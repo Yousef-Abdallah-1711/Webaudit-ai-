@@ -1,0 +1,19 @@
+/* Ported from design-system/components/report/AttributionMark.jsx (T239). */
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.measured {
+  color: var(--sev-info);
+}
+
+.aiJudgment {
+  color: var(--text-muted);
+}

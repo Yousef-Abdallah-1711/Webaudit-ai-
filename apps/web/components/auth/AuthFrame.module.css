@@ -1,0 +1,65 @@
+/* Ported from design-system/ui_kits/marketing/AuthPages.jsx (T128). */
+
+.wrap {
+  display: grid;
+  place-items: center;
+  padding: 72px 24px;
+}
+
+.inner {
+  width: 420px;
+  max-width: 100%;
+}
+
+.title {
+  font: var(--type-card-title);
+  color: var(--text-strong);
+  margin: 0 0 8px;
+}
+
+.lead {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin: 0 0 22px;
+  text-wrap: pretty;
+}
+
+.foot {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 18px;
+}
+
+.foot a {
+  color: var(--accent);
+}
+
+.field {
+  display: block;
+}
+
+.fieldLabel {
+  font: var(--type-small);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.dividerText {
+  font: var(--type-small);
+  color: var(--text-muted);
+}

@@ -1,0 +1,9 @@
+.emailBox {
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-default);
+  padding: 14px 16px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-zinc);
+  margin-bottom: 18px;
+}

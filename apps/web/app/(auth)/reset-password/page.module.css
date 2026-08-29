@@ -1,0 +1,26 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkOk,
+.checkPending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: var(--type-small);
+}
+
+.checkOk {
+  color: var(--sev-resolved);
+}
+
+.checkPending {
+  color: var(--text-muted);
+}
+
+.error {
+  font: var(--type-small);
+  color: var(--sev-critical);
+}

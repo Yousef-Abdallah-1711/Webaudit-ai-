@@ -1,0 +1,26 @@
+{
+  "name": "@webaudit/capabilities-vendored-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T125 — the shared conformance suite for every vendored capability. Not a runnable capability itself; each capability under this directory is its own workspace package.",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/capability-headers-checker": "workspace:*",
+    "@webaudit/capability-ssl-analyzer": "workspace:*",
+    "@webaudit/capability-data-leak-scanner": "workspace:*",
+    "@webaudit/capability-owasp-checker": "workspace:*",
+    "@webaudit/capability-meta-checker": "workspace:*",
+    "@webaudit/capability-content-checker": "workspace:*",
+    "@webaudit/capability-lighthouse-analyzer": "workspace:*",
+    "@webaudit/capability-network-inspector": "workspace:*",
+    "@webaudit/capability-cwv-analyzer": "workspace:*",
+    "@webaudit/capability-screenshot-capture": "workspace:*",
+    "@webaudit/capability-impeccable": "workspace:*",
+    "@webaudit/capability-playwright-runner": "workspace:*",
+    "@webaudit/capability-contradiction-detector": "workspace:*"
+  }
+}

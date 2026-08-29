@@ -1,0 +1,11 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Scans (T244). */
+
+.searchBox {
+  width: 240px;
+}
+
+.note {
+  margin-top: 12px;
+  font: var(--type-small);
+  color: var(--text-muted);
+}

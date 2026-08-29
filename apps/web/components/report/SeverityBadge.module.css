@@ -1,0 +1,44 @@
+/* Ported from design-system/components/core/SeverityBadge.jsx (T239). */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: var(--border-width) solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 3px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.count {
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.critical {
+  color: var(--sev-critical);
+  background: var(--sev-critical-bg);
+}
+.high {
+  color: var(--sev-high);
+  background: var(--sev-high-bg);
+}
+.medium {
+  color: var(--sev-medium);
+  background: var(--sev-medium-bg);
+}
+.low {
+  color: var(--sev-low);
+  background: var(--sev-low-bg);
+}
+.info {
+  color: var(--sev-info);
+  background: var(--sev-info-bg);
+}
+.resolved {
+  color: var(--sev-resolved);
+  background: var(--sev-resolved-bg);
+}

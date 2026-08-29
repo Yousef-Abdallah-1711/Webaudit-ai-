@@ -1,0 +1,19 @@
+{
+  "name": "@webaudit/capability-headers-checker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T119 — SECURITY, CODE layer. Checks for missing security response headers.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/types": "workspace:*"
+  }
+}

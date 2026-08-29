@@ -1,0 +1,15 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.note {
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.error {
+  font: var(--type-small);
+  color: var(--sev-critical);
+}

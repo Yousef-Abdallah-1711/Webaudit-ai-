@@ -1,0 +1,97 @@
+/* Ported from design-system/ui_kits/app/Account.jsx's UsageScreen (T242). */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.statValue {
+  font: var(--type-h3);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+.statSub {
+  margin-top: 6px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.chartRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 150px;
+  margin-top: 8px;
+}
+.chartBar {
+  flex: 1;
+  min-height: 2px;
+  background: var(--border-default);
+}
+.chartBarActive {
+  background: var(--accent);
+}
+.chartLegend {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.areaRow {
+  padding: 9px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.areaRowHead {
+  display: flex;
+  font: var(--type-small);
+}
+.areaRowValue {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+.areaBar {
+  height: 4px;
+  margin-top: 6px;
+  background: var(--surface-sunken);
+}
+.areaBarFill {
+  height: 100%;
+}
+
+.refundRow {
+  display: flex;
+  gap: 12px;
+  padding: 11px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.refundDate {
+  width: 56px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.refundReason {
+  font: var(--type-small);
+}
+.refundValue {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--sev-resolved);
+}
+.refundNote {
+  margin: 14px 0 0;
+  font: var(--type-small);
+  color: var(--text-muted);
+}

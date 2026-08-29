@@ -1,0 +1,124 @@
+{
+  "$comment": "Runtime-extracted design tokens from https://www.siteaudits.ai/ — captured 2026-08-23 via ui-clone discovery (Playwright computed styles). This is REFERENCE EVIDENCE, not WebAudit AI's design system. See /DESIGN.md for ours.",
+  "source": {
+    "url": "https://www.siteaudits.ai/",
+    "capturedAt": "2026-08-23",
+    "method": "getComputedStyle over all rendered elements, frequency-ranked",
+    "viewport": "1440x900",
+    "documentHeight": 7134,
+    "images": 24,
+    "inlineSvgs": 9,
+    "consoleErrors": 0
+  },
+  "color": {
+    "accent": {
+      "base": "#fe5a01",
+      "hover": "#fe4a00",
+      "note": "Single accent. Used for CTA fill, headline emphasis span, focus ring, chat launcher, logo."
+    },
+    "text": {
+      "primary": "#1f2937",
+      "secondary": "#6b7280",
+      "muted": "#737373",
+      "zinc": "#3f3f46",
+      "strong": "#111827",
+      "onAccent": "#fafafa"
+    },
+    "surface": {
+      "page": "#ffffff",
+      "raised": "#fafafa",
+      "sunken": "#f9fafb",
+      "inverse": "#1f2937"
+    },
+    "border": {
+      "subtle": "#e5e5e5",
+      "default": "#e5e7eb",
+      "$note": "Measured border-width 0.667px — sub-pixel hairline, not 1px."
+    },
+    "status": {
+      "promoBg": "#10b981",
+      "promoBgDark": "#047857"
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": "\"Lexend Deca\", \"Lexend Deca Fallback\", system-ui, sans-serif",
+      "$note": "Variable font, weight axis 100-900. Loaded remotely. One family for the entire site — no serif, no separate display face.",
+      "mono": "ui-monospace"
+    },
+    "scale": {
+      "hero":    { "size": "48px", "lineHeight": "48px", "weight": 700, "letterSpacing": "-1.2px" },
+      "h2":      { "size": "36px", "lineHeight": "40px", "weight": 700, "letterSpacing": "-0.9px" },
+      "h3":      { "size": "30px", "lineHeight": "36px", "weight": 700, "letterSpacing": "normal" },
+      "cardTitle":{ "size": "24px", "lineHeight": "32px", "weight": 600, "letterSpacing": "normal" },
+      "lead":    { "size": "20px", "lineHeight": "28px", "weight": 400, "letterSpacing": "normal" },
+      "bodyLg":  { "size": "18px", "lineHeight": "28px", "weight": 500, "letterSpacing": "normal" },
+      "body":    { "size": "16px", "lineHeight": "24px", "weight": 400, "letterSpacing": "normal" },
+      "bodyBold":{ "size": "16px", "lineHeight": "20px", "weight": 700, "letterSpacing": "normal" },
+      "small":   { "size": "14px", "lineHeight": "20px", "weight": 400, "letterSpacing": "normal" },
+      "eyebrow": { "size": "15.2px", "lineHeight": "20px", "weight": 700, "letterSpacing": "1.52px", "transform": "uppercase" }
+    },
+    "$observation": "Negative tracking on display sizes only (-1.2px hero, -0.9px h2); positive tracking on the uppercase eyebrow (+1.52px). Body sizes stay at normal. This is the single most transferable typographic decision on the site."
+  },
+  "radius": {
+    "none": "0px",
+    "control": "6px",
+    "card": "8px",
+    "pill": "9999px",
+    "$distribution": { "0px": 215, "8px": 14, "6px": 8, "9999px": 5, "4px": 1, "16px": 1, "30px": 1, "48px": 1 },
+    "$observation": "215 of ~250 styled elements have zero radius. Rounding is reserved for interactive controls and cards only. The overall impression is deliberately square."
+  },
+  "elevation": {
+    "card": "0 1px 2px rgba(0,0,0,0.1)",
+    "floating": "0 1px 3px rgba(0,0,0,0.15), 0 0 20px rgba(0,0,0,0.1)",
+    "focusRing": "0 0 0 1px #fa7014",
+    "$observation": "Only three shadows on a 7134px page. Depth is carried by background tint changes (#ffffff / #fafafa / #f9fafb), not by shadow."
+  },
+  "gradient": {
+    "ctaBand": "linear-gradient(to right, #f97316, #ef4444)",
+    "cornerWashBR": "linear-gradient(to bottom right, rgba(234,88,12,0.4), transparent, transparent)",
+    "cornerWashTL": "linear-gradient(to left top, rgba(234,88,12,0.5), transparent, transparent)"
+  },
+  "layout": {
+    "containerMaxWidth": "896px",
+    "$note": "max-w-4xl. Unusually narrow for a marketing page — forces single-column reading and short line lengths.",
+    "controlHeight": "48px"
+  },
+  "motion": {
+    "duration": "150ms",
+    "easing": "cubic-bezier(0.4, 0, 0.2, 1)",
+    "properties": ["color", "background-color", "border-color", "fill", "stroke"],
+    "$observation": "Colour-only transitions at framework-default timing. No scroll-triggered animation, no GSAP, no reveal-on-scroll, no parallax detected. The ui-clone animation pipeline has nothing to reproduce here."
+  },
+  "components": {
+    "primaryButton": {
+      "background": "#fe5a01",
+      "color": "#fafafa",
+      "padding": "0 32px",
+      "height": "48px",
+      "radius": "6px",
+      "fontSize": "14px",
+      "fontWeight": 500
+    },
+    "urlInput": {
+      "height": "48px",
+      "border": "0.667px solid #e5e5e5",
+      "radius": "6px",
+      "padding": "4px 12px 4px 64px",
+      "$note": "64px left padding reserves space for an inline prefix affordance."
+    }
+  },
+  "stack": {
+    "detected": "Tailwind CSS utility classes; colour values match Tailwind's default palette (gray-800 #1f2937, gray-500 #6b7280, emerald-500 #10b981, orange-500 #f97316, red-500 #ef4444)",
+    "thirdParty": ["Google Fonts (Lexend Deca)", "Intercom-style chat launcher", "Product Hunt badge"]
+  },
+  "notablyAbsent": [
+    "Top navigation bar — the homepage has no nav at all",
+    "Hero product screenshot or illustration",
+    "Public pricing page (/pricing redirects to /login)",
+    "Scroll-triggered animation of any kind",
+    "Dark mode",
+    "Social proof beyond a single Product Hunt badge",
+    "Customer logos, testimonials, case studies"
+  ]
+}

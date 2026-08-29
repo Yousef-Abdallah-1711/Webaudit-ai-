@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="App dashboard" description="Signed-in shell: collapsible left sidebar with credit meter, page head, score arc, module states, and an issue card with attribution." -->
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap"><script src="./ds-base.js"></script><style>body{margin:0}a{text-decoration:none}</style></helmet>
+<div style="font-family:'Lexend Deca',system-ui,sans-serif;color:#1f2937;background:#f9fafb;display:flex;min-height:100vh">
+<aside style="width:248px;flex-shrink:0;background:#fafafa;border-right:0.667px solid #e5e7eb;display:flex;flex-direction:column">
+<div style="height:60px;display:flex;align-items:center;gap:8px;padding:0 12px">
+<button style="width:34px;height:34px;display:grid;place-items:center;border:0;background:transparent;border-radius:6px;color:#6b7280;cursor:pointer"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
+<div style="font-size:16px;font-weight:700;letter-spacing:-0.3px;color:#111827">Web<span style="color:#fe5a01">Audit</span> AI</div>
+</div>
+<div style="flex:1;padding:6px 10px">
+<div style="font-size:10px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#737373;padding:0 12px 6px">Audits</div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"></path></svg><span>New scan</span></button>
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;font-weight:600;background:#ffffff;color:#111827;box-shadow:inset 2px 0 0 #fe5a01"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M7 3h7l5 5v13H7Zm7 0v5h5M10 13h7M10 17h5"></path></svg><span>Report</span></button>
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="m4 12 5 5L20 6"></path></svg><span>Fixes</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:11px;color:#b91c1c">4</span></button>
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 21V4h12l-2 4 2 4H6"></path></svg><span>Readiness</span></button>
+</div>
+<div style="font-size:10px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#737373;padding:16px 12px 6px">Account</div>
+<div style="display:flex;flex-direction:column;gap:2px">
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8"></path></svg><span>Usage</span></button>
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 7h18v12H3Zm0 4h18M7 15h4"></path></svg><span>Billing and plans</span></button>
+<button style="display:flex;align-items:center;gap:11px;width:100%;border:0;cursor:pointer;text-align:left;padding:0 12px;height:38px;border-radius:6px;font-family:inherit;font-size:14px;background:transparent;color:#6b7280"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-8 8a8 8 0 0 1 16 0"></path></svg><span>Profile</span></button>
+</div>
+</div>
+<div style="border-top:0.667px solid #e5e7eb;padding:12px">
+<div style="border:0.667px solid #e5e7eb;border-radius:8px;background:#ffffff;padding:12px;margin-bottom:12px">
+<div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:ui-monospace,monospace;font-size:15px;font-weight:700;color:#111827">1,120</span><span style="font-size:12px;color:#6b7280">credits left</span></div>
+<div style="height:4px;background:#f9fafb;margin-top:8px"><div style="width:77%;height:100%;background:#fe5a01"></div></div>
+</div>
+<div style="display:flex;align-items:center;gap:10px">
+<div style="width:30px;height:30px;border-radius:9999px;background:#1f2937;color:#fafafa;display:grid;place-items:center;font-size:12px;font-weight:600">KA</div>
+<div><div style="font-size:13px;font-weight:600;color:#111827">Khalid Ahmed</div><div style="font-size:11px;color:#737373">Pro plan</div></div>
+</div>
+</div>
+</aside>
+<div style="flex:1;min-width:0;padding:32px 32px 64px">
+<div style="max-width:1280px;margin:0 auto">
+<div style="display:flex;align-items:flex-end;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+<div>
+<div style="font-size:12px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#fe5a01">Report</div>
+<h1 style="font-size:30px;line-height:36px;font-weight:700;margin:8px 0 0;color:#111827">acme.com</h1>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#6b7280;margin-top:6px">scan 4f21a8c9 · completed 23 Aug 2026, 14:02 · 3m 41s</div>
+</div>
+<div style="margin-left:auto;display:flex;gap:10px">
+<a href="#" style="height:36px;display:inline-flex;align-items:center;padding:0 16px;border-radius:6px;border:0.667px solid #e5e7eb;color:#1f2937;font-size:14px;font-weight:500">Export</a>
+<a href="#" style="height:36px;display:inline-flex;align-items:center;padding:0 16px;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Re-audit</a>
+</div>
+</div>
+<div style="display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:20px;text-align:center">
+<div style="font-size:54px;font-weight:700;color:#111827;font-variant-numeric:tabular-nums;line-height:1">62</div>
+<div style="font-size:14px;color:#6b7280;margin-top:6px">Health score</div>
+</div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:20px">
+<div style="font-size:24px;line-height:32px;font-weight:600;color:#111827;margin-bottom:12px">Areas</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#ecfdf5;border:0.667px solid #e5e7eb"><span style="color:#047857;display:inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m4 12 5 5L20 6"></path></svg></span><span style="font-size:14px;font-weight:600;color:#111827">Security</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:#6b7280">2</span></div>
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#ecfdf5;border:0.667px solid #e5e7eb"><span style="color:#047857;display:inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="m4 12 5 5L20 6"></path></svg></span><span style="font-size:14px;font-weight:600;color:#111827">Performance</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:12px;color:#6b7280">1</span></div>
+<div style="display:flex;align-items:center;gap:10px;padding:12px 14px;background:#fefce8;border:0.667px solid #e5e7eb;border-left:3px solid #a16207"><span style="color:#a16207;display:inline-flex"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2 1 21h22L12 2Zm0 7v5m0 3v.5"></path></svg></span><span style="font-size:14px;font-weight:600;color:#111827">Testing</span><span style="margin-left:auto;font-size:12px;font-weight:700;color:#a16207">Degraded</span></div>
+</div>
+<p style="font-size:13px;line-height:20px;color:#6b7280;margin:12px 0 0">2 of 5 checks skipped — you were not charged for them.</p>
+</div>
+</div>
+<div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:24px;margin-bottom:16px">
+<div style="font-size:24px;line-height:32px;font-weight:600;color:#111827;margin-bottom:12px">Executive summary</div>
+<p style="font-size:16px;line-height:24px;margin:0;max-width:70ch;text-wrap:pretty">Two critical security findings block a launch: the primary host serves no HSTS header, and a dependency carries a remote-code-execution advisory with a semver-minor fix available. Performance is close — LCP is 4.1s against a 2.5s threshold, driven almost entirely by an uncompressed hero image.</p>
+<div style="display:flex;gap:10px;align-items:center;margin-top:16px;font-size:14px;color:#6b7280"><span><strong style="color:#111827">2</strong> critical</span><span style="color:#e5e7eb">·</span><span><strong style="color:#111827">2</strong> high</span><span style="color:#e5e7eb">·</span><span><strong style="color:#111827">1</strong> medium</span><span style="color:#e5e7eb">·</span><span><strong style="color:#111827">1</strong> low</span></div>
+</div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-left:3px solid #b91c1c;border-radius:8px;padding:18px 20px;margin-bottom:12px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;background:#fef2f2;color:#b91c1c;border:0.667px solid currentColor;border-radius:9999px;padding:3px 10px;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2 1 21h22L12 2Zm0 6v6m0 3v.5"></path></svg>Critical</span>
+<span style="font-size:14px;color:#737373">Security</span>
+<span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.3px;text-transform:uppercase;color:#52525b"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8"></path></svg>Measured</span>
+</div>
+<div style="font-size:17px;font-weight:600;color:#111827;margin-bottom:6px">No Strict-Transport-Security header on the primary host</div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#3f3f46;margin-bottom:10px">strict-transport-security</div>
+<p style="font-size:14px;line-height:20px;color:#6b7280;margin:0 0 14px;max-width:62ch;text-wrap:pretty">The response carries no HSTS header, so a first visit over http is downgradeable before any redirect fires.</p>
+<button style="height:36px;padding:0 16px;border-radius:6px;border:0.667px solid #e5e7eb;background:#fff;color:#1f2937;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer">Copy fix prompt</button>
+</div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-left:3px solid #c2410c;border-radius:8px;padding:18px 20px">
+<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+<span style="display:inline-flex;align-items:center;gap:6px;background:#fff7ed;color:#c2410c;border:0.667px solid currentColor;border-radius:9999px;padding:3px 10px;font-size:12px;font-weight:700"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 3v12m0 4v.5M4 20h16"></path></svg>High</span>
+<span style="font-size:14px;color:#737373">Performance</span>
+<span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.3px;text-transform:uppercase;color:#52525b"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20V10m5 10V4m5 16v-7m5 7V8"></path></svg>Measured</span>
+</div>
+<div style="font-size:17px;font-weight:600;color:#111827;margin-bottom:6px">Largest Contentful Paint is 4.1s on a throttled 4G profile</div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#3f3f46;margin-bottom:10px">/ · hero image</div>
+<p style="font-size:14px;line-height:20px;color:#6b7280;margin:0 0 14px;max-width:62ch;text-wrap:pretty">The hero image is 1.4MB and is not preloaded. The threshold for a pass is 2.5s.</p>
+<button style="height:36px;padding:0 16px;border-radius:6px;border:0.667px solid #e5e7eb;background:#fff;color:#1f2937;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer">Copy fix prompt</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,50 @@
+{
+  "name": "@webaudit/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Express API. Holds database and provider credentials.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./prisma-client": "./prisma/generated/client/index.js",
+    "./credits": "./src/services/credits/index.ts",
+    "./control-gate": "./src/services/control-gate/index.ts",
+    "./test-db": "./tests/helpers/db.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "echo 'not implemented \u2014 scaffold only (port 3001)'"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.972.0",
+    "@node-rs/bcrypt": "1.10.7",
+    "@prisma/client": "6.1.0",
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/config": "workspace:*",
+    "@webaudit/scoring": "workspace:*",
+    "@webaudit/safe-net": "workspace:*",
+    "@webaudit/types": "workspace:*",
+    "bullmq": "6.2.0",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.5",
+    "express": "5.1.0",
+    "express-rate-limit": "7.4.1",
+    "helmet": "8.0.0",
+    "ioredis": "5.4.1",
+    "jose": "5.9.6",
+    "rate-limit-redis": "4.2.0",
+    "ws": "8.21.3",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "1.4.8",
+    "@types/cors": "2.8.17",
+    "@types/ws": "8.18.1",
+    "@types/express": "5.0.0",
+    "@types/supertest": "6.0.2",
+    "supertest": "7.0.0",
+    "@webaudit/worker": "workspace:*"
+  }
+}

@@ -1,0 +1,7 @@
+/* Ported verbatim from design-system/tokens/radius.css (T236a). Do not edit here; edit the source and re-port. */
+:root {
+  --radius-none: 0;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-pill: 9999px;
+}

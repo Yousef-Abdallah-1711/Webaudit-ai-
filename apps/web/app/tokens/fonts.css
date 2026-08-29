@@ -1,0 +1,25 @@
+/* Ported from design-system/tokens/fonts.css (T236a), with one deliberate change. */
+
+/*
+ * The vendored file's own comment ("SUBSTITUTION FLAG") says DESIGN.md §3
+ * requires Lexend Deca to be self-hosted with zero remote font requests, and
+ * loads it from Google Fonts's CDN via `@import url(...)` in the meantime,
+ * because no font binaries were present in the design export to vendor by
+ * hand. That `@import` is exactly the runtime dependency CLAUDE.md forbids —
+ * "never import [design-system/] at runtime" — so it is not carried into this
+ * port.
+ *
+ * The replacement is `next/font/google` in `app/layout.tsx`, which downloads
+ * Lexend Deca and JetBrains Mono once at build time and serves them from this
+ * app's own origin — zero requests to Google at runtime, which is what
+ * "self-hosted" means here. `layout.tsx` applies each font's generated
+ * variable as a class on `<html>`; `--font-sans`/`--font-mono` below read
+ * those variables first, falling back to the same chain the vendored file
+ * specified if the font loader variable is ever absent (e.g. a component
+ * rendered outside the root layout in a test).
+ */
+:root {
+  --font-sans: var(--font-lexend-deca), 'Lexend Deca Fallback', system-ui, sans-serif;
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+}

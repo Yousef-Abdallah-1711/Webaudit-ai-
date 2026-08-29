@@ -1,0 +1,43 @@
+{
+  "command": "/ui-clone",
+  "stages": [
+    "intake",
+    "discovery",
+    "specification",
+    "planning",
+    "task_generation",
+    "dependency_install",
+    "foundation",
+    "section_implementation",
+    "section_comparison",
+    "section_repair",
+    "independent_review",
+    "full_page_comparison",
+    "final_repair",
+    "final_audit"
+  ],
+  "defaultOptions": {
+    "fidelity": "strict",
+    "framework": "auto",
+    "install": true,
+    "reviewAgents": true,
+    "repairUntilPass": true,
+    "maxRepairCycles": 5,
+    "viewports": [
+      "1440x900",
+      "1280x800",
+      "1024x768",
+      "768x1024",
+      "390x844"
+    ]
+  },
+  "taskStates": [
+    "pending",
+    "implementing",
+    "testing",
+    "comparison",
+    "repair",
+    "independent-review",
+    "approved"
+  ]
+}

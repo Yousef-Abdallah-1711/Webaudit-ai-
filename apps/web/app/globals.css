@@ -1,0 +1,62 @@
+/**
+ * T236a — the token wiring every ported surface depends on.
+ *
+ * Imports the 8 ported token files (see app/tokens/, each headed with its
+ * design-system source) and applies the one thing the vendored export defines
+ * but never applies: the mobile type scale.
+ */
+
+@import './tokens/colors.css';
+@import './tokens/dark.css';
+@import './tokens/elevation.css';
+@import './tokens/fonts.css';
+@import './tokens/layout.css';
+@import './tokens/motion.css';
+@import './tokens/radius.css';
+@import './tokens/typography.css';
+
+/**
+ * T126's other half. `typography.css` defines `--type-display-mobile` etc.
+ * alongside the desktop values and nothing ever selects them — CLAUDE.md
+ * names this exactly: "the mobile type tokens are defined but never applied
+ * by a media query". The breakpoint is 640px, per
+ * design-system/guidelines/type-mobile.card.html ("Mobile ≤640"), not the
+ * 390px a screen is *designed and measured* at — 390 is the reference
+ * viewport, 640 is where the swap actually happens, and the two are not the
+ * same number by design: the mobile scale needs to be live well before a
+ * phone-width layout, at the point tablet/narrow-desktop layouts start
+ * needing it too.
+ *
+ * Body tracking goes *positive* on mobile (+0.35px) where desktop is tight or
+ * negative — easy to miss, called out in CLAUDE.md for exactly that reason.
+ */
+@media (max-width: 640px) {
+  :root {
+    --type-display: var(--type-display-mobile);
+    --track-display: var(--track-display-mobile);
+    --type-h2: var(--type-h2-mobile);
+    --track-h2: var(--track-h2-mobile);
+    --type-body: var(--type-body-mobile);
+    --track-body: var(--track-body-mobile);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: var(--type-body);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}

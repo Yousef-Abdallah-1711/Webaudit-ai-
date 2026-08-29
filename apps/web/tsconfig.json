@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "jsx": "preserve",
+    "allowJs": true,
+    "incremental": true,
+    // tsconfig.base.json's `lib: ["ES2023"]` is correct for the backend
+    // packages that inherit it — apps/web is the one package in this monorepo
+    // that runs in a browser and needs `window`/`document`/etc., so it adds
+    // DOM here rather than widening the shared base for everything else.
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "plugins": [{ "name": "next" }]
+  },
+  "include": [
+    "next-env.d.ts",
+    "next.config.ts",
+    "playwright.config.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "lib/**/*.ts",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", ".next"]
+}

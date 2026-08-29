@@ -1,0 +1,8 @@
+/*
+ * T247 — the shrink behaviour `Ico`/`AIco` gave every nav icon via inline
+ * `style={{flexShrink:0}}`: without it, an icon inside a flex row with a
+ * long label truncates the icon instead of the text.
+ */
+.icon {
+  flex-shrink: 0;
+}

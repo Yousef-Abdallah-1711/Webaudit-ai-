@@ -1,0 +1,1 @@
+Use `PromoBar` at the very top of a marketing page only, never inside the app. `<PromoBar message="First audit free — 50 credits" code="START50" />`. Emerald, not accent: it must not read as the page's action.

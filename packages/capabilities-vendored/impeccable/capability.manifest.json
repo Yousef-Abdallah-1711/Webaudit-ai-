@@ -1,0 +1,15 @@
+{
+  "id": "impeccable",
+  "name": "Impeccable Design Critique",
+  "version": "1.0.0",
+  "module": "UI",
+  "layer": "AI",
+  "entrypoint": "src/index.ts",
+  "requiresCode": false,
+  "requiresScreenshot": true,
+  "requiredControlLevel": "NONE",
+  "estimatedTokens": 800,
+  "originalSource": "WebAudit AI, first-party",
+  "license": "UNLICENSED",
+  "vendoredAt": "2026-08-26"
+}

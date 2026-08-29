@@ -1,0 +1,39 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Overview (T243). */
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.attentionRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.attentionTitle {
+  font: var(--type-small);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.attentionDesc {
+  margin-top: 3px;
+  font: var(--type-small);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.areaHealth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}

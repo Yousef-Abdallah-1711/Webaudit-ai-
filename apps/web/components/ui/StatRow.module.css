@@ -1,0 +1,24 @@
+/* Ported from design-system/components/core/StatRow.jsx (T237). */
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-start;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.center {
+  justify-content: center;
+}
+
+.separator {
+  color: var(--border-default);
+}
+
+.value {
+  color: var(--text-strong);
+  font-weight: 700;
+}

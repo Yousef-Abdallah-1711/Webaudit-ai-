@@ -1,0 +1,19 @@
+{
+  "name": "@webaudit/capability-playwright-runner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T141 — TESTING, CODE layer. Functional link-integrity check: crawls the page's own same-origin links and reports the ones that do not resolve.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/types": "workspace:*"
+  }
+}

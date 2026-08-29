@@ -1,0 +1,75 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Settings (T244). */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.flagRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.flagLabel {
+  font: var(--type-small);
+}
+
+.switch {
+  margin-left: auto;
+  width: 36px;
+  height: 20px;
+  position: relative;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+.switchOn {
+  background: var(--accent);
+}
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  transition: left 150ms var(--easing);
+}
+.switchKnobOn {
+  left: 18px;
+}
+
+.note {
+  margin-top: 14px;
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.limitRow {
+  display: flex;
+  padding: 10px 0;
+  border-top: var(--border-width) solid var(--border-default);
+  font: var(--type-small);
+}
+.limitValue {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.retentionNote {
+  margin-top: 12px;
+  font: var(--type-small);
+  color: var(--text-muted);
+}

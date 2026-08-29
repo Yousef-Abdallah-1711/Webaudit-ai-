@@ -1,0 +1,5 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Log (T244). */
+
+.searchBox {
+  width: 240px;
+}

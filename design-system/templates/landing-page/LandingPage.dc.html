@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Landing page" description="Public marketing page: shared header and footer, two-tone hero, three principles, five-area table, fix loop, dark CTA band." -->
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap"><script src="./ds-base.js"></script><style>body{margin:0}a{text-decoration:none}</style></helmet>
+<div style="font-family:'Lexend Deca',system-ui,sans-serif;color:#1f2937;background:#ffffff">
+<div style="background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;gap:12px;padding:10px 16px;font-size:13px;font-weight:500;letter-spacing:.6px;text-transform:uppercase">First audit free — 50 credits<code style="font-family:ui-monospace,monospace;background:rgba(0,0,0,.22);padding:3px 8px;border-radius:6px;letter-spacing:normal;text-transform:none">START50</code></div>
+<header style="background:#ffffff;border-bottom:0.667px solid #e5e7eb;position:sticky;top:0;z-index:20">
+<div style="max-width:1120px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:28px">
+<div style="font-size:19px;font-weight:700;letter-spacing:-0.4px;color:#111827">Web<span style="color:#fe5a01">Audit</span> AI</div>
+<nav style="display:flex;gap:22px"><a href="#" style="font-size:14px;font-weight:600;color:#111827">Product</a><a href="#" style="font-size:14px;color:#6b7280">Pricing</a><a href="#" style="font-size:14px;color:#6b7280">Docs</a><a href="#" style="font-size:14px;color:#6b7280">Changelog</a></nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:10px"><a href="#" style="font-size:14px;color:#6b7280">Sign in</a><a href="#" style="height:36px;display:inline-flex;align-items:center;padding:0 16px;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Start free</a></div>
+</div>
+</header>
+<section style="position:relative;overflow:hidden;padding:88px 24px 96px;text-align:center">
+<div style="position:absolute;inset:0;background:linear-gradient(to left top,rgba(234,88,12,.5),transparent,transparent);pointer-events:none"></div>
+<div style="position:relative;max-width:896px;margin:0 auto">
+<h1 style="font-size:48px;line-height:48px;font-weight:700;letter-spacing:-1.2px;margin:0;text-wrap:pretty">Think your site is ready? <span style="color:#fe5a01">Prove it, then ship it.</span></h1>
+<p style="font-size:20px;line-height:28px;color:#6b7280;max-width:62ch;margin:20px auto 0;text-wrap:pretty">We audit performance, security, design, testing and search visibility — measured first, then explained. Then we re-verify every fix until the board is green.</p>
+<div style="display:flex;gap:12px;max-width:620px;margin:36px auto 0;flex-wrap:wrap">
+<input placeholder="yoursite.com" style="flex:1 1 320px;height:48px;box-sizing:border-box;border:0.667px solid #e5e5e5;border-radius:6px;padding:4px 12px;font-family:inherit;font-size:14px;color:#1f2937">
+<a href="#" style="height:48px;display:inline-flex;align-items:center;padding:0 32px;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Audit my site</a>
+</div>
+<div style="display:flex;justify-content:center;gap:10px;margin-top:20px;font-size:14px;color:#6b7280"><span><strong style="color:#111827">50</strong> free credits, no card</span><span style="color:#e5e7eb">·</span><span><strong style="color:#111827">5</strong> areas</span><span style="color:#e5e7eb">·</span><span><strong style="color:#111827">3</strong> credits per re-check</span></div>
+</div>
+</section>
+<section style="background:#fafafa;padding:88px 24px">
+<div style="max-width:896px;margin:0 auto">
+<div style="font-size:12px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#fe5a01">The difference</div>
+<h2 style="font-size:36px;line-height:40px;font-weight:700;letter-spacing:-0.9px;margin:12px 0 0">Everyone else sells you a report.</h2>
+<p style="font-size:18px;line-height:28px;font-weight:500;color:#6b7280;margin-top:16px;max-width:60ch;text-wrap:pretty">We sell you the walk from red to green, and we verify each step. An issue turns green when a check passes, never when you say so.</p>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px">
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:20px"><div style="font-size:24px;line-height:32px;font-weight:600;color:#111827;margin-bottom:12px">Measured before inferred</div><p style="font-size:14px;line-height:20px;color:#6b7280;margin:0;text-wrap:pretty">Anything measurable is measured, not guessed. Every finding says which it is.</p></div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:20px"><div style="font-size:24px;line-height:32px;font-weight:600;color:#111827;margin-bottom:12px">Green means verified</div><p style="font-size:14px;line-height:20px;color:#6b7280;margin:0;text-wrap:pretty">A narrow re-check costs 3 credits and seconds. It passes, or the issue stays red.</p></div>
+<div style="background:#fff;border:0.667px solid #e5e7eb;border-radius:8px;padding:20px"><div style="font-size:24px;line-height:32px;font-weight:600;color:#111827;margin-bottom:12px">Degrade, never collapse</div><p style="font-size:14px;line-height:20px;color:#6b7280;margin:0;text-wrap:pretty">A failing capability degrades its area. You are told exactly what is missing.</p></div>
+</div>
+</div>
+</section>
+<section style="padding:88px 24px">
+<div style="max-width:896px;margin:0 auto">
+<div style="font-size:12px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#fe5a01">Five areas</div>
+<h2 style="font-size:36px;line-height:40px;font-weight:700;letter-spacing:-0.9px;margin:12px 0 24px">Every area reports independently.</h2>
+<div style="border:0.667px solid #e5e7eb">
+<div style="display:flex;gap:16px;align-items:baseline;padding:18px 20px"><div style="width:160px;font-size:16px;font-weight:600;color:#111827">Performance</div><div style="flex:1;font-size:14px;color:#6b7280">Core Web Vitals, bundle composition, request patterns</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#737373">20 cr</div></div>
+<div style="display:flex;gap:16px;align-items:baseline;padding:18px 20px;border-top:0.667px solid #e5e7eb"><div style="width:160px;font-size:16px;font-weight:600;color:#111827">Security</div><div style="flex:1;font-size:14px;color:#6b7280">Headers, TLS, OWASP checks, leaked credentials, dependency CVEs</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#737373">25 cr</div></div>
+<div style="display:flex;gap:16px;align-items:baseline;padding:18px 20px;border-top:0.667px solid #e5e7eb"><div style="width:160px;font-size:16px;font-weight:600;color:#111827">Design</div><div style="flex:1;font-size:14px;color:#6b7280">Layout, hierarchy and contrast, against your stated brand intent</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#737373">20 cr</div></div>
+<div style="display:flex;gap:16px;align-items:baseline;padding:18px 20px;border-top:0.667px solid #e5e7eb"><div style="width:160px;font-size:16px;font-weight:600;color:#111827">Testing</div><div style="flex:1;font-size:14px;color:#6b7280">Functional flows driven in a real browser</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#737373">20 cr</div></div>
+<div style="display:flex;gap:16px;align-items:baseline;padding:18px 20px;border-top:0.667px solid #e5e7eb"><div style="width:160px;font-size:16px;font-weight:600;color:#111827">Search visibility</div><div style="flex:1;font-size:14px;color:#6b7280">Metadata, crawlability, content structure</div><div style="font-family:ui-monospace,monospace;font-size:13px;color:#737373">10 cr</div></div>
+</div>
+<p style="font-size:14px;line-height:20px;color:#737373;margin-top:14px">Five areas cost 95 individually against 80 bundled. Complete coverage is always the cheapest route to complete coverage.</p>
+</div>
+</section>
+<section style="background:#f9fafb;padding:88px 24px">
+<div style="max-width:896px;margin:0 auto">
+<div style="font-size:12px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#fe5a01">The fix loop</div>
+<h2 style="font-size:36px;line-height:40px;font-weight:700;letter-spacing:-0.9px;margin:12px 0 28px">Red to green, one check at a time.</h2>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+<div style="border-top:3px solid #fe5a01;padding-top:14px"><div style="font-family:ui-monospace,monospace;font-size:12px;color:#fe5a01">01</div><div style="font-size:17px;font-weight:600;margin:6px 0">Audit</div><div style="font-size:14px;line-height:20px;color:#6b7280;text-wrap:pretty">Submit a URL, a repository, or an archive.</div></div>
+<div style="border-top:3px solid #fe5a01;padding-top:14px"><div style="font-family:ui-monospace,monospace;font-size:12px;color:#fe5a01">02</div><div style="font-size:17px;font-weight:600;margin:6px 0">Fix</div><div style="font-size:14px;line-height:20px;color:#6b7280;text-wrap:pretty">Copy the remediation prompt into your coding agent.</div></div>
+<div style="border-top:3px solid #fe5a01;padding-top:14px"><div style="font-family:ui-monospace,monospace;font-size:12px;color:#fe5a01">03</div><div style="font-size:17px;font-weight:600;margin:6px 0">Re-check</div><div style="font-size:14px;line-height:20px;color:#6b7280;text-wrap:pretty">3 credits, seconds. It passes or it stays red.</div></div>
+<div style="border-top:3px solid #fe5a01;padding-top:14px"><div style="font-family:ui-monospace,monospace;font-size:12px;color:#fe5a01">04</div><div style="font-size:17px;font-weight:600;margin:6px 0">Ship</div><div style="font-size:14px;line-height:20px;color:#6b7280;text-wrap:pretty">A fresh full re-audit returns an explicit go or no-go.</div></div>
+</div>
+</div>
+</section>
+<section style="position:relative;overflow:hidden;background:#1f2937;padding:80px 24px;text-align:center">
+<div style="position:absolute;inset:0;background:linear-gradient(to bottom right,rgba(234,88,12,.4),transparent,transparent);pointer-events:none"></div>
+<div style="position:relative;max-width:896px;margin:0 auto">
+<h2 style="font-size:36px;line-height:40px;font-weight:700;letter-spacing:-0.9px;color:#fafafa;margin:0">Fifty credits. No card.</h2>
+<p style="font-size:16px;line-height:24px;color:#9ca3af;margin:14px 0 28px">Enough to audit two or three areas of your real site and see real findings.</p>
+<a href="#" style="height:48px;display:inline-flex;align-items:center;padding:0 32px;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Audit my site</a>
+</div>
+</section>
+<footer style="border-top:0.667px solid #e5e7eb;background:#fafafa">
+<div style="max-width:1120px;margin:0 auto;padding:48px 24px 24px;display:grid;grid-template-columns:1.6fr repeat(3,1fr);gap:32px">
+<div><div style="font-size:17px;font-weight:700;letter-spacing:-0.4px;color:#111827">Web<span style="color:#fe5a01">Audit</span> AI</div><p style="font-size:14px;line-height:20px;color:#6b7280;margin:12px 0 0;max-width:34ch;text-wrap:pretty">Measured before inferred. Green means verified. You are never charged for our failures.</p></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#737373;margin-bottom:12px">Product</div><div style="display:flex;flex-direction:column;gap:8px"><a href="#" style="font-size:14px;color:#6b7280">Five areas</a><a href="#" style="font-size:14px;color:#6b7280">Verified fix loop</a><a href="#" style="font-size:14px;color:#6b7280">Readiness verdict</a></div></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#737373;margin-bottom:12px">Pricing</div><div style="display:flex;flex-direction:column;gap:8px"><a href="#" style="font-size:14px;color:#6b7280">Plans</a><a href="#" style="font-size:14px;color:#6b7280">Credits</a><a href="#" style="font-size:14px;color:#6b7280">Top-ups</a></div></div>
+<div><div style="font-size:11px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#737373;margin-bottom:12px">Company</div><div style="display:flex;flex-direction:column;gap:8px"><a href="#" style="font-size:14px;color:#6b7280">Status</a><a href="#" style="font-size:14px;color:#6b7280">Security</a><a href="#" style="font-size:14px;color:#6b7280">Terms</a></div></div>
+</div>
+<div style="max-width:1120px;margin:0 auto;padding:20px 24px 32px;border-top:0.667px solid #e5e7eb;display:flex;gap:16px;flex-wrap:wrap">
+<span style="font-size:14px;color:#737373">© 2026 WebAudit AI</span>
+<span style="display:flex;gap:18px"><a href="../../ui_kits/app/index.html" style="font-size:14px;color:#fe5a01">Dashboard</a><a href="../../ui_kits/admin/index.html" style="font-size:14px;color:#fe5a01">Admin console</a></span>
+<span style="font-size:12px;color:#737373;margin-left:auto;font-family:ui-monospace,monospace">zero third-party runtime requests</span>
+</div>
+</footer>
+</div>
+</x-dc>
+</body>
+</html>

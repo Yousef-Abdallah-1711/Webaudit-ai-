@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Clone"
+  short_description: "Spec-driven UI cloning with visual repair loops"
+  default_prompt: "Use $ui-clone to recreate a reference website as a verified, responsive implementation with discovery, planning, visual comparison, repair loops, and a final audit."

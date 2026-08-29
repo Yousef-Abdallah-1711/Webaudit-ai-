@@ -1,0 +1,54 @@
+/* Ported from design-system/components/report/ProgressRow.jsx (T130). */
+
+.row {
+  border: var(--border-width) solid var(--border-default);
+  background: var(--surface-page);
+  padding: 16px 18px;
+  font-family: var(--font-sans);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.phase {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.elapsed {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  height: 6px;
+  background: var(--surface-sunken);
+  border: var(--border-width) solid var(--border-default);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--duration-land) var(--easing-reveal);
+}
+
+.safe {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-top: 10px;
+}

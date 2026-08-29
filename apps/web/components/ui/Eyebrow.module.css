@@ -1,0 +1,13 @@
+/* Ported from design-system/components/core/Eyebrow.jsx (T237). */
+
+.eyebrow {
+  font: var(--type-eyebrow);
+  font-size: 12px;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.accent {
+  color: var(--accent);
+}

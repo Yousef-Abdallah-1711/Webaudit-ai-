@@ -1,0 +1,16 @@
+/* Ported from design-system/components/report/ScoreArc.jsx (T240). */
+
+.wrap {
+  text-align: center;
+  font-family: var(--font-sans);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-top: -4px;
+}

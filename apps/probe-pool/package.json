@@ -1,0 +1,17 @@
+{
+  "name": "@webaudit/probe-pool",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser automation and load generation. Isolated from platform credentials.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "echo 'not implemented \u2014 scaffold only (port 3002)'"
+  },
+  "dependencies": {
+    "@webaudit/types": "workspace:*",
+    "@webaudit/config": "workspace:*",
+    "@webaudit/capability-sdk": "workspace:*",
+    "@playwright/test": "1.62.1"
+  }
+}

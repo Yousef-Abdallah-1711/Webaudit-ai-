@@ -1,0 +1,70 @@
+/* Ported from design-system/components/report/IssueCard.jsx (T133). */
+
+.card {
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-default);
+  /* Colour is set per-instance inline (the severity rule) — width/style fixed here. */
+  border-inline-start: 3px solid transparent;
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+  font-family: var(--font-sans);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.area {
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.attribution {
+  margin-inline-start: auto;
+}
+
+.title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 6px;
+}
+
+.location {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-zinc);
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.description {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin: 0 0 14px;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+
+.copyBtn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-control);
+  border: var(--border-width) solid var(--border-default);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+
+.copyBtnCopied {
+  background: var(--sev-resolved-bg);
+  color: var(--sev-resolved);
+}

@@ -1,0 +1,40 @@
+{
+  "name": "@webaudit/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "BullMQ consumer. Orchestrator, module runner, re-verification.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/ai-executor": "workspace:*",
+    "@webaudit/api": "workspace:*",
+    "bullmq": "6.2.0",
+    "ioredis": "5.4.1",
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/capability-headers-checker": "workspace:*",
+    "@webaudit/capability-ssl-analyzer": "workspace:*",
+    "@webaudit/capability-data-leak-scanner": "workspace:*",
+    "@webaudit/capability-owasp-checker": "workspace:*",
+    "@webaudit/capability-meta-checker": "workspace:*",
+    "@webaudit/capability-content-checker": "workspace:*",
+    "@webaudit/capability-lighthouse-analyzer": "workspace:*",
+    "@webaudit/capability-network-inspector": "workspace:*",
+    "@webaudit/capability-cwv-analyzer": "workspace:*",
+    "@webaudit/capability-screenshot-capture": "workspace:*",
+    "@webaudit/capability-impeccable": "workspace:*",
+    "@webaudit/capability-playwright-runner": "workspace:*",
+    "@webaudit/capability-contradiction-detector": "workspace:*",
+    "@webaudit/redaction": "workspace:*",
+    "@webaudit/scoring": "workspace:*",
+    "@webaudit/types": "workspace:*",
+    "zod": "3.25.76",
+    "@webaudit/config": "workspace:*"
+  }
+}

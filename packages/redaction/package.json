@@ -1,0 +1,18 @@
+{
+  "name": "@webaudit/redaction",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R8 — the only thing that can construct a RedactedPrompt. Nothing reaches a provider except through here.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/types": "workspace:*"
+  }
+}

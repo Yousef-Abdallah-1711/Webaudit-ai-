@@ -1,0 +1,15 @@
+{
+  "id": "content-checker",
+  "name": "Content Structure Checker",
+  "version": "1.0.0",
+  "module": "SEO",
+  "layer": "CODE",
+  "entrypoint": "src/index.ts",
+  "requiresCode": false,
+  "requiresScreenshot": false,
+  "requiredControlLevel": "NONE",
+  "estimatedTokens": 0,
+  "originalSource": "WebAudit AI, first-party",
+  "license": "UNLICENSED",
+  "vendoredAt": "2026-08-26"
+}

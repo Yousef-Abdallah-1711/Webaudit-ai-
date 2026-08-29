@@ -1,0 +1,304 @@
+/*
+ * Ported from design-system/ui_kits/app/Sidebar.jsx (T241).
+ *
+ * Hover moved from `useState` + mouse handlers to CSS `:hover`, matching
+ * the established pattern from Button.tsx (T237). Two-state props
+ * (`open`/`active`) became modifier classes rather than inline style
+ * objects — the same, already-established deviation as Public.tsx (T240),
+ * forced by this repo's raw-px lint rule (T245).
+ */
+
+.shellRoot {
+  display: flex;
+  min-height: 100vh;
+  background: var(--surface-sunken);
+}
+.mainCol {
+  flex: 1;
+  min-width: 0;
+}
+.main {
+  padding: 32px 32px 64px;
+}
+.mainInner {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.sidebar {
+  flex-shrink: 0;
+  width: 60px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-raised);
+  border-inline-end: var(--border-width) solid var(--border-default);
+  transition: width 150ms var(--easing);
+}
+.sidebarOpen {
+  width: 248px;
+}
+
+.sidebarHead {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.sidebarHeadOpen {
+  justify-content: flex-start;
+  padding: 0 12px;
+}
+
+.toggleBtn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+
+.wordmark {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+.wordmarkAccent {
+  color: var(--accent);
+}
+
+.navScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 8px;
+}
+.navScrollOpen {
+  padding: 6px 10px;
+}
+
+.navGroup {
+  margin-bottom: 16px;
+}
+.navGroupLabel {
+  padding: 0 12px 6px;
+  font: var(--type-eyebrow);
+  font-size: 10px;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.navGroupDivider {
+  height: 1px;
+  margin: 0 6px 8px;
+  background: var(--border-default);
+}
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 11px;
+  width: 100%;
+  height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  transition: var(--transition-color);
+}
+.navItem:hover {
+  background: rgb(255 255 255 / 55%);
+}
+.navItemOpen {
+  justify-content: flex-start;
+  padding: 0 12px;
+}
+.navItemActive,
+.navItemActive:hover {
+  background: var(--surface-page);
+  color: var(--text-strong);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.navItemLabel {
+  white-space: nowrap;
+  overflow: hidden;
+}
+.navItemBadge {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--sev-critical);
+}
+
+.sidebarFoot {
+  flex-shrink: 0;
+  padding: 12px 8px;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.sidebarFootOpen {
+  padding: 12px;
+}
+
+.creditsBox {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--surface-page);
+}
+.creditsRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.creditsValue {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.creditsLabel {
+  font: var(--type-small);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.creditsBar {
+  height: 4px;
+  margin-top: 8px;
+  background: var(--surface-sunken);
+}
+.creditsBarFill {
+  width: 77%;
+  height: 100%;
+  background: var(--accent);
+}
+.topUpBtn {
+  width: 100%;
+  height: 30px;
+  margin-top: 10px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-page);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.toolsRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.toolsThemeToggle {
+  flex: 1;
+}
+.adminLink {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+}
+
+.closedTools {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.avatar {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: var(--surface-inverse);
+  color: #fafafa;
+  font-size: 12px;
+  font-weight: 600;
+}
+.profileText {
+  overflow: hidden;
+  text-align: left;
+}
+.profileName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+.profilePlan {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.profileChevron {
+  margin-inline-start: auto;
+  color: var(--text-muted);
+}
+
+.pageHead {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.pageHeadTitle {
+  margin: 8px 0 0;
+  font: var(--type-h3);
+  color: var(--text-strong);
+}
+.pageHeadMeta {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.pageHeadActions {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 10px;
+}

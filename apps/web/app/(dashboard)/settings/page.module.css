@@ -1,0 +1,133 @@
+/* Ported from design-system/ui_kits/app/Account.jsx's ProfileScreen (T242). */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+  align-items: start;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  align-items: start;
+  padding: 18px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.rowLabel {
+  font: var(--type-small);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.rowNote {
+  margin-top: 4px;
+  font: var(--type-small);
+  font-size: 13px;
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.fieldWrap {
+  max-width: 360px;
+}
+
+.appearanceBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 14px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  cursor: pointer;
+}
+.switchTrack {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  background: var(--border-default);
+  transition: var(--transition-color);
+}
+.switchTrackOn {
+  background: var(--accent);
+}
+.switchKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-pill);
+  background: #fff;
+  transition: left 150ms var(--easing);
+}
+.switchKnobOn {
+  left: 16px;
+}
+
+.connectedRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.tokensNote {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.sessionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.sessionDevice {
+  font: var(--type-small);
+  font-weight: 500;
+}
+.sessionWhere {
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.deleteNote {
+  max-width: 62ch;
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.planValue {
+  font: var(--type-h3);
+  color: var(--text-strong);
+}
+.planSub {
+  margin: 6px 0 14px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.retentionText {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

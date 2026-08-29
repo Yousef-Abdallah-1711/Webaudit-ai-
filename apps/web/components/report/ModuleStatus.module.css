@@ -1,0 +1,140 @@
+/*
+ * Ported from design-system/components/report/ModuleStatus.jsx (T240).
+ *
+ * The source's `S` lookup (fg/bg per state, including `running`'s literal
+ * `#fff3ec`) is expressed here as `--state-fg`/`--state-bg` custom
+ * properties per state class, mechanically forced by this repo's raw-hex/
+ * raw-px `no-restricted-syntax` lint rule (T245) rather than a value change
+ * — every colour below is the exact one the source used.
+ */
+
+.box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--state-bg);
+  border: var(--border-width) solid var(--border-default);
+  font-family: var(--font-sans);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.compact {
+  display: block;
+  padding: 10px 12px;
+}
+
+.stateWaiting {
+  --state-fg: var(--text-muted);
+  --state-bg: var(--surface-raised);
+}
+.stateRunning {
+  --state-fg: var(--accent);
+  --state-bg: #fff3ec;
+}
+.stateComplete {
+  --state-fg: var(--sev-resolved);
+  --state-bg: var(--sev-resolved-bg);
+}
+.stateDegraded {
+  --state-fg: var(--sev-medium);
+  --state-bg: var(--sev-medium-bg);
+  border-inline-start: 3px solid var(--sev-medium);
+}
+.stateNotApplicable {
+  --state-fg: var(--text-muted);
+  --state-bg: var(--surface-sunken);
+}
+
+.icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--state-fg);
+}
+
+.area {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.word {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--state-fg);
+}
+
+.detail {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.issues {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.compactRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.compactArea {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.compactIssues {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.compactMeta {
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+  padding-inline-start: 23px;
+  min-width: 0;
+}
+
+.compactWord {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--state-fg);
+}
+
+.compactDetail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

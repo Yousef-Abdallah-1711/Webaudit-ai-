@@ -1,0 +1,94 @@
+/* T143 — original design, no design-system counterpart to port from. See the component's own module note. */
+
+.wrapper {
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-card);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+.heading {
+  font: var(--type-card-title);
+  color: var(--text-strong);
+  padding: var(--space-5) var(--space-5) 0;
+}
+
+.unavailable {
+  margin: var(--space-5);
+  padding: var(--space-8) var(--space-5);
+  border: var(--border-width) dashed var(--border-default);
+  border-radius: var(--radius-card);
+  text-align: center;
+  color: var(--text-muted);
+  font: var(--type-small);
+}
+
+.frame {
+  position: relative;
+  width: 100%;
+  line-height: 0;
+  margin-top: var(--space-4);
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.pin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-pill);
+  border: var(--border-width) solid currentColor;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.legendItem {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.legendNumber {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.legendTitle {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.legendDescription {
+  flex-basis: 100%;
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

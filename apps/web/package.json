@@ -1,0 +1,31 @@
+{
+  "name": "@webaudit/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Next.js frontend. Ports UI from design-system/ per design/screen-map.md.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@webaudit/types": "workspace:*",
+    "@webaudit/config": "workspace:*",
+    "next": "15.5.23",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/pngjs": "6.0.5",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.5",
+    "pixelmatch": "7.2.0",
+    "pngjs": "7.0.0",
+    "@webaudit/api": "workspace:*",
+    "@webaudit/worker": "workspace:*"
+  }
+}

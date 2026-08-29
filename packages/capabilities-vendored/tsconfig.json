@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false
+  },
+  "include": ["tests/**/*.ts"],
+  "exclude": ["node_modules", "dist", "headers-checker", "ssl-analyzer", "data-leak-scanner", "owasp-checker", "meta-checker", "content-checker"]
+}

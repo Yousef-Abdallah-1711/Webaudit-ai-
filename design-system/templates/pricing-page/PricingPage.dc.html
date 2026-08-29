@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- @template name="Pricing page" description="Public pricing: shared header and footer, four tiers with the Pro column emphasised, and the credit schedule." -->
+<helmet><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap"><script src="./ds-base.js"></script><style>body{margin:0}a{text-decoration:none}</style></helmet>
+<div style="font-family:'Lexend Deca',system-ui,sans-serif;color:#1f2937;background:#ffffff">
+<header style="background:#ffffff;border-bottom:0.667px solid #e5e7eb;position:sticky;top:0;z-index:20">
+<div style="max-width:1120px;margin:0 auto;padding:0 24px;height:64px;display:flex;align-items:center;gap:28px">
+<div style="font-size:19px;font-weight:700;letter-spacing:-0.4px;color:#111827">Web<span style="color:#fe5a01">Audit</span> AI</div>
+<nav style="display:flex;gap:22px"><a href="#" style="font-size:14px;color:#6b7280">Product</a><a href="#" style="font-size:14px;font-weight:600;color:#111827">Pricing</a><a href="#" style="font-size:14px;color:#6b7280">Docs</a><a href="#" style="font-size:14px;color:#6b7280">Changelog</a></nav>
+<div style="margin-left:auto;display:flex;align-items:center;gap:10px"><a href="#" style="font-size:14px;color:#6b7280">Sign in</a><a href="#" style="height:36px;display:inline-flex;align-items:center;padding:0 16px;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Start free</a></div>
+</div>
+</header>
+<section style="padding:72px 24px 44px;text-align:center">
+<h1 style="font-size:48px;line-height:48px;font-weight:700;letter-spacing:-1.2px;margin:0">Credits, not seats.</h1>
+<p style="font-size:20px;line-height:28px;color:#6b7280;max-width:56ch;margin:18px auto 0;text-wrap:pretty">Plan credits expire at renewal. Purchased top-ups never expire, and expiring credits are always spent first.</p>
+</section>
+<section style="padding:0 24px 80px">
+<div style="max-width:1120px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:16px">
+<div style="border:0.667px solid #e5e7eb;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px;background:#fff">
+<div style="font-size:18px;font-weight:700">Free</div>
+<div><span style="font-size:30px;line-height:36px;font-weight:700">$0</span><span style="font-size:14px;color:#737373"> / mo</span></div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#6b7280">50, once</div>
+<div style="border-top:0.667px solid #e5e7eb;padding-top:14px;display:flex;flex-direction:column;gap:8px;flex:1"><div style="font-size:14px">1 concurrent audit</div><div style="font-size:14px">7-day retention</div><div style="font-size:14px">URL input</div></div>
+<a href="#" style="height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:0.667px solid #e5e7eb;color:#1f2937;font-size:14px;font-weight:500">Start free</a>
+</div>
+<div style="border:0.667px solid #e5e7eb;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px;background:#fff">
+<div style="font-size:18px;font-weight:700">Starter</div>
+<div><span style="font-size:30px;line-height:36px;font-weight:700">$29</span><span style="font-size:14px;color:#737373"> / mo</span></div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#6b7280">300 / mo</div>
+<div style="border-top:0.667px solid #e5e7eb;padding-top:14px;display:flex;flex-direction:column;gap:8px;flex:1"><div style="font-size:14px">1 concurrent audit</div><div style="font-size:14px">30-day retention</div><div style="font-size:14px">Readiness pass</div></div>
+<a href="#" style="height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:0.667px solid #e5e7eb;color:#1f2937;font-size:14px;font-weight:500">Choose Starter</a>
+</div>
+<div style="border:0.667px solid #fe5a01;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px;background:#fff">
+<div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px;font-weight:700">Pro</span><span style="background:#fff3ec;color:#fe5a01;border:0.667px solid #ffd9c2;border-radius:9999px;padding:4px 10px;font-size:12px;font-weight:500">Most depth</span></div>
+<div><span style="font-size:30px;line-height:36px;font-weight:700">$99</span><span style="font-size:14px;color:#737373"> / mo</span></div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#6b7280">1,200 / mo</div>
+<div style="border-top:0.667px solid #e5e7eb;padding-top:14px;display:flex;flex-direction:column;gap:8px;flex:1"><div style="font-size:14px">3 concurrent audits</div><div style="font-size:14px">12-month retention</div><div style="font-size:14px">Repository input</div><div style="font-size:14px">Load generation</div></div>
+<a href="#" style="height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:#fe5a01;color:#fafafa;font-size:14px;font-weight:500">Choose Pro</a>
+</div>
+<div style="border:0.667px solid #e5e7eb;border-radius:8px;padding:24px;display:flex;flex-direction:column;gap:14px;background:#fff">
+<div style="font-size:18px;font-weight:700">Business</div>
+<div><span style="font-size:30px;line-height:36px;font-weight:700">$299</span><span style="font-size:14px;color:#737373"> / mo</span></div>
+<div style="font-family:ui-monospace,monospace;font-size:13px;color:#6b7280">4,000 / mo</div>
+<div style="border-top:0.667px solid #e5e7eb;padding-top:14px;display:flex;flex-direction:column;gap:8px;flex:1"><div style="font-size:14px">6 concurrent audits</div><div style="font-size:14px">24-month retention</div><div style="font-size:14px">Everything in Pro</div></div>
+<a href="#" style="height:48px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:0.667px solid #e5e7eb;color:#1f2937;font-size:14px;font-weight:500">Choose Business</a>
+</div>
+</div>
+<div style="max-width:896px;margin:56px auto 0">
+<div style="font-size:12px;font-weight:700;letter-spacing:1.52px;text-transform:uppercase;color:#fe5a01">What things cost</div>
+<div style="border:0.667px solid #e5e7eb;margin-top:12px">
+<div style="display:flex;padding:14px 18px"><span style="font-size:16px">One audit area</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:14px">10–25 cr</span></div>
+<div style="display:flex;padding:14px 18px;border-top:0.667px solid #e5e7eb"><span style="font-size:16px">Full audit, all five, bundled</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:14px">80 cr</span></div>
+<div style="display:flex;padding:14px 18px;border-top:0.667px solid #e5e7eb"><span style="font-size:16px">Targeted re-check of one issue</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:14px">3 cr</span></div>
+<div style="display:flex;padding:14px 18px;border-top:0.667px solid #e5e7eb"><span style="font-size:16px">Production-readiness pass</span><span style="margin-left:auto;font-family:ui-monospace,monospace;font-size:14px">60 cr</span></div>
+</div>
+<p style="font-size:14px;line-height:20px;color:#737373;margin-top:14px">Top-ups are paid-plan only. Platform faults, provider outages and internal errors refund or never debit.</p>
+</div>
+</section>
+<footer style="border-top:0.667px solid #e5e7eb;background:#fafafa">
+<div style="max-width:1120px;margin:0 auto;padding:32px 24px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+<div style="font-size:17px;font-weight:700;letter-spacing:-0.4px;color:#111827">Web<span style="color:#fe5a01">Audit</span> AI</div>
+<span style="display:flex;gap:18px;margin-left:auto"><a href="../../ui_kits/app/index.html" style="font-size:14px;color:#fe5a01">Dashboard</a><a href="../../ui_kits/admin/index.html" style="font-size:14px;color:#fe5a01">Admin console</a></span>
+</div>
+</footer>
+</div>
+</x-dc>
+</body>
+</html>

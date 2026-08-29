@@ -1,0 +1,33 @@
+/* Ported verbatim from design-system/tokens/dark.css (T236a). Do not edit here; edit the source and re-port. */
+/* [EXTENDED] Dark mode. DESIGN.md §9: severity hues lighten and desaturate rather than invert,
+   so the scale keeps its order. Accent holds. Surfaces invert through the cloned neutrals,
+   never to pure black. NOT YET CONTRAST-VERIFIED — see readme.md Open items. */
+:root[data-theme='dark'] {
+  --accent: #fe5a01;
+  --accent-hover: #ff6b1a;
+  --accent-ring: #fa7014;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --text-zinc: #d4d4d8;
+  --text-muted: #a1a1aa;
+  --text-strong: #f9fafb;
+  --text-on-accent: #fafafa;
+  --surface-page: #1f2937;
+  --surface-raised: #273444;
+  --surface-sunken: #18212f;
+  --surface-inverse: #fafafa;
+  --border-subtle: #374151;
+  --border-default: #3f4a5a;
+  --sev-critical: #f87171;
+  --sev-critical-bg: #2b1a1c;
+  --sev-high: #fb923c;
+  --sev-high-bg: #2b2018;
+  --sev-medium: #facc15;
+  --sev-medium-bg: #2a2618;
+  --sev-low: #a3e635;
+  --sev-low-bg: #1f2718;
+  --sev-info: #a1a1aa;
+  --sev-info-bg: #242b36;
+  --sev-resolved: #34d399;
+  --sev-resolved-bg: #132a25;
+}

@@ -1,0 +1,725 @@
+// WebAudit AI — persistence schema
+//
+// Physical realisation of specs/001-webaudit-mvp-baseline/data-model.md.
+// Resolves the constitution's TODO(DATA_MODEL).
+//
+// Two structural commitments worth stating up front, because they are the
+// reason this schema is shaped the way it is:
+//
+//   1. There is no credit balance column anywhere. A balance is the sum of
+//      unexpired lots (Principle VI). Lot accounting is the only way a refund
+//      can be correct when plan credits expire and purchased credits do not.
+//   2. Issue.state reaches RESOLVED through exactly one inbound edge, and the
+//      only trigger is a VerificationAttempt with outcome PASSED (SC-007).
+//      No user action writes it.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────── T013 ──
+
+enum ModuleType {
+  PERFORMANCE
+  SECURITY
+  UI
+  TESTING
+  SEO
+}
+
+enum CapabilityLayer {
+  CODE
+  AI
+  BOTH
+}
+
+/// Derived from the discovery root, never self-declared by a manifest (R10).
+enum TrustLevel {
+  VENDORED
+  INSTALLED
+}
+
+enum InputType {
+  URL
+  REPOSITORY
+  ARCHIVE
+}
+
+/// Two escalating levels of established control (FR-017).
+enum ControlLevel {
+  NONE
+  ATTESTED
+  VERIFIED
+}
+
+enum VerificationMethod {
+  FILE
+  DNS
+}
+
+enum ScanKind {
+  INITIAL
+  READINESS
+}
+
+enum ScanState {
+  QUEUED
+  RUNNING_PHASE_1 // performance, security, seo
+  AWAITING_QUESTIONNAIRE // R4: no worker slot is held here
+  RUNNING_PHASE_2 // ui
+  RUNNING_PHASE_3 // testing
+  RUNNING_MASTER // cross-module synthesis
+  RUNNING_DOCS
+  COMPLETED
+  FAILED
+  CANCELLED
+  TIMED_OUT
+}
+
+enum ModuleState {
+  PENDING
+  RUNNING
+  COMPLETE
+  DEGRADED
+  FAILED
+  NOT_APPLICABLE
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+  INFO
+}
+
+/// Assigned by the module runner from which layer produced the finding.
+/// A capability cannot label its own guess as a measurement (FR-032).
+enum Attribution {
+  MEASURED
+  AI_JUDGMENT
+}
+
+enum IssueState {
+  OPEN
+  ASSERTED_FIXED
+  RESOLVED
+  UNVERIFIABLE
+  REOPENED
+}
+
+enum VerificationOutcome {
+  PASSED
+  FAILED
+  UNVERIFIABLE
+  ERRORED
+}
+
+enum CreditKind {
+  PLAN
+  PURCHASED
+}
+
+enum LotSource {
+  FREE_GRANT
+  PLAN_RENEWAL
+  PURCHASE
+  REFUND
+  PROMOTIONAL
+}
+
+enum TxType {
+  GRANT
+  DEBIT
+  REFUND
+  EXPIRE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum AiOutcome {
+  SUCCESS
+  SCHEMA_INVALID
+  RATE_LIMITED
+  TIMEOUT
+  ERROR
+}
+
+enum IntentSource {
+  SUPPLIED
+  SKIPPED
+  DEFAULTED
+}
+
+// ─── Identity and access ────────────────────────────────────────────── T014 ──
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String? // null when social-only
+  emailVerifiedAt DateTime?
+  isOperator      Boolean   @default(false) // FR-008, enforced server-side
+
+  /// FR-091: encrypted at rest. No plaintext column exists for these.
+  githubTokenEnc Bytes?
+  githubTokenIv  Bytes?
+  githubLogin    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  identities    OAuthIdentity[]
+  emailTokens   EmailToken[]
+  refreshTokens RefreshToken[]
+  subscription  Subscription?
+  lots          CreditLot[]
+  transactions  CreditTransaction[]
+  targets       Target[]
+  scans         Scan[]
+}
+
+model OAuthIdentity {
+  id             String @id @default(cuid())
+  userId         String
+  provider       String // "google" | "github"
+  providerUserId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// FR-004: a matching verified email joins identities, never duplicates.
+  @@unique([provider, providerUserId])
+  @@index([userId])
+}
+
+model EmailToken {
+  id        String    @id @default(cuid())
+  userId    String
+  purpose   String // "verify" | "reset"
+  tokenHash String    @unique // the hash, never the token
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ─── Plans, subscriptions, credits ──────────────────────────────────── T015 ──
+
+model Plan {
+  id             String  @id // "free" | "starter" | "pro" | "business"
+  name           String
+  monthlyCredits Int // 50 / 300 / 1200 / 4000
+  creditsRecur   Boolean // false for free — a one-time grant
+
+  allowedInputTypes     InputType[]
+  allowLoadGeneration   Boolean
+  allowReadinessPass    Boolean
+  allowCreditPurchase   Boolean // FR-078: false on free, keeping it an evaluation
+  allowCustomCapability Boolean
+
+  concurrentScanLimit Int
+  queuePriority       Int // lower value = sooner
+  retentionDays       Int // 7 / 30 / 365 / 730
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+  capabilities  CapabilityPlan[]
+}
+
+model Subscription {
+  id     String             @id @default(cuid())
+  userId String             @unique
+  planId String
+  status SubscriptionStatus
+
+  periodStart       DateTime
+  periodEnd         DateTime // the renewal boundary that expires PLAN lots
+  cancelAtPeriodEnd Boolean  @default(false)
+
+  externalCustomerId     String?
+  externalSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([status, periodEnd]) // renewal + expiry sweep
+  @@index([planId])
+}
+
+/// One row per grant. `amountRemaining` is the only mutable field, and it moves
+/// only inside the debit/refund transaction.
+model CreditLot {
+  id     String     @id @default(cuid())
+  userId String
+  kind   CreditKind
+  source LotSource
+
+  amountGranted   Int
+  amountRemaining Int
+
+  /// Null means never expires — every PURCHASED lot. This single nullable column
+  /// is what makes SC-022's first half true by construction: the expiry sweep
+  /// cannot select a row it can never match.
+  expiresAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocations CreditAllocation[]
+
+  /// Consumption order (FR-078): expiring first, nulls last.
+  @@index([userId, expiresAt, createdAt])
+  @@index([userId, kind])
+}
+
+model CreditTransaction {
+  id     String @id @default(cuid())
+  userId String
+  type   TxType
+  amount Int // always positive; `type` carries the direction
+  reason String // "scan:full_audit", "reverify:issue", ...
+
+  scanId  String?
+  issueId String?
+
+  /// A REFUND points at the DEBIT it reverses, so a debit can be reversed once.
+  reversesId String? @unique
+
+  createdAt DateTime @default(now())
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allocations CreditAllocation[]
+  reverses    CreditTransaction? @relation("TxReversal", fields: [reversesId], references: [id], onDelete: SetNull)
+  reversedBy  CreditTransaction? @relation("TxReversal")
+
+  @@index([userId, createdAt]) // FR-076: user-visible movement history
+  @@index([scanId])
+  @@index([issueId])
+}
+
+/// The join that makes refunds correct: which lots a debit drew from, and how
+/// much from each. Without it, a refund cannot know which lifetime to return to.
+model CreditAllocation {
+  id            String @id @default(cuid())
+  transactionId String
+  lotId         String
+  amount        Int
+
+  transaction CreditTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  lot         CreditLot         @relation(fields: [lotId], references: [id])
+
+  @@unique([transactionId, lotId])
+  @@index([lotId])
+}
+
+// ─── Targets and scans ──────────────────────────────────────────────── T016 ──
+
+model Target {
+  id             String    @id @default(cuid())
+  userId         String
+  inputType      InputType
+  canonicalValue String // normalized URL origin, repo full name, or archive key
+  displayName    String
+
+  controlLevel ControlLevel @default(NONE)
+  attestedAt   DateTime?
+  attestedBy   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verifications TargetVerification[]
+  scans         Scan[]
+
+  /// FR-018: one target row per user per thing.
+  @@unique([userId, inputType, canonicalValue])
+  @@index([userId])
+}
+
+/// A history, not a flag. A token can be issued, confirmed, then removed — and
+/// re-confirming immediately before each Level 2 check is what defeats SC-021's
+/// third case (a target verified once and since changed hands).
+model TargetVerification {
+  id       String             @id @default(cuid())
+  targetId String
+  method   VerificationMethod
+  token    String // system-issued
+
+  issuedAt      DateTime  @default(now())
+  confirmedAt   DateTime?
+  lastCheckedAt DateTime?
+  revokedAt     DateTime?
+
+  target Target @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([targetId, confirmedAt])
+}
+
+model Scan {
+  id       String    @id @default(cuid())
+  userId   String
+  targetId String
+  kind     ScanKind  @default(INITIAL)
+  state    ScanState @default(QUEUED)
+
+  requestedModules ModuleType[]
+
+  /// Resolved once at scan start and held for the scan's duration (R10). An
+  /// operator toggling a capability mid-scan must not produce a half-configured
+  /// audit, and the scan must record what actually ran.
+  capabilitySnapshot Json
+
+  quotedCredits  Int
+  chargedCredits Int @default(0)
+
+  overallScore Int?
+  summary      String?
+
+  /// A READINESS scan points at the INITIAL scan it is compared against.
+  baselineScanId String?
+
+  questionnaireDeadline DateTime? // R4
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  failureReason String?
+
+  /// FR-090: the cleanup owner reads this and destroys it on every exit path.
+  workspacePath String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  target        Target            @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  baseline      Scan?             @relation("ScanBaseline", fields: [baselineScanId], references: [id], onDelete: SetNull)
+  derivedScans  Scan[]            @relation("ScanBaseline")
+  moduleResults ModuleResult[]
+  issues        Issue[]
+  executions    CapabilityExecution[]
+  invocations   AiInvocation[]
+  designIntent  DesignIntent?
+  verdict       ReadinessVerdict?
+
+  @@index([userId, createdAt])
+  @@index([state]) // queue pickup + timeout sweep
+  @@index([targetId, kind, completedAt]) // regression comparison
+  @@index([baselineScanId])
+}
+
+model ModuleResult {
+  id     String      @id @default(cuid())
+  scanId String
+  module ModuleType
+  state  ModuleState @default(PENDING)
+
+  /// Null unless the area completed. FR-053 is enforced at read time: the
+  /// overall score averages only non-null scores, so an incomplete area can
+  /// neither inflate nor deflate the total.
+  score Int?
+
+  summary        String?
+  skippedReason  String? // FR-021: why NOT_APPLICABLE
+  degradedReason String? // FR-035: e.g. provider chain exhausted
+
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  scan   Scan    @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  issues Issue[]
+
+  @@unique([scanId, module])
+}
+
+model Issue {
+  id             String @id @default(cuid())
+  scanId         String
+  moduleResultId String
+
+  /// R3: deterministic identity, computed by the capability from its own
+  /// fingerprintParts. Survives re-auditing, which is what makes targeted
+  /// re-verification, recurrence detection, and regression diffing possible.
+  fingerprint String
+
+  /// Routes re-verification back to the check that owns this finding (FR-059).
+  checkId String
+
+  severity    Severity
+  title       String
+  explanation String
+  consequence String
+  location    String?
+  evidence    Json?
+
+  /// FR-032 / SC-006. Set by the runner, not by the capability.
+  attribution Attribution
+
+  fixPrompt String
+
+  state                IssueState   @default(OPEN)
+  requiredControlLevel ControlLevel @default(NONE)
+
+  assertedFixedAt DateTime?
+  resolvedAt      DateTime?
+  reopenedAt      DateTime? // FR-064 keeps the history
+
+  /// Retained across a reopen so "this was verified before" is never lost.
+  previouslyResolved Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  scan         Scan                  @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  moduleResult ModuleResult          @relation(fields: [moduleResultId], references: [id], onDelete: Cascade)
+  attempts     VerificationAttempt[]
+
+  @@unique([scanId, fingerprint]) // one row per problem per scan
+  @@index([scanId, severity, state]) // the fixes board query
+  @@index([fingerprint]) // cross-scan recurrence + regression
+  @@index([moduleResultId])
+}
+
+model VerificationAttempt {
+  id      String              @id @default(cuid())
+  issueId String
+  outcome VerificationOutcome
+
+  /// FR-061: mandatory on FAILED. A negative verdict without evidence is a
+  /// requirement violation, not a terse response.
+  evidence Json?
+
+  creditsCharged Int
+  durationMs     Int
+  createdAt      DateTime @default(now())
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@index([issueId, createdAt])
+}
+
+// ─── Capabilities and cost ──────────────────────────────────────────── T017 ──
+
+model Capability {
+  id      String          @id // manifest id, e.g. "headers-checker"
+  name    String
+  version String
+  module  ModuleType
+  layer   CapabilityLayer
+
+  /// From the discovery root (R10). A manifest cannot declare itself trusted.
+  trust TrustLevel
+
+  originalSource String?
+  license        String?
+
+  requiresCode         Boolean      @default(false)
+  requiresScreenshot   Boolean      @default(false)
+  requiredControlLevel ControlLevel @default(NONE) // gates load generation
+
+  estimatedTokens Int @default(0) // FR-082
+
+  isEnabled Boolean @default(true)
+
+  vendoredAt  DateTime?
+  installedAt DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  plans      CapabilityPlan[]
+  executions CapabilityExecution[]
+
+  @@index([module, layer, isEnabled])
+  @@index([trust])
+}
+
+/// FR-026: restrict a capability to specific tiers.
+model CapabilityPlan {
+  capabilityId String
+  planId       String
+
+  capability Capability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+  plan       Plan       @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([capabilityId, planId])
+  @@index([planId])
+}
+
+/// The unit that makes cost attributable (Principle VI). Margin per capability
+/// is an aggregation over this table, not an estimate.
+model CapabilityExecution {
+  id           String     @id @default(cuid())
+  scanId       String
+  capabilityId String
+  module       ModuleType
+
+  succeeded     Boolean
+  skippedReason String?
+  findingCount  Int      @default(0)
+  durationMs    Int
+
+  /// Integer micros. Money and floats do not mix, and FR-081's reconciliation
+  /// requires exactness. A CODE-layer execution must record 0 (Principle III).
+  costMicros Int @default(0)
+
+  errorMessage String?
+  createdAt    DateTime @default(now())
+
+  scan        Scan           @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  capability  Capability     @relation(fields: [capabilityId], references: [id])
+  invocations AiInvocation[]
+
+  @@index([scanId])
+  @@index([capabilityId, createdAt]) // FR-082: estimate vs actual drift
+}
+
+model AiInvocation {
+  id          String  @id @default(cuid())
+  executionId String?
+  scanId      String?
+
+  provider String
+  model    String
+
+  /// 0 = primary. Any value above 0 means a fallback carried the request,
+  /// which is the signal Principle IV exists to make visible.
+  chainPosition Int
+
+  promptTokens Int
+  outputTokens Int
+  latencyMs    Int
+  costMicros   Int
+  outcome      AiOutcome
+
+  createdAt DateTime @default(now())
+
+  execution CapabilityExecution? @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  scan      Scan?                @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([scanId])
+  @@index([executionId])
+  @@index([provider, createdAt]) // provider health + spend
+}
+
+// ─── Design intent, verdicts, audit log ─────────────────────────────── T018 ──
+
+model DesignIntent {
+  id     String @id @default(cuid())
+  scanId String @unique
+
+  /// FR-041 records DEFAULTED explicitly, so a report can say intent was never
+  /// supplied rather than implying the defaults were chosen.
+  source IntentSource
+
+  audience          String?
+  stylePreference   String?
+  admiredReferences String[]
+  brandColors       String[]
+  answeredAt        DateTime?
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+}
+
+model ReadinessVerdict {
+  id             String @id @default(cuid())
+  scanId         String @unique
+  baselineScanId String
+
+  isReady      Boolean
+  overallScore Int
+  baselineScore Int
+
+  moduleOutcomes Json // per-area score, threshold, pass/fail
+  regressions    Json // FR-069: named, not merely counted
+  improvements   Json
+
+  blockers       String[] // FR-070
+  certificateKey String? // FR-072
+
+  createdAt DateTime @default(now())
+
+  scan Scan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+
+  @@index([baselineScanId])
+}
+
+/// FR-089: every operator action, attributable, append-only.
+///
+/// `actorId` deliberately carries NO foreign key to `User`. This is a decision,
+/// not an omission — every other actor reference in this schema is a real
+/// relation, so a reviewer is right to stop here and ask why this one is not.
+///
+/// An append-only audit log has to outlive the actor it describes. With a
+/// relation, only three behaviours are available and each destroys the record:
+///
+///   - `onDelete: Cascade` deletes the log rows when the operator is deleted —
+///     the operator who did the most damage is the one whose trail vanishes,
+///     and deleting your own account becomes a way to erase your own history.
+///   - `onDelete: SetNull` keeps the row but forgets who acted, which breaks
+///     the "attributable" half of FR-089 for exactly the entries most likely to
+///     matter in an investigation.
+///   - `onDelete: Restrict` keeps both, but makes an audit entry a permanent
+///     block on account deletion. FR-009 requires that a user be able to delete
+///     their account; a row that can never be deleted contradicts it.
+///
+/// So the column stores the actor's id as an immutable fact about what happened,
+/// not as a live pointer to a row that still exists. A dangling `actorId` after
+/// an account deletion is the intended state: the event is still attributed even
+/// though the account is gone. Readers must therefore treat resolution as
+/// optional — join to `User` with a left join and render "deleted user <id>" on
+/// a miss. Never an inner join: that silently hides deleted actors' entries and
+/// reintroduces the erasure the missing FK exists to prevent.
+///
+/// The `@@index([actorId, createdAt])` below is what makes "everything this
+/// actor did" fast without a relation. Nothing writes an update or a delete to
+/// this table; append-only is enforced in the service layer, not by a constraint
+/// (PostgreSQL has no append-only table), and that is a separate matter from the
+/// missing FK.
+model AuditLogEntry {
+  id          String  @id @default(cuid())
+  /// Intentionally unconstrained — see the note above. Not a relation field.
+  actorId     String
+  action      String
+  subjectType String
+  subjectId   String?
+  before      Json?
+  after       Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([subjectType, subjectId])
+}

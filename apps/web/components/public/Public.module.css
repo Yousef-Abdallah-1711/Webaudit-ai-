@@ -1,0 +1,124 @@
+/* Ported from design-system/ui_kits/marketing/Public.jsx (T240). */
+
+.wordmark {
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+  color: var(--text-strong);
+}
+.wordmarkAccent {
+  color: var(--accent);
+}
+.wordmarkLink {
+  text-decoration: none;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface-page);
+  border-bottom: var(--border-width) solid var(--border-default);
+}
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  max-width: 1120px;
+  height: 64px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.nav {
+  display: flex;
+  gap: 22px;
+}
+.navLink {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: var(--transition-color);
+}
+.navLinkActive {
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.footer {
+  background: var(--surface-raised);
+  border-top: var(--border-width) solid var(--border-default);
+}
+.footerGrid {
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, 1fr);
+  gap: 32px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 48px 24px 24px;
+}
+.footerTag {
+  max-width: 34ch;
+  margin: 12px 0 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+.footerColTitle {
+  margin-bottom: 12px;
+  font: var(--type-eyebrow);
+  font-size: 11px;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.footerColLinks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.footerColLinks a {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+.footerBottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 24px 32px;
+  border-top: var(--border-width) solid var(--border-default);
+}
+.footerCopy {
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+.footerLink {
+  font: var(--type-small);
+}
+.footerZero {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.page {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--surface-page);
+}
+.pageMain {
+  flex: 1;
+}

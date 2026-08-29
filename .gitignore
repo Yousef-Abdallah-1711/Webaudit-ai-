@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+out/
+.next/
+.turbo/
+*.tsbuildinfo
+
+# Environment — .env.example IS tracked
+.env
+.env.*
+!.env.example
+
+# Test output
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.vitest/
+# Visual-regression DIFFS are transient; BASELINES under
+# design-system/reference-pages/ and tests/visual/__baselines__/ are tracked.
+**/__diff_output__/
+**/*.actual.png
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Prisma — generated client only; migrations are tracked
+apps/api/prisma/generated/
+
+# Scan workspaces (FR-090: never persisted, never committed)
+.workspaces/
+tmp/
+
+# Tooling scratch
+.playwright-mcp/
+.eslintcache
+.oxlintcache
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Source archive — extracted content lives in design-system/, tracked.
+# Keeping the 11MB zip alongside it would duplicate the whole system.
+*.zip

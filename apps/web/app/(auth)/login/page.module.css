@@ -1,0 +1,26 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.passwordRow {
+  display: flex;
+  margin-bottom: 6px;
+}
+
+.passwordLabel {
+  font: var(--type-small);
+  font-weight: 500;
+}
+
+.forgotLink {
+  margin-inline-start: auto;
+  font: var(--type-small);
+  color: var(--accent);
+}
+
+.error {
+  font: var(--type-small);
+  color: var(--sev-critical);
+}

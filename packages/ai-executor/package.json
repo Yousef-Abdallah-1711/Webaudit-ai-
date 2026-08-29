@@ -1,0 +1,24 @@
+{
+  "name": "@webaudit/ai-executor",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Principle IV — the only component that holds a provider client.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.120.0",
+    "@google/genai": "2.18.0",
+    "@webaudit/config": "workspace:*",
+    "@webaudit/redaction": "workspace:*",
+    "@webaudit/types": "workspace:*",
+    "openai": "7.5.0",
+    "zod": "3.25.76"
+  }
+}

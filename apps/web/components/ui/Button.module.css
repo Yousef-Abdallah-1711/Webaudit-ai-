@@ -1,0 +1,87 @@
+/* Ported from design-system/components/core/Button.jsx (T237). */
+
+.base {
+  height: 48px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 32px;
+  border-radius: var(--radius-control);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: var(--border-width) solid transparent;
+  transition: var(--transition-color);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/*
+ * Button.prompt.md: "Hover is a colour step only — never a transform or
+ * shadow change." Not visible anywhere in the vendored .jsx's inline styles;
+ * stated only in the prompt file, which is exactly why CLAUDE.md calls out
+ * reading it. No transform, no box-shadow anywhere in this file.
+ */
+.primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.secondary {
+  background: var(--surface-page);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+}
+.ghost:hover:not(:disabled) {
+  background: var(--surface-raised);
+  color: var(--text-strong);
+}
+
+.inverse {
+  background: var(--surface-page);
+  color: var(--text-primary);
+}
+.inverse:hover:not(:disabled) {
+  background: var(--surface-raised);
+}
+
+.sm {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.lg {
+  height: 56px;
+  padding: 0 40px;
+  font-size: 16px;
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.base:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/*
+ * No focus-visible treatment: the vendored Button.jsx has none, and "port,
+ * never author" means this file does not invent one even though
+ * `--shadow-focus` exists and would be the obvious token to use. Flagged as a
+ * carried correction rather than silently fixed — see PROGRESS.md.
+ */

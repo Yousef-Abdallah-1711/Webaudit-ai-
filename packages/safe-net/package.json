@@ -1,0 +1,18 @@
+{
+  "name": "@webaudit/safe-net",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "R6 — the only way platform or capability code reaches the network. SSRF-guarded at four layers.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "undici": "7.29.0"
+  }
+}

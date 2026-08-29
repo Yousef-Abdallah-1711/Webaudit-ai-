@@ -1,0 +1,22 @@
+node_modules/
+dist/
+build/
+.next/
+.turbo/
+coverage/
+pnpm-lock.yaml
+**/prisma/generated/
+
+# Vendored reference — never reformat (constitution v1.1.0)
+design-system/
+
+# Hand-authored governance and specification documents.
+# Prettier reflows prose, which would destroy deliberate line wrapping and —
+# critically — rewrite the "- [ ] T### ..." task lines that /speckit-implement
+# parses. These are documents, not code.
+*.md
+specs/
+design/
+.specify/
+.claude/
+.agents/

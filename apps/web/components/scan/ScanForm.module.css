@@ -1,0 +1,159 @@
+/* Ported from ScanScreen in design-system/ui_kits/app/Screens.jsx (T129). */
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tabs {
+  display: flex;
+  border-bottom: var(--border-width) solid var(--border-default);
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabActive {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.repoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+}
+
+.repoName {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.repoBranch {
+  margin-inline-start: auto;
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.dropzone {
+  border: var(--border-width) dashed var(--border-default);
+  border-radius: var(--radius-card);
+  padding: 36px;
+  text-align: center;
+  background: var(--surface-raised);
+}
+
+.dropzoneTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dropzoneNote {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.areasSection {
+  margin-top: 28px;
+}
+
+.areasList {
+  margin-top: 12px;
+  border: var(--border-width) solid var(--border-default);
+}
+
+.areaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.areaRowTop {
+  border-top: var(--border-width) solid var(--border-default);
+}
+
+.areaName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.areaCost {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.areasNote {
+  font: var(--type-small);
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+.costRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.costValue {
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+  font-variant-numeric: tabular-nums;
+}
+
+.costLabel {
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.bundled {
+  font: var(--type-small);
+  color: var(--sev-resolved);
+  margin-top: 6px;
+}
+
+.quoteNote {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin: 16px 0;
+  text-wrap: pretty;
+}
+
+.error {
+  font: var(--type-small);
+  color: var(--sev-critical);
+  margin-bottom: 12px;
+}

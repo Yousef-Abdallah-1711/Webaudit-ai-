@@ -1,0 +1,38 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Providers (T244). */
+
+.warning {
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: var(--border-width) solid var(--sev-critical);
+  background: var(--sev-critical-bg);
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.health {
+  font: var(--type-small);
+  font-weight: 700;
+}
+.healthHealthy {
+  color: var(--sev-resolved);
+}
+.healthDegraded {
+  color: var(--sev-medium);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+.cardText {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

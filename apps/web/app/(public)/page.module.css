@@ -1,0 +1,199 @@
+/* Ported from design-system/ui_kits/marketing/Landing.jsx (T240). */
+
+.wrap {
+  padding: 88px 24px;
+  background: var(--surface-page);
+}
+.wrapInner {
+  max-width: 896px;
+  margin: 0 auto;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 88px 24px 96px;
+  text-align: center;
+}
+.heroWash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--wash-tl);
+}
+.heroInner {
+  position: relative;
+  max-width: 896px;
+  margin: 0 auto;
+}
+.heroSub {
+  max-width: 62ch;
+  margin: 20px auto 0;
+  font: var(--type-lead);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+.heroForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  max-width: 620px;
+  margin: 36px auto 0;
+}
+.heroInputWrap {
+  flex: 1 1 320px;
+}
+.heroStats {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.diffH2 {
+  margin: 12px 0 0;
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+}
+.diffLead {
+  max-width: 60ch;
+  margin-top: 16px;
+  font: var(--type-body-lg);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+.diffGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 40px;
+}
+.diffCardText {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.areasH2 {
+  margin: 12px 0 24px;
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+}
+.areasList {
+  border: var(--border-width) solid var(--border-default);
+}
+.areaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 18px 20px;
+  border-top: none;
+}
+.areaRowBordered {
+  border-top: var(--border-width) solid var(--border-default);
+}
+.areaName {
+  width: 170px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.areaDesc {
+  flex: 1;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+.areaCredits {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.areasNote {
+  margin-top: 14px;
+  font: var(--type-small);
+  color: var(--text-muted);
+  text-wrap: pretty;
+}
+
+.proofRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 40px;
+}
+.proofModules {
+  display: flex;
+  flex: 1 1 360px;
+  flex-direction: column;
+  gap: 8px;
+}
+.proofNote {
+  max-width: 62ch;
+  margin-top: 24px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.loopH2 {
+  margin: 12px 0 28px;
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+}
+.loopGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.loopStep {
+  padding-top: 14px;
+  border-top: 3px solid var(--accent);
+}
+.loopNum {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+.loopTitle {
+  margin: 6px 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.loopDesc {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.cta {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 24px;
+  text-align: center;
+  background: var(--surface-inverse);
+}
+.ctaWash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--wash-br);
+}
+.ctaInner {
+  position: relative;
+  max-width: 896px;
+  margin: 0 auto;
+}
+.ctaH2 {
+  margin: 0;
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+  /* The source's own literal — FinalCta sits on --surface-inverse, which the
+     dark palette already resolves near-white, so this is not a token gap. */
+  color: #fafafa;
+}
+.ctaLead {
+  margin: 14px 0 28px;
+  font: var(--type-body);
+  color: #9ca3af;
+  text-wrap: pretty;
+}

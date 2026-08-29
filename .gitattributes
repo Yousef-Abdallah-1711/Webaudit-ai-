@@ -1,0 +1,25 @@
+# Normalize line endings: LF in the repo, native in the working tree.
+# Without this, a Windows and a Linux checkout produce spurious whole-file diffs.
+* text=auto eol=lf
+
+# Windows-only tooling keeps CRLF
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary — never diff, never normalize
+*.png binary
+*.jpg binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.zip binary
+*.pdf binary
+
+# Design system is vendored reference. Mark it so `git diff` stays readable
+# and GitHub does not count it toward language statistics.
+design-system/** linguist-vendored
+design-system/reference-pages/** -diff
+
+# Lockfiles: keep out of diffs and merges
+pnpm-lock.yaml -diff merge=binary linguist-generated

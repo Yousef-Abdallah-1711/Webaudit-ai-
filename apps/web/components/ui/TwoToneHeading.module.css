@@ -1,0 +1,29 @@
+/* Ported from design-system/components/core/TwoToneHeading.jsx (T238). */
+
+.heading {
+  color: var(--text-primary);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.display {
+  font: var(--type-display);
+  letter-spacing: var(--track-display);
+}
+
+.h2 {
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+}
+
+.left {
+  text-align: left;
+}
+
+.center {
+  text-align: center;
+}
+
+.accent {
+  color: var(--accent);
+}

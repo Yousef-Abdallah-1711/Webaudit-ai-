@@ -1,0 +1,10 @@
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 896px;
+}
+
+.done {
+  margin-top: 12px;
+}

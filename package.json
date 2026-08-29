@@ -1,0 +1,48 @@
+{
+  "name": "webaudit-ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Audits a website across five dimensions and walks the owner from red to green.",
+  "packageManager": "pnpm@9.0.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
+    "test": "vitest run --project unit --passWithNoTests --no-file-parallelism",
+    "test:adverse": "vitest run --project adverse --passWithNoTests --no-file-parallelism",
+    "test:visual": "vitest run --project visual --passWithNoTests --no-file-parallelism",
+    "test:watch": "vitest --project unit --no-file-parallelism",
+    "lint": "pnpm run lint:code && pnpm run lint:adherence",
+    "lint:code": "eslint .",
+    "lint:adherence": "oxlint -c design-system/_adherence.oxlintrc.json apps/web",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:studio": "prisma studio --schema apps/api/prisma/schema.prisma",
+    "services:up": "docker compose -f infrastructure/docker-compose.yml up -d",
+    "services:down": "docker compose -f infrastructure/docker-compose.yml down",
+    "db:generate": "prisma generate --schema apps/api/prisma/schema.prisma",
+    "db:reset": "prisma migrate reset --schema apps/api/prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "@prisma/client": "6.1.0",
+    "@types/node": "22.20.1",
+    "eslint": "9.39.5",
+    "oxlint": "0.13.2",
+    "prettier": "3.9.6",
+    "prisma": "6.1.0",
+    "tsx": "4.23.12",
+    "turbo": "2.10.11",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.67.0",
+    "vitest": "2.1.9"
+  }
+}

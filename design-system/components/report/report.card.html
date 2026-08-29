@@ -1,0 +1,16 @@
+<!-- @dsCard group="Components" viewport="700x900" name="Report" subtitle="ScoreArc, ModuleStatus, IssueCard, AttributionMark, ProgressRow, VerdictPanel" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script><script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script><script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script><script src="../../_ds_bundle.js"></script><style>html,body{margin:0}body{font-family:var(--font-sans);background:var(--surface-page);color:var(--text-primary);padding:20px}.lbl{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);margin:0 0 8px}.grp+.grp{margin-top:18px}.r{display:flex;gap:12px;align-items:center;flex-wrap:wrap}</style></head><body><div id="root"></div><script type="text/babel">const {ScoreArc,ModuleStatus,IssueCard,AttributionMark,ProgressRow,VerdictPanel}=window.WebAuditAIDesignSystem_fa5933;
+function App(){return <div>
+<div className="grp r" style={{alignItems:'flex-start',gap:24}}><ScoreArc score={84} delta={23}/><ScoreArc score={38} size={140} label="Baseline"/><div><div className="lbl">AttributionMark</div><AttributionMark kind="measured"/><div style={{height:8}}/><AttributionMark kind="ai-judgment"/></div></div>
+<div className="grp"><div className="lbl">ModuleStatus — five states, never confusable</div>
+<ModuleStatus area="Security" state="complete" issues={7}/>
+<ModuleStatus area="Performance" state="running" detail="Collecting Core Web Vitals"/>
+<ModuleStatus area="Testing" state="degraded" detail="Playwright runner unavailable — 2 of 5 checks skipped"/>
+<ModuleStatus area="Design" state="waiting"/>
+<ModuleStatus area="Search visibility" state="not-applicable" detail="No source connected"/></div>
+<div className="grp"><div className="lbl">ModuleStatus — compact, for columns under 300px</div><div style={{width:250,display:'flex',flexDirection:'column',gap:6}}><ModuleStatus compact area="Security" state="complete" issues={7}/><ModuleStatus compact area="Testing" state="degraded" detail="2 of 5 checks skipped"/></div></div>
+<div className="grp"><div className="lbl">ProgressRow</div><ProgressRow phase="Running security checks" elapsed="1:42" done={2} total={5}/></div>
+<div className="grp"><div className="lbl">IssueCard</div><IssueCard severity="critical" area="Security" title="No HSTS header on the primary host" location="strict-transport-security" attribution="measured" description="The response carries no Strict-Transport-Security header, so a first visit over http is downgradeable." prompt="Add HSTS"/></div>
+<div className="grp"><VerdictPanel verdict="go" score={91} baseline={68} areas={[{name:'Security',score:94,threshold:80,pass:true},{name:'Performance',score:88,threshold:80,pass:true},{name:'Search visibility',score:91,threshold:70,pass:true}]}/></div>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);</script></body></html>

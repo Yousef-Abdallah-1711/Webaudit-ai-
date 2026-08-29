@@ -1,0 +1,397 @@
+/**
+ * T113 — the five-phase orchestrator run loop.
+ *
+ * The `phase` job handler `queue/workers.ts`'s `dispatch()` has needed since
+ * T104b: read the scan, transition into the phase the job names (guarded —
+ * a lost race is a no-op, per `state-machine.ts`'s own contract), run that
+ * phase's work, and enqueue whatever comes next. `modulesForPhase`
+ * (`@webaudit/config`) decides which requested modules belong to
+ * `RUNNING_PHASE_1`/`RUNNING_PHASE_2`/`RUNNING_PHASE_3`; `RUNNING_MASTER` and
+ * `RUNNING_DOCS` are not module-running phases and run `master-report.ts`
+ * (T114) and `fix-prompt.ts` (T115) instead.
+ *
+ * **Every module in a phase runs concurrently, and each is emitted as soon
+ * as it finishes** (FR-033) — `Promise.all` over `runAndPersistModule`,
+ * which itself does not resolve until its own `persistModuleResult` and
+ * `module:complete` emit are both done, but the modules run alongside each
+ * other, not queued behind one another.
+ *
+ * **Real capabilities now run** (T119-124): `capability-loader.ts` dynamically
+ * imports each vendored capability's own workspace package, and `makeContext`
+ * below builds a real `CodeLayerContext` via `createCodeLayerContext` — no
+ * probe pool and no attached-source workspace are wired into it yet (this
+ * vertical slice is URL-only), so `ctx.withPage`/`ctx.readFile`/`ctx.glob`
+ * stay unavailable exactly as `createCodeLayerContext`'s own contract says
+ * they should when neither is configured.
+ *
+ * **What this file honestly still does not do, each recorded rather than
+ * silently skipped:**
+ *
+ * - The design-intent questionnaire is never triggered. See
+ *   `phase-modules.ts`'s module note — full FR-040/041/042/043 wiring is
+ *   US6 (T194-201). `RUNNING_PHASE_1` always proceeds straight to
+ *   `RUNNING_PHASE_2` rather than pausing.
+ * - A phase job that throws transitions the scan to `FAILED` via `failScan`,
+ *   which refunds the undelivered share through `installTerminalRefund`
+ *   (`terminal-refund.ts`, a terminal observer that runs inside the awaited
+ *   `transition()` call and so has already committed by the time `failScan`
+ *   reads the ledger back) and reports the real amount on `scan:failed`'s
+ *   `creditsRefunded`, not a hardcoded zero.
+ * - That coverage has one boundary worth naming: a throw that happens
+ *   *before* the scan reaches the phase this job names — during
+ *   `planQueuePriorityFor` above (called before the `try` block even
+ *   starts) or during the entry `moveAndAnnounce` if it fails before the
+ *   transition into `data.phase` lands — never reaches a state `failScan`
+ *   can legally move out of. Its `transition(..., from: data.phase, ...)`
+ *   call loses the race or is illegal, `outcome.moved` is `false`, and
+ *   `failScan` returns without emitting or refunding. The scan is left
+ *   stuck in a non-terminal state with its charge unrefunded, and — since
+ *   no timeout sweep is scheduled in production either (see
+ *   `terminal-refund.ts`'s own module note) — nothing else catches it.
+ *   Pre-existing, not fixed here; recorded rather than silently implied
+ *   covered.
+ */
+
+import { modulesForPhase } from '@webaudit/config';
+import type { ModuleType, ScanState } from '@webaudit/types';
+import { controlLevelRank, type ControlLevel } from '@webaudit/types';
+import type { AiExecutor } from '@webaudit/ai-executor';
+import type { PrismaClient } from '@webaudit/api/prisma-client';
+import { reconfirmControl, createSafeNetProbe } from '@webaudit/api/control-gate';
+import { createCodeLayerContext } from '@webaudit/capability-sdk';
+import type { CapabilityInput, CodeLayerContext } from '@webaudit/capability-sdk';
+import { runModule, persistModuleResult } from '../module-runner/index.js';
+import type { ModuleResultWriter } from '../module-runner/persist.js';
+import { loadCapabilities } from './capability-loader.js';
+import { runMasterSynthesis } from './master-report.js';
+import { enrichFixPrompts } from './fix-prompt.js';
+import { transition, nextPhase } from './state-machine.js';
+import { moveAndAnnounce, enqueuePhase, type EnqueueContext, type PhaseJobData } from './phases.js';
+import { createScanEmitter, type EventPublisher } from './emit.js';
+import type { JobRef } from '../queue/workers.js';
+import type { QueueSet } from '../queue/queues.js';
+
+const MODULE_RUNNING_PHASES: readonly ScanState[] = [
+  'RUNNING_PHASE_1',
+  'RUNNING_PHASE_2',
+  'RUNNING_PHASE_3',
+];
+
+/**
+ * No probe pool, no attached-source workspace — both unwired in this
+ * vertical slice (URL-only scans, no capability calls `ctx.withPage` yet).
+ * `createCodeLayerContext` already refuses `readFile`/`glob` when
+ * `workspaceRoot` is absent and rejects `withPage` when `pageProvider` is
+ * absent, so this is a real, safe context, not a stub.
+ */
+function makeContext(signal: AbortSignal, capabilityId: string): CodeLayerContext {
+  return createCodeLayerContext({ signal, capabilityId });
+}
+
+/**
+ * Per-capability required levels for one module, read from the `Capability`
+ * table — the reconciled registry's own source, never a capability's
+ * self-declared manifest at runtime.
+ *
+ * Deliberately NOT filtered on `isEnabled: true` (unlike
+ * `resolve-required-control-level.ts`'s query, which answers a different
+ * question — the minimum level among what can actually run — and is correct
+ * to filter). This query answers "what does the DB row for this capability
+ * require", full stop. `capability-loader.ts` is a separate, static import
+ * table that can drift from the registry's `isEnabled` flag (a known,
+ * already-documented risk); if a capability is disabled in the registry but
+ * still loaded there, filtering here would silently drop its requirement and
+ * default it to ungated (`NONE`) rather than gated at whatever level its row
+ * actually declares. Fail-safe means over-including a requirement — it can
+ * only make more things gated, never fewer.
+ */
+async function requiredControlLevelsFor(
+  db: PrismaClient,
+  module: ModuleType,
+): Promise<Readonly<Record<string, ControlLevel>>> {
+  const rows = await db.capability.findMany({
+    where: { module },
+    select: { id: true, requiredControlLevel: true },
+  });
+  return Object.fromEntries(rows.map((row) => [row.id, row.requiredControlLevel]));
+}
+
+/**
+ * Live-reconfirmed control level for a whole phase, computed at most once.
+ * A phase whose capabilities all require NONE never touches the network —
+ * NONE can never be gated regardless of the target's real level, so it's
+ * always safe to skip the live check in that case.
+ */
+async function resolvePhaseControlLevel(
+  db: PrismaClient,
+  scan: { userId: string; targetId: string },
+  requiredControlLevelsByModule: ReadonlyMap<ModuleType, Readonly<Record<string, ControlLevel>>>,
+): Promise<ControlLevel> {
+  const maxRequiredRank = Math.max(
+    0,
+    ...[...requiredControlLevelsByModule.values()].flatMap((levels) =>
+      Object.values(levels).map(controlLevelRank),
+    ),
+  );
+  if (maxRequiredRank === 0) return 'NONE';
+  const result = await reconfirmControl(
+    db,
+    { targetId: scan.targetId, userId: scan.userId },
+    createSafeNetProbe(),
+  );
+  return result.level;
+}
+
+export interface OrchestratorOptions {
+  readonly db: PrismaClient;
+  readonly queues: Pick<QueueSet, 'scanPhase' | 'maintenance'>;
+  readonly publisher: EventPublisher;
+  readonly executor: AiExecutor;
+  readonly moduleTimeoutMs?: number;
+}
+
+async function planQueuePriorityFor(db: PrismaClient, userId: string): Promise<number> {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { subscription: { select: { plan: { select: { queuePriority: true } } } } },
+  });
+  if (user?.subscription?.plan) return user.subscription.plan.queuePriority;
+  const free = await db.plan.findUnique({ where: { id: 'free' }, select: { queuePriority: true } });
+  return free?.queuePriority ?? 40;
+}
+
+async function runAndPersistModule(
+  options: OrchestratorOptions,
+  scan: {
+    id: string;
+    targetId: string;
+    target: { canonicalValue: string; inputType: string };
+  },
+  module: ModuleType,
+  emitter: ReturnType<typeof createScanEmitter>,
+  requiredControlLevels: Readonly<Record<string, ControlLevel>>,
+  effectiveControlLevel: ControlLevel,
+): Promise<void> {
+  await emitter.emit({ type: 'module:started', scanId: scan.id, module }, () => Promise.resolve());
+
+  const input: CapabilityInput = {
+    ...(scan.target.inputType === 'URL' ? { targetUrl: scan.target.canonicalValue } : {}),
+    priorModuleResults: {},
+    controlLevel: effectiveControlLevel,
+  };
+
+  const startedAt = new Date();
+  const capabilities = await loadCapabilities(module);
+  const result = await runModule({
+    module,
+    capabilities,
+    input,
+    executor: options.executor,
+    makeContext,
+    timeoutMs: options.moduleTimeoutMs ?? 60_000,
+    scanId: scan.id,
+    targetId: scan.targetId,
+    requiredControlLevels,
+  });
+
+  // Prisma's generated `issue.createMany` types `evidence` more narrowly
+  // (`InputJsonValue`) than `ModuleResultWriter`'s structural `unknown` —
+  // both accept the same runtime shape (a JSON-serialisable value or
+  // undefined, per `code-layer.ts`'s own `usableEvidence`), so this is a
+  // type-level mismatch, not a real one.
+  await persistModuleResult(options.db as unknown as ModuleResultWriter, {
+    scanId: scan.id,
+    module,
+    state: result.state,
+    score: result.score,
+    summary: result.summary,
+    skippedReason: result.skippedReason,
+    degradedReason: result.degradedReason,
+    findings: result.findings,
+    executions: result.executions,
+    aiInvocations: result.aiInvocations,
+    aiCostMicros: result.aiCostMicros,
+    startedAt,
+    completedAt: new Date(),
+  });
+
+  await emitter.emit(
+    {
+      type: 'module:complete',
+      scanId: scan.id,
+      module,
+      state: result.state,
+      score: result.score,
+      issueCount: result.findings.length,
+    },
+    () => Promise.resolve(),
+  );
+}
+
+async function failScan(
+  db: PrismaClient,
+  emitter: ReturnType<typeof createScanEmitter>,
+  scanId: string,
+  from: ScanState,
+  error: unknown,
+): Promise<void> {
+  const outcome = await transition(db, {
+    scanId,
+    from,
+    to: 'FAILED',
+    extra: { failureReason: error instanceof Error ? error.message : String(error) },
+  });
+  if (!outcome.moved) return;
+
+  // `installTerminalRefund` (terminal-refund.ts) has already run, inside the
+  // transition() call above, and committed any refund — read it back rather
+  // than assuming zero.
+  const refunds = await db.creditTransaction.aggregate({
+    where: { scanId, type: 'REFUND' },
+    _sum: { amount: true },
+  });
+
+  await emitter.emit(
+    {
+      type: 'scan:failed',
+      scanId,
+      reason: error instanceof Error ? error.message : 'The audit failed unexpectedly.',
+      creditsRefunded: refunds._sum.amount ?? 0,
+    },
+    () => Promise.resolve(),
+  );
+}
+
+export function createPhaseHandler(
+  options: OrchestratorOptions,
+): (data: PhaseJobData, job: JobRef) => Promise<void> {
+  return async function handlePhase(data: PhaseJobData): Promise<void> {
+    const scan = await options.db.scan.findUnique({
+      where: { id: data.scanId },
+      include: {
+        target: { select: { canonicalValue: true, inputType: true } },
+      },
+    });
+    if (scan === null) return; // Nothing to run against. Not an error: the scan is gone.
+
+    const emitter = createScanEmitter(data.scanId, { publisher: options.publisher });
+    const context: EnqueueContext = {
+      scanPhaseQueue: options.queues.scanPhase,
+      maintenanceQueue: options.queues.maintenance,
+      db: options.db,
+      emitter,
+      planQueuePriority: await planQueuePriorityFor(options.db, scan.userId),
+    };
+
+    try {
+      const outcome = await moveAndAnnounce(context, {
+        scanId: data.scanId,
+        from: scan.state,
+        to: data.phase,
+      });
+      // Lost the race, or someone else already handled this phase (e.g. a
+      // cancellation). Either way, this job's work is done.
+      if (!outcome.moved) return;
+
+      if (MODULE_RUNNING_PHASES.includes(data.phase)) {
+        const requiredControlLevelsByModule = new Map(
+          await Promise.all(
+            data.modules.map(
+              async (module) =>
+                [module, await requiredControlLevelsFor(options.db, module)] as const,
+            ),
+          ),
+        );
+        const effectiveControlLevel = await resolvePhaseControlLevel(
+          options.db,
+          scan,
+          requiredControlLevelsByModule,
+        );
+
+        await Promise.all(
+          data.modules.map((module) =>
+            runAndPersistModule(
+              options,
+              scan,
+              module,
+              emitter,
+              requiredControlLevelsByModule.get(module) ?? {},
+              effectiveControlLevel,
+            ),
+          ),
+        );
+
+        // Walk forward through any subsequent module-running phase that has
+        // nothing to run — RUNNING_PHASE_2/3 have no modules at all unless
+        // UI was requested (phase-modules.ts) — transitioning through each
+        // in this same invocation rather than enqueueing a job for it.
+        // `phaseJobSchema` requires `modules.min(1)` (a phase with no areas
+        // would cost a worker slot to do nothing), so a job carrying an
+        // empty module list is refused at the queue boundary, not run: the
+        // fix is not to enqueue one, not to weaken that guard.
+        let current = data.phase;
+        let next = nextPhase(current);
+        while (
+          next !== null &&
+          MODULE_RUNNING_PHASES.includes(next) &&
+          modulesForPhase(next, scan.requestedModules).length === 0
+        ) {
+          const advanced = await moveAndAnnounce(context, {
+            scanId: data.scanId,
+            from: current,
+            to: next,
+          });
+          if (!advanced.moved) return; // Lost the race somewhere in the walk.
+          current = next;
+          next = nextPhase(current);
+        }
+        if (next === null) return; // Should not happen mid-run; nothing further to do.
+
+        if (MODULE_RUNNING_PHASES.includes(next)) {
+          await enqueuePhase(context, {
+            scanId: data.scanId,
+            phase: next,
+            modules: modulesForPhase(next, scan.requestedModules),
+            attempt: 1,
+          });
+          return;
+        }
+
+        // next is RUNNING_MASTER. Not a module-running phase — the queue
+        // payload still needs a non-empty `modules` array (the schema's own
+        // rule), so it carries the scan's full selection, which is always
+        // non-empty (create-scan.ts's own boundary check).
+        await enqueuePhase(context, {
+          scanId: data.scanId,
+          phase: next,
+          modules: scan.requestedModules,
+          attempt: 1,
+        });
+        return;
+      }
+
+      if (data.phase === 'RUNNING_MASTER') {
+        await runMasterSynthesis(options.db, options.executor, data.scanId);
+        await enqueuePhase(context, {
+          scanId: data.scanId,
+          phase: 'RUNNING_DOCS',
+          modules: scan.requestedModules,
+          attempt: 1,
+        });
+        return;
+      }
+
+      if (data.phase === 'RUNNING_DOCS') {
+        await enrichFixPrompts();
+        await moveAndAnnounce(context, {
+          scanId: data.scanId,
+          from: 'RUNNING_DOCS',
+          to: 'COMPLETED',
+        });
+        return;
+      }
+    } catch (error) {
+      await failScan(options.db, emitter, data.scanId, data.phase, error);
+    }
+  };
+}

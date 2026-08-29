@@ -1,0 +1,54 @@
+/*
+ * Ported from design-system/ui_kits/theme.jsx (T248): ThemeToggle + LangToggle.
+ *
+ * Hover moved from `useState` + `onMouseEnter`/`onMouseLeave` to CSS `:hover`,
+ * and the per-prop inline style objects moved here — the same, already
+ * established deviation as Button.tsx (T237). Same visual result, no new
+ * behaviour.
+ */
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  transition: var(--transition-color);
+}
+.toggle:hover {
+  background: var(--surface-raised);
+}
+
+.themeToggle {
+  gap: 8px;
+  height: 36px;
+  width: 36px;
+  padding: 0;
+}
+.themeToggle.compact {
+  height: 30px;
+  width: 30px;
+}
+.themeToggle.labeled {
+  width: 100%;
+  padding: 0 12px;
+  border-color: var(--border-default);
+}
+
+.langToggle {
+  gap: 7px;
+  height: 36px;
+  width: auto;
+  padding: 0 12px;
+  font-weight: 500;
+}
+.langToggle.labeled {
+  width: 100%;
+  border-color: var(--border-default);
+}

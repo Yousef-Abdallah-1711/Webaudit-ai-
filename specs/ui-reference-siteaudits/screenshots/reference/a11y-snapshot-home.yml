@@ -1,0 +1,167 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - generic [ref=e7]:
+      - list [ref=e9]:
+        - listitem [ref=e10]:
+          - link "SiteAudits.ai":
+            - /url: /
+            - generic:
+              - img "SiteAudits.ai"
+      - list [ref=e13]:
+        - listitem [ref=e14]:
+          - link [ref=e15] [cursor=pointer]:
+            - /url: /login
+    - generic [ref=e23]:
+      - main [ref=e24]:
+        - generic [ref=e25]:
+          - generic [ref=e27]:
+            - paragraph [ref=e28]:
+              - text: 🔥
+              - generic [ref=e29]: Flash Sale! 65% OFF
+              - generic [ref=e30]: with code
+              - code [ref=e31] [cursor=pointer]: HURRY65
+              - text: .
+              - generic [ref=e32]: Upgrade all your audits to Pro before it ends!
+              - text: 🔥
+            - button "Close promotion" [ref=e33] [cursor=pointer]
+          - main [ref=e37]:
+            - generic [ref=e38]:
+              - generic [ref=e39]:
+                - generic [ref=e40]:
+                  - link [ref=e41] [cursor=pointer]:
+                    - /url: /
+                    - img "SiteAudits.ai" [ref=e42]
+                  - heading "Think Your Website’s Perfect? - Let’s Double-Check." [level=1] [ref=e43]
+                  - paragraph [ref=e44]: Run a free audit to see where your site’s shining, where it’s slacking, and what you can do to level up. It’s like a friendly intervention for your website.
+                  - generic [ref=e46]:
+                    - generic [ref=e47]:
+                      - textbox "example.com" [active] [ref=e48]
+                      - generic: https://
+                    - button "Generate Audit" [ref=e49] [cursor=pointer]
+                - link [ref=e51] [cursor=pointer]:
+                  - /url: https://www.producthunt.com/posts/siteaudits-ai?embed=true&utm_source=badge-featured&utm_medium=badge&utm_souce=badge-siteaudits-ai
+                  - img "SiteAudits.ai - All-in-One Website Audits in Under 2 Minutes | Product Hunt" [ref=e52]
+              - generic [ref=e55] [cursor=pointer]: Scroll to Learn More
+            - generic [ref=e59]:
+              - generic [ref=e61]:
+                - paragraph [ref=e62]: Personalized Insights for Your Website
+                - heading "Time to See What’s Really Going on With Your Site" [level=2] [ref=e63]
+                - paragraph [ref=e64]: We give you no-BS insights and simple steps to fix your site—because your website’s not going to optimize itself (unfortunately).
+              - generic [ref=e65]:
+                - generic [ref=e66]:
+                  - generic [ref=e67]:
+                    - heading "Stop Guessing. Start Fixing." [level=3] [ref=e72]
+                    - generic [ref=e73]:
+                      - paragraph [ref=e74]: Ever catch yourself staring at your website and wondering, "Why isn’t this thing doing its job?" You’re not alone.
+                      - paragraph [ref=e75]: With SiteAudits.ai, we make website improvement as simple as finding the remote after a binge-watching session.
+                      - paragraph [ref=e76]: We’ll give you a clear breakdown of what’s awesome, what’s awkward, and exactly how to fix it—no stress, no jargon.
+                    - button "Analyze My Site" [ref=e77] [cursor=pointer]
+                  - img "Stop Guessing. Start Fixing." [ref=e79]
+                - generic [ref=e80]:
+                  - generic [ref=e81]:
+                    - heading "Turn Your Website Into a Conversion Machine in 3 Simple Steps" [level=3] [ref=e86]
+                    - generic [ref=e87]:
+                      - paragraph [ref=e88]: "Fixing your website shouldn’t feel like rocket science (because it’s not). With SiteAudits.ai, you’ll get everything you need to make big improvements in no time:"
+                      - paragraph [ref=e89]: "Step 1: Run your audit—it’s so quick, you won’t even need to refresh your coffee."
+                      - paragraph [ref=e90]: "Step 2: Get a detailed report packed with insights, scores, and clear recommendations."
+                      - paragraph [ref=e91]: "Step 3: Follow the steps to optimize your site and watch it crush performance goals."
+                  - img "Turn Your Website Into a Conversion Machine in 3 Simple Steps" [ref=e93]
+                - generic [ref=e94]:
+                  - generic [ref=e95]:
+                    - heading "Give Your Visitors a Reason to Stay (And Click Around)" [level=3] [ref=e100]
+                    - generic [ref=e101]:
+                      - paragraph [ref=e102]: A great website isn’t just about looking good—it’s about working seamlessly. If your navigation feels like a scavenger hunt or your load times could double as a coffee break, we’re here to help.
+                      - paragraph [ref=e103]: From performance hiccups to accessibility quirks, we’ll show you where your site shines and where it stumbles, so your visitors stay happy, engaged, and maybe even buy something.
+                    - button "Analyze My Site" [ref=e104] [cursor=pointer]
+                  - img "Give Your Visitors a Reason to Stay (And Click Around)" [ref=e106]
+                - generic [ref=e107]:
+                  - generic [ref=e108]:
+                    - heading "Your Website Called—It Wants a Promotion" [level=3] [ref=e113]
+                    - generic [ref=e114]:
+                      - paragraph [ref=e115]: "Your website has one job: to bring in leads, sales, or subscribers."
+                      - paragraph [ref=e116]: If it’s slacking, we’ve got your back. SiteAudits.ai makes it easy to spot what’s holding your site back and how to fix it—no tech headaches, no guesswork, no fluff.
+                      - paragraph [ref=e117]: Just clear, actionable steps to get your website back to working harder (and smarter).
+                  - img "Your Website Called—It Wants a Promotion" [ref=e119]
+            - generic [ref=e122]:
+              - generic [ref=e123]:
+                - paragraph [ref=e124]: Think Your Site's Perfect?
+                - heading "Why SiteAudits.ai Is the Wingman Your Website Needs" [level=2] [ref=e125]
+                - paragraph [ref=e126]: "SiteAudits.ai makes website optimization as easy as pie—if pie came with detailed instructions. Here’s what you’ll get:"
+              - generic [ref=e127]:
+                - generic [ref=e128]:
+                  - button "Clear, No-Nonsense Reports We break down performance, SEO, usability, and design into bite-sized nuggets of wisdom. No fluff, no tech babble—just the stuff that actually makes a difference." [ref=e129] [cursor=pointer]:
+                    - generic [ref=e130]:
+                      - generic [ref=e131]: Clear, No-Nonsense Reports
+                      - paragraph [ref=e133]: We break down performance, SEO, usability, and design into bite-sized nuggets of wisdom. No fluff, no tech babble—just the stuff that actually makes a difference.
+                  - button "Actionable Recommendations" [ref=e134] [cursor=pointer]
+                  - button "Comprehensive Coverage" [ref=e137] [cursor=pointer]
+                - img "Clear, No-Nonsense Reports" [ref=e142]
+            - generic [ref=e143]:
+              - generic [ref=e144]:
+                - paragraph [ref=e145]: What We Offer
+                - heading "The Most Comprehensive Website Audits You’ll Ever Need" [level=2] [ref=e146]
+                - paragraph [ref=e147]: We don’t just skim the surface; we dig deep into every aspect of your site. From testing functionality to ensuring SEO and accessibility, SiteAudits.ai ensures your site is firing on all cylinders.
+              - generic [ref=e148]:
+                - button [ref=e149] [cursor=pointer]:
+                  - img "Visual Branding" [ref=e151]
+                  - heading "Visual Branding" [level=5] [ref=e152]
+                - button [ref=e153] [cursor=pointer]:
+                  - img "Responsive Design Optimization" [ref=e155]
+                  - heading "Responsive Design Optimization" [level=5] [ref=e156]
+                - button [ref=e157] [cursor=pointer]:
+                  - img "Accessibility Testing" [ref=e159]
+                  - heading "Accessibility Testing" [level=5] [ref=e160]
+                - button [ref=e161] [cursor=pointer]:
+                  - img "Cookie Consent Enhancements" [ref=e163]
+                  - heading "Cookie Consent Enhancements" [level=5] [ref=e164]
+                - button [ref=e165] [cursor=pointer]:
+                  - img "Typography and Visual Hierarchy" [ref=e167]
+                  - heading "Typography and Visual Hierarchy" [level=5] [ref=e168]
+                - button [ref=e169] [cursor=pointer]:
+                  - img "Performance Optimization" [ref=e171]
+                  - heading "Performance Optimization" [level=5] [ref=e172]
+                - button [ref=e173] [cursor=pointer]:
+                  - img "Metadata Updates" [ref=e175]
+                  - heading "Metadata Updates" [level=5] [ref=e176]
+                - button [ref=e177] [cursor=pointer]:
+                  - img "Interactive Element Enhancements" [ref=e179]
+                  - heading "Interactive Element Enhancements" [level=5] [ref=e180]
+                - button [ref=e181] [cursor=pointer]:
+                  - img "Navigation Refinement" [ref=e183]
+                  - heading "Navigation Refinement" [level=5] [ref=e184]
+                - button [ref=e185] [cursor=pointer]:
+                  - img "Content Accessibility" [ref=e187]
+                  - heading "Content Accessibility" [level=5] [ref=e188]
+                - button [ref=e189] [cursor=pointer]:
+                  - img "Social Media Optimization" [ref=e191]
+                  - heading "Social Media Optimization" [level=5] [ref=e192]
+                - button [ref=e193] [cursor=pointer]:
+                  - img "More" [ref=e195]
+                  - heading "More" [level=5] [ref=e196]
+            - generic [ref=e199]:
+              - generic:
+                - iframe
+            - generic [ref=e201]:
+              - generic [ref=e205]:
+                - heading "Is Your Website Living Up to Its Potential? Let’s Find Out." [level=2] [ref=e206]
+                - paragraph [ref=e208]: Time to Give Your Website a Health Check. Get the Truth About Your Site—Run Your Free Audit.
+                - button "Analyze My Site" [ref=e209] [cursor=pointer]
+              - img "App screenshot" [ref=e211]
+            - generic [ref=e212]:
+              - link [ref=e214] [cursor=pointer]:
+                - /url: /
+                - img "SiteAudits.ai" [ref=e215]
+              - paragraph [ref=e216]: SiteAudits.ai analyzes your website to uncover issues, improve performance, and optimize user experience—all with actionable insights to boost your site's success.
+      - contentinfo [ref=e217]:
+        - generic [ref=e218]:
+          - generic [ref=e219]:
+            - link "Affiliates" [ref=e220] [cursor=pointer]:
+              - /url: https://affiliate.siteaudits.ai
+            - generic [ref=e221]: Agencies
+            - link "Privacy" [ref=e222] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms" [ref=e223] [cursor=pointer]:
+              - /url: /terms
+          - paragraph [ref=e224]: © 2026 SiteAudits.ai - All Rights Reserved
+  - region "Notifications alt+T"
+  - alert [ref=e225]

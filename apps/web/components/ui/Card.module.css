@@ -1,0 +1,35 @@
+/* Ported from design-system/components/core/Card.jsx (T237). */
+
+.card {
+  background: var(--surface-card);
+  border: var(--border-width) solid var(--border-card);
+  border-radius: var(--radius-card);
+  box-shadow: none;
+}
+
+.elevated {
+  box-shadow: var(--shadow-card);
+}
+
+.eyebrow {
+  font: var(--type-eyebrow);
+  font-size: 12px;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.title {
+  font: var(--type-card-title);
+  color: var(--text-strong);
+  margin-bottom: 12px;
+}
+
+.footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: var(--border-width) solid var(--border-default);
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

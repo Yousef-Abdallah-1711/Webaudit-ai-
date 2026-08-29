@@ -1,0 +1,54 @@
+/* Ported from design-system/components/core/Input.jsx (T237). */
+
+.wrap {
+  position: relative;
+  width: auto;
+}
+.fullWidth {
+  width: 100%;
+}
+
+.prefix {
+  position: absolute;
+  left: 12px;
+  top: 0;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  font: var(--type-small);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  pointer-events: none;
+}
+
+.field {
+  height: 48px;
+  width: 100%;
+  box-sizing: border-box;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  padding: 4px 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--surface-field);
+  outline: none;
+  transition: var(--transition-color);
+}
+
+.field:focus {
+  box-shadow: var(--shadow-focus);
+}
+
+.withPrefix {
+  /* 64px measured left inset — see Input.d.ts. */
+  padding-left: 64px;
+}
+
+.invalid {
+  border-color: var(--sev-critical);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}

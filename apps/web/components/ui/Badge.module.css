@@ -1,0 +1,56 @@
+/*
+ * Ported from design-system/components/core/Badge.jsx (T237).
+ *
+ * `.accent`'s two hex values are carried verbatim from the source, which
+ * hardcodes them rather than using a token — not something this port invents
+ * or corrects.
+ */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.pill {
+  border-radius: var(--radius-pill);
+}
+.square {
+  border-radius: var(--radius-none);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+.sans {
+  font-family: var(--font-sans);
+}
+
+.neutral {
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  border: var(--border-width) solid var(--border-default);
+}
+
+.accent {
+  background: #fff3ec;
+  color: var(--accent);
+  border: var(--border-width) solid #ffd9c2;
+}
+
+.success {
+  background: var(--sev-resolved-bg);
+  color: var(--sev-resolved);
+  border: var(--border-width) solid #a7f3d0;
+}
+
+.inverse {
+  background: var(--surface-inverse);
+  color: var(--text-on-accent);
+  border: var(--border-width) solid transparent;
+}

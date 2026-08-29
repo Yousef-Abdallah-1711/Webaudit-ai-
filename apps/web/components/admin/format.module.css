@@ -1,0 +1,12 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's mono/num helpers (T244). */
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
