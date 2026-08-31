@@ -1501,31 +1501,40 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 ## Reality check on "production ready"
 
-The foundation is sound and CI now genuinely gates merges — it did not before, at all. But:
+The core loop works and CI genuinely gates merges. Honest state as of Phase 5:
 
-- **107 of 250 tasks.** The machinery exists — capability registry, AI executor, module runner,
-  orchestrator, queue and realtime are all built and tested. What does *not* exist is anything that
-  joins them up. Specifically, and verified rather than assumed:
-  - ~~Neither service boots~~ — **fixed at T104a/T104b, and then actually true as of `9915608`.**
-    T104a/T104b claimed both services start; the worker in fact could not, because BullMQ 6.2.0
-    rejects a colon in a queue name and every `QUEUE_NAMES` entry had one — nothing had ever called
-    `createQueues`/`createWorkers` against a real BullMQ to catch it. `startWorker()` now boots and
-    shuts down end-to-end against a real Redis, verified directly rather than assumed.
-  - ~~No queue consumer~~ — **fixed at T104b**, but the processors are placeholders that reject by
-    design until T113. An enqueued job now fails loudly instead of vanishing.
-  - **Only `/auth` and `/targets` are mounted.** No route starts a scan (T112).
-  - **No real audit capability exists** (T119–T124), and **no Next.js application at all**.
-
-  Nothing has ever audited a website end to end. The wiring is Phase 3's job (T105–T143).
-- **No provider has ever been called.** Every suite runs `AI_MODE=fixtures` by design, so the three
-  vendor adapters are typechecked and unexecuted. The first live call is a Phase 3 milestone.
-- **9 of 11 adversarial gates green** (SC-007 added at Phase 4).
-- First sellable artifact is **T135**, end of Phase 3.
+- **184 of 250 tasks (73%).** Phases 1, 2, 2L, 3, 4, 5 are complete. A real audit runs against a
+  live URL through the real orchestrator and 13 vendored capabilities; a human drives it through the
+  UI; the fix loop turns issues green only on a passing re-check; and a readiness pass returns a
+  go/no-go verdict with named blockers and a shareable certificate.
+- **Still not built (Phases 6–11, 66 tasks):**
+  - **Phase 6 (US4)** — repository / archive input, streaming extraction guard, source-only
+    capabilities (dependency/bundle/css). URL-only until then.
+  - **Phase 7 (US5)** — subscriptions, entitlement enforcement, credit purchase, the billing
+    webhook, retention + export. **SC-008** (nobody charged for our failures) lands here.
+  - **Phase 8 (US6)** — the design-intent questionnaire pause. The orchestrator currently always
+    proceeds straight past the UI phase on defaults.
+  - **Phase 9 (US7)** — the entire operator surface. **The first `requireOperator` route lands
+    here**; there is no admin API yet. **SC-009, SC-010**.
+  - **Phase 10** — `sandbox-runner`. Untrusted uploaded capabilities cannot run; the upload path
+    correctly returns `503`. **SC-017**. Complete or not at all.
+  - **Phase 11** — axe-core a11y in e2e, dark-mode severity contrast, structured logging, the FR-025
+    / architecture-doc corrections, deploy runbooks, the full quickstart validation pass.
+- **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
+  design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
+  OpenAI/Google model + per-MTok price config (open decision #9).
+- **9 of 11 adversarial gates green** (SC-007 added at Phase 4). SC-008 → Phase 7, SC-017 → Phase 10.
+- The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
+  is deliverable as of Phase 5.
 
 ## Commit log
 
 | | |
 | --- | --- |
+| `8e64e88` | docs: task board + progress through phase 5; ignore parked worktree dirs |
+| `8792ef7` | feat(us3): production-readiness verdict (T158–T168) |
+| `e75ac61` | feat(us2): verified fix loop, plus phase 1–3 engineering-review remediations (T144–T157) |
+| `a2b2735` | Initial push: WebAudit AI monorepo (Phases 1–3 + review work) |
 | `b48af08` | feat(web): build the visual-comparison harness (T246) |
 | `f0a2c7c` | fix(web): the design-adherence gate could never fail (T245) |
 | `9c14f78` | feat(web): vendor the icon subset, no CDN dependency existed to remove (T247) |

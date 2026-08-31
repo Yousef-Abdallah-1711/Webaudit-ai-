@@ -23,24 +23,28 @@ Positioning, competitive standing, and the commercial model are in [PRODUCT.md](
 
 ## Status — read this before forming an opinion of the code
 
-**43 of 248 tasks complete. Foundational phases only. There is no scan engine yet.**
+**184 of 250 tasks complete (73%). The core product loop works end to end.** A real audit runs
+against a live URL, a human drives it through the UI, issues turn green only when a re-check passes,
+and a production-readiness pass returns an explicit go/no-go.
 
-Nothing in this repository audits a website today. What exists is the layer everything else stands
-on, built and verified in order:
+Built and verified in dependency order:
 
 | Phase | State | What it is |
 | --- | --- | --- |
-| 1 — Setup | done | Monorepo, pinned toolchain, CI, local services |
-| 2A — Persistence | done | 22 models, 19 enums, migrations applied, seeds |
-| 2B — Accounts & sessions | done | Registration, verification, login, refresh, reset, deletion |
-| 2C — Credit ledger | done | Lot accounting, debit, refund, expiry — SC-022 green |
-| 2D — SSRF-safe fetch | **next** | |
-| 2E–2L, 3–11 | not started | Capability SDK, AI executor, module runner, queue, the five audit modules, billing, admin, sandbox |
+| 1 — Setup | ✅ done | Monorepo, pinned toolchain, CI, local services |
+| 2 — Foundational spine | ✅ done | Persistence (22 models), accounts & sessions, credit ledger, SSRF-safe fetch, control gate, secret redaction, capability SDK + registry, AI executor, module runner, queue + realtime, workspace lifecycle |
+| 2L — Design system port | ✅ done | 15 components + 4 app shells ported into `apps/web`; `pnpm lint` enforces tokens, `pnpm test:visual` enforces fidelity |
+| 3 — US1: Audit a live site | ✅ done | Orchestrator, 13 vendored capabilities, real end-to-end audit (5 areas' `ctx.fetch` checks), report + live progress UI. **First sellable artifact.** |
+| 4 — US2: The fix loop | ✅ done | assert-fixed → narrow re-verification queue → green only on a passing check (**SC-007**); `reverify()` on 6 capabilities; recurrence detection; fixes board |
+| 5 — US3: Readiness verdict | ✅ done | Fresh full re-audit, fingerprint regression diff, go/no-go with named blockers, shareable certificate, `/readiness` UI |
+| 6 — US4: Source audit | ⬜ not started | Archive/repo input, streaming extraction guard, dependency/bundle/css capabilities |
+| 7 — US5: Billing | ⬜ not started | Subscriptions, entitlements, credit purchase, webhook, retention, export (**SC-008**) |
+| 8 — US6: Design-intent questionnaire | ⬜ not started | `AWAITING_QUESTIONNAIRE` without holding a worker slot |
+| 9 — US7: Operator admin | ⬜ not started | Margin attribution, capability toggles, provider config, queue ops (**SC-009, SC-010**); first `requireOperator` routes |
+| 10 — Sandbox runner | ⬜ not started | The no-egress, no-credential service for untrusted uploaded capabilities (**SC-017**). Until it exists the upload path returns `503`. |
+| 11 — Polish | 🟡 1/10 | a11y assertions, dark-mode contrast, structured logging, deploy runbooks, doc corrections |
 
-Specifically **not built**: capability SDK, AI executor, module runner, orchestrator, queue and
-realtime transport, any of the five audit modules, report generation, billing, the admin surface,
-the sandbox runner, and the frontend. The design system is vendored but not yet ported into
-`apps/web`.
+**9 of 11 adversarial gates green.** SC-008 lands with Phase 7, SC-017 with Phase 10.
 
 [PROGRESS.md](PROGRESS.md) is the honest scoreboard — what is verified rather than merely written,
 which adversarial gates are green, and what is still an open decision.
@@ -102,8 +106,10 @@ redis://localhost:6389
 `pnpm services:down` stops them. `pnpm db:studio` opens Prisma Studio; `pnpm db:reset` drops and
 rebuilds the database.
 
-`pnpm dev` runs, but every app's `dev` script is still a placeholder — none of the five units has a
-server entry point yet. The API is exercised through its test suite, not by being started.
+`apps/api` and `apps/worker` have real `dev`/`start` scripts and boot end to end; `apps/web` runs
+under `next dev` / `next build`. `apps/probe-pool` and `apps/sandbox-runner` are still scaffolds
+(the sandbox is Phase 10, deliberately last). Most work is still exercised through the test suites
+rather than a running stack.
 
 ## Verification gates
 
