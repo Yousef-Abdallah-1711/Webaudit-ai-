@@ -53,3 +53,9 @@ Thumbs.db
 # Source archive — extracted content lives in design-system/, tracked.
 # Keeping the 11MB zip alongside it would duplicate the whole system.
 *.zip
+
+# Separate work parked in this worktree — not part of the WebAudit AI product,
+# each with its own tooling. Not committed.
+/showcase-esaalnybot/
+/apps/early-access/
+/reference-landing/

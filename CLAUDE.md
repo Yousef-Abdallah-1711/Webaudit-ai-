@@ -33,21 +33,22 @@ three deployable units where we have five (R16). Do not implement from it withou
 current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
-are complete. **107 of 250 tasks done** — Phase 1 and all of Phase 2 except 2L. Next is **Phase 2L**
-(T237–T248, the design-system port), which is **blocked**: `apps/web` has no Next.js application to
-port into, and no task creates one. See PROGRESS.md "Resume here" before starting it, and do not
-start Phase 3 until that scaffold exists.
+are complete. **184 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2) and 5 (US3) are complete.
+Next is **Phase 6** (T169–T179, US4 — audit source, not just the served page). See PROGRESS.md
+"Resume here".
 
-**8 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
+**9 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
 redaction, SC-011 capability disable, SC-012 provider exhaustion, SC-006 attribution, SC-015
-workspace destruction. Of the rest,
-**SC-007 is already enforced by the schema** — `OPEN → RESOLVED` is not a legal transition — but its
-adversarial suite lands at T144. SC-008 and SC-017 land with their phases (T180, T218).
-`tasks.md` is authoritative for task state; PROGRESS.md carries the honest scoreboard and the
-reasoning behind each one.
+workspace destruction, **SC-007 verified-fix loop** (T144, added at Phase 4 — schema + a total
+`outcomeToState` function + a single RESOLVED writer + an adversarial suite). SC-008 and SC-017 land
+with their phases (T180, T218). `tasks.md` is authoritative for task state; PROGRESS.md carries the
+honest scoreboard and the reasoning behind each one.
 
-There is no scan engine wired end to end yet and no UI. The first sellable artifact is **T135**, end
-of Phase 3.
+A real audit runs end to end (URL scans, SECURITY + SEO + the other three areas' `ctx.fetch`-based
+checks) and is drivable by a human through the UI; the red-to-green fix loop works; and a
+production-readiness pass (fresh full re-audit, fingerprint regression diff, go/no-go verdict with
+named blockers, shareable certificate) closes the journey. The first sellable artifact was **T135**,
+end of Phase 3.
 
 Two rounds of defects are recorded rather than forgotten. A full engineering review of Phases 1–2B
 produced 19 findings, all resolved in `f02ef48` — three Critical: a credit-ordering bug that drew

@@ -13,6 +13,12 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/coverage/**',
       'design-system/**',
+      // Not deployable units of the WebAudit AI product and not part of its
+      // lint/typecheck gate — separate work parked in this worktree, each with
+      // its own tooling. Gitignored.
+      'showcase-esaalnybot/**',
+      'apps/early-access/**',
+      'reference-landing/**',
       '**/prisma/generated/**',
       '**/*.min.js',
       // Next.js writes and owns this file; its own triple-slash reference to

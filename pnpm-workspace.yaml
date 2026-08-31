@@ -3,3 +3,7 @@ packages:
   - 'packages/*'
   - 'packages/capabilities-vendored'
   - 'packages/capabilities-vendored/*'
+  # Separate work parked in this worktree, not deployable units of the product
+  # and not on its lint/typecheck/test gate. Gitignored; excluded here so a
+  # local `pnpm -r` does not pick them up either.
+  - '!apps/early-access'

@@ -1,16 +1,263 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-08-27 · **Tasks** 159 / 250 (+T236a, not in the original 250) · **Commits** 67 ·
-**Tests** `unit` project 586/587 passing (**1 deliberately RED** — T108's second assertion, a
-per-module refund that needs either a real `VERIFIED`-requiring capability or `Scan.capabilitySnapshot`
-wiring, neither of which exists yet; confirmed unaffected by T136–T143, see § below), `adverse`
-508/509 (1 skipped, not a fail), plus **1 Playwright e2e spec, fully green** (T109 — the first complete
-audit in the product's history) and the `visual` project's first real use of its own harness against a
-live `apps/web` (7 `it.todo`, one real assertion proving the mechanism works — see § T126–T135 below).
-🎯 **Phase 3 (User Story 1) is now fully complete — T105–T143, every task done.**
+**Updated** 2026-08-31 · **Tasks** 184 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **696/696 green**, `adverse` green (1 pre-existing skip), `visual` 6 + 7 todo,
+plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` clean across the monorepo.
+🎯 **Phase 3 (US1) complete — T105–T143.** ✅ **Phase 4 (US2, the fix loop) complete — T144–T157;
+SC-007 now has its adversarial gate.** ✅ **Phase 5 (US3, the readiness verdict) complete —
+T158–T168; the full journey audit→fix→verify→ship is deliverable.** Two review passes on Phases 1–3
+also folded in (§§ below).
+
+## Phase 3 engineering review (2026-08-30) — findings fixed
+
+A strict senior-engineering review of T105–T143. Findings and their remediation:
+
+- **C1 (Critical) — a scan including the UI/Design area failed at persist on an unreconciled FK.**
+  `persist.ts` writes the module AI-execution row keyed `module-ai:<module>`; `CapabilityExecution
+  .capabilityId` is a required FK to `Capability.id` and nothing created those synthetic rows, so any
+  scan whose AI layer emitted an invocation (UI, via `impeccable`) threw
+  `CapabilityExecution_capabilityId_fkey` → `failScan` → whole scan FAILED. No test caught it
+  (`persist.test.ts` mocks the writer; T109 e2e is SECURITY+SEO only). **Fixed:** new
+  `apps/api/src/services/registry/platform-capabilities.ts` (`ensurePlatformCapabilities`), called
+  from `reconcileCapabilitiesAtBoot`, from the worker orchestrator's first job (memoised), and from
+  `scripts/seed.ts`. New test `apps/worker/tests/integration/orchestrator-ui-module.test.ts` (also
+  closes review finding M9 — no e2e covered a UI-area scan) and the showcase full-pipeline run now
+  completes a real 5-area scan with no workaround.
+- **H2 (High) — `persistModuleResult` was not transactional.** A failure partway left a half-written
+  `ModuleResult`. **Fixed:** the orchestrator wraps the call in `db.$transaction`.
+- **H3 (High) — the `globalThis.fetch` egress poison raced across concurrently-run modules.** Module
+  A's `finally` un-poisoned `fetch` while module B was still running (FR-025 silently off).
+  **Fixed:** the poison is now reference-counted and process-wide with one shared violations map
+  keyed by `currentCapabilityId()`; restored only when the last concurrent module's code layer ends.
+  New test in `layer-ordering.test.ts`.
+- **H4 (High) — FR-018 one-active-scan-per-target was a read-then-write TOCTOU race** (concurrent
+  `POST /scans` → double charge). **Fixed:** partial unique index
+  `Scan_one_active_per_target` (raw migration `20260830090000_...`) + `create-scan.ts` catches the
+  P2002 → `DuplicateScanError`. New test: 8 concurrent creates → exactly one 201, one debit.
+- **M5** — `chargedCredits` is now written at scan-create time, not in a later separate update (a
+  crash between `debit` and that update left a real charge reading as `chargedCredits: 0`).
+- **M6** — `create-scan.ts` no longer runs the `reconfirmControl` network probe when nothing in the
+  selection needs more than `NONE` control (the common URL scan), matching the orchestrator.
+- **M7** — the orchestrator now threads completed `ModuleResult` summaries into later phases'
+  `CapabilityInput.priorModuleResults` (was hard-coded `{}`). `contradiction-detector` (TESTING,
+  phase 1) still needs a dedicated post-audit QA phase to be fully useful; the threading mechanism it
+  depends on is now real.
+- **T108's second assertion (`chargedCredits < quotedCredits`) is fixed, not RED.** `create-scan.ts`
+  now debits only the modules whose control gate is met; the gated module's share is never charged.
+  `gated-check-partial.test.ts` raises every SECURITY capability to `VERIFIED` so SECURITY is
+  genuinely gated at execution (NOT_APPLICABLE) while SEO completes.
+- **L10–L13** — `create-scan.ts` selects only the plan fields it needs (not the whole `User` row) and
+  parallelises its independent reads; `persist.ts` writes capability-execution rows in one
+  `createMany`; the flaky `adherence-lint` cold-start test gets a 20s timeout.
+
+Not changed: **M8** — `AI_MODE=fixtures` returning `{}` and degrading the AI layer is a *deliberate*
+design (it is forbidden in production for exactly that reason); the AI layer is tested with
+schema-valid responses via explicit stubs, not the default fixture chain.
+
+## Phases 1–2 review (2026-08-30) — wiring gaps fixed
+
+A follow-on review of the pre-Phase-3 foundation for "built but never connected":
+
+- **`sweepTimedOutScans` (T101 / FR-038) was never scheduled** — its only caller was a test, so a
+  scan whose phase job died sat non-terminal for ever with its credits spent. New
+  `apps/worker/src/orchestrator/timeout-scheduler.ts`: a BullMQ **repeatable** job on the
+  maintenance queue (`upsertJobScheduler`, 60s default, `TIMEOUT_SWEEP_INTERVAL_MS` to tune),
+  wired into `startWorker`. New `timeout-sweep.test.ts` (3): stuck scan → TIMED_OUT + refund,
+  in-deadline scan untouched, dispatch routing. Confirmed at real worker boot
+  (`bull:webaudit-maintenance:repeat:timeout-sweep` registered).
+- **`assertCapabilitiesAreLocal` (T074 / FR-023) was defined but never called at boot.** Now runs
+  inside `reconcileCapabilitiesAtBoot` (option `assertLocal`, default true) and **fails closed** —
+  a capability that reconciled but whose entry module is not on disk stops the boot. The 13
+  vendored manifests point at `src/index.ts` (present), so it passes; verified at real `startApi`.
+- **`capability-loader.ts` ignored the registry's `isEnabled` flag** (open decision #13) — an
+  operator-disabled capability kept running until the next deploy. `loadCapabilities` now takes the
+  enabled-id set; the orchestrator reads `isEnabled: true` per module and threads it in. New
+  `orchestrator-capability-enabled.test.ts` (2): a disabled capability writes no execution row; a
+  module with everything disabled resolves NOT_APPLICABLE without failing the scan.
+- **`apps/api` and `apps/worker` had no runnable `dev` script** — both `index.ts` files already
+  carried `isEntrypoint()` guards, so this was just missing package scripts. Added `dev`
+  (`node --env-file-if-exists=../../.env --import tsx --watch src/index.ts`) and `start`. Both boot
+  cleanly (`[api] listening on …`, `[worker] consuming …`). The stale "placeholders until T113"
+  worker log line is corrected.
+
+**Not fixed** — workspace teardown still does not fire on an API-side `POST /scans/:id/cancel`
+(SC-015's cross-process gap, PROGRESS open item 7). It needs the API to enqueue a maintenance
+teardown job; deferred rather than done half-way, and low-frequency while Phase 3 is URL-only (few
+workspaces created).
+
+Verified: `pnpm test` **666/666**, `pnpm test:adverse` **532/533** (1 skip), `pnpm lint` clean.
+(A concurrent-session collaboration on Phase 4 is in the same worktree; run tests against your own
+`TEST_DATABASE_URL` — two `--no-file-parallelism` runs truncate one DB and produce phantom failures.)
 **Task list** [specs/001-webaudit-mvp-baseline/tasks.md](specs/001-webaudit-mvp-baseline/tasks.md) — authoritative for task state.
 
 Human-readable roll-up and handoff. **Starting a fresh session? Read § Resume here first.**
+
+---
+
+## Phase 4 (User Story 2) — the fix loop, T144–T157 — done
+
+**The red-to-green loop is built end to end.** A user asserts an issue fixed, the platform re-runs
+*only* that one check against the recorded location, and the issue turns green **only** when the
+check passes — verified adversarially (SC-007), not just enforced by the schema.
+
+**SC-007 is the load-bearing guarantee, and it is now structural in three layers:**
+
+1. `@webaudit/types`' `ISSUE_STATE_TRANSITIONS` already had `RESOLVED` with exactly one inbound
+   edge (from `ASSERTED_FIXED`) and no user action on any right-hand side.
+2. `apps/api/src/services/issues/state-machine.ts` (T148) — `outcomeToState` is a **total function
+   over `VerificationOutcome` whose only `RESOLVED` branch is `PASSED`**; `assertResolvedOnlyOnPass`
+   re-checks that at runtime before any write.
+3. `recordVerificationAttempt` (`attempts.ts`, T151) is the **only writer of `Issue.state =
+   RESOLVED` anywhere in the system** — one transaction, the state move guarded on
+   `state: 'ASSERTED_FIXED'` (a retried BullMQ job records exactly one attempt), the
+   `VerificationAttempt` row second, a refund outside the tx for a non-delivered verdict.
+
+`apps/api/tests/adverse/verification.test.ts` (T144, 5 tests) drives all three SC-007 shapes —
+unchanged assertion → `FAILED` → stays `OPEN`; bulk assert-all → 0 green; a throwing check →
+`ERRORED` → not green + refunded — plus a positive control proving a genuine `PASSED` *does*
+resolve, so the suite tests a lock rather than a wall.
+
+**Async, through a real queue — not the http-api.md example's synchronous-looking shape.**
+`POST /issues/:id/assert-fixed` (T154) charges 3 credits (`REVERIFY_COST`), transitions the issue to
+`ASSERTED_FIXED` under a guarded `updateMany` (a lost race refunds + 409s), enqueues a `reverify`
+job, and returns `202`. The verdict arrives later as an `issue:verified` realtime event and a new
+`VerificationAttempt` row — matching the dedicated `reverify` queue + `REVERIFY_JOB_OPTIONS`
+(3 attempts, backoff) the architecture already shipped in `@webaudit/config`. New producer:
+`apps/api/src/services/queue/reverify-producer.ts`, mirroring `scan-phase-producer.ts` (no
+`@webaudit/worker` dependency in production).
+
+**The worker runner (T149/T150) touches exactly one capability.** `apps/worker/src/reverify/
+resolve-check.ts` maps a `checkId` namespace (`headers`/`ssl`/`owasp`/`meta`/`content`/`redaction`)
+to its owning capability id — a static table for the same reason `capability-loader.ts`'s is; an
+unknown namespace, or a capability with no `reverify`, resolves to nothing → the runner returns
+`UNVERIFIABLE` (FR-063), never a guess. `runner.ts` loads the issue (must be `ASSERTED_FIXED` or the
+job is stale and no-ops), builds the same `CodeLayerContext` a code-layer capability gets, contains
+the call with `containCapabilityCall` (a throw, a rejection, and a hang are all one `ERRORED`
+shape), hands the verdict to `recordVerificationAttempt`, and publishes `issue:verified`. It never
+calls `runModule` or loads the module's other capabilities — FR-059's "MUST NOT re-audit" is a
+property of only ever touching one `reverify`.
+
+**Refunds on a non-delivered verdict (FR-075).** `ERRORED` (we could not run the check) and
+`UNVERIFIABLE` (we have no check for this issue at all — a gap in our coverage, not a service) both
+refund the 3-credit charge to its originating lot. A `FAILED` re-check *is* a delivered verdict —
+the user learns their fix did not hold — and stays charged. `IssueVerifiedEvent.outcome` gained
+`'ERRORED'` (additive union widening in `@webaudit/types`).
+
+**`reverify` on all six first-slice capabilities (T153).** Each fetches the recorded URL once and
+re-runs exactly the one check its `checkId` names — never the others — returning
+`PASSED` / `FAILED {evidence}` / `UNVERIFIABLE`. `data-leak-scanner` is URL-only and *kind*-granular
+at re-check time (`ctx.readFile` is unavailable with no attached-source workspace): it never reports
+`PASSED` while any credential of the flagged kind remains in the page — the safe direction for
+SC-007. `ssl-analyzer` decides ownership before touching the network (the conformance probe passes
+`conformance-probe` as the checkId).
+
+**Recurrence (T152).** `markRecurrences` runs in the orchestrator's `RUNNING_DOCS` phase: a
+new-scan issue whose fingerprint reached `RESOLVED` (or `previouslyResolved`) in an earlier scan of
+the same target is re-labelled `REOPENED` with `previouslyResolved`/`reopenedAt` set — a birth-time
+classification, not a fix-loop transition, so the fixes board and the readiness diff (FR-069) both
+see it as a regression rather than a new find.
+
+**Frontend (T155–T157).** `apps/web/components/fixes/{FixesBoard,IssueRow}.tsx` ported from
+`FixesScreen`; `app/(dashboard)/fixes/page.tsx` reads `?scan=<id>` (no "current scan" concept,
+`Suspense`-wrapped for `useSearchParams`), loads `GET /scans/:id/issues`, re-fetches on every
+`issue:verified` event and `onResync` (T135 realtime), shows "Re-checking…" optimistically from the
+route's returned state, and pulls `GET /issues/:id/attempts` for any re-checked-but-not-resolved
+issue so the current failing evidence renders **inline in mono, never behind a click** (FR-061).
+**Visual diff N/A** — there is no fixes-board artboard in `design-system/reference-pages/` (only
+Home/Dashboard/Admin + public pages), the same situation T129/T130/T134's dashboard screens were in;
+covered by `apps/web/tests/unit/fixes-board.test.ts` (9) + adherence lint instead.
+
+**`@webaudit/api/issues` package subpath** added (same shape as `/credits`, `/control-gate`) so the
+worker reaches `recordVerificationAttempt`/`markRecurrences` without depending on `apps/api`'s
+routes.
+
+**Two pre-existing tests updated for the new reality, not worked around:** the capability conformance
+suite's `reverify-reports-failure-with-evidence` check now actually runs (the 6 capabilities have a
+`reverify`) — `ssl-analyzer` needed its ownership check moved before the fetch; and
+`workers.test.ts`'s "reverify has no producer yet" premise is stale — `reverify` is now a known job,
+so a missing handler is `JobNotImplementedError` naming T150, not `UnknownJobError`.
+
+**Verified** (against an isolated `TEST_DATABASE_URL`, so the concurrent Phases 1–2 session's runs
+don't collide): `pnpm lint` + `pnpm -r typecheck` clean; `pnpm test` **666/666**; `pnpm test:adverse`
+**532 passed / 1 pre-existing skip** (+8: `verification.test.ts` ×5, `reverify.unverifiable.test.ts`
+×3); `pnpm test:visual` 6 passed / 7 todo (baseline unchanged); `next build` clean, `/fixes` route
+builds. New unit coverage beyond the 4 numbered task suites: worker runner (7), capability `reverify`
+(16), recurrence (3), fixes board (9).
+
+**Still open, recorded not hidden:** an AI-judgment issue (`checkId` `ai.*`) has no re-verification
+entry point, so pressing "I fixed this" on one costs 3 credits then immediately refunds them and
+lands `UNVERIFIABLE` — financially correct, mildly wasteful UX. Disabling the button for those needs
+the frontend to know the `resolve-check` namespace map, which is worker-side; deferred.
+
+---
+
+## Phase 5 (User Story 3) — the readiness verdict, T158–T168 — done
+
+**The full journey is deliverable: audit → fix → verify → ship.** A user whose baseline audit has no
+outstanding critical or high issues runs a readiness pass; every area is re-audited fresh; the
+result is diffed against the baseline by fingerprint; and an explicit **go / no-go** verdict comes
+back with every failing criterion named.
+
+**FR-067 (audit fresh, no reuse) is kept by construction.** A `READINESS` scan
+(`apps/api/src/services/readiness/create.ts`, T161) is an ordinary `Scan` — `kind: READINESS`,
+`baseline` connected, `requestedModules: ALL_AREAS` — that runs the same orchestrator phase
+pipeline as an `INITIAL` one. `persistModuleResult` writes against the readiness scan's own id, so a
+baseline `ModuleResult` is never read for scoring, copied, or mutated. `readiness.fresh.test.ts`
+(T158) pins that: the verdict is scored from the readiness scan's own results, and the baseline's
+rows come back byte-identical.
+
+**The finalization pipeline** (`apps/worker/src/readiness/run.ts`, T162) runs in the orchestrator's
+`RUNNING_DOCS` phase when `scan.kind === 'READINESS'`: it reads both scans' snapshots (baseline only
+for comparison, FR-068), computes the diff and verdict, and upserts the one `ReadinessVerdict` row
+(idempotent for a retried phase).
+
+**The diff** (`diff.ts`, T163) is pure and fingerprint-keyed. `areaChanges` carries a signed delta
+and a direction per area with a 3-point noise floor (FR-068). `regressions` are all **named**
+(FR-069's "named, not merely counted"): an area score that fell past the floor; an area whose state
+carries less confidence than before (COMPLETE→DEGRADED counts as a regression *of the audit* even at
+the same score — `STATE_RANK`); a fresh issue whose fingerprint reached `RESOLVED` in the baseline
+(a verified fix that came back); a fresh CRITICAL/HIGH issue whose fingerprint is absent from the
+baseline (the "readiness pass discovers new critical issues" edge case). `improvements`: risen
+scores, cleared blocking issues.
+
+**The verdict** (`verdict.ts`, T164) is pure. A *go* needs both halves of FR-071 at once — every
+area at or above its **published** threshold (`READINESS_THRESHOLDS` in `@webaudit/config`, defaulted
+PERF/SEC 80, TESTING 75, UI/SEO 70 — an open decision, published rather than hidden in the logic)
+**and** zero regressions. Every failing criterion becomes a named blocker (FR-070). An unscored area
+is a blocker — you cannot ship what could not be audited — and `overallScore` is never null (an
+audit that measured nothing is a no-go at 0).
+
+**FR-066 (premature)** — `POST /scans/:baseline/readiness` is refused `403 READINESS_PREMATURE` with
+the outstanding count while any CRITICAL/HIGH issue on the baseline is not `RESOLVED`, and charges
+nothing; `GET /scans/:baseline/readiness` reports `{ premature, outstandingBlocking }` so the UI
+offers-and-marks rather than hides. `readiness.premature.test.ts` (T160) covers both plus the
+free-tier `403 PLAN_UPGRADE_REQUIRED` and the "starts once resolved" path.
+
+**FR-072 (shareable certificate)** — a self-contained HTML page (no external CSS/fonts/scripts),
+generated **lazily** by `GET /scans/:id/readiness` on the first read of a *go* verdict, stored in R2
+under the scan's prefix, guarded by a single `updateMany` on `certificateKey: null` so it happens
+once — and the congratulations email (T166, a new `Mailer.sendReadinessAchieved` method) is sent in
+the same guarded block. If R2 is not configured the verdict still returns and `certificateKey` stays
+null (documented, matching how `storage/reports.ts` is real-but-unconsumed until something needs it).
+
+**Frontend** — `ReadinessVerdict` (T168, ported from `VerdictPanel.jsx`, prop names matching its
+`.d.ts`, blockers always visible per `VerdictPanel.prompt.md`) plus `app/(dashboard)/readiness/page.tsx`
+(not a numbered task, same "the component is dead code without it" reasoning as T157's fixes page):
+`?scan=<id>` resolves to offer/premature for an INITIAL scan or the verdict for a READINESS scan,
+realtime-driven, with the certificate link.
+
+**`@webaudit/api/readiness` was NOT added** — the certificate/email stay route-side (lazy), and the
+worker's finalization writes only the verdict row, so no new package subpath was needed beyond what
+Phase 4 already established.
+
+**Verified** (isolated `TEST_DATABASE_URL`): `pnpm lint` + `pnpm -r typecheck` clean; `pnpm test`
+green; `pnpm test:adverse` green; `next build` clean, `/readiness` route builds. New coverage: the 3
+named suites (T158/159/160) + `readiness-diff` (8), `readiness-verdict` (5), `readiness-certificate`
+(4), the `ReadinessVerdict` component (3).
+
+**Open decision recorded:** the per-area go thresholds have no number in the spec ("published and
+fixed" is all it says) — defaulted and published in `@webaudit/config/constants` with a rationale,
+same treatment as FR-017's Level 1 probe rate. Needs product sign-off; a one-line change.
 
 ---
 
@@ -54,7 +301,23 @@ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:adver
 
 All 8 gates currently pass (`pnpm lint` covers both code lint and design-adherence lint).
 
-### Next task: T144 (Phase 4, US2) — Phase 3 is fully complete
+### Next task: T169 (Phase 6, US4 — audit source, not just the served page) — Phases 3, 4, 5 complete
+
+Phase 5 (readiness verdict, T158–T168) is done — see § Phase 5 near the top. **Next is Phase 6, User
+Story 4 ("Audit source, not just the served page")**, starting at T169: the streaming archive
+extraction guard (FR-015 — all limits enforced *before* bytes land), R2 upload staging, shallow repo
+clone into the scan workspace, and three source-only capabilities (dependency-scanner,
+bundle-analyzer, css-analyzer). It depends only on Phase 2 — genuinely independent of US1–US3.
+
+The rest of this section predates Phase 4/5 and is kept for the T136–T143 context it carries.
+
+Phase 4 (the fix loop, T144–T157) is done — see § Phase 4 near the top for the full account. **Next
+is Phase 5, User Story 3 ("Get a production readiness verdict")**, starting at T158: a fresh full
+re-audit that diffs against the baseline (the fingerprint identity `markRecurrences` already relies
+on), names regressions (FR-069), and returns an explicit go / no-go. It depends on US1 for a
+baseline and US2 for resolved issues — both now in place.
+
+The rest of this section predates Phase 4 and is kept for the T136–T143 context it carries.
 
 **Phase 3's "Remaining audit areas" sub-phase (T136–T142) is done** — the seven capabilities that
 fill in `capability-loader.ts`'s PERFORMANCE/UI/TESTING arrays, left empty since T125. See § T136–T142
@@ -817,8 +1080,8 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 2K — Workspace lifecycle | T102–T104a/b | ✅ done | **SC-015 green.** +2 tasks the plan omitted |
 | 2L — Design system port | T236a, T237–T248 all done | ✅ done | Checkpoint reached; Phase 3 next |
 | 3 — US1 🎯 MVP | T105–T143 | ✅ done | 🎯 **MVP checkpoint reached** — real audit, driven through the UI, end to end, all 5 areas' capabilities wired. T143's design gap resolved by documented exception (§ below) |
-| 4 — US2 fix loop | T144–T157 | ⬜ | SC-007 next up |
-| 5 — US3 readiness | T158–T168 | ⬜ | |
+| 4 — US2 fix loop | T144–T157 | ✅ done | **SC-007 green** — the red-to-green loop, async re-verify queue, `reverify` on all 6 first-slice capabilities, recurrence, fixes board. § Phase 4 near top |
+| 5 — US3 readiness | T158–T168 | ✅ done | Fresh full re-audit, fingerprint diff, go/no-go verdict with named blockers, shareable certificate. § Phase 5 near top |
 | 6 — US4 source audit | T169–T179 | ⬜ | |
 | 7 — US5 billing | T180–T193 | ⬜ | SC-008 |
 | 8 — US6 questionnaire | T194–T201 | ⬜ | |
@@ -832,7 +1095,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | --- | --- | --- | --- |
 | SC-022 | No purchased credit lost or drawn out of order | T035 | ✅ **GREEN** — 8 seeds × 200 random steps |
 | SC-018 | SSRF refused including DNS rebinding | T044 | ✅ **GREEN** — 99 assertions, 4 layers |
-| SC-007 | Nothing turns green without a passing check | T144 | 🟡 schema-enforced; suite pending |
+| SC-007 | Nothing turns green without a passing check | T144 | ✅ **GREEN** — schema + `outcomeToState` total function + single RESOLVED writer; adversarial suite: unchanged assertion, bulk assert-all, throwing check, + positive control |
 | SC-006 | No unattributed finding reaches a user | T084 | ✅ **GREEN** — 8 seeds × 25 random module shapes, 3 locks |
 | SC-008 | Nobody charged for our failures | T180 | ⬜ |
 | SC-011 | Disabling any capability leaves audits completable | T066 | ✅ **GREEN** — resolution half at 2G, execution half at 2I |
@@ -842,7 +1105,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | SC-017 | Six escape attempts refused, host survives | T218 | ⬜ |
 | SC-021 | Load generation refused without verified control | T052 | ✅ **GREEN** — 3 named bypasses + 2 forged-state cases |
 
-**8 of 11 green.** The rest land with their phases.
+**9 of 11 green.** SC-008 (T180) and SC-017 (T218) land with their phases.
 
 ---
 
@@ -1256,7 +1519,7 @@ The foundation is sound and CI now genuinely gates merges — it did not before,
   Nothing has ever audited a website end to end. The wiring is Phase 3's job (T105–T143).
 - **No provider has ever been called.** Every suite runs `AI_MODE=fixtures` by design, so the three
   vendor adapters are typechecked and unexecuted. The first live call is a Phase 3 milestone.
-- **8 of 11 adversarial gates green.**
+- **9 of 11 adversarial gates green** (SC-007 added at Phase 4).
 - First sellable artifact is **T135**, end of Phase 3.
 
 ## Commit log
