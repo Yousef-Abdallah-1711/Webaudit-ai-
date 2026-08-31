@@ -10,7 +10,9 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev": "node --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local --import tsx --watch src/index.ts",
+    "start": "node --env-file-if-exists=../../.env --import tsx src/index.ts"
   },
   "dependencies": {
     "@webaudit/ai-executor": "workspace:*",

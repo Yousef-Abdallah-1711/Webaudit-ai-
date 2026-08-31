@@ -53,18 +53,25 @@
  */
 
 import { modulesForPhase } from '@webaudit/config';
-import type { ModuleType, ScanState } from '@webaudit/types';
-import { controlLevelRank, type ControlLevel } from '@webaudit/types';
+import type { ModuleType, ScanState, Severity } from '@webaudit/types';
+import { controlLevelRank, SEVERITY_ORDER, type ControlLevel } from '@webaudit/types';
 import type { AiExecutor } from '@webaudit/ai-executor';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
 import { reconfirmControl, createSafeNetProbe } from '@webaudit/api/control-gate';
+import { ensurePlatformCapabilities } from '@webaudit/api';
+import { markRecurrences } from '@webaudit/api/issues';
 import { createCodeLayerContext } from '@webaudit/capability-sdk';
-import type { CapabilityInput, CodeLayerContext } from '@webaudit/capability-sdk';
+import type {
+  CapabilityInput,
+  CodeLayerContext,
+  ModuleSummary,
+} from '@webaudit/capability-sdk';
 import { runModule, persistModuleResult } from '../module-runner/index.js';
 import type { ModuleResultWriter } from '../module-runner/persist.js';
 import { loadCapabilities } from './capability-loader.js';
 import { runMasterSynthesis } from './master-report.js';
 import { enrichFixPrompts } from './fix-prompt.js';
+import { finalizeReadiness } from '../readiness/run.js';
 import { transition, nextPhase } from './state-machine.js';
 import { moveAndAnnounce, enqueuePhase, type EnqueueContext, type PhaseJobData } from './phases.js';
 import { createScanEmitter, type EventPublisher } from './emit.js';
@@ -117,6 +124,26 @@ async function requiredControlLevelsFor(
 }
 
 /**
+ * The `isEnabled: true` capability ids for the modules in this phase (open
+ * decision #13). Passed into `loadCapabilities` so an operator-disabled
+ * capability does not run. A module id absent from the registry entirely
+ * (nothing reconciled) yields an empty set → the module loads nothing →
+ * NOT_APPLICABLE, which is the correct answer for "no enabled checks here".
+ */
+async function enabledCapabilityIdsFor(
+  db: PrismaClient,
+  modules: readonly ModuleType[],
+): Promise<ReadonlyMap<ModuleType, ReadonlySet<string>>> {
+  const rows = await db.capability.findMany({
+    where: { module: { in: [...modules] }, isEnabled: true },
+    select: { id: true, module: true },
+  });
+  const map = new Map<ModuleType, Set<string>>(modules.map((m) => [m, new Set<string>()]));
+  for (const row of rows) map.get(row.module)?.add(row.id);
+  return map;
+}
+
+/**
  * Live-reconfirmed control level for a whole phase, computed at most once.
  * A phase whose capabilities all require NONE never touches the network —
  * NONE can never be gated regardless of the target's real level, so it's
@@ -160,6 +187,42 @@ async function planQueuePriorityFor(db: PrismaClient, userId: string): Promise<n
   return free?.queuePriority ?? 40;
 }
 
+/**
+ * Summaries of every area whose result is already persisted for this scan —
+ * i.e. areas that completed in an earlier phase (review finding M7). Threaded
+ * into a later phase's `CapabilityInput.priorModuleResults` so a capability can
+ * correlate across areas.
+ */
+async function buildPriorModuleResults(
+  db: PrismaClient,
+  scanId: string,
+): Promise<CapabilityInput['priorModuleResults']> {
+  const results = await db.moduleResult.findMany({
+    where: { scanId },
+    select: {
+      module: true,
+      state: true,
+      score: true,
+      issues: { select: { severity: true } },
+    },
+  });
+
+  const out: Partial<Record<ModuleType, ModuleSummary>> = {};
+  for (const r of results) {
+    let worst: Severity | null = null;
+    for (const { severity } of r.issues) {
+      if (worst === null || SEVERITY_ORDER[severity] < SEVERITY_ORDER[worst]) worst = severity;
+    }
+    out[r.module] = {
+      state: r.state,
+      score: r.score,
+      findingCount: r.issues.length,
+      worstSeverity: worst,
+    };
+  }
+  return out;
+}
+
 async function runAndPersistModule(
   options: OrchestratorOptions,
   scan: {
@@ -171,17 +234,27 @@ async function runAndPersistModule(
   emitter: ReturnType<typeof createScanEmitter>,
   requiredControlLevels: Readonly<Record<string, ControlLevel>>,
   effectiveControlLevel: ControlLevel,
+  priorModuleResults: CapabilityInput['priorModuleResults'],
+  enabledCapabilityIds: ReadonlySet<string>,
 ): Promise<void> {
   await emitter.emit({ type: 'module:started', scanId: scan.id, module }, () => Promise.resolve());
 
   const input: CapabilityInput = {
     ...(scan.target.inputType === 'URL' ? { targetUrl: scan.target.canonicalValue } : {}),
-    priorModuleResults: {},
+    // Summaries of every area that completed in an EARLIER phase (review
+    // finding M7). Modules within a phase run concurrently, so this is empty
+    // for phase 1 and carries phase-1's results into phase 2. `contradiction
+    // -detector` (TESTING, phase 1) still sees nothing today — it needs a
+    // dedicated post-audit QA phase to be fully useful — but the threading
+    // mechanism it depends on is now real rather than hard-coded `{}`.
+    priorModuleResults,
     controlLevel: effectiveControlLevel,
   };
 
   const startedAt = new Date();
-  const capabilities = await loadCapabilities(module);
+  // Only the capabilities an operator has left enabled in the registry
+  // (open decision #13 / SC-011 — the static loader ignored `isEnabled`).
+  const capabilities = await loadCapabilities(module, enabledCapabilityIds);
   const result = await runModule({
     module,
     capabilities,
@@ -194,26 +267,35 @@ async function runAndPersistModule(
     requiredControlLevels,
   });
 
+  // One transaction for the whole module result (review finding H2). Without
+  // it a failure partway through — a constraint, a pool timeout, a malformed
+  // evidence value — leaves a `ModuleResult` + `Issue` rows with no execution
+  // rows, and the scan then FAILs carrying a half-written area with its
+  // credits already debited. `timeout` is generous because persist does ~10
+  // sequential statements; it is still all local INSERTs and fast in practice.
+  //
   // Prisma's generated `issue.createMany` types `evidence` more narrowly
   // (`InputJsonValue`) than `ModuleResultWriter`'s structural `unknown` —
-  // both accept the same runtime shape (a JSON-serialisable value or
-  // undefined, per `code-layer.ts`'s own `usableEvidence`), so this is a
-  // type-level mismatch, not a real one.
-  await persistModuleResult(options.db as unknown as ModuleResultWriter, {
-    scanId: scan.id,
-    module,
-    state: result.state,
-    score: result.score,
-    summary: result.summary,
-    skippedReason: result.skippedReason,
-    degradedReason: result.degradedReason,
-    findings: result.findings,
-    executions: result.executions,
-    aiInvocations: result.aiInvocations,
-    aiCostMicros: result.aiCostMicros,
-    startedAt,
-    completedAt: new Date(),
-  });
+  // both accept the same runtime shape, so the cast is a type-level bridge.
+  await options.db.$transaction(
+    (tx) =>
+      persistModuleResult(tx as unknown as ModuleResultWriter, {
+        scanId: scan.id,
+        module,
+        state: result.state,
+        score: result.score,
+        summary: result.summary,
+        skippedReason: result.skippedReason,
+        degradedReason: result.degradedReason,
+        findings: result.findings,
+        executions: result.executions,
+        aiInvocations: result.aiInvocations,
+        aiCostMicros: result.aiCostMicros,
+        startedAt,
+        completedAt: new Date(),
+      }),
+    { timeout: 30_000 },
+  );
 
   await emitter.emit(
     {
@@ -265,7 +347,25 @@ async function failScan(
 export function createPhaseHandler(
   options: OrchestratorOptions,
 ): (data: PhaseJobData, job: JobRef) => Promise<void> {
+  // The module-ai:<module> sentinel Capability rows are the FK target for
+  // every module's AI-execution row (finding C1). `startApi` ensures them at
+  // boot; this covers a worker that processes a job before any API instance
+  // has booted (a fresh deploy, or a test that starts only the worker). Once
+  // per process, memoised — the first job waits on it, the rest do not.
+  let platformCapabilitiesReady: Promise<void> | undefined;
+  const ensureReady = (): Promise<void> => {
+    platformCapabilitiesReady ??= ensurePlatformCapabilities(options.db).catch((error: unknown) => {
+      console.error(
+        `[orchestrator] could not ensure module-ai platform capabilities: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    return platformCapabilitiesReady;
+  };
+
   return async function handlePhase(data: PhaseJobData): Promise<void> {
+    await ensureReady();
+
     const scan = await options.db.scan.findUnique({
       where: { id: data.scanId },
       include: {
@@ -308,6 +408,9 @@ export function createPhaseHandler(
           requiredControlLevelsByModule,
         );
 
+        const priorModuleResults = await buildPriorModuleResults(options.db, data.scanId);
+        const enabledByModule = await enabledCapabilityIdsFor(options.db, data.modules);
+
         await Promise.all(
           data.modules.map((module) =>
             runAndPersistModule(
@@ -317,6 +420,8 @@ export function createPhaseHandler(
               emitter,
               requiredControlLevelsByModule.get(module) ?? {},
               effectiveControlLevel,
+              priorModuleResults,
+              enabledByModule.get(module) ?? new Set<string>(),
             ),
           ),
         );
@@ -383,6 +488,19 @@ export function createPhaseHandler(
 
       if (data.phase === 'RUNNING_DOCS') {
         await enrichFixPrompts();
+        // FR-064 (T152): an issue whose fingerprint was verified fixed in an
+        // earlier scan of this target and has come back is re-labelled REOPENED
+        // with previouslyResolved set, so the fixes board and the readiness
+        // diff (FR-069) can both see it as a regression rather than a new find.
+        await markRecurrences(options.db, { scanId: data.scanId });
+        // FR-068/069/070/071 (T162): for a READINESS scan, compute the diff
+        // against the baseline and the go/no-go verdict now that every area has
+        // been audited fresh. The certificate + email (FR-072) are generated
+        // lazily by `GET /scans/:id/readiness`, since R2 and the mailer are
+        // apps/api's. A no-op for an INITIAL scan.
+        if (scan.kind === 'READINESS' && scan.baselineScanId !== null) {
+          await finalizeReadiness(options.db, data.scanId);
+        }
         await moveAndAnnounce(context, {
           scanId: data.scanId,
           from: 'RUNNING_DOCS',

@@ -11,11 +11,13 @@
     "./prisma-client": "./prisma/generated/client/index.js",
     "./credits": "./src/services/credits/index.ts",
     "./control-gate": "./src/services/control-gate/index.ts",
+    "./issues": "./src/services/issues/index.ts",
     "./test-db": "./tests/helpers/db.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "echo 'not implemented \u2014 scaffold only (port 3001)'"
+    "dev": "node --env-file-if-exists=../../.env --env-file-if-exists=../../.env.local --import tsx --watch src/index.ts",
+    "start": "node --env-file-if-exists=../../.env --import tsx src/index.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.972.0",

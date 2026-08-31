@@ -97,6 +97,7 @@ export interface ModuleResultWriter {
   };
   capabilityExecution: {
     create(args: { data: CapabilityExecutionRow; select: { id: true } }): Promise<{ id: string }>;
+    createMany(args: { data: CapabilityExecutionRow[] }): Promise<{ count: number }>;
   };
   aiInvocation: {
     createMany(args: { data: Record<string, unknown>[] }): Promise<{ count: number }>;
@@ -193,11 +194,15 @@ export async function persistModuleResult(
     issuesWritten = created.count;
   }
 
+  // Per-capability executions are always code-layer here (`executionsFor` in
+  // index.ts sets `invocations: []` on every one — the module's AI call is the
+  // separate row below), so they need no id back and go in one round trip
+  // rather than N sequential `create`s (review finding L12).
   let executionsWritten = 0;
   let invocationsWritten = 0;
-  for (const execution of options.executions) {
-    const created = await db.capabilityExecution.create({
-      data: {
+  if (options.executions.length > 0) {
+    const written = await db.capabilityExecution.createMany({
+      data: options.executions.map((execution) => ({
         scanId: options.scanId,
         capabilityId: execution.capabilityId,
         module: options.module,
@@ -207,28 +212,9 @@ export async function persistModuleResult(
         durationMs: execution.durationMs,
         costMicros: execution.costMicros,
         errorMessage: execution.errorMessage ?? null,
-      },
-      select: { id: true },
+      })),
     });
-    executionsWritten += 1;
-
-    if (execution.invocations.length > 0) {
-      const written = await db.aiInvocation.createMany({
-        data: execution.invocations.map((invocation) => ({
-          executionId: created.id,
-          scanId: options.scanId,
-          provider: invocation.provider,
-          model: invocation.model,
-          chainPosition: invocation.chainPosition,
-          promptTokens: invocation.promptTokens,
-          outputTokens: invocation.outputTokens,
-          latencyMs: invocation.latencyMs,
-          costMicros: invocation.costMicros,
-          outcome: invocation.outcome,
-        })),
-      });
-      invocationsWritten += written.count;
-    }
+    executionsWritten += written.count;
   }
 
   // The module's own AI call gets an execution row of its own, carrying the

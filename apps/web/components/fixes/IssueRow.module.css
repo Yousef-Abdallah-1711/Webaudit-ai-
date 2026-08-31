@@ -1,0 +1,104 @@
+/* T156 — one fixes-board row, from the inline row in Screens.jsx's FixesScreen. */
+
+.row {
+  padding: 16px 20px;
+  border-inline-start: 3px solid transparent;
+  background: var(--surface-page);
+  font-family: var(--font-sans);
+}
+
+.rowBordered {
+  border-top: var(--border-width) solid var(--border-default);
+}
+
+.rowResolved {
+  background: var(--sev-resolved-bg);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.verified {
+  font: var(--type-small);
+  color: var(--sev-resolved);
+  font-family: var(--font-mono);
+}
+
+.regressed {
+  font: var(--type-small);
+  color: var(--sev-high);
+  font-family: var(--font-mono);
+}
+
+.assertBtn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-control);
+  border: var(--border-width) solid var(--border-default);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition-color);
+}
+
+.assertBtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.location {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-zinc);
+  margin-top: 8px;
+  word-break: break-all;
+}
+
+.unverifiable {
+  margin-top: 10px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.evidence {
+  margin-top: 10px;
+  background: var(--sev-critical-bg);
+  border: var(--border-width) solid var(--sev-critical);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+}
+
+.evidenceLabel {
+  font: var(--type-small);
+  font-weight: 700;
+  color: var(--sev-critical);
+  margin-bottom: 6px;
+}
+
+.evidenceBody {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-zinc);
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

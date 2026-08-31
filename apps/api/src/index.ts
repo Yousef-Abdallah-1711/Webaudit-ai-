@@ -50,6 +50,12 @@ import { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 import { buildResolveRequiredControlLevel } from './services/registry/resolve-required-control-level.js';
 import type { RateLimiters } from './middleware/ratelimit.middleware.js';
 
+export { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
+export {
+  ensurePlatformCapabilities,
+  moduleAiCapabilityId,
+} from './services/registry/platform-capabilities.js';
+
 export const SERVICE_NAME = '@webaudit/api' as const;
 
 const DEFAULT_PORT = 3001;

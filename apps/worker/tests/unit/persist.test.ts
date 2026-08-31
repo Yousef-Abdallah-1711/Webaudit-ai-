@@ -54,6 +54,10 @@ function recorder() {
         executions.push(args.data);
         return Promise.resolve({ id: `ce_${String(executions.length)}` });
       },
+      createMany: (args: { data: unknown[] }) => {
+        executions.push(...args.data);
+        return Promise.resolve({ count: args.data.length });
+      },
     },
     aiInvocation: {
       createMany: (args: { data: unknown[] }) => {

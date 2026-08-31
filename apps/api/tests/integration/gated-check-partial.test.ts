@@ -20,15 +20,14 @@
  * capability with `requiredControlLevel: 'VERIFIED'` (none exist yet) and
  * belongs to a finer-grained test once one does.
  *
- * **RED right now, for the same two reasons T105/T106 and T107 already
- * are.** No `/scans` route is mounted, so the scan can never even be
- * created (404) today; and even once T110–T112 make creation possible,
- * nothing runs a phase to completion until T113's orchestrator exists —
- * `apps/worker/src/queue/workers.ts` still throws `JobNotImplementedError`
- * for the real job this file enqueues. Same real `startApi` + `startWorker`
- * composition as T107, for the same reason: this scenario is inescapably
- * about what actually happens once work runs, not only about an HTTP
- * refusal.
+ * **GREEN as of the 2026-08-30 engineering-review remediation.** The second
+ * assertion (`chargedCredits < quotedCredits`) was a long-standing documented
+ * RED — `create-scan.ts` debited the whole accepted quote and never excluded a
+ * gated module's share. It now debits only the modules whose control gate is
+ * met, and this test raises every SECURITY capability to
+ * `requiredControlLevel: VERIFIED` in the registry the orchestrator reads, so
+ * SECURITY is genuinely gated at execution and resolves NOT_APPLICABLE while
+ * SEO completes. Same real `startApi` + `startWorker` composition as T107.
  */
 
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -174,14 +173,17 @@ describe('a scan mixing a gated and a non-gated module (US1 scenario 8)', () => 
 
   it('completes the non-gated module and does not charge for the gated one', async () => {
     api = await startApi({ db: testDb, port: 0, installSignalHandlers: false });
-    // Real handlers now (T113's orchestrator), pointed at the same test
-    // database. It runs to completion, but two things this scenario needs
-    // still are not there: no capability is registered yet
-    // (packages/capabilities-vendored/ is empty until T119-124), so SEO
-    // resolves NOT_APPLICABLE rather than COMPLETE; and create-scan.ts does
-    // not refund a gated module's share of the charge in this sub-phase
-    // (see its own module note). Both assertions below stay RED for those
-    // documented reasons, not because the orchestrator failed to run.
+    // `startApi` reconciled the 13 real capabilities at their manifest control
+    // levels (all NONE). This scenario needs SECURITY to be genuinely gated at
+    // *execution* time, not only at the create-time seam — so raise every
+    // SECURITY capability to VERIFIED in the registry the orchestrator reads.
+    // With the target only attested, all of them are skipped and SECURITY
+    // resolves NOT_APPLICABLE; SEO is untouched and completes; create-scan
+    // charges for SEO only.
+    await testDb.capability.updateMany({
+      where: { module: 'SECURITY' },
+      data: { requiredControlLevel: 'VERIFIED' },
+    });
     worker = startWorker({ connection, db: testDb, installSignalHandlers: false });
     queueEvents = new QueueEvents(worker.queues.scanPhase.name, { connection });
     await queueEvents.waitUntilReady();

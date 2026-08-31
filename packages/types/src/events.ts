@@ -141,7 +141,12 @@ export interface IssueVerifiedEvent {
   readonly issueId: string;
   /** Present so the fan-out can route it to the scan's room. */
   readonly scanId: string;
-  readonly outcome: 'PASSED' | 'FAILED' | 'UNVERIFIABLE';
+  /**
+   * `ERRORED` is "the check could not be run" — distinct from `UNVERIFIABLE`
+   * ("there is no check for this issue at all"), though the client treats both
+   * as "not verified, and you were not charged" and the issue goes back to OPEN.
+   */
+  readonly outcome: 'PASSED' | 'FAILED' | 'UNVERIFIABLE' | 'ERRORED';
   readonly state: 'OPEN' | 'ASSERTED_FIXED' | 'RESOLVED' | 'UNVERIFIABLE';
 }
 

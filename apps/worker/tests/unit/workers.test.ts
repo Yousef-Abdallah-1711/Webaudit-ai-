@@ -128,13 +128,25 @@ describe('payloads are validated at the queue boundary', () => {
 });
 
 describe('an unrecognised job name is a failure, not a no-op', () => {
-  it('refuses a job on the reverify queue, which has no producer yet', async () => {
-    // FR-059's payload lands in Phase 4. Until then there is no shape to
-    // validate, so the honest answer is to refuse the job rather than to invent
-    // a permissive schema and run it.
+  it('refuses a reverify job with no handler by name (T150), not as unknown', async () => {
+    // FR-059's producer (`apps/api`'s `reverify-producer.ts`) lands in Phase 4,
+    // so `reverify` is now a *known* job — a `dispatch` with no `reverify`
+    // handler must fail as JobNotImplementedError naming its owning task, the
+    // same as `phase` without a handler, not as an unknown job.
+    const error = await dispatch({
+      id: 'j3',
+      name: 'reverify',
+      queueName: QUEUE_NAMES.reverify,
+      data: { issueId: 'issue_abc', creditsCharged: 3 },
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(JobNotImplementedError);
+    expect((error as JobNotImplementedError).owningTask).toBe('T150');
+  });
+
+  it('refuses a reverify job with a malformed payload for the payload reason', async () => {
     await expect(
-      dispatch({ id: 'j3', name: 'reverify', queueName: QUEUE_NAMES.reverify, data: {} }),
-    ).rejects.toThrow(UnknownJobError);
+      dispatch({ id: 'j3b', name: 'reverify', queueName: QUEUE_NAMES.reverify, data: {} }),
+    ).rejects.toThrow(/issueId/);
   });
 
   it('refuses an unnamed maintenance job', async () => {

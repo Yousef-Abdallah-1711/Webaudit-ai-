@@ -27,7 +27,25 @@
 import type { ControlLevel, ModuleType } from '@webaudit/types';
 import { controlLevelRank, SCAN_STATES_TERMINAL } from '@webaudit/types';
 import { modulesForPhase } from '@webaudit/config';
-import type { PrismaClient } from '../../../prisma/generated/client/index.js';
+import { Prisma, type PrismaClient } from '../../../prisma/generated/client/index.js';
+
+/**
+ * A Postgres 23505 surfaced by Prisma as P2002 whose `meta.target` names all of
+ * `columns` (Prisma reports the raw partial index `Scan_one_active_per_target`
+ * as its column list `["userId","targetId"]`, not the index name).
+ */
+function isUniqueConstraintViolation(error: unknown, columns: readonly string[]): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+    return false;
+  }
+  const raw: unknown = error.meta?.['target'];
+  const asText = Array.isArray(raw)
+    ? raw.filter((x): x is string => typeof x === 'string').join(',')
+    : typeof raw === 'string'
+      ? raw
+      : '';
+  return columns.every((c) => asText.includes(c)) || asText === '';
+}
 import { debit, InsufficientCreditsError } from '../credits/debit.js';
 import { totalAvailable } from '../credits/balance.js';
 import { TargetNotAvailableError, type ControlProbe } from '../control-gate/verify.js';
@@ -90,28 +108,50 @@ export async function createScan(
   input: CreateScanInput,
   deps: CreateScanDeps,
 ): Promise<CreatedScan> {
-  const target = await db.target.findFirst({
-    where: { id: input.targetId, userId: input.userId },
-    select: { id: true, inputType: true, canonicalValue: true },
-  });
-  if (target === null) throw new TargetNotAvailableError(input.targetId);
+  // These three reads are independent — run them together rather than in
+  // series on the scan-create hot path (review finding L11). Each result is
+  // checked below, in the order the contract's refusals are specified.
+  const [target, running, userPlan] = await Promise.all([
+    db.target.findFirst({
+      where: { id: input.targetId, userId: input.userId },
+      select: { id: true, inputType: true, canonicalValue: true },
+    }),
+    // FR-018, before anything else: a request against an already-running scan
+    // of the same target is refused outright.
+    db.scan.findFirst({
+      where: {
+        userId: input.userId,
+        targetId: input.targetId,
+        state: { notIn: [...SCAN_STATES_TERMINAL] },
+      },
+      select: { id: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    // Only the plan fields this function reads — not the whole User row
+    // (which carries the password hash) just to reach `subscription.plan`
+    // (review finding L10).
+    db.user.findUnique({
+      where: { id: input.userId },
+      select: {
+        subscription: {
+          select: {
+            plan: { select: { id: true, allowedInputTypes: true, queuePriority: true } },
+          },
+        },
+      },
+    }),
+  ]);
 
-  // FR-018, before anything else is checked: a request against an already-
-  // running scan of the same target is refused outright, cheaply.
-  const running = await db.scan.findFirst({
-    where: { userId: input.userId, targetId: input.targetId, state: { notIn: [...SCAN_STATES_TERMINAL] } },
-    select: { id: true },
-    orderBy: { createdAt: 'desc' },
-  });
+  if (target === null) throw new TargetNotAvailableError(input.targetId);
   if (running !== null) throw new DuplicateScanError(running.id);
 
   // FR-016: the plan must permit this target's input type.
-  const user = await db.user.findUnique({
-    where: { id: input.userId },
-    include: { subscription: { include: { plan: true } } },
-  });
   const plan =
-    user?.subscription?.plan ?? (await db.plan.findUniqueOrThrow({ where: { id: 'free' } }));
+    userPlan?.subscription?.plan ??
+    (await db.plan.findUniqueOrThrow({
+      where: { id: 'free' },
+      select: { id: true, allowedInputTypes: true, queuePriority: true },
+    }));
   if (!plan.allowedInputTypes.includes(target.inputType)) {
     const permitting = await db.plan.findMany({
       where: { isActive: true, allowedInputTypes: { has: target.inputType } },
@@ -126,13 +166,20 @@ export async function createScan(
   // from the cached column (reconfirm.ts's own module note). A selection
   // that mixes gated and ungated modules starts; the gated ones are filtered
   // per-module later, inside module-runner's resolveApplicable.
-  const reconfirmed = await reconfirmControl(db, { targetId: target.id, userId: input.userId }, deps.probe);
   const gated = await Promise.all(
     input.modules.map(async (moduleType) => ({
       moduleType,
       required: await deps.resolveRequiredControlLevel(moduleType),
     })),
   );
+  // The live re-confirmation is a DNS/HTTP probe of the target. Skip it when
+  // nothing in the selection needs more than NONE — the common URL scan — so
+  // scan creation is not gated on a needless network round trip (review
+  // finding M6). The orchestrator's own per-phase check already does this.
+  const anyGate = gated.some((g) => controlLevelRank(g.required) > 0);
+  const reconfirmed = anyGate
+    ? await reconfirmControl(db, { targetId: target.id, userId: input.userId }, deps.probe)
+    : { level: 'NONE' as const };
   const allGated = gated.every((g) => controlLevelRank(g.required) > controlLevelRank(reconfirmed.level));
   if (allGated) {
     const strictest = gated.reduce((max, g) =>
@@ -141,39 +188,78 @@ export async function createScan(
     throw new ControlLevelRequiredError(target.id, strictest.required, reconfirmed.level);
   }
 
-  // FR-012: no silent reprice between quote and accept.
+  // FR-012: no silent reprice between quote and accept. The accepted quote is
+  // for the whole selection the user saw priced.
   const currentQuote = quoteFor(input.modules).credits;
   if (currentQuote !== input.acceptedQuote) {
     throw new QuoteMismatchError(currentQuote, input.acceptedQuote);
   }
 
+  // US1 scenario 8 / FR-017 (review finding: T108's second assertion): a module
+  // whose required control level exceeds the target's current level will be
+  // skipped at execution and reported unavailable-pending-verification — so it
+  // must not be charged for. Charge only the modules whose gate is met.
+  const chargeableModules = gated
+    .filter((g) => controlLevelRank(g.required) <= controlLevelRank(reconfirmed.level))
+    .map((g) => g.moduleType);
+  const chargeCredits = quoteFor(chargeableModules).credits;
+
   // Pre-flight only — cheap, and avoids writing a Scan row for the ordinary
   // "cannot afford it" case. `debit()` below is the authoritative, race-safe
   // check; a race that slips past this still fails there, and the row it
-  // wrote is removed.
+  // wrote is removed. The pre-flight compares against the amount actually
+  // debited, not the full quote.
   const available = await totalAvailable(db, input.userId);
-  if (available < input.acceptedQuote) {
-    throw new InsufficientCreditsError(input.acceptedQuote, available);
+  if (available < chargeCredits) {
+    throw new InsufficientCreditsError(chargeCredits, available);
   }
 
-  const created = await db.scan.create({
-    data: {
-      userId: input.userId,
-      targetId: target.id,
-      requestedModules: [...input.modules],
-      capabilitySnapshot: {},
-      quotedCredits: input.acceptedQuote,
-    },
-    select: { id: true, state: true, quotedCredits: true, chargedCredits: true },
-  });
+  // `chargedCredits` is written here, not in a later update: a crash between
+  // `debit` succeeding and a separate `update` would otherwise leave a real
+  // charge with `chargedCredits: 0`, and the refund path reads that column
+  // (review finding M5). The row is deleted below if `debit` never succeeds.
+  let created: { id: string; state: string; quotedCredits: number; chargedCredits: number };
+  try {
+    created = await db.scan.create({
+      data: {
+        userId: input.userId,
+        targetId: target.id,
+        requestedModules: [...input.modules],
+        capabilitySnapshot: {},
+        // The full selection was quoted; only the gate-met modules are charged.
+        quotedCredits: input.acceptedQuote,
+        chargedCredits: chargeCredits,
+      },
+      select: { id: true, state: true, quotedCredits: true, chargedCredits: true },
+    });
+  } catch (error) {
+    // The partial unique index `Scan_one_active_per_target` rejected this row:
+    // a concurrent request won the FR-018 race between the findFirst above and
+    // here (review finding H4). This request never debited — refuse cleanly.
+    if (isUniqueConstraintViolation(error, ['userId', 'targetId'])) {
+      const winner = await db.scan.findFirst({
+        where: {
+          userId: input.userId,
+          targetId: input.targetId,
+          state: { notIn: [...SCAN_STATES_TERMINAL] },
+        },
+        select: { id: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      throw new DuplicateScanError(winner?.id ?? input.targetId);
+    }
+    throw error;
+  }
 
   try {
-    await debit(db, {
-      userId: input.userId,
-      amount: input.acceptedQuote,
-      reason: 'scan:create',
-      scanId: created.id,
-    });
+    if (chargeCredits > 0) {
+      await debit(db, {
+        userId: input.userId,
+        amount: chargeCredits,
+        reason: 'scan:create',
+        scanId: created.id,
+      });
+    }
   } catch (error) {
     // Principle VI: never a paid-for row with nothing charged, and never a
     // charge with no row. `debit` throws before writing anything, so the
@@ -182,11 +268,7 @@ export async function createScan(
     throw error;
   }
 
-  const charged = await db.scan.update({
-    where: { id: created.id },
-    data: { chargedCredits: input.acceptedQuote },
-    select: { id: true, state: true, quotedCredits: true, chargedCredits: true },
-  });
+  const charged = created;
 
   // The first job carries only RUNNING_PHASE_1's own subset (everything but
   // UI, per phase-modules.ts) — `PhaseJobData.modules`' own contract is

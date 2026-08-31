@@ -10,6 +10,7 @@
  */
 
 import { PrismaClient } from '../apps/api/prisma/generated/client/index.js';
+import { ensurePlatformCapabilities } from '../apps/api/src/services/registry/platform-capabilities.js';
 
 const prisma = new PrismaClient();
 
@@ -96,6 +97,13 @@ async function main(): Promise<void> {
 
   const count = await prisma.plan.count();
   console.log(`\n${count} plans in database.`);
+
+  // The module-ai:<module> sentinel capability rows — the FK target for every
+  // scan's per-module AI execution row (review finding C1). `startApi` also
+  // ensures these at boot; seeding them keeps a fresh DB consistent before the
+  // API has ever run.
+  await ensurePlatformCapabilities(prisma);
+  console.log('Ensured module-ai platform capability rows.');
 
   // Sanity check the conversion gate is intact. If the free allocation ever
   // covers a full audit, the funnel silently changes shape.

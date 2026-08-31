@@ -19,6 +19,8 @@ import type {
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 function extractTitle(html: string): string | null {
@@ -162,12 +164,54 @@ async function runCodeLayer(
   return findings;
 }
 
+/** T153 — one check, re-run against the recorded URL's current markup. */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  if (issue.location === undefined) {
+    return { outcome: 'UNVERIFIABLE', reason: 'meta-checker needs the recorded URL to re-check.' };
+  }
+  const response = await ctx.fetch(issue.location, { signal: ctx.signal });
+  const html = response.text();
+  const url = response.url;
+
+  const pass: ReverifyResult = { outcome: 'PASSED' };
+  const fail = (evidence: Record<string, unknown>): ReverifyResult => ({
+    outcome: 'FAILED',
+    evidence: { url, ...evidence },
+  });
+
+  switch (issue.checkId) {
+    case 'meta.title-missing': {
+      const title = extractTitle(html);
+      return title !== null && title !== '' ? pass : fail({ title: null });
+    }
+    case 'meta.title-too-long': {
+      const title = extractTitle(html) ?? '';
+      return title.length <= 60 ? pass : fail({ title, length: title.length });
+    }
+    case 'meta.description-missing': {
+      const description = extractMetaContent(html, 'description');
+      return description !== null && description !== '' ? pass : fail({ description: null });
+    }
+    case 'meta.description-too-long': {
+      const description = extractMetaContent(html, 'description') ?? '';
+      return description.length <= 160 ? pass : fail({ description, length: description.length });
+    }
+    case 'meta.viewport-missing':
+      return extractMetaContent(html, 'viewport') !== null ? pass : fail({ viewport: null });
+    case 'meta.canonical-missing':
+      return extractCanonical(html) !== null ? pass : fail({ canonical: null });
+    default:
+      return { outcome: 'UNVERIFIABLE', reason: `meta-checker does not own ${issue.checkId}.` };
+  }
+}
+
 export const metaChecker: AuditCapability = {
   id: 'meta-checker',
   module: 'SEO',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default metaChecker;

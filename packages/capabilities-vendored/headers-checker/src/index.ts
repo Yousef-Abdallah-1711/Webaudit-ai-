@@ -16,6 +16,8 @@ import type {
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 interface HeaderCheck {
@@ -105,12 +107,43 @@ async function runCodeLayer(
   return findings;
 }
 
+/**
+ * T153 — the narrow re-check. Fetches the recorded location once and asks the
+ * single question this issue's `checkId` names: is that one header present now?
+ * A present header is `PASSED`; an absent one is `FAILED` with the current
+ * evidence (FR-061). Never re-runs the other four checks.
+ */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  const check = CHECKS.find((c) => c.checkId === issue.checkId);
+  if (check === undefined || issue.location === undefined) {
+    return {
+      outcome: 'UNVERIFIABLE',
+      reason: `headers-checker cannot re-verify ${issue.checkId} without a recorded URL.`,
+    };
+  }
+
+  const response = await ctx.fetch(issue.location, { signal: ctx.signal });
+  const value = response.headers[check.header];
+  if (value !== undefined) return { outcome: 'PASSED' };
+
+  return {
+    outcome: 'FAILED',
+    evidence: {
+      url: response.url,
+      header: check.header,
+      observed: null,
+      note: `The ${check.header} header is still absent from the response.`,
+    },
+  };
+}
+
 export const headersChecker: AuditCapability = {
   id: 'headers-checker',
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default headersChecker;

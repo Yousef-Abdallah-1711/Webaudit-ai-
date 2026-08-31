@@ -46,6 +46,7 @@ import { z } from 'zod';
 import { MODULE_TYPES, SCAN_STATES } from '@webaudit/types';
 import { CONCURRENCY, QUEUE_NAMES } from './queues.js';
 import type { PhaseJobData, QuestionnaireTimeoutJobData } from '../orchestrator/phases.js';
+import type { ReverifyJobData } from '../reverify/runner.js';
 
 /**
  * The job names the producers in this repository actually use.
@@ -60,6 +61,10 @@ export const JOB_NAMES = {
   phase: 'phase',
   /** `phases.ts` → `maintenanceQueue.add('questionnaire-deadline', …)`, delayed. */
   questionnaireDeadline: 'questionnaire-deadline',
+  /** `timeout-scheduler.ts` → `maintenanceQueue.add('timeout-sweep', …, { repeat })`. */
+  timeoutSweep: 'timeout-sweep',
+  /** `apps/api`'s `reverify-producer.ts` → `reverifyQueue.add('reverify', …)` (T154). */
+  reverify: 'reverify',
 } as const;
 
 export type KnownJobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -107,6 +112,22 @@ export const questionnaireTimeoutJobSchema = z
   })
   .strict();
 
+/** The repeatable FR-038 sweep carries no per-run data. */
+export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep') }).strict();
+
+/**
+ * A targeted re-verification (T154). `.strict()` for the same reason as the
+ * phase schema — the one field that must never appear is prompt text, and a
+ * re-verification never assembles one.
+ */
+export const reverifyJobSchema = z
+  .object({
+    issueId: z.string().min(1).max(64),
+    creditsCharged: z.number().int().nonnegative(),
+    debitTransactionId: z.string().min(1).max(64).optional(),
+  })
+  .strict();
+
 /**
  * Proof the schemas still describe the producers' types.
  *
@@ -118,8 +139,10 @@ const _phaseShape: PhaseJobData = {} as z.infer<typeof phaseJobSchema>;
 const _deadlineShape: QuestionnaireTimeoutJobData = {} as z.infer<
   typeof questionnaireTimeoutJobSchema
 >;
+const _reverifyShape: ReverifyJobData = {} as z.infer<typeof reverifyJobSchema>;
 void _phaseShape;
 void _deadlineShape;
+void _reverifyShape;
 
 /**
  * The subset of a BullMQ `Job` this module reads.
@@ -150,6 +173,10 @@ export interface JobHandlers {
     data: QuestionnaireTimeoutJobData,
     job: JobRef,
   ) => Promise<void>;
+  /** The repeatable FR-038 sweep. Carries no data. */
+  readonly timeoutSweep?: () => Promise<void>;
+  /** A targeted re-verification (T150). */
+  readonly reverify?: (data: ReverifyJobData, job: JobRef) => Promise<void>;
 }
 
 /**
@@ -206,6 +233,26 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       const handler = handlers.phase;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T113', 'The orchestrator run loop');
+      }
+      await handler(data, job);
+      return;
+    }
+
+    case JOB_NAMES.timeoutSweep: {
+      timeoutSweepJobSchema.parse(job.data);
+      const handler = handlers.timeoutSweep;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T101', 'The FR-038 scan timeout sweep');
+      }
+      await handler();
+      return;
+    }
+
+    case JOB_NAMES.reverify: {
+      const data = reverifyJobSchema.parse(job.data) as ReverifyJobData;
+      const handler = handlers.reverify;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T150', 'The targeted re-verification runner');
       }
       await handler(data, job);
       return;

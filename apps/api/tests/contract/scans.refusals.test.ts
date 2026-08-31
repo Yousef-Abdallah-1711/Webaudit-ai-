@@ -219,4 +219,34 @@ describe('POST /scans — 409 duplicate concurrent scan (FR-018)', () => {
     // touched the ledger.
     expect(await testDb.scan.count()).toBe(1);
   });
+
+  it('refuses all but one of N concurrent scans of the same target (review finding H4)', async () => {
+    // The read-then-write duplicate check is a TOCTOU race: fired in parallel,
+    // every request passes the findFirst before any row is committed. The
+    // partial unique index Scan_one_active_per_target is the backstop — exactly
+    // one INSERT wins, the rest get 23505 -> P2002 -> 409, and only the winner
+    // debits.
+    const cost = await quote(token, targetId, ['SECURITY']);
+    const attempts = await Promise.all(
+      Array.from({ length: 8 }, () =>
+        request(app)
+          .post('/scans')
+          .set(auth(token))
+          .send({ targetId, modules: ['SECURITY'], acceptedQuote: cost })
+          .then((r) => r.status),
+      ),
+    );
+
+    const created = attempts.filter((s) => s === 201);
+    const refused = attempts.filter((s) => s === 409);
+    expect(created).toHaveLength(1);
+    expect(refused).toHaveLength(7);
+
+    expect(await testDb.scan.count()).toBe(1);
+    // Exactly one new DEBIT beyond the registration free grant.
+    const debits = await testDb.creditTransaction.count({
+      where: { type: 'DEBIT', reason: 'scan:create' },
+    });
+    expect(debits).toBe(1);
+  });
 });

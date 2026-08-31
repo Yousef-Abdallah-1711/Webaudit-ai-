@@ -440,6 +440,12 @@ model Scan {
   @@index([state]) // queue pickup + timeout sweep
   @@index([targetId, kind, completedAt]) // regression comparison
   @@index([baselineScanId])
+  // FR-018 (review finding H4): a PARTIAL unique index on (userId, targetId)
+  // WHERE state NOT IN (terminal) enforces one-active-scan-per-target as a
+  // database invariant, not just a create-scan.ts read-then-write check.
+  // Prisma's schema DSL has no partial-index syntax, so it lives in the raw
+  // migration 20260830090000_scan_one_active_per_target and `prisma migrate
+  // dev` will report it as drift — do not "fix" that by dropping it.
 }
 
 model ModuleResult {

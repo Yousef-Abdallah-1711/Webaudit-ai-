@@ -27,6 +27,8 @@ import type {
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 const VERSION_PATTERN = /\d+\.\d+/;
@@ -118,12 +120,59 @@ async function runCodeLayer(
   return findings;
 }
 
+const COOKIE_FLAG_PATTERNS: Readonly<Record<string, RegExp>> = {
+  'owasp.cookie-missing-secure': /;\s*secure\b/i,
+  'owasp.cookie-missing-httponly': /;\s*httponly\b/i,
+  'owasp.cookie-missing-samesite': /;\s*samesite\s*=/i,
+};
+
+/**
+ * T153 — the narrow re-check. Fetches the recorded URL once and asks only the
+ * question the issue's `checkId` names.
+ *
+ *   owasp.cookie-missing-*      → does the Set-Cookie header now carry the flag
+ *                                 (or is no cookie set at all)?
+ *   owasp.server-version-disclosed → do Server / X-Powered-By still name a version?
+ */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  if (issue.location === undefined) {
+    return { outcome: 'UNVERIFIABLE', reason: 'owasp-checker needs the recorded URL to re-check.' };
+  }
+  const response = await ctx.fetch(issue.location, { signal: ctx.signal });
+
+  const flagPattern = COOKIE_FLAG_PATTERNS[issue.checkId];
+  if (flagPattern !== undefined) {
+    const setCookie = response.headers['set-cookie'];
+    // No cookie set any more, or every cookie carries the flag: the gap is closed.
+    if (setCookie === undefined || flagPattern.test(setCookie)) return { outcome: 'PASSED' };
+    return {
+      outcome: 'FAILED',
+      evidence: { url: response.url, setCookie, missingFlag: issue.checkId },
+    };
+  }
+
+  if (issue.checkId === 'owasp.server-version-disclosed') {
+    const disclosing = VERSION_HEADERS.map((header) => ({
+      header,
+      value: response.headers[header],
+    })).filter((h) => h.value !== undefined && VERSION_PATTERN.test(h.value));
+    if (disclosing.length === 0) return { outcome: 'PASSED' };
+    return {
+      outcome: 'FAILED',
+      evidence: { url: response.url, headers: Object.fromEntries(disclosing.map((h) => [h.header, h.value])) },
+    };
+  }
+
+  return { outcome: 'UNVERIFIABLE', reason: `owasp-checker does not own ${issue.checkId}.` };
+}
+
 export const owaspChecker: AuditCapability = {
   id: 'owasp-checker',
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default owaspChecker;

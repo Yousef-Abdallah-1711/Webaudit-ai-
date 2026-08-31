@@ -309,4 +309,58 @@ describe('Principle III - the code layer consumes no AI budget', () => {
     await run([timedCapability('a', 5, timeline)], timeline);
     expect(globalThis.fetch).toBe(before);
   });
+
+  it('keeps fetch poisoned for a module still running while a sibling module finishes (review finding H3)', async () => {
+    // The orchestrator runs a phase's modules concurrently. A per-call
+    // save/restore let the first module's `finally` un-poison `fetch` while a
+    // second module's capabilities were still executing — FR-025 enforcement
+    // silently off for the rest of that module.
+    const before = globalThis.fetch;
+
+    const fast: AuditCapability = {
+      id: 'fast-module-cap',
+      module: 'SECURITY',
+      layer: 'CODE',
+      canRun: () => true,
+      runCodeLayer: () => Promise.resolve([finding('fast-module-cap')]),
+    };
+
+    let slowReachedNetwork = false;
+    const slow: AuditCapability = {
+      id: 'slow-module-cap',
+      module: 'PERFORMANCE',
+      layer: 'CODE',
+      canRun: () => true,
+      runCodeLayer: async () => {
+        // Outlast the fast module's whole run and its restore.
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        try {
+          await globalThis.fetch('https://after-sibling.example.com/');
+          slowReachedNetwork = true;
+        } catch {
+          /* still poisoned, as it must be */
+        }
+        return [finding('slow-module-cap')];
+      },
+    };
+
+    const [, slowResult] = await Promise.all([
+      run([fast], { events: [] }),
+      runModule({
+        module: 'PERFORMANCE',
+        capabilities: [slow],
+        input: { priorModuleResults: {}, controlLevel: 'NONE', targetUrl: 'https://example.com' },
+        executor: executor({ events: [] }),
+        makeContext: refusingContext,
+        timeoutMs: 2000,
+      }),
+    ]);
+
+    expect(slowReachedNetwork).toBe(false);
+    expect(
+      slowResult.executions.find((e) => e.capabilityId === 'slow-module-cap')?.egressViolations,
+    ).toContain('https://after-sibling.example.com/');
+    // And once BOTH modules are done, the real fetch is back.
+    expect(globalThis.fetch).toBe(before);
+  });
 });

@@ -21,6 +21,8 @@ import type {
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 /** RFC 6797's minimum recommendation is commonly cited as six months. */
@@ -99,12 +101,89 @@ async function runCodeLayer(
   return findings;
 }
 
+/**
+ * T153 — the narrow re-check, scoped exactly as the code layer is: what a
+ * single response's own headers (and its final URL) can show.
+ *
+ *   ssl.not-https        → does the recorded URL now resolve over https, by
+ *                          redirect or otherwise?
+ *   ssl.hsts-missing     → is Strict-Transport-Security present now?
+ *   ssl.hsts-max-age-low → is its max-age at or above the recommended minimum?
+ */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  const OWNED = ['ssl.not-https', 'ssl.hsts-missing', 'ssl.hsts-max-age-low'];
+  // Decide ownership before touching the network — an unknown checkId must not
+  // cost a fetch (and the conformance probe passes a `conformance-probe` id).
+  if (!OWNED.includes(issue.checkId)) {
+    return { outcome: 'UNVERIFIABLE', reason: `ssl-analyzer does not own ${issue.checkId}.` };
+  }
+
+  const recorded = issue.location;
+  if (recorded === undefined) {
+    return { outcome: 'UNVERIFIABLE', reason: 'ssl-analyzer needs the recorded URL to re-check.' };
+  }
+
+  if (issue.checkId === 'ssl.not-https') {
+    const response = await ctx.fetch(recorded, { signal: ctx.signal });
+    const finalIsHttps = new URL(response.url).protocol === 'https:';
+    if (finalIsHttps) return { outcome: 'PASSED' };
+    return {
+      outcome: 'FAILED',
+      evidence: {
+        requested: recorded,
+        finalUrl: response.url,
+        redirects: response.redirects,
+        note: 'The URL still does not end on an https:// address.',
+      },
+    };
+  }
+
+  // The remaining two checks need an https response to inspect.
+  const httpsUrl = recorded.replace(/^http:\/\//i, 'https://');
+  const response = await ctx.fetch(httpsUrl, { signal: ctx.signal });
+  const hsts = response.headers['strict-transport-security'];
+
+  if (issue.checkId === 'ssl.hsts-missing') {
+    if (hsts !== undefined) return { outcome: 'PASSED' };
+    return {
+      outcome: 'FAILED',
+      evidence: { url: response.url, 'strict-transport-security': null },
+    };
+  }
+
+  if (issue.checkId === 'ssl.hsts-max-age-low') {
+    if (hsts === undefined) {
+      return {
+        outcome: 'FAILED',
+        evidence: { url: response.url, 'strict-transport-security': null },
+      };
+    }
+    const maxAge = parseMaxAge(hsts);
+    if (maxAge !== null && maxAge >= MIN_RECOMMENDED_MAX_AGE_SECONDS) {
+      return { outcome: 'PASSED' };
+    }
+    return {
+      outcome: 'FAILED',
+      evidence: {
+        url: response.url,
+        'strict-transport-security': hsts,
+        maxAge,
+        minRecommended: MIN_RECOMMENDED_MAX_AGE_SECONDS,
+      },
+    };
+  }
+
+  // Unreachable — OWNED is checked at the top — but keeps the return total.
+  return { outcome: 'UNVERIFIABLE', reason: `ssl-analyzer does not own ${issue.checkId}.` };
+}
+
 export const sslAnalyzer: AuditCapability = {
   id: 'ssl-analyzer',
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default sslAnalyzer;

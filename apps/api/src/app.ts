@@ -27,6 +27,8 @@ import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
 import { scansRoutes, type ScanRoutesDeps } from './routes/scans.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
+import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
+import { readinessRoutes, type ReadinessRoutesDeps } from './routes/readiness.routes.js';
 import { env } from './config/env.js';
 import { createRateLimiters, type RateLimiters } from './middleware/ratelimit.middleware.js';
 
@@ -56,6 +58,17 @@ export interface AppDeps {
    * 403 without it.
    */
   scans?: ScanRoutesDeps;
+  /**
+   * Seam for the fix-loop routes — how a re-verification job is enqueued.
+   * Defaults to a real BullMQ producer; a suite injects a capturing fake so it
+   * can assert what was queued without a running worker.
+   */
+  issues?: IssueRoutesDeps;
+  /**
+   * Seam for the readiness routes — the phase-job producer, the certificate
+   * storage (pass `null` to disable), and the web base URL for the email link.
+   */
+  readiness?: ReadinessRoutesDeps;
 }
 
 /**
@@ -256,6 +269,15 @@ export function createApp(deps: AppDeps): Express {
   // (`/scans/:id/report`, `/scans/:id/issues`, `/issues/:id`) rather than
   // sharing one prefix, the same way oauthRoutes sits alongside authRoutes.
   app.use(reportsRoutes(deps.db));
+
+  // Also mounted at root: issuesRoutes declares its own full paths
+  // (`/issues/:id/assert-fixed`, `/issues/:id/attempts`), the same as
+  // reportsRoutes beside it.
+  app.use(issuesRoutes(deps.db, deps.issues ?? {}));
+
+  // Root-mounted for the same reason — `/scans/:id/readiness[...]`. The mailer
+  // is threaded through so the congratulations email uses the same transport.
+  app.use(readinessRoutes(deps.db, { mailer, ...(deps.readiness ?? {}) }));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'No such route.' } });

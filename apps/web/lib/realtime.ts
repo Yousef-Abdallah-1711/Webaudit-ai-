@@ -23,7 +23,7 @@
  */
 
 import type { ScanEvent, ScanEventEnvelope } from '@webaudit/types';
-import { API_BASE } from './api.js';
+import { API_BASE } from './api';
 
 const MAX_BACKOFF_MS = 15_000;
 const BASE_BACKOFF_MS = 1_000;

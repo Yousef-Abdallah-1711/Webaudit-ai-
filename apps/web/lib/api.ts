@@ -200,3 +200,109 @@ export interface Report {
 export function getReport(scanId: string): Promise<{ report: Report }> {
   return request(`/scans/${scanId}/report`);
 }
+
+// ─── Fix loop (US2) ─────────────────────────────────────────────────────────
+
+export type IssueState = 'OPEN' | 'ASSERTED_FIXED' | 'RESOLVED' | 'UNVERIFIABLE' | 'REOPENED';
+
+export interface FixesIssue {
+  readonly id: string;
+  readonly severity: string;
+  readonly title: string;
+  readonly explanation: string;
+  readonly consequence: string;
+  readonly location: string | null;
+  readonly attribution: string;
+  readonly fixPrompt: string;
+  readonly state: IssueState;
+  readonly checkId: string;
+  readonly assertedFixedAt: string | null;
+  readonly resolvedAt: string | null;
+  readonly reopenedAt: string | null;
+  readonly previouslyResolved: boolean;
+  readonly createdAt: string;
+}
+
+export interface VerificationAttempt {
+  readonly id: string;
+  readonly outcome: 'PASSED' | 'FAILED' | 'UNVERIFIABLE' | 'ERRORED';
+  readonly evidence: unknown;
+  readonly creditsCharged: number;
+  readonly durationMs: number;
+  readonly createdAt: string;
+}
+
+export function getIssues(
+  scanId: string,
+  filters: { readonly severity?: string; readonly state?: string } = {},
+): Promise<{ issues: readonly FixesIssue[] }> {
+  const params = new URLSearchParams();
+  if (filters.severity !== undefined) params.set('severity', filters.severity);
+  if (filters.state !== undefined) params.set('state', filters.state);
+  const query = params.toString();
+  return request(`/scans/${scanId}/issues${query === '' ? '' : `?${query}`}`);
+}
+
+export function getIssueAttempts(
+  issueId: string,
+): Promise<{ attempts: readonly VerificationAttempt[] }> {
+  return request(`/issues/${issueId}/attempts`);
+}
+
+export function assertIssueFixed(issueId: string): Promise<{
+  issue: { id: string; state: IssueState; scanId: string };
+  reverification: { jobId: string; creditsCharged: number };
+}> {
+  return request(`/issues/${issueId}/assert-fixed`, { method: 'POST' });
+}
+
+// ─── Readiness (US3) ────────────────────────────────────────────────────────
+
+export interface ReadinessModuleOutcome {
+  readonly module: string;
+  readonly score: number | null;
+  readonly threshold: number;
+  readonly pass: boolean;
+  readonly baselineScore?: number | null;
+  readonly delta?: number | null;
+  readonly direction?: string;
+}
+
+export interface ReadinessVerdictData {
+  readonly id: string;
+  readonly isReady: boolean;
+  readonly overallScore: number;
+  readonly baselineScore: number;
+  readonly moduleOutcomes: readonly ReadinessModuleOutcome[];
+  readonly regressions: readonly { kind: string; name: string }[];
+  readonly improvements: readonly { kind: string; name: string }[];
+  readonly blockers: readonly string[];
+  readonly certificateKey: string | null;
+}
+
+export interface ReadinessStatus {
+  /** Present when :id is a READINESS scan. */
+  readonly scanId?: string;
+  readonly baselineScanId?: string | null;
+  readonly state?: string;
+  readonly verdict?: ReadinessVerdictData | null;
+  /** Present when :id is an INITIAL scan. */
+  readonly premature?: boolean;
+  readonly outstandingBlocking?: number;
+  readonly readinessScanId?: string | null;
+  readonly readinessScanState?: string | null;
+}
+
+export function getReadiness(scanId: string): Promise<{ readiness: ReadinessStatus }> {
+  return request(`/scans/${scanId}/readiness`);
+}
+
+export function startReadiness(
+  baselineScanId: string,
+  acceptedQuote: number,
+): Promise<{ scan: { id: string; state: string; kind: string; baselineScanId: string } }> {
+  return request(`/scans/${baselineScanId}/readiness`, {
+    method: 'POST',
+    body: { acceptedQuote },
+  });
+}

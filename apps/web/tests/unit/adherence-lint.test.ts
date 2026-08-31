@@ -70,8 +70,11 @@ async function lintFixture(source: string): Promise<readonly string[]> {
   return (result?.messages ?? []).map((m) => m.message);
 }
 
+// Each case spawns an oxlint child process; the first pays cold-start (~5s on
+// a loaded machine, right at Vitest's default 5s testTimeout — review finding
+// L13, an intermittent CI red that has nothing to do with the assertion).
 describe('the adherence gate actually fails on what it claims to forbid', () => {
-  it('flags a raw hex colour', async () => {
+  it('flags a raw hex colour', { timeout: 20_000 }, async () => {
     const messages = await lintFixture(
       `export function P(){ return <div style={{color:'#ff0000'}}/>; }`,
     );

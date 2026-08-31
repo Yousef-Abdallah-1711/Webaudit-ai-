@@ -18,6 +18,8 @@ import type {
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 const MIN_WORD_COUNT = 200;
@@ -155,12 +157,50 @@ async function runCodeLayer(
   return findings;
 }
 
+/** T153 — one check, re-run against the recorded URL's current markup. */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  if (issue.location === undefined) {
+    return { outcome: 'UNVERIFIABLE', reason: 'content-checker needs the recorded URL to re-check.' };
+  }
+  const response = await ctx.fetch(issue.location, { signal: ctx.signal });
+  const html = response.text();
+  const url = response.url;
+
+  const pass: ReverifyResult = { outcome: 'PASSED' };
+  const fail = (evidence: Record<string, unknown>): ReverifyResult => ({
+    outcome: 'FAILED',
+    evidence: { url, ...evidence },
+  });
+
+  switch (issue.checkId) {
+    case 'content.h1-missing':
+      return countTags(html, 'h1') >= 1 ? pass : fail({ h1Count: 0 });
+    case 'content.h1-multiple': {
+      const count = countTags(html, 'h1');
+      return count <= 1 ? pass : fail({ h1Count: count });
+    }
+    case 'content.lang-missing':
+      return hasLangAttribute(html) ? pass : fail({ lang: null });
+    case 'content.images-missing-alt': {
+      const missing = countImagesWithoutAlt(html);
+      return missing === 0 ? pass : fail({ imagesMissingAlt: missing });
+    }
+    case 'content.thin-content': {
+      const words = visibleWordCount(html);
+      return words >= MIN_WORD_COUNT ? pass : fail({ wordCount: words, minimum: MIN_WORD_COUNT });
+    }
+    default:
+      return { outcome: 'UNVERIFIABLE', reason: `content-checker does not own ${issue.checkId}.` };
+  }
+}
+
 export const contentChecker: AuditCapability = {
   id: 'content-checker',
   module: 'SEO',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default contentChecker;

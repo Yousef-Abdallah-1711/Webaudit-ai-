@@ -1,0 +1,27 @@
+/* T155 — the fixes board, from FixesScreen in Screens.jsx. */
+
+.stats {
+  margin-bottom: 16px;
+}
+
+.list {
+  border: var(--border-width) solid var(--border-default);
+  background: var(--surface-page);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.empty {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-card);
+  padding: 24px;
+  margin: 0;
+}
+
+.note {
+  font: var(--type-small);
+  color: var(--text-muted);
+  margin-top: 14px;
+}

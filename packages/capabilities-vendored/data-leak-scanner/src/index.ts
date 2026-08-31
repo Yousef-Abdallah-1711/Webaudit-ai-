@@ -27,12 +27,19 @@
  * thousands of `ctx.readFile` calls.
  */
 
-import { assemblePrompt, secretsToFindings, type RedactedSecretRef } from '@webaudit/redaction';
+import {
+  assemblePrompt,
+  secretsToFindings,
+  SECRET_CHECK_ID,
+  type RedactedSecretRef,
+} from '@webaudit/redaction';
 import type {
   AuditCapability,
   CapabilityFinding,
   CapabilityInput,
   CodeLayerContext,
+  ReverifyRequest,
+  ReverifyResult,
 } from '@webaudit/capability-sdk';
 
 const MAX_FILES = 200;
@@ -95,6 +102,63 @@ async function runCodeLayer(
   return [...secretsToFindings(secrets)];
 }
 
+/**
+ * T153 — the narrow re-check.
+ *
+ * **URL-only, and kind-granular rather than instance-granular.** The re-check
+ * context has no attached-source workspace (`ctx.readFile` is unavailable),
+ * so this re-fetches the recorded page and re-scans it. It can tell whether a
+ * credential of the flagged *kind* still appears in the page, not whether the
+ * exact one this issue named is the one still there — so a page that had two
+ * keys and lost one still reads `FAILED` for both issues until the page is
+ * clean of that kind. That is the safe direction: it never reports `PASSED`
+ * while any matching credential remains (SC-007).
+ */
+async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
+  if (issue.checkId !== SECRET_CHECK_ID) {
+    return { outcome: 'UNVERIFIABLE', reason: `data-leak-scanner does not own ${issue.checkId}.` };
+  }
+  if (issue.location === undefined) {
+    return {
+      outcome: 'UNVERIFIABLE',
+      reason:
+        'This credential was found in attached source, which is not available at re-check time. ' +
+        'Re-run the audit to confirm it is gone.',
+    };
+  }
+
+  // `location` is `path:line:column`; the path half is the fetched URL.
+  const url = issue.location.replace(/:\d+:\d+$/, '');
+  const response = await ctx.fetch(url, { signal: ctx.signal });
+  const { secrets } = assemblePrompt({
+    instructions: '',
+    segments: [{ label: 'fetched-page', path: response.url, content: response.text() }],
+  });
+
+  const wantedKind =
+    isRecord(issue.evidence) && typeof issue.evidence['kind'] === 'string'
+      ? issue.evidence['kind']
+      : null;
+  const stillPresent =
+    wantedKind === null ? secrets.length > 0 : secrets.some((s) => s.kind === wantedKind);
+
+  if (!stillPresent) return { outcome: 'PASSED' };
+  return {
+    outcome: 'FAILED',
+    evidence: {
+      url: response.url,
+      note:
+        wantedKind === null
+          ? `${String(secrets.length)} credential-shaped value(s) still appear in the page.`
+          : `A credential of kind ${wantedKind} still appears in the page.`,
+    },
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 export const dataLeakScanner: AuditCapability = {
   id: 'data-leak-scanner',
   module: 'SECURITY',
@@ -102,6 +166,7 @@ export const dataLeakScanner: AuditCapability = {
   canRun: (input: CapabilityInput): boolean =>
     input.code !== undefined || typeof input.targetUrl === 'string',
   runCodeLayer,
+  reverify,
 };
 
 export default dataLeakScanner;

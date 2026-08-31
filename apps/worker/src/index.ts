@@ -45,6 +45,11 @@ import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers
 import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
 import { createPhaseHandler } from './orchestrator/orchestrator.js';
+import { createReverifyHandler } from './reverify/runner.js';
+import {
+  createTimeoutSweepHandler,
+  scheduleTimeoutSweep,
+} from './orchestrator/timeout-scheduler.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
 import { installTerminalTeardown } from './workspace/teardown.js';
 import type { EventPublisher } from './orchestrator/emit.js';
@@ -168,9 +173,31 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           return client;
         })();
       const executor = options.executor ?? createExecutorFromEnv();
-      return { phase: createPhaseHandler({ db, queues, publisher, executor }) };
+      return {
+        phase: createPhaseHandler({ db, queues, publisher, executor }),
+        // FR-038: the repeatable sweep that terminates stuck scans and refunds
+        // their undelivered share. Registered as a repeatable job below.
+        timeoutSweep: createTimeoutSweepHandler({ db, publisher }),
+        // FR-059 (T150): the targeted re-verification runner. `apps/api`'s
+        // assert-fixed route is its only producer.
+        reverify: createReverifyHandler({ db, publisher }),
+      };
     })();
   const workers = createWorkers({ connection, handlers });
+
+  // The repeatable maintenance job. Idempotent — a stable jobId means a
+  // redeploy replaces the schedule rather than stacking a second one. Only
+  // done for the real handler path; a caller supplying its own `handlers`
+  // (a test, the placeholder path) opts out.
+  if (options.handlers === undefined) {
+    void scheduleTimeoutSweep(queues.maintenance).catch((error: unknown) => {
+      console.error(
+        `[worker] could not schedule the timeout sweep; stuck scans will not be ` +
+          `recovered until this is resolved: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+  }
 
   let shuttingDown: Promise<void> | undefined;
 
@@ -258,7 +285,10 @@ function isEntrypoint(): boolean {
 if (isEntrypoint()) {
   try {
     startWorker();
-    console.warn(`[worker] ${SERVICE_NAME} consuming. Job processors: placeholders until T113.`);
+    console.warn(
+      `[worker] ${SERVICE_NAME} consuming — phase orchestrator, re-verification, and the ` +
+        `repeatable timeout sweep.`,
+    );
   } catch (error) {
     // Exit non-zero so an orchestrator restarts or reports rather than treating a
     // dead process as a deliberate stop.

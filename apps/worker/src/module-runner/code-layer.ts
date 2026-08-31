@@ -180,32 +180,62 @@ function asFindings(value: unknown): readonly CapabilityFinding[] | null {
   return snapshot;
 }
 
+/**
+ * The `globalThis.fetch` poison is **process-wide and reference-counted**
+ * (review finding H3). The orchestrator runs a phase's modules concurrently
+ * (FR-033), so two `runCodeLayer` calls overlap; a per-call save/restore let
+ * module A's `finally` un-poison `fetch` while module B's capabilities were
+ * still running, silently disabling FR-025 enforcement for the rest of B.
+ *
+ * Instead: the first concurrent entrant installs the poison, the last to leave
+ * restores it, and violations are collected in one shared map keyed by
+ * `currentCapabilityId()` — which propagates correctly across the concurrent
+ * async contexts (`capability-context.ts`), so an attempt is still attributed
+ * to exactly the capability that made it.
+ */
+const egressViolations = new Map<string, string[]>();
+let realFetchRef: typeof globalThis.fetch | undefined;
+let poisonDepth = 0;
+
+const poisonedFetch = ((...args: unknown[]): never => {
+  const url = typeof args[0] === 'string' ? args[0] : describeThrown(args[0]);
+  const id = currentCapabilityId() ?? '(unattributed)';
+  const bucket = egressViolations.get(id) ?? [];
+  bucket.push(url);
+  egressViolations.set(id, bucket);
+  throw new Error(
+    'The code layer must reach the network only through ctx.fetch, which is SSRF-guarded ' +
+      '(FR-025, Principle III).',
+  );
+}) as unknown as typeof globalThis.fetch;
+
+function installPoison(): void {
+  if (poisonDepth++ === 0) {
+    realFetchRef = globalThis.fetch;
+    globalThis.fetch = poisonedFetch;
+  }
+}
+
+function removePoison(): void {
+  poisonDepth = Math.max(0, poisonDepth - 1);
+  if (poisonDepth === 0 && realFetchRef !== undefined) {
+    globalThis.fetch = realFetchRef;
+    realFetchRef = undefined;
+  }
+}
+
 export async function runCodeLayer(
   options: CodeLayerOptions,
 ): Promise<readonly CodeLayerOutcome[]> {
   const runnable = options.applicable.filter((entry) => entry.runsCodeLayer);
   if (runnable.length === 0) return [];
 
-  const violations = new Map<string, string[]>();
-  const realFetch = globalThis.fetch;
+  const violations = egressViolations;
+  // Start every runnable capability from a clean slate — a previous phase's
+  // (unattributed) or a re-run of the same id must not carry over.
+  for (const entry of runnable) violations.delete(entry.capability.id);
 
-  const poisoned = ((...args: unknown[]): never => {
-    const url = typeof args[0] === 'string' ? args[0] : describeThrown(args[0]);
-    // Attributed to the caller, not to the batch. `currentCapabilityId` is the
-    // shared, process-wide context (`capability-context.ts`), not a local one —
-    // it is the same thread `process-guards.ts` reads for a detached throw that
-    // fires after this batch has already finished.
-    const id = currentCapabilityId() ?? '(unattributed)';
-    const bucket = violations.get(id) ?? [];
-    bucket.push(url);
-    violations.set(id, bucket);
-    throw new Error(
-      'The code layer must reach the network only through ctx.fetch, which is SSRF-guarded ' +
-        '(FR-025, Principle III).',
-    );
-  }) as unknown as typeof globalThis.fetch;
-
-  globalThis.fetch = poisoned;
+  installPoison();
   try {
     // Every task contains its own failure, so nothing here can reject and
     // `Promise.all` cannot short-circuit. See the module note.
@@ -270,9 +300,9 @@ export async function runCodeLayer(
       }),
     );
   } finally {
-    // Restored on every path, including a throw from `Promise.all` that should
-    // be impossible. Leaving the process without a working fetch would break
-    // everything downstream in a way that looks nothing like its cause.
-    globalThis.fetch = realFetch;
+    // Decrement the refcount. `fetch` is only restored once the last concurrent
+    // module's code layer has finished — leaving it poisoned while another
+    // module still runs is the whole point (H3).
+    removePoison();
   }
 }

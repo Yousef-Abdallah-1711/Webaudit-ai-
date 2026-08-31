@@ -71,12 +71,28 @@ const CAPABILITY_LOADERS: Readonly<Record<ModuleType, readonly CapabilityLoader[
   ],
 };
 
-export async function loadCapabilities(module: ModuleType): Promise<readonly AuditCapability[]> {
+/**
+ * `enabledIds` — the registry's `isEnabled: true` set for this module (review
+ * finding / open decision #13). This static table listed *what exists on disk*
+ * and ignored the operator's enable/disable flag entirely, so an operator who
+ * disabled a token-burning capability saw it keep running until the next
+ * deploy. Passing the set closes that: an id not in it is skipped exactly as if
+ * its `import()` had failed, and a module whose capabilities are all disabled
+ * comes back empty → NOT_APPLICABLE ("the area reports it unavailable" — SC-011).
+ * Omit the set to load everything (the pre-registry behaviour, for a caller
+ * with no database).
+ */
+export async function loadCapabilities(
+  module: ModuleType,
+  enabledIds?: ReadonlySet<string>,
+): Promise<readonly AuditCapability[]> {
   const loaders = CAPABILITY_LOADERS[module];
   const loaded = await Promise.all(
     loaders.map(async (load) => {
       try {
-        return (await load()).default;
+        const capability = (await load()).default;
+        if (enabledIds !== undefined && !enabledIds.has(capability.id)) return null;
+        return capability;
       } catch (error) {
         console.error(`[capability-loader] failed to load a ${module} capability`, error);
         return null;
