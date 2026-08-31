@@ -1,10 +1,11 @@
-import type { Mailer } from '../../src/services/email/mailer.js';
+import type { Mailer, ReadinessAchievedMail } from '../../src/services/email/mailer.js';
 
 export interface CapturingMailer extends Mailer {
   clear(): void;
   lastVerificationToken(): string;
   lastResetToken(): string;
   sent(): ReadonlyArray<{ kind: string; email: string; token: string }>;
+  readinessMails(): ReadonlyArray<{ email: string; mail: ReadinessAchievedMail }>;
 }
 
 /**
@@ -13,6 +14,7 @@ export interface CapturingMailer extends Mailer {
  */
 export function createCapturingMailer(): CapturingMailer {
   const log: { kind: string; email: string; token: string }[] = [];
+  const readiness: { email: string; mail: ReadinessAchievedMail }[] = [];
   const lastOf = (kind: string): string => {
     const hit = [...log].reverse().find((e) => e.kind === kind);
     if (!hit) throw new Error(`no ${kind} email was sent`);
@@ -27,9 +29,17 @@ export function createCapturingMailer(): CapturingMailer {
       log.push({ kind: 'reset', email, token });
       return Promise.resolve();
     },
-    clear: () => void (log.length = 0),
+    sendReadinessAchieved: (email, mail) => {
+      readiness.push({ email, mail });
+      return Promise.resolve();
+    },
+    clear: () => {
+      log.length = 0;
+      readiness.length = 0;
+    },
     lastVerificationToken: () => lastOf('verify'),
     lastResetToken: () => lastOf('reset'),
     sent: () => log,
+    readinessMails: () => readiness,
   };
 }

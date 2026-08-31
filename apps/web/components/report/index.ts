@@ -10,6 +10,7 @@ export { ScoreArc, type ScoreArcProps } from './ScoreArc';
 export { ModuleStatus, type ModuleStatusProps } from './ModuleStatus';
 export { ProgressRow, type ProgressRowProps } from './ProgressRow';
 export { IssueCard, type IssueCardProps } from './IssueCard';
+export { ReadinessVerdict, type ReadinessVerdictProps } from './ReadinessVerdict';
 export {
   AnnotatedScreenshot,
   type AnnotatedScreenshotProps,

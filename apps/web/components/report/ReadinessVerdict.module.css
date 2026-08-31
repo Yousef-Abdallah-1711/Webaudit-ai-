@@ -1,0 +1,112 @@
+/* T168 — ported from design-system/components/report/VerdictPanel.jsx. */
+
+.panel {
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  font-family: var(--font-sans);
+}
+
+.go {
+  border-color: var(--sev-resolved);
+}
+
+.noGo {
+  border-color: var(--sev-critical);
+}
+
+.head {
+  padding: 22px 24px;
+  border-bottom: var(--border-width) solid var(--border-default);
+}
+
+.go .head {
+  background: var(--sev-resolved-bg);
+}
+
+.noGo .head {
+  background: var(--sev-critical-bg);
+}
+
+.eyebrow {
+  font: var(--type-eyebrow);
+  font-size: 12px;
+  letter-spacing: var(--track-eyebrow);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.go .eyebrow {
+  color: var(--sev-resolved);
+}
+
+.noGo .eyebrow {
+  color: var(--sev-critical);
+}
+
+.title {
+  font: var(--type-h3);
+  color: var(--text-strong);
+}
+
+.score {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-top: 6px;
+  font-family: var(--font-mono);
+}
+
+.body {
+  padding: 18px 24px;
+  background: var(--surface-page);
+}
+
+.area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+}
+
+.areaBordered {
+  border-bottom: var(--border-width) solid var(--border-default);
+}
+
+.tickPass {
+  color: var(--sev-resolved);
+  display: inline-flex;
+}
+
+.tickFail {
+  color: var(--sev-critical);
+  display: inline-flex;
+}
+
+.areaName {
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.areaScore {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.blockers {
+  margin-top: 16px;
+}
+
+.blockersTitle {
+  font: var(--type-small);
+  font-weight: 700;
+  color: var(--sev-critical);
+  margin-bottom: 8px;
+}
+
+.blocker {
+  font: var(--type-small);
+  color: var(--text-primary);
+  padding: 4px 0;
+}

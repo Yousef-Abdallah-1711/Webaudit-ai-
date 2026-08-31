@@ -57,3 +57,29 @@ export const CONTROL_GATE = {
     burst: 12,
   },
 } as const;
+
+/**
+ * FR-071 — the per-area score a readiness pass must reach for a *go* verdict.
+ *
+ * spec.md's Assumptions section: "The per-area scores required for a go verdict
+ * are published to users in advance rather than being determined per audit."
+ * The specification does **not** state the numbers, so these are engineering
+ * defaults pending a product decision — recorded as an open decision in
+ * PROGRESS.md, and placed here rather than inside the verdict logic because a
+ * threshold hidden in code is not "published."
+ *
+ * They mirror the same "measured before inferred" ranking the product's voice
+ * takes: SECURITY and PERFORMANCE carry the most user/business consequence and
+ * are held highest; UI and SEO are held a step lower because a design or
+ * search-visibility shortfall is a growth cost, not a launch blocker. The
+ * per-area formula (`packages/scoring`) deducts 25 per CRITICAL / 12 per HIGH,
+ * so an 80 threshold means "no more than one unresolved HIGH-equivalent of
+ * measured debt," which is the spirit of FR-066's blocking severities.
+ */
+export const READINESS_THRESHOLDS = {
+  PERFORMANCE: 80,
+  SECURITY: 80,
+  UI: 70,
+  TESTING: 75,
+  SEO: 70,
+} as const;
