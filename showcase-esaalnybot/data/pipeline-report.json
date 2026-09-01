@@ -1,0 +1,364 @@
+{
+  "meta": {
+    "target": "https://app.esaalnybot.tech/",
+    "modules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "UI",
+      "TESTING"
+    ],
+    "finalState": "COMPLETED",
+    "durationMs": 2238,
+    "engine": "full pipeline: startApi + startWorker + Postgres + Redis + BullMQ + 5-phase orchestrator (AI_MODE=fixtures)",
+    "note": "ctx.withPage is not wired in the product orchestrator, so CWV / page-weight / layout checks are inert here — see data/audit.json (standalone runner) for the browser-backed measurements."
+  },
+  "report": {
+    "score": 87,
+    "summary": "Summary (AI interpretation unavailable): SEO scored 79, TESTING scored 100, SECURITY scored 67, PERFORMANCE scored 91, UI scored 100.",
+    "areas": [
+      {
+        "module": "SEO",
+        "state": "COMPLETE",
+        "score": 79,
+        "summary": null,
+        "degradedReason": null,
+        "skippedReason": null
+      },
+      {
+        "module": "TESTING",
+        "state": "COMPLETE",
+        "score": 100,
+        "summary": null,
+        "degradedReason": null,
+        "skippedReason": null
+      },
+      {
+        "module": "SECURITY",
+        "state": "COMPLETE",
+        "score": 67,
+        "summary": null,
+        "degradedReason": null,
+        "skippedReason": null
+      },
+      {
+        "module": "PERFORMANCE",
+        "state": "COMPLETE",
+        "score": 91,
+        "summary": null,
+        "degradedReason": null,
+        "skippedReason": null
+      },
+      {
+        "module": "UI",
+        "state": "DEGRADED",
+        "score": 100,
+        "summary": null,
+        "degradedReason": "No AI provider could be reached for this area, so its findings are what was measured directly, without interpretation.",
+        "skippedReason": null
+      }
+    ],
+    "issues": [
+      {
+        "severity": "HIGH",
+        "title": "Missing H1 heading",
+        "checkId": "content.h1-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "74a21d4d8c753fa7e8a26f81fa608045887f80c225f5944c0b9a993a627c749c",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing H1 heading\nWhat was measured: No <h1> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Search engines and assistive technology both use the H1 as the page’s primary topic signal; without one there is no clear heading hierarchy to anchor either on.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SEO"
+        }
+      },
+      {
+        "severity": "HIGH",
+        "title": "Missing Content-Security-Policy header",
+        "checkId": "headers.csp-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "99f6b624e7788abd795f6bd55f6effdc0b59e14648b00825c2ace31e6e4d60e4",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Content-Security-Policy header\nWhat was measured: The response carried no Content-Security-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "MEDIUM",
+        "title": "Missing meta description",
+        "checkId": "meta.description-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "b8d433665afe7b8b3391c8c2b92b48e193eed0a27992c6133b57c839e969a775",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing meta description\nWhat was measured: No non-empty <meta name=\"description\"> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a meta description, search engines generate a snippet from arbitrary page text, which is less likely to match what a searcher is looking for.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SEO"
+        }
+      },
+      {
+        "severity": "MEDIUM",
+        "title": "Missing X-Frame-Options header",
+        "checkId": "headers.frame-options-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "ad482d5316a652019e98440dbcb14fdaf4a5b1e4d12bd1396e3148a6143a3bf7",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing X-Frame-Options header\nWhat was measured: The response carried no X-Frame-Options header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it (and no frame-ancestors directive in a CSP), the page can be embedded in another site’s frame and used for clickjacking.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "MEDIUM",
+        "title": "Missing X-Content-Type-Options header",
+        "checkId": "headers.content-type-options-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "7da18c28c1e411e3814c573a17d0f57e81388246ed2c534920d851c08f28e8cf",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing X-Content-Type-Options header\nWhat was measured: The response carried no X-Content-Type-Options: nosniff header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, some browsers will MIME-sniff the response and may execute content that was not intended to run as a script.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "MEDIUM",
+        "title": "Missing Strict-Transport-Security header",
+        "checkId": "ssl.hsts-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "8fc6bca93c55a3f2d5d69fd1b92ddaea700dc1d28e51d5f97545d59bb14f97c7",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Strict-Transport-Security header\nWhat was measured: The HTTPS response carried no Strict-Transport-Security header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without HSTS, a visitor who types the bare domain or follows an http:// link is not told by the browser to upgrade automatically, leaving a window for a downgrade attack.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "MEDIUM",
+        "title": "Response is not compressed",
+        "checkId": "lighthouse.no-text-compression",
+        "attribution": "MEASURED",
+        "fingerprint": "ecf666552b24a3939338fc0d6893d0c9c61a1f44890b3b12fcb32b2a1b479a5f",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://app.esaalnybot.tech\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "PERFORMANCE"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Missing canonical link",
+        "checkId": "meta.canonical-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "4e8a0a6efe8f221bac242e75204e2e9b3135fca84f553856bc542791cbfc2b0f",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing canonical link\nWhat was measured: No <link rel=\"canonical\"> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SEO"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Thin content",
+        "checkId": "content.thin-content",
+        "attribution": "MEASURED",
+        "fingerprint": "ac2bc91957706e0dae573ed33818752489e76052b403ad4eb2f7515add4df743",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 3 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":3}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SEO"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Missing Referrer-Policy header",
+        "checkId": "headers.referrer-policy-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "d52ce2739639a5a120581d7ddca709eba8a05773dd689c128fe8608551002540",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Referrer-Policy header\nWhat was measured: The response carried no Referrer-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, the browser’s default referrer behaviour applies, which can leak the full URL (including any sensitive path or query data) to third-party destinations linked from the page.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Missing Permissions-Policy header",
+        "checkId": "headers.permissions-policy-missing",
+        "attribution": "MEASURED",
+        "fingerprint": "da858a2fbfe4f9a6a3d6f59bdb62a81f07c50282d72047f0c478bae6b34ee84c",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Permissions-Policy header\nWhat was measured: The response carried no Permissions-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, embedded or loaded content is not restricted from requesting powerful browser features (camera, microphone, geolocation) it does not need.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Server header discloses a software version",
+        "checkId": "owasp.server-version-disclosed",
+        "attribution": "MEASURED",
+        "fingerprint": "bd80b26be9fbed6ea3f8f051eec4a907367a22befc383251ea382380b190a038",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following security issue.\n\nProblem: Server header discloses a software version\nWhat was measured: The response's server header is \"nginx/1.24.0 (Ubuntu)\", naming a specific software version.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Publishing a specific software version narrows an attacker’s search for a known vulnerability affecting that exact version.\nEvidence: {\"header\":\"server\",\"value\":\"nginx/1.24.0 (Ubuntu)\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "SECURITY"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "No caching headers set",
+        "checkId": "lighthouse.no-cache-headers",
+        "attribution": "MEASURED",
+        "fingerprint": "c5143e0f28e49360b701704ed2245d42fef20de775646ec2f69bdec55390c32c",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following performance issue.\n\nProblem: No caching headers set\nWhat was measured: The response carried neither a Cache-Control nor an Expires header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a caching policy, a repeat visitor re-downloads the same response on every visit instead of reusing a cached copy.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "PERFORMANCE"
+        }
+      },
+      {
+        "severity": "LOW",
+        "title": "Uncompressed script or stylesheet",
+        "checkId": "network.uncompressed-subresource",
+        "attribution": "MEASURED",
+        "fingerprint": "d892e41cf861486409ccf7928205532e51fe2a09b5b94fe6355038266de961e4",
+        "location": "https://app.esaalnybot.tech",
+        "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 3 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":3,\"sample\":[\"https://app.esaalnybot.tech/assets/index-BnuOJplz.js\",\"https://api.esaalnybot.tech/widget.js\",\"https://app.esaalnybot.tech/assets/index-11YUK2dq.css\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+        "moduleResult": {
+          "module": "PERFORMANCE"
+        }
+      }
+    ]
+  },
+  "executions": [
+    {
+      "capabilityId": "cwv-analyzer",
+      "module": "PERFORMANCE",
+      "succeeded": true,
+      "findingCount": 0,
+      "durationMs": 1,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "lighthouse-analyzer",
+      "module": "PERFORMANCE",
+      "succeeded": true,
+      "findingCount": 2,
+      "durationMs": 317,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "network-inspector",
+      "module": "PERFORMANCE",
+      "succeeded": true,
+      "findingCount": 1,
+      "durationMs": 725,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "data-leak-scanner",
+      "module": "SECURITY",
+      "succeeded": true,
+      "findingCount": 0,
+      "durationMs": 268,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "headers-checker",
+      "module": "SECURITY",
+      "succeeded": true,
+      "findingCount": 5,
+      "durationMs": 277,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "owasp-checker",
+      "module": "SECURITY",
+      "succeeded": true,
+      "findingCount": 1,
+      "durationMs": 297,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "ssl-analyzer",
+      "module": "SECURITY",
+      "succeeded": true,
+      "findingCount": 1,
+      "durationMs": 277,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "module-ai:ui",
+      "module": "UI",
+      "succeeded": false,
+      "findingCount": 0,
+      "durationMs": 0,
+      "skippedReason": null,
+      "errorMessage": "the response does not match the schema — summary: Required; insights: Required; priorityOrder: Required",
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "screenshot-capture",
+      "module": "UI",
+      "succeeded": true,
+      "findingCount": 0,
+      "durationMs": 191,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "contradiction-detector",
+      "module": "TESTING",
+      "succeeded": false,
+      "findingCount": 0,
+      "durationMs": 0,
+      "skippedReason": "This check does not apply to what was submitted.",
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "playwright-runner",
+      "module": "TESTING",
+      "succeeded": true,
+      "findingCount": 0,
+      "durationMs": 263,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "content-checker",
+      "module": "SEO",
+      "succeeded": true,
+      "findingCount": 2,
+      "durationMs": 272,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    },
+    {
+      "capabilityId": "meta-checker",
+      "module": "SEO",
+      "succeeded": true,
+      "findingCount": 2,
+      "durationMs": 272,
+      "skippedReason": null,
+      "errorMessage": null,
+      "costMicros": 0
+    }
+  ]
+}

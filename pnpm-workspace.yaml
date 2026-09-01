@@ -1,5 +1,6 @@
 packages:
   - 'apps/*'
+  - 'showcase-esaalnybot'
   - 'packages/*'
   - 'packages/capabilities-vendored'
   - 'packages/capabilities-vendored/*'

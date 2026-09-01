@@ -1,0 +1,28 @@
+{
+  "target": "https://app.esaalnybot.tech/",
+  "capturedAt": "2026-08-29T15:04:18.920Z",
+  "timings": {
+    "ttfbMs": 56,
+    "domContentLoadedMs": 494,
+    "loadMs": 579,
+    "firstContentfulPaintMs": 480,
+    "domInteractiveMs": 191
+  },
+  "transferKb": 261,
+  "resourceCount": 6,
+  "domNodes": 40,
+  "scripts": 2,
+  "stylesheets": 1,
+  "images": 1,
+  "title": "Esaalny-Bot",
+  "textLength": 241,
+  "headings": {
+    "h1": 1,
+    "h2": 0,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

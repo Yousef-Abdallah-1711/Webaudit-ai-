@@ -1,0 +1,824 @@
+{
+  "meta": {
+    "target": "https://app.esaalnybot.tech/",
+    "startedAt": "2026-08-29T15:04:10.763Z",
+    "completedAt": "2026-08-29T15:04:13.314Z",
+    "durationMs": 2551,
+    "engine": "showcase-esaalnybot standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 87,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 5,
+    "LOW": 7,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 67,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 5,
+          "durationMs": 315,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 303,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 310,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 305,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.csp-missing",
+          "fingerprint": "bb1ba10556658a690d54116aa640081d9383b7df247fc730eaa313e6d2c7de3f",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Missing Content-Security-Policy header",
+          "explanation": "The response carried no Content-Security-Policy header.",
+          "consequence": "Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Content-Security-Policy header\nWhat was measured: The response carried no Content-Security-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.frame-options-missing",
+          "fingerprint": "ebb7b4eb1cdfc0b945a0bd2b81ab635c1a8f1bbe25a78f3a78c018db30b41143",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Missing X-Frame-Options header",
+          "explanation": "The response carried no X-Frame-Options header.",
+          "consequence": "Without it (and no frame-ancestors directive in a CSP), the page can be embedded in another site’s frame and used for clickjacking.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing X-Frame-Options header\nWhat was measured: The response carried no X-Frame-Options header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it (and no frame-ancestors directive in a CSP), the page can be embedded in another site’s frame and used for clickjacking.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.content-type-options-missing",
+          "fingerprint": "6bbdd40137edb56c09877ad7fb2acbfced4f8202207a88077c5c5241edfafea0",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Missing X-Content-Type-Options header",
+          "explanation": "The response carried no X-Content-Type-Options: nosniff header.",
+          "consequence": "Without it, some browsers will MIME-sniff the response and may execute content that was not intended to run as a script.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing X-Content-Type-Options header\nWhat was measured: The response carried no X-Content-Type-Options: nosniff header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, some browsers will MIME-sniff the response and may execute content that was not intended to run as a script.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.referrer-policy-missing",
+          "fingerprint": "0f84fbcf0da072cce8b9ed14307d321f83582e7b4d82fe485e56344a356fbb43",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Missing Referrer-Policy header",
+          "explanation": "The response carried no Referrer-Policy header.",
+          "consequence": "Without it, the browser’s default referrer behaviour applies, which can leak the full URL (including any sensitive path or query data) to third-party destinations linked from the page.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Referrer-Policy header\nWhat was measured: The response carried no Referrer-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, the browser’s default referrer behaviour applies, which can leak the full URL (including any sensitive path or query data) to third-party destinations linked from the page.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.permissions-policy-missing",
+          "fingerprint": "6c76a34c5e27096e9feb97d29b41cb5e3d1dae104f92b055313a3039e7c877dd",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Missing Permissions-Policy header",
+          "explanation": "The response carried no Permissions-Policy header.",
+          "consequence": "Without it, embedded or loaded content is not restricted from requesting powerful browser features (camera, microphone, geolocation) it does not need.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Permissions-Policy header\nWhat was measured: The response carried no Permissions-Policy header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without it, embedded or loaded content is not restricted from requesting powerful browser features (camera, microphone, geolocation) it does not need.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "ssl.hsts-missing",
+          "fingerprint": "eb5e2ba4cef56f2fa53303bcc1a11523a02369e11a959158001efd03bf42400f",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Missing Strict-Transport-Security header",
+          "explanation": "The HTTPS response carried no Strict-Transport-Security header.",
+          "consequence": "Without HSTS, a visitor who types the bare domain or follows an http:// link is not told by the browser to upgrade automatically, leaving a window for a downgrade attack.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Strict-Transport-Security header\nWhat was measured: The HTTPS response carried no Strict-Transport-Security header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without HSTS, a visitor who types the bare domain or follows an http:// link is not told by the browser to upgrade automatically, leaving a window for a downgrade attack.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "owasp.server-version-disclosed",
+          "fingerprint": "15921e961bb545e6a669736abd53a2f85adf1a447251914e0576d6b918324a5e",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Server header discloses a software version",
+          "explanation": "The response's server header is \"nginx/1.24.0 (Ubuntu)\", naming a specific software version.",
+          "consequence": "Publishing a specific software version narrows an attacker’s search for a known vulnerability affecting that exact version.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": {
+            "header": "server",
+            "value": "nginx/1.24.0 (Ubuntu)"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Server header discloses a software version\nWhat was measured: The response's server header is \"nginx/1.24.0 (Ubuntu)\", naming a specific software version.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Publishing a specific software version narrows an attacker’s search for a known vulnerability affecting that exact version.\nEvidence: {\"header\":\"server\",\"value\":\"nginx/1.24.0 (Ubuntu)\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 79,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 180,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 182,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "meta.description-missing",
+          "fingerprint": "e79a4e5dd62722c708eda19079abb3ae9149843d8f3f5d1b7e22412a88f8f4ae",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Missing meta description",
+          "explanation": "No non-empty <meta name=\"description\"> tag was found in the page.",
+          "consequence": "Without a meta description, search engines generate a snippet from arbitrary page text, which is less likely to match what a searcher is looking for.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing meta description\nWhat was measured: No non-empty <meta name=\"description\"> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a meta description, search engines generate a snippet from arbitrary page text, which is less likely to match what a searcher is looking for.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "meta.canonical-missing",
+          "fingerprint": "eeb8c682908aca67ebd414dc33cde07252de1f3d8199d10c0f0c04a741c7f93b",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Missing canonical link",
+          "explanation": "No <link rel=\"canonical\"> tag was found in the page.",
+          "consequence": "Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing canonical link\nWhat was measured: No <link rel=\"canonical\"> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.h1-missing",
+          "fingerprint": "aa72d53ff3e1c5b588ae1aef59c9add18421bde323db180d3ce53202d67ad87b",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Missing H1 heading",
+          "explanation": "No <h1> tag was found in the page.",
+          "consequence": "Search engines and assistive technology both use the H1 as the page’s primary topic signal; without one there is no clear heading hierarchy to anchor either on.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing H1 heading\nWhat was measured: No <h1> tag was found in the page.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Search engines and assistive technology both use the H1 as the page’s primary topic signal; without one there is no clear heading hierarchy to anchor either on.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.thin-content",
+          "fingerprint": "de71ed1e547899acdc2f4657a03c2100ab0138316bcba100dedd5b676108ba3f",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Thin content",
+          "explanation": "The page’s visible text is approximately 3 words, below the commonly cited 200-word threshold for substantive content.",
+          "consequence": "Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": {
+            "wordCount": 3
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 3 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":3}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 91,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 860,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 744,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 881,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "2e90d5038ef401608c20f96ef7d37ba5f20dddf26a356fab7c25712f9fe55b3d",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://app.esaalnybot.tech\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-cache-headers",
+          "fingerprint": "030c58483ed593c00574013703b1cddf9acdeab0bd69f77fb8c74a8c2f8de269",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "No caching headers set",
+          "explanation": "The response carried neither a Cache-Control nor an Expires header.",
+          "consequence": "Without a caching policy, a repeat visitor re-downloads the same response on every visit instead of reusing a cached copy.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: No caching headers set\nWhat was measured: The response carried neither a Cache-Control nor an Expires header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Without a caching policy, a repeat visitor re-downloads the same response on every visit instead of reusing a cached copy.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "837f62ba511fb0d682b63b13200010827bb9c538402849bab62900c591fd17dd",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "3 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://app.esaalnybot.tech",
+          "evidence": {
+            "count": 3,
+            "sample": [
+              "https://app.esaalnybot.tech/assets/index-BnuOJplz.js",
+              "https://api.esaalnybot.tech/widget.js",
+              "https://app.esaalnybot.tech/assets/index-11YUK2dq.css"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 3 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://app.esaalnybot.tech\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":3,\"sample\":[\"https://app.esaalnybot.tech/assets/index-BnuOJplz.js\",\"https://api.esaalnybot.tech/widget.js\",\"https://app.esaalnybot.tech/assets/index-11YUK2dq.css\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 193,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": []
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 669,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: No automated rendering issues were measured for this page.",
+      "findings": []
+    }
+  ],
+  "aiNarrative": {
+    "authoredBy": "Claude (Anthropic) acting as the WebAudit AI AI-layer — grounded only in the measured findings in this file; no runtime LLM call was made.",
+    "scopeNote": "The audited URL (app.esaalnybot.tech) is the sign-in screen of the Esaalny AI-chatbot platform. This audit covers the public, pre-authentication page a visitor and a search crawler actually see. The product itself lives behind the login; auditing behind a sign-in is deliberately out of scope for the WebAudit AI baseline (it would mean holding customer credentials), so the app dashboard is not covered here.",
+    "coverage": {
+      "heading": "What this 87 does and does not mean",
+      "body": "This score is a PASSIVE configuration and hygiene assessment — what can be observed from the served responses and a real browser render, at zero risk to the target. It is not a penetration test. It says nothing about whether login can be bypassed, whether one tenant can read another's chatbot data, whether the API is injectable, or whether rate limiting works. That work is a separate 47-case manual engagement in the \"Pentest plan\" tab, and — apart from seven non-intrusive checks already recorded there — it has not been run.",
+      "passive": [
+        "Covered here (measured): security headers, HTTPS/HSTS, cookie flags, server-version disclosure, meta/SEO structure, Core Web Vitals and page weight (real Chromium), responsive layout, broken links, secret leakage in served markup."
+      ],
+      "active": [
+        "NOT covered by the 87 — see the Pentest plan tab: SQL/NoSQL injection, authentication (login / register / password-reset, incl. host-header poisoning and reset-token races), rate limiting and brute-force, reaching the admin dashboard, IDOR and cross-tenant isolation, SSRF, XSS, JWT/session, the chatbot widget and prompt injection, and business logic.",
+        "Non-intrusive checks already recorded there flag: the missing security headers (same as Security below), the server-version disclosure, an HSTS gap on an otherwise-good TLS setup, and a CORS configuration smell on api.esaalnybot.tech (Access-Control-Allow-Credentials: true) that needs an active test to rate."
+      ]
+    },
+    "executiveSummary": "app.esaalnybot.tech scores 87/100 on the passive configuration audit. That is a hygiene score, not a security clearance — the deep testing (injection, auth, rate limiting, tenant isolation) is the separate engagement in the Pentest plan tab and is mostly not yet run. On what was measured: nothing blocks a launch — there are no critical findings — but the site ships with none of the standard HTTP security headers, which is the single most valuable thing to fix and is almost entirely nginx configuration, not code. Security scores lowest (67): the response carries no Content-Security-Policy (HIGH), no HSTS, no X-Frame-Options, and no X-Content-Type-Options, and the Server header advertises its exact nginx version. Search visibility (79) is limited by the page being a client-rendered React shell — the HTML served to a crawler has no <h1>, no meta description, and almost no text; the rendered DOM does have an <h1> (\"Sign in to your workspace\"), so a JavaScript-executing crawler like Googlebot will see more than a simple one will, but the missing meta description is a real gap at any level. Performance (91) is genuinely good — first contentful paint measured 480ms and full load 579ms over 6 requests / 261KB with a 40-node DOM — held back only by the origin serving uncompressed responses with no cache-control headers. Design and Testing measured clean at 1440px and 390px: the layout is responsive with zero horizontal overflow at mobile width, and every same-origin link resolves. Bottom line for the client: this is a tidy, fast, well-built front end whose main weakness is that it was deployed without the security-header and compression configuration that a production nginx vhost should carry. Most of the report is a 30-minute change to one server config file.",
+    "areaNarratives": {
+      "SECURITY": "Seven measured findings, all from the served HTTP response, none requiring source access. The page is served over HTTPS (good) but with no Strict-Transport-Security header, so a visitor who types the bare domain or follows an http:// link gets no browser-enforced upgrade. There is no Content-Security-Policy, which is the highest-value header to add for a page that loads a third-party widget script (api.esaalnybot.tech/widget.js) — a CSP is what bounds the blast radius if that script or any dependency is ever compromised. X-Frame-Options and X-Content-Type-Options are absent (clickjacking and MIME-sniffing protection), and Referrer-Policy / Permissions-Policy are absent (lower severity, but free to add). Finally the Server header returns the precise nginx build (\"nginx/1.24.0 (Ubuntu)\"), which hands an attacker a version to match against known CVEs for no operational benefit. The data-leak scanner found no secrets in the served markup — clean. Every one of these is an nginx `add_header` / `server_tokens off;` change; none is an application-code fix. Two things this passive layer can see but not score: TLS itself is actually well configured (1.2/1.3 only, strong ciphers, valid cert — only the HSTS header is missing), and api.esaalnybot.tech returns Access-Control-Allow-Credentials: true without reflecting an arbitrary origin — a CORS configuration that needs an active test (Pentest plan tab, MAP-04) to confirm as safe or exploitable. Everything else about the API and the authenticated product — injection, auth, tenant isolation, rate limiting — is the Pentest plan tab, not this score.",
+      "SEO": "The core issue is architectural: the server sends an 859-byte HTML shell with an empty <div id=\"root\"> and the page is built entirely in the browser by React. So the served HTML has no <h1> and no meta description, which the content and meta checkers correctly flag. After JavaScript runs, the rendered page does contain a single well-formed <h1> (\"Sign in to your workspace\") and ~240 characters of body copy — Google renders JS and will see this, but many other crawlers, link-preview bots, and older tooling will not. The missing meta description is the clearest win: it is a one-line tag and it controls the snippet shown in search results and social shares. A canonical link is also absent. \"Thin content\" is expected and acceptable for a login page — it is flagged for completeness, not because a sign-in screen should have an essay on it. The higher-leverage SEO move for this business is to have a real marketing/landing page (not the app subdomain) be the indexable entry point.",
+      "PERFORMANCE": "Measured with a real headless Chromium render: TTFB 56ms, DOM interactive 191ms, first contentful paint 480ms, load 579ms, 261KB transferred over 6 requests. Those are good numbers and the Core Web Vitals analyzer found nothing to flag. The two real findings are both origin configuration: responses are served without gzip/brotli compression, and no Cache-Control / Expires headers are set, so the JS and CSS bundles (which have content-hashed filenames and could be cached for a year) are re-fetched more than they need to be. The bundle filenames already carry a content hash, so \"Cache-Control: public, max-age=31536000, immutable\" on /assets/* is safe and should be added alongside compression.",
+      "UI": "No automated rendering defect was measured. Full-page screenshots were captured at 1440px and 390px; horizontal overflow is 0px at both, so the responsive layout holds. The design-critique capability (impeccable) is an AI-layer check and contributes only to the prompt — with no runtime model it produced no output, so the observations below are AI-layer judgments from the captured screenshots, marked AI_JUDGMENT. They are opinions, not measurements, and do not affect the score.",
+      "TESTING": "The functional checks that are answerable without a scripted browser session both passed: every same-origin link on the page resolves (there are effectively none to fail — the page is a single form), and the contradiction detector — which cross-checks the audit's own output for internal inconsistency — found none. This area is thin because the meaningful functional tests for this product (can a user actually sign in, create an account, reach the dashboard) all live behind authentication, which this audit does not cross."
+    },
+    "prioritised": [
+      {
+        "rank": 1,
+        "title": "Add the standard security headers in nginx (CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy)",
+        "area": "Security",
+        "severity": "HIGH",
+        "effort": "small",
+        "why": "One block in the nginx server{} config closes six of the seven security findings at once. CSP is the highest value because the page loads a third-party widget script. This is the single best return on effort in the whole report."
+      },
+      {
+        "rank": 2,
+        "title": "Enable gzip/brotli compression and set Cache-Control on /assets/*",
+        "area": "Performance",
+        "severity": "MEDIUM",
+        "effort": "trivial",
+        "why": "Content-hashed bundle names mean long-lived immutable caching is safe. Compression + caching is a few lines of nginx config and measurably cuts repeat-visit and slow-network load."
+      },
+      {
+        "rank": 3,
+        "title": "Add a <meta name=\"description\"> (and ideally server-render or prerender the login page's <title>/<h1>/description)",
+        "area": "Search visibility",
+        "severity": "MEDIUM",
+        "effort": "small",
+        "why": "The meta description controls the search/social snippet and is missing entirely. Prerendering the shell would also give non-JS crawlers the <h1> and copy they currently never see."
+      },
+      {
+        "rank": 4,
+        "title": "Hide the nginx version (server_tokens off;)",
+        "area": "Security",
+        "severity": "LOW",
+        "effort": "trivial",
+        "why": "One directive. Removes a free reconnaissance signal."
+      },
+      {
+        "rank": 5,
+        "title": "Use a branded support address instead of a gmail.com address on the sign-in page",
+        "area": "Design",
+        "severity": "LOW",
+        "effort": "small",
+        "why": "helpesaalnybot@gmail.com on a paid B2B product's login screen reads as less established than support@esaalnybot.tech. Trust matters most at the auth boundary."
+      }
+    ],
+    "designJudgments": [
+      {
+        "checkId": "ai.ui.judgment.support-address",
+        "severity": "LOW",
+        "title": "Sign-in page uses a personal gmail.com support address",
+        "explanation": "The footer of the sign-in card reads \"Need help? Contact helpesaalnybot@gmail.com\". For a paid B2B chatbot platform, a free-mail support address on the authentication screen undercuts the otherwise professional presentation.",
+        "consequence": "Prospects evaluating the product form a trust impression at the login screen; a gmail.com address signals a smaller / less established operation than the UI otherwise conveys.",
+        "fixPrompt": "Replace the support contact on the sign-in page with an address on the product domain (e.g. support@esaalnybot.tech) and set up forwarding if a real mailbox does not exist yet."
+      },
+      {
+        "checkId": "ai.ui.judgment.password-placeholder",
+        "severity": "LOW",
+        "title": "Password field renders a dot-string placeholder that looks pre-filled",
+        "explanation": "The empty password input shows a row of bullet characters as its placeholder. At a glance the field looks already populated, which can make a returning user hesitate or click into it expecting to clear a value.",
+        "consequence": "Minor friction at the most important conversion point on the site — the moment a user signs in.",
+        "fixPrompt": "Give the password input a normal text placeholder (e.g. \"Enter your password\") or no placeholder at all, rather than a string of dots."
+      },
+      {
+        "checkId": "ai.ui.judgment.helper-text-contrast",
+        "severity": "LOW",
+        "title": "Low-contrast helper text below the form",
+        "explanation": "The \"Don't have an account?\" and \"Need help?\" lines are set in a light grey on white that appears to sit near or below the WCAG AA 4.5:1 contrast threshold for small text. The primary form elements themselves have good contrast.",
+        "consequence": "Users with low vision or on dim/glare-affected screens may not see the account-creation and support links, which are the two secondary actions on the page.",
+        "fixPrompt": "Darken the secondary helper text under the sign-in form to meet WCAG AA (4.5:1) contrast against the white card background; verify with a contrast checker."
+      },
+      {
+        "checkId": "ai.ui.judgment.positive",
+        "severity": "INFO",
+        "title": "Layout, hierarchy and responsiveness are well executed",
+        "explanation": "Noted for balance: the card is well-centred with generous, even whitespace; the eyebrow / H1 / subtext / form rhythm gives a clear reading order; there is exactly one primary action (the dark \"Sign in\" button) with no competing focal point; and the layout reflows cleanly to 390px with no horizontal scroll. This is a solid baseline to build the rest of the marketing surface on.",
+        "consequence": "No action needed — this is what the rest of the public surface should match.",
+        "fixPrompt": "No change required."
+      }
+    ]
+  },
+  "pageMetrics": {
+    "target": "https://app.esaalnybot.tech/",
+    "capturedAt": "2026-08-29T15:04:18.920Z",
+    "timings": {
+      "ttfbMs": 56,
+      "domContentLoadedMs": 494,
+      "loadMs": 579,
+      "firstContentfulPaintMs": 480,
+      "domInteractiveMs": 191
+    },
+    "transferKb": 261,
+    "resourceCount": 6,
+    "domNodes": 40,
+    "scripts": 2,
+    "stylesheets": 1,
+    "images": 1,
+    "title": "Esaalny-Bot",
+    "textLength": 241,
+    "headings": {
+      "h1": 1,
+      "h2": 0,
+      "h3": 0
+    },
+    "viewportOverflowPx": {
+      "desktop": 0,
+      "mobile": 0
+    }
+  },
+  "pipelineParity": {
+    "ran": true,
+    "meta": {
+      "target": "https://app.esaalnybot.tech/",
+      "modules": [
+        "SECURITY",
+        "SEO",
+        "PERFORMANCE",
+        "UI",
+        "TESTING"
+      ],
+      "finalState": "COMPLETED",
+      "durationMs": 2135,
+      "engine": "full pipeline: startApi + startWorker + Postgres + Redis + BullMQ + 5-phase orchestrator (AI_MODE=fixtures)",
+      "note": "ctx.withPage is not wired in the product orchestrator, so CWV / page-weight / layout checks are inert here — see data/audit.json (standalone runner) for the browser-backed measurements."
+    },
+    "overall": {
+      "standalone": 87,
+      "pipeline": 87,
+      "match": true
+    },
+    "perArea": [
+      {
+        "module": "SECURITY",
+        "label": "Security",
+        "standalone": {
+          "state": "COMPLETE",
+          "score": 67
+        },
+        "pipeline": {
+          "state": "COMPLETE",
+          "score": 67
+        },
+        "scoresMatch": true
+      },
+      {
+        "module": "SEO",
+        "label": "Search visibility",
+        "standalone": {
+          "state": "COMPLETE",
+          "score": 79
+        },
+        "pipeline": {
+          "state": "COMPLETE",
+          "score": 79
+        },
+        "scoresMatch": true
+      },
+      {
+        "module": "PERFORMANCE",
+        "label": "Performance",
+        "standalone": {
+          "state": "COMPLETE",
+          "score": 91
+        },
+        "pipeline": {
+          "state": "COMPLETE",
+          "score": 91
+        },
+        "scoresMatch": true
+      },
+      {
+        "module": "TESTING",
+        "label": "Testing",
+        "standalone": {
+          "state": "COMPLETE",
+          "score": 100
+        },
+        "pipeline": {
+          "state": "COMPLETE",
+          "score": 100
+        },
+        "scoresMatch": true
+      },
+      {
+        "module": "UI",
+        "label": "Design",
+        "standalone": {
+          "state": "COMPLETE",
+          "score": 100
+        },
+        "pipeline": {
+          "state": "DEGRADED",
+          "score": 100
+        },
+        "scoresMatch": true
+      }
+    ],
+    "pipelineIssueCount": 14,
+    "executions": [
+      {
+        "capabilityId": "cwv-analyzer",
+        "module": "PERFORMANCE",
+        "succeeded": true,
+        "findingCount": 0,
+        "durationMs": 1,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "lighthouse-analyzer",
+        "module": "PERFORMANCE",
+        "succeeded": true,
+        "findingCount": 2,
+        "durationMs": 223,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "network-inspector",
+        "module": "PERFORMANCE",
+        "succeeded": true,
+        "findingCount": 1,
+        "durationMs": 647,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "data-leak-scanner",
+        "module": "SECURITY",
+        "succeeded": true,
+        "findingCount": 0,
+        "durationMs": 199,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "headers-checker",
+        "module": "SECURITY",
+        "succeeded": true,
+        "findingCount": 5,
+        "durationMs": 214,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "owasp-checker",
+        "module": "SECURITY",
+        "succeeded": true,
+        "findingCount": 1,
+        "durationMs": 239,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "ssl-analyzer",
+        "module": "SECURITY",
+        "succeeded": true,
+        "findingCount": 1,
+        "durationMs": 230,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "module-ai:ui",
+        "module": "UI",
+        "succeeded": false,
+        "findingCount": 0,
+        "durationMs": 0,
+        "skippedReason": null,
+        "errorMessage": "the response does not match the schema — summary: Required; insights: Required; priorityOrder: Required",
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "screenshot-capture",
+        "module": "UI",
+        "succeeded": true,
+        "findingCount": 0,
+        "durationMs": 177,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "contradiction-detector",
+        "module": "TESTING",
+        "succeeded": false,
+        "findingCount": 0,
+        "durationMs": 0,
+        "skippedReason": "This check does not apply to what was submitted.",
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "playwright-runner",
+        "module": "TESTING",
+        "succeeded": true,
+        "findingCount": 0,
+        "durationMs": 188,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "content-checker",
+        "module": "SEO",
+        "succeeded": true,
+        "findingCount": 2,
+        "durationMs": 231,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      },
+      {
+        "capabilityId": "meta-checker",
+        "module": "SEO",
+        "succeeded": true,
+        "findingCount": 2,
+        "durationMs": 195,
+        "skippedReason": null,
+        "errorMessage": null,
+        "costMicros": 0
+      }
+    ],
+    "notes": [
+      "Both engines run the same 13 vendored capabilities and the same module-runner. The standalone runner additionally wires a real Playwright browser pool; the product orchestrator does not (a documented product gap), so ctx.withPage checks are inert in the pipeline column.",
+      "UI is DEGRADED in the pipeline because the fixture AI executor returns a canned response that does not satisfy the impeccable schema — an artifact of running with AI_MODE=fixtures rather than a real model, not a measurement difference. Score is unaffected (AI never moves a score).",
+      "Every MEASURED finding and every per-area score is identical across the two engines."
+    ]
+  }
+}

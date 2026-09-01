@@ -1,0 +1,47 @@
+{
+  "name": "showcase-esaalnybot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Client showcase: real WebAudit AI audit of https://app.esaalnybot.tech/ rendered into the design-system dashboard.",
+  "scripts": {
+    "audit": "tsx src/runner.ts",
+    "capture": "tsx src/capture.ts",
+    "narrative": "tsx src/ai-narrative.ts",
+    "pipeline": "tsx src/pipeline-run.ts",
+    "merge-pipeline": "tsx src/merge-pipeline.ts",
+    "runbook": "tsx src/build-runbook.ts",
+    "report": "tsx src/render-report.ts",
+    "dashboard": "tsx src/render-dashboard.ts",
+    "render": "pnpm run narrative && pnpm run merge-pipeline && pnpm run runbook && pnpm run report && pnpm run dashboard",
+    "build": "pnpm run audit && pnpm run capture && pnpm run render",
+    "serve": "node serve.mjs"
+  },
+  "dependencies": {
+    "@webaudit/api": "workspace:*",
+    "@webaudit/worker": "workspace:*",
+    "@webaudit/config": "workspace:*",
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/scoring": "workspace:*",
+    "@webaudit/types": "workspace:*",
+    "@webaudit/safe-net": "workspace:*",
+    "@webaudit/redaction": "workspace:*",
+    "@webaudit/capability-headers-checker": "workspace:*",
+    "@webaudit/capability-ssl-analyzer": "workspace:*",
+    "@webaudit/capability-data-leak-scanner": "workspace:*",
+    "@webaudit/capability-owasp-checker": "workspace:*",
+    "@webaudit/capability-meta-checker": "workspace:*",
+    "@webaudit/capability-content-checker": "workspace:*",
+    "@webaudit/capability-lighthouse-analyzer": "workspace:*",
+    "@webaudit/capability-network-inspector": "workspace:*",
+    "@webaudit/capability-cwv-analyzer": "workspace:*",
+    "@webaudit/capability-screenshot-capture": "workspace:*",
+    "@webaudit/capability-impeccable": "workspace:*",
+    "@webaudit/capability-playwright-runner": "workspace:*",
+    "@webaudit/capability-contradiction-detector": "workspace:*",
+    "@playwright/test": "1.62.1"
+  },
+  "devDependencies": {
+    "tsx": "4.23.12"
+  }
+}
