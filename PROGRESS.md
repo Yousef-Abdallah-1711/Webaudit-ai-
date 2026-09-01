@@ -1,12 +1,18 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-08-31 · **Tasks** 184 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **696/696 green**, `adverse` green (1 pre-existing skip), `visual` 6 + 7 todo,
-plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` clean across the monorepo.
+**Updated** 2026-09-01 · **Tasks** 195 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **752/753** (1 confirmed-flaky timing test — `gated-check-partial.test.ts`'s first
+case, 5000ms default timeout under full-suite load; reproduces green in isolation every time,
+2/2 — not an assertion failure), `adverse` **561 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
+plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` clean across the monorepo;
+`next build` clean. A real `Cannot find name 'refPath'` typecheck error in
+`apps/worker/src/intake/repo-clone.ts` (the GitHub zipball ref-path helper had never been written)
+was found and fixed during this verification pass — recorded rather than silently folded in.
 🎯 **Phase 3 (US1) complete — T105–T143.** ✅ **Phase 4 (US2, the fix loop) complete — T144–T157;
 SC-007 now has its adversarial gate.** ✅ **Phase 5 (US3, the readiness verdict) complete —
-T158–T168; the full journey audit→fix→verify→ship is deliverable.** Two review passes on Phases 1–3
-also folded in (§§ below).
+T158–T168; the full journey audit→fix→verify→ship is deliverable.** ✅ **Phase 6 (US4, audit source)
+complete — T169–T179; archive and repository input, refused before extraction and before charging.**
+Two review passes on Phases 1–3 also folded in (§§ below).
 
 ## Phase 3 engineering review (2026-08-30) — findings fixed
 
@@ -91,6 +97,117 @@ Verified: `pnpm test` **666/666**, `pnpm test:adverse` **532/533** (1 skip), `pn
 **Task list** [specs/001-webaudit-mvp-baseline/tasks.md](specs/001-webaudit-mvp-baseline/tasks.md) — authoritative for task state.
 
 Human-readable roll-up and handoff. **Starting a fresh session? Read § Resume here first.**
+
+---
+
+## Phase 6 (User Story 4) — audit source, not just the served page, T169–T179 — done
+
+**A `.zip` or a connected GitHub repository is now a first-class audit input.** It is refused before
+extraction and before charging if it is hostile, becomes a workspace the three new source capabilities
+read, and is destroyed on every exit path. FR-015's ordering guarantee is structural rather than a
+matter of statement order: **the upload endpoint stages a `Target` and does not create a scan or charge
+anything** — the charge is a separate request that cannot be reached by an archive that was refused.
+
+**The extraction guard (T172) is the load-bearing piece, and the order inside it is the guarantee.**
+`packages/safe-archive` has two entry points. `inspectArchive` answers every FR-015 question from the
+zip central directory with no filesystem involved, so the API can refuse before a scan row exists.
+`extractArchive` calls it **unconditionally** — no skip option, no "already inspected" fast path,
+because a fast path is exactly how a second caller ends up writing unchecked bytes a year from now.
+Three details each close a real hole:
+
+- **A ratio *and* an absolute ceiling.** Either alone has a gap. `ARCHIVE_LIMITS.maxUncompressedBytes`
+  (512 MB, added this phase) stops a 50 MB archive expanding *honestly* to 5 GB — no suspicious ratio
+  anywhere. The ratio stops a 4 KB archive expanding to 512 MB — under any absolute ceiling worth
+  having. The budget is the `min` of the two.
+- **A per-entry byte budget between inflate and the file.** A central-directory size is a *claim*. A
+  `ByteBudget` transform enforces it mid-stream, so an entry that lies about its size fails
+  `DECLARED_SIZE_MISMATCH` and its partial file is removed before the error propagates.
+- **Symlinks are refused, never dereferenced.** Following one to decide whether to allow it is the
+  vulnerability.
+
+**Zip only, deliberately.** T179 corrects the shipped copy that promised `.tar.gz`. Every additional
+container is a second parser that must be independently proven not to write before it checks, and a
+tar `typeflag` check is not the same code as a zip mode check. Support arrives with its own T169
+entries or not at all.
+
+**A repository is fetched as a zipball, not cloned — a recorded divergence from T174's wording**, for
+three reasons that all point the same way. It routes repository bytes through the same adversarially
+tested guard an upload uses, where `git clone` would *create* the symlink and leave the SDK's read
+confinement as the only defence. It keeps the credential out of a process argument list visible in
+`ps`. And it keeps a `git` binary out of an image that processes hostile input. The cost is no history
+and no submodules; nothing in this repository reads either. Two details matter: `stripComponents: 1`
+removes GitHub's `owner-repo-<sha>/` wrapper, without which **every source finding's fingerprint would
+change on every commit** (R3), and `safeFetch` is doing real work here because the zipball request
+302s to `codeload.github.com` — the hop that delivers the bytes is the second one, so it is the one
+that must be re-validated (R6).
+
+**Materialisation is idempotent across phase jobs.** Each phase is a separate invocation; re-fetching
+would mean auditing a moving target. A materialisation failure destroys the workspace before
+propagating — FR-090 does not exempt "the source never fully arrived".
+
+**A revoked connection is a refusal, not a refund (T171).** `create-scan.ts` checks connection liveness
+*before* the debit, so the user gets a `409` naming the remedy and no statement lines at all. The test
+asserts no `DEBIT` **and** no `REFUND`, because a balance-only assertion passes against an
+implementation that charges and compensates — which leaves two entries on a bill for an audit that
+never ran. The refund path stays behind the check for a revocation that lands in the seconds after it.
+
+**Routes (T178).** `GET /repos` and `POST /scans/upload` live in their own router mounted **ahead of**
+`scansRoutes` for one concrete reason: `express.json()` runs on every request, and a 50 MB multipart
+body must never reach a JSON parser. The upload handler owns its body from the socket to
+`readBoundedUpload` with nothing buffering in between. `413` for oversize, `422` for every other
+refusal — a client can act on the first and cannot act on the second, and conflating them makes every
+hostile archive look like a size problem in a dashboard.
+
+**Three capabilities (T175–T177):** dependency-scanner (vulnerable dependencies against a *vendored*
+advisory list — Principle II, plus missing lockfiles and floating ranges), bundle-analyzer (oversized
+and unminified bundles, published source maps), css-analyzer (weight, `!important` overuse, colour
+sprawl). All three answer `canRun` from `CapabilityInput.code`'s listing without touching disk, so
+T170 can assert what a URL-only audit does: all three skip on `PRECONDITIONS`, the module lands
+NOT_APPLICABLE, and **the area's score is `null`, not `0`** — FR-053, and a `?? 0` here would deflate
+every URL-only audit ever run. `reverify` reports `UNVERIFIABLE` rather than guessing once FR-090 has
+destroyed the workspace.
+
+One bug worth recording because its own test caught it: bundle-analyzer originally read a prefix of
+each bundle and reported clean on **every** file that leaked its source, since
+`//# sourceMappingURL=` is the *last* line of a real bundle. It now reads head and tail.
+
+**Frontend (T179).** `InputTabs.tsx` extracts the selector from `ScanForm` (T129) and gives it the
+backing that task's note said it was waiting for: `GET /repos` replaces three hardcoded repository
+names, `POST /scans/upload` replaces a decorative dropzone. It reports a discriminated
+`InputSelection` upward rather than a tab name — "which tab is open" and "what has the user chosen"
+are different questions, and conflating them submits an empty URL because the URL tab happened to be
+in front. **An archive is staged when chosen, not at submit**: refusing is free, so a hostile archive
+is rejected at the file picker rather than after the user has chosen five areas and pressed "Accept
+and run". Visual diff N/A — no new-scan artboard exists in `design-system/reference-pages/` (as with
+T129, T155/156, T168); verified with adherence lint, unit tests, and a clean `next build` instead.
+
+Verified: `pnpm lint` clean, `pnpm -r typecheck` clean (30 projects), `pnpm test` **752/753** (1
+confirmed-flaky timing test, green 2/2 in isolation — see the header), `pnpm test:adverse`
+**561 passed / 1 pre-existing skip** (30 files), `pnpm test:visual` 6 + 7 todo (baseline unchanged),
+`next build` clean. `pnpm format:check` is red on files that predate this phase — see § Resume here.
+
+**Re-verification found one real regression the session that wrote this section had not caught**:
+`repo-clone.ts`'s zipball URL built `.../zipball${ref}` from a `refPath()` helper that was called but
+never defined — `tsc --noEmit` on `apps/worker` failed with `Cannot find name 'refPath'`, so "typecheck
+clean (30 projects)" above was not true at the commit this session inherited. Fixed with the obviously
+intended helper (`''` for the default branch, `/<encodeURIComponent(ref)>` otherwise — GitHub's API
+decodes `%2F` inside a ref segment, which is what makes a branch name like `release/1.0` reachable at
+all). Recorded here rather than silently amending the claim above.
+
+**One pre-existing flaky adverse test was de-flaked on the way through** (`credits.expiry-race.test.ts`,
+"leaves purchased credits alone however the sweep is raced"). It raced a debit against the expiry sweep
+with `Promise.allSettled` and then asserted a balance of exactly 50 — which is the outcome only when
+the *debit* commits first. Sweep-first is equally legitimate and leaves 10, so the suite was green on
+most runs and red on precisely the interleaving it exists to exercise; it failed once in three full
+gate runs here. It now asserts the order-independent invariant instead: no purchased credit is ever
+destroyed, so the surviving balance is fully explained by the grant minus the debit minus the sweep's
+own `creditsDestroyed`, and a sweep that reached the purchased lot would break that identity from
+either side. **The de-flake did not weaken SC-022** — the old assertion could not distinguish "the
+sweep spared the purchased lot" from "the debit got there first".
+
+**Not done in this phase, and named rather than left implicit:** the `tar.gz` container (above);
+GitLab and Bitbucket (`GET /repos` is GitHub-only, matching the single provider in `token-vault`);
+and a `Target` for a subdirectory of a repository, which the schema allows and no UI offers.
 
 ---
 
@@ -299,15 +416,37 @@ pnpm db:seed
 pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:adverse && pnpm test:visual
 ```
 
-All 8 gates currently pass (`pnpm lint` covers both code lint and design-adherence lint).
+Seven of the eight pass. **`pnpm format:check` is red, and was already red before Phase 6** — about
+two dozen files from Phases 4 and 5, `apps/probe-pool`, and several vendored capabilities were
+committed unformatted. Every file Phase 6 touched is formatted; the pre-existing ones were left alone
+deliberately so this phase's diff stays reviewable. Fixing it is one mechanical
+`npx prettier --write .` whenever someone is willing to own the whitespace-only churn, and it should
+happen on its own commit rather than inside a feature phase. `pnpm lint` (code lint plus
+design-adherence lint), `pnpm -r typecheck`, `pnpm test`, `pnpm test:adverse`, `pnpm test:visual`, the
+T109 e2e spec, and `next build` are all green.
 
-### Next task: T169 (Phase 6, US4 — audit source, not just the served page) — Phases 3, 4, 5 complete
+### Next task: T180 (Phase 7, US5 — pay for capacity with plans and credits) — Phases 3, 4, 5, 6 complete
 
-Phase 5 (readiness verdict, T158–T168) is done — see § Phase 5 near the top. **Next is Phase 6, User
-Story 4 ("Audit source, not just the served page")**, starting at T169: the streaming archive
-extraction guard (FR-015 — all limits enforced *before* bytes land), R2 upload staging, shallow repo
-clone into the scan workspace, and three source-only capabilities (dependency-scanner,
-bundle-analyzer, css-analyzer). It depends only on Phase 2 — genuinely independent of US1–US3.
+Phase 6 (audit source, T169–T179) is done — see § Phase 6 near the top. **Next is Phase 7, User Story 5
+("Pay for capacity with plans and credits")**, T180–T193, starting at **T180, which is SC-008's
+adversarial gate**: *zero users are charged for an operation the platform failed to deliver*. The rest
+of the phase is subscription lifecycle, entitlement enforcement, non-expiring purchased lots, a
+signature-verified idempotent billing webhook, retention, export, and the two billing surfaces.
+(The sandbox and the capability marketplace are Phase 9, T218's SC-017 — not this one.)
+
+Two pre-existing gate failures were fixed during Phase 6 rather than worked around, and both are worth
+knowing about before the next session runs the gates:
+
+- **`next build` could not resolve any `@webaudit/config` import.** Webpack took
+  `export * from './constants.js'` literally and reported a missing file that nothing in this monorepo
+  will ever emit. `apps/web/next.config.ts` now sets `resolve.extensionAlias` (`.js` →
+  `['.ts', '.tsx', '.js']`), which is webpack's own answer to ESM-correct specifiers over TypeScript
+  sources. This is known issue 0b from the other direction: there a `.js` specifier pointing at a
+  `.tsx` file typechecked and would not bundle, and the fix was the import; here the imports belong to
+  a shared package and are correct as written, so the bundler had to be told.
+- **`pnpm lint` failed on two untracked operator scripts** (`scripts/domain-*.mjs`) with a parse error,
+  not a finding: they are in no tsconfig, so the type-aware service cannot read them. Added to
+  `eslint.config.js`'s `ignores`, alongside the parked worktrees already there.
 
 The rest of this section predates Phase 4/5 and is kept for the T136–T143 context it carries.
 
@@ -1082,7 +1221,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 3 — US1 🎯 MVP | T105–T143 | ✅ done | 🎯 **MVP checkpoint reached** — real audit, driven through the UI, end to end, all 5 areas' capabilities wired. T143's design gap resolved by documented exception (§ below) |
 | 4 — US2 fix loop | T144–T157 | ✅ done | **SC-007 green** — the red-to-green loop, async re-verify queue, `reverify` on all 6 first-slice capabilities, recurrence, fixes board. § Phase 4 near top |
 | 5 — US3 readiness | T158–T168 | ✅ done | Fresh full re-audit, fingerprint diff, go/no-go verdict with named blockers, shareable certificate. § Phase 5 near top |
-| 6 — US4 source audit | T169–T179 | ⬜ | |
+| 6 — US4 source audit | T169–T179 | ✅ done | Archive + repo input, streaming extraction guard, refused before extraction and before charging. § Phase 6 near top |
 | 7 — US5 billing | T180–T193 | ⬜ | SC-008 |
 | 8 — US6 questionnaire | T194–T201 | ⬜ | |
 | 9 — US7 admin | T202–T215 | ⬜ | SC-009, SC-010. **First `requireOperator` route lands here** |
@@ -1501,15 +1640,14 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 ## Reality check on "production ready"
 
-The core loop works and CI genuinely gates merges. Honest state as of Phase 5:
+The core loop works and CI genuinely gates merges. Honest state as of Phase 6:
 
-- **184 of 250 tasks (73%).** Phases 1, 2, 2L, 3, 4, 5 are complete. A real audit runs against a
-  live URL through the real orchestrator and 13 vendored capabilities; a human drives it through the
-  UI; the fix loop turns issues green only on a passing re-check; and a readiness pass returns a
-  go/no-go verdict with named blockers and a shareable certificate.
-- **Still not built (Phases 6–11, 66 tasks):**
-  - **Phase 6 (US4)** — repository / archive input, streaming extraction guard, source-only
-    capabilities (dependency/bundle/css). URL-only until then.
+- **195 of 250 tasks (78%).** Phases 1, 2, 2L, 3, 4, 5, 6 are complete. A real audit runs against a
+  live URL, an uploaded archive, or a connected GitHub repository, through the real orchestrator and
+  16 vendored capabilities; a human drives it through the UI; the fix loop turns issues green only on
+  a passing re-check; and a readiness pass returns a go/no-go verdict with named blockers and a
+  shareable certificate.
+- **Still not built (Phases 7–11, 57 tasks):**
   - **Phase 7 (US5)** — subscriptions, entitlement enforcement, credit purchase, the billing
     webhook, retention + export. **SC-008** (nobody charged for our failures) lands here.
   - **Phase 8 (US6)** — the design-intent questionnaire pause. The orchestrator currently always
@@ -1519,13 +1657,17 @@ The core loop works and CI genuinely gates merges. Honest state as of Phase 5:
   - **Phase 10** — `sandbox-runner`. Untrusted uploaded capabilities cannot run; the upload path
     correctly returns `503`. **SC-017**. Complete or not at all.
   - **Phase 11** — axe-core a11y in e2e, dark-mode severity contrast, structured logging, the FR-025
-    / architecture-doc corrections, deploy runbooks, the full quickstart validation pass.
+    / architecture-doc corrections, deploy runbooks, the full quickstart validation pass. (T230 done
+    early, at Phase 3.)
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
 - **9 of 11 adversarial gates green** (SC-007 added at Phase 4). SC-008 → Phase 7, SC-017 → Phase 10.
+- **`pnpm format:check` is red** on ~two dozen files from Phases 4–5, `apps/probe-pool`, and several
+  vendored capabilities, committed unformatted before Phase 6 started. Everything Phase 6 touched is
+  formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
-  is deliverable as of Phase 5.
+  is deliverable as of Phase 5; source-level depth (repos and archives) is deliverable as of Phase 6.
 
 ## Commit log
 

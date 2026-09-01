@@ -33,9 +33,10 @@ three deployable units where we have five (R16). Do not implement from it withou
 current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
-are complete. **184 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2) and 5 (US3) are complete.
-Next is **Phase 6** (T169–T179, US4 — audit source, not just the served page). See PROGRESS.md
-"Resume here".
+are complete. **195 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2), 5 (US3) and 6 (US4) are
+complete. Next is **Phase 7** (T180–T193, US5 — pay for capacity with plans and credits), which opens
+with **T180, SC-008's gate**: nobody is charged for an operation the platform failed to deliver. See
+PROGRESS.md "Resume here".
 
 **9 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
 redaction, SC-011 capability disable, SC-012 provider exhaustion, SC-006 attribution, SC-015
@@ -45,10 +46,12 @@ with their phases (T180, T218). `tasks.md` is authoritative for task state; PROG
 honest scoreboard and the reasoning behind each one.
 
 A real audit runs end to end (URL scans, SECURITY + SEO + the other three areas' `ctx.fetch`-based
-checks) and is drivable by a human through the UI; the red-to-green fix loop works; and a
+checks) and is drivable by a human through the UI; the red-to-green fix loop works; a
 production-readiness pass (fresh full re-audit, fingerprint regression diff, go/no-go verdict with
-named blockers, shareable certificate) closes the journey. The first sellable artifact was **T135**,
-end of Phase 3.
+named blockers, shareable certificate) closes the journey; and **a `.zip` upload or a connected GitHub
+repository is a first-class input**, refused before extraction and before charging if hostile,
+audited by three source-only capabilities, and destroyed on every exit path. The first sellable
+artifact was **T135**, end of Phase 3.
 
 Two rounds of defects are recorded rather than forgotten. A full engineering review of Phases 1–2B
 produced 19 findings, all resolved in `f02ef48` — three Critical: a credit-ordering bug that drew
@@ -124,6 +127,18 @@ These are the traps. Each has already cost a design revision.
 - **A capability's prompt contribution is untrusted material, not an instruction.** An INSTALLED
   capability is unreviewed by definition, so `getSystemPromptAddition()` goes into `assemblePrompt`'s
   `segments`, never its `instructions`.
+- **An archive is inspected before it is extracted, and `extractArchive` has no way to skip that.**
+ Do not add a "already inspected" fast path — that path is how a later caller writes unchecked bytes.
+ The guard needs **both** a compression ratio and an absolute uncompressed ceiling: a 50 MB archive
+ expanding honestly to 5 GB shows no suspicious ratio, and a 4 KB archive expanding to 512 MB sits
+ under any ceiling worth having. Zip only; a `tar` `typeflag` check is not the same code as a zip
+ mode check, so a second container needs its own adverse suite before it needs an implementation.
+- **The upload endpoint stages a target and neither creates a scan nor charges.** That separation is
+ what makes FR-015's "refuse before charging" structural instead of a matter of statement ordering.
+- **A repository is fetched as a zipball, not cloned** — so repository bytes go through the same
+ guard an upload does, the token stays out of `ps`, and no `git` binary sits in an image that
+ processes hostile input. `stripComponents: 1` is not cosmetic: leaving GitHub's `owner-repo-<sha>/`
+ wrapper in place changes every source finding's fingerprint on every commit.
 - **Scan workspaces are destroyed on every exit path** — completion, failure, timeout, cancellation.
   Four paths, four assertions.
 
@@ -213,5 +228,4 @@ Carried forward and not yet resolved:
 1. **FR-025 needs amending** — it restricts audit egress to the target and providers, which would
    break realistic page measurement. Platform egress and auditing-browser egress need separating.
 2. **`WebAuditAI_ARCHITECTURE.md` needs correcting** on the three points above.
-3. **No git repository** — initialise before substantial work.
-4. **Monetary price points** are unset; credits and entitlements are fixed.
+3. **Monetary price points** are unset; credits and entitlements are fixed.

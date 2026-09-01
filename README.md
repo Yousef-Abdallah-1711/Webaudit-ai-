@@ -23,9 +23,10 @@ Positioning, competitive standing, and the commercial model are in [PRODUCT.md](
 
 ## Status — read this before forming an opinion of the code
 
-**184 of 250 tasks complete (73%). The core product loop works end to end.** A real audit runs
-against a live URL, a human drives it through the UI, issues turn green only when a re-check passes,
-and a production-readiness pass returns an explicit go/no-go.
+**195 of 250 tasks complete (78%). The core product loop works end to end, on source too.** A real
+audit runs against a live URL, an uploaded `.zip`, or a connected GitHub repository; a human drives
+it through the UI; issues turn green only when a re-check passes; and a production-readiness pass
+returns an explicit go/no-go.
 
 Built and verified in dependency order:
 
@@ -37,7 +38,7 @@ Built and verified in dependency order:
 | 3 — US1: Audit a live site | ✅ done | Orchestrator, 13 vendored capabilities, real end-to-end audit (5 areas' `ctx.fetch` checks), report + live progress UI. **First sellable artifact.** |
 | 4 — US2: The fix loop | ✅ done | assert-fixed → narrow re-verification queue → green only on a passing check (**SC-007**); `reverify()` on 6 capabilities; recurrence detection; fixes board |
 | 5 — US3: Readiness verdict | ✅ done | Fresh full re-audit, fingerprint regression diff, go/no-go with named blockers, shareable certificate, `/readiness` UI |
-| 6 — US4: Source audit | ⬜ not started | Archive/repo input, streaming extraction guard, dependency/bundle/css capabilities |
+| 6 — US4: Source audit | ✅ done | Archive upload + connected-repo input, streaming extraction guard (refused before extraction, before charging), dependency/bundle/css capabilities |
 | 7 — US5: Billing | ⬜ not started | Subscriptions, entitlements, credit purchase, webhook, retention, export (**SC-008**) |
 | 8 — US6: Design-intent questionnaire | ⬜ not started | `AWAITING_QUESTIONNAIRE` without holding a worker slot |
 | 9 — US7: Operator admin | ⬜ not started | Margin attribution, capability toggles, provider config, queue ops (**SC-009, SC-010**); first `requireOperator` routes |
