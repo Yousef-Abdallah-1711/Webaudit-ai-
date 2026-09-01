@@ -95,10 +95,27 @@ const en = {
   quote_note:
     'Nothing is charged until you accept this quote. If the platform fails mid-audit, the credits come back.',
   accept_run: 'Accept and run',
-  drop_archive: 'Drop a .zip or .tar.gz',
+  // Corrected at T179 from "Drop a .zip or .tar.gz". `@webaudit/safe-archive`
+  // supports zip only and refuses everything else by magic bytes, so the
+  // original copy promised a format the product declines — the one kind of
+  // inaccuracy this product cannot afford in its own interface.
+  drop_archive: 'Drop a .zip archive',
   drop_note: 'Validated before extraction. Destroyed when the scan ends.',
   theme_dark: 'Dark',
   theme_light: 'Light',
+
+  // T179 — the three-tab input selector, now backed by real endpoints.
+  drop_browse: 'or choose a file',
+  drop_uploading: 'Checking the archive…',
+  drop_staged: 'Ready to audit',
+  drop_replace: 'Choose a different archive',
+  drop_files: 'files',
+  repo_loading: 'Loading your repositories…',
+  repo_empty: 'No repositories on the connected account.',
+  repo_connect: 'Connect GitHub to audit a repository.',
+  repo_connect_cta: 'Connect GitHub',
+  repo_reconnect: 'Reconnect GitHub',
+  repo_private: 'Private',
 
   // T128 — auth pages.
   auth_signin_title: 'Sign in',
@@ -253,10 +270,22 @@ const ar: Record<keyof typeof en, string> = {
   quote_note:
     'لا يُخصم شيء حتى توافق على هذه التسعيرة. وإذا فشلت المنصّة في منتصف التدقيق، تعود الأرصدة.',
   accept_run: 'موافقة وتشغيل',
-  drop_archive: 'أفلِت ملف .zip أو .tar.gz',
+  drop_archive: 'أفلِت ملف .zip',
   drop_note: 'يُتحقَّق منه قبل الاستخراج، ويُحذف عند انتهاء التدقيق.',
   theme_dark: 'داكن',
   theme_light: 'فاتح',
+
+  drop_browse: 'أو اختر ملفًا',
+  drop_uploading: 'جارٍ فحص الملف…',
+  drop_staged: 'جاهز للتدقيق',
+  drop_replace: 'اختر ملفًا آخر',
+  drop_files: 'ملفات',
+  repo_loading: 'جارٍ تحميل مستودعاتك…',
+  repo_empty: 'لا توجد مستودعات في الحساب المرتبط.',
+  repo_connect: 'اربط GitHub لتدقيق مستودع.',
+  repo_connect_cta: 'ربط GitHub',
+  repo_reconnect: 'إعادة ربط GitHub',
+  repo_private: 'خاص',
 
   auth_signin_title: 'تسجيل الدخول',
   auth_signin_lead: 'تدقيقاتك ولوحة الإصلاحات في مكانها الذي تركتها فيه.',

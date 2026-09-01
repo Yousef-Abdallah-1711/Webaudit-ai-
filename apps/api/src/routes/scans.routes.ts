@@ -51,6 +51,10 @@ import {
 } from '../services/intake/create-scan.js';
 import { quoteFor } from '../services/intake/quote.js';
 import {
+  RepositoryConnectionMissingError,
+  RepositoryConnectionRevokedError,
+} from '../services/intake/repos.js';
+import {
   createScanPhaseProducer,
   type ScanPhaseProducer,
 } from '../services/queue/scan-phase-producer.js';
@@ -61,6 +65,8 @@ export interface ScanRoutesDeps {
   probe?: ControlProbe;
   producer?: ScanPhaseProducer;
   resolveRequiredControlLevel?: (moduleType: string) => ControlLevel | Promise<ControlLevel>;
+  /** T171's seam — see `CreateScanDeps.checkRepositoryConnection`. */
+  checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
 }
 
 const quoteBody = z.object({
@@ -114,7 +120,14 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       const scan = await createScan(
         db,
         { userId, ...parsed.data },
-        { probe, producer, resolveRequiredControlLevel },
+        {
+          probe,
+          producer,
+          resolveRequiredControlLevel,
+          ...(deps.checkRepositoryConnection === undefined
+            ? {}
+            : { checkRepositoryConnection: deps.checkRepositoryConnection }),
+        },
       );
       res.status(201).json({ scan });
     } catch (error) {
@@ -138,6 +151,25 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
             code: 'PLAN_UPGRADE_REQUIRED',
             message: error.message,
             details: { inputType: error.inputType, requiredTier: error.requiredTier },
+          },
+        });
+        return;
+      }
+      // T171. 409, matching `GET /repos`: the request is well-formed and the
+      // caller is authenticated — what is wrong is a precondition they can fix
+      // by reconnecting. Nothing was charged; `createScan` refuses ahead of
+      // the debit.
+      if (
+        error instanceof RepositoryConnectionMissingError ||
+        error instanceof RepositoryConnectionRevokedError
+      ) {
+        res.status(409).json({
+          error: {
+            code:
+              error instanceof RepositoryConnectionMissingError
+                ? 'REPO_CONNECTION_MISSING'
+                : 'REPO_CONNECTION_REVOKED',
+            message: error.message,
           },
         });
         return;

@@ -51,6 +51,7 @@ const CAPABILITY_LOADERS: Readonly<Record<ModuleType, readonly CapabilityLoader[
     () => import('@webaudit/capability-ssl-analyzer'),
     () => import('@webaudit/capability-data-leak-scanner'),
     () => import('@webaudit/capability-owasp-checker'),
+    () => import('@webaudit/capability-dependency-scanner'),
   ],
   SEO: [
     () => import('@webaudit/capability-meta-checker'),
@@ -60,10 +61,12 @@ const CAPABILITY_LOADERS: Readonly<Record<ModuleType, readonly CapabilityLoader[
     () => import('@webaudit/capability-lighthouse-analyzer'),
     () => import('@webaudit/capability-network-inspector'),
     () => import('@webaudit/capability-cwv-analyzer'),
+    () => import('@webaudit/capability-bundle-analyzer'),
   ],
   UI: [
     () => import('@webaudit/capability-screenshot-capture'),
     () => import('@webaudit/capability-impeccable'),
+    () => import('@webaudit/capability-css-analyzer'),
   ],
   TESTING: [
     () => import('@webaudit/capability-playwright-runner'),

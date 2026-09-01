@@ -51,6 +51,7 @@ import { totalAvailable } from '../credits/balance.js';
 import { TargetNotAvailableError, type ControlProbe } from '../control-gate/verify.js';
 import { ControlLevelRequiredError, reconfirmControl } from '../control-gate/reconfirm.js';
 import { quoteFor } from './quote.js';
+import { assertRepositoryConnectionLive } from './repos.js';
 import type { ScanPhaseProducer } from '../queue/scan-phase-producer.js';
 
 export class PlanUpgradeRequiredError extends Error {
@@ -94,6 +95,12 @@ export interface CreateScanDeps {
   readonly resolveRequiredControlLevel: (
     moduleType: ModuleType,
   ) => ControlLevel | Promise<ControlLevel>;
+  /**
+   * Whether the user's GitHub connection still works. Defaults to a real
+   * request against GitHub; a suite injects a fake so it needs no credential.
+   * Consulted only for a REPOSITORY target.
+   */
+  readonly checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
 }
 
 export interface CreatedScan {
@@ -161,6 +168,18 @@ export async function createScan(
     throw new PlanUpgradeRequiredError(target.inputType, permitting[0]?.id ?? null);
   }
 
+  // T171 / FR-007: a REPOSITORY audit cannot be delivered without a working
+  // GitHub credential, and whether the credential still works is only knowable
+  // by using it. Checked here — one cheap request, ahead of the debit — so a
+  // revoked connection is a refusal rather than a refund. Both outcomes leave
+  // the user unbilled (Principle VI), but only the refusal leaves them without
+  // a failed scan in their history for something they did nothing wrong to
+  // cause. The refund path still exists behind this, for the revocation that
+  // happens in the seconds after this check passes.
+  if (target.inputType === 'REPOSITORY') {
+    await (deps.checkRepositoryConnection ?? assertRepositoryConnectionLive)(db, input.userId);
+  }
+
   // FR-017: refuse the whole scan only when every requested module is gated
   // out for the target's *current* level — re-confirmed live, never read
   // from the cached column (reconfirm.ts's own module note). A selection
@@ -180,7 +199,9 @@ export async function createScan(
   const reconfirmed = anyGate
     ? await reconfirmControl(db, { targetId: target.id, userId: input.userId }, deps.probe)
     : { level: 'NONE' as const };
-  const allGated = gated.every((g) => controlLevelRank(g.required) > controlLevelRank(reconfirmed.level));
+  const allGated = gated.every(
+    (g) => controlLevelRank(g.required) > controlLevelRank(reconfirmed.level),
+  );
   if (allGated) {
     const strictest = gated.reduce((max, g) =>
       controlLevelRank(g.required) > controlLevelRank(max.required) ? g : max,

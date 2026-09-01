@@ -1,0 +1,19 @@
+{
+  "name": "@webaudit/capability-dependency-scanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "T175 — SECURITY, CODE layer. Manifest and lockfile checks against a vendored advisory set.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/types": "workspace:*"
+  }
+}

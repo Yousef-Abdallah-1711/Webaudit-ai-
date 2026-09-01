@@ -21,6 +21,9 @@
     "@webaudit/capability-screenshot-capture": "workspace:*",
     "@webaudit/capability-impeccable": "workspace:*",
     "@webaudit/capability-playwright-runner": "workspace:*",
-    "@webaudit/capability-contradiction-detector": "workspace:*"
+    "@webaudit/capability-contradiction-detector": "workspace:*",
+    "@webaudit/capability-dependency-scanner": "workspace:*",
+    "@webaudit/capability-bundle-analyzer": "workspace:*",
+    "@webaudit/capability-css-analyzer": "workspace:*"
   }
 }

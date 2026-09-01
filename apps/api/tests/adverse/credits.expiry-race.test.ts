@@ -211,11 +211,35 @@ describe('an EXPIRE row records what actually died', () => {
       expiresAt: boundary,
     });
 
-    await Promise.allSettled([
+    /**
+     * Both interleavings are legitimate and they leave different balances, so
+     * the assertion has to be the invariant rather than one of the outcomes.
+     *
+     * Debit first: it draws 40 from the expiring plan lot (expiry order), the
+     * sweep destroys the remaining 60, and 50 purchased credits survive. Sweep
+     * first: it destroys all 100, the debit then has only the purchased lot to
+     * draw from, and 10 survive. Asserting 50 was asserting that the debit wins
+     * a race with no ordering guarantee — green on most runs and red on the runs
+     * where the sweep commits first, which is exactly the interleaving this file
+     * exists to exercise.
+     *
+     * What must hold either way is that **no purchased credit was destroyed**:
+     * the sweep's own total accounts for plan credits only, so the surviving
+     * balance is fully explained by the grant minus the debit minus what the
+     * sweep says it destroyed. A sweep that reached the purchased lot would push
+     * `creditsDestroyed` above the 100 plan credits ever granted and break the
+     * identity, whichever side won.
+     */
+    const [debited, swept] = await Promise.allSettled([
       debit(testDb, { userId, amount: 40, reason: 'scan:mixed' }),
       expireRenewedLots(testDb, userId, boundary),
     ]);
+    expect(debited.status).toBe('fulfilled');
+    expect(swept.status).toBe('fulfilled');
+    const destroyed = swept.status === 'fulfilled' ? swept.value.creditsDestroyed : -1;
 
-    expect(await spendableTotal(userId)).toBe(50);
+    expect(destroyed).toBeLessThanOrEqual(100);
+    expect(await spendableTotal(userId)).toBe(150 - 40 - destroyed);
+    expect(await ledgerBalance(userId)).toBe(await spendableTotal(userId));
   });
 });

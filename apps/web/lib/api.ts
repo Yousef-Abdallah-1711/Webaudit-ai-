@@ -135,8 +135,66 @@ export interface TargetSummary {
   readonly displayName: string;
 }
 
-export function createTarget(value: string): Promise<{ target: TargetSummary }> {
-  return request('/targets', { method: 'POST', body: { inputType: 'URL', value } });
+export function createTarget(
+  value: string,
+  inputType: 'URL' | 'REPOSITORY' = 'URL',
+): Promise<{ target: TargetSummary }> {
+  return request('/targets', { method: 'POST', body: { inputType, value } });
+}
+
+// ─── Source intake (US4) ────────────────────────────────────────────────────
+
+export interface ConnectedRepository {
+  readonly fullName: string;
+  readonly defaultBranch: string;
+  readonly isPrivate: boolean;
+  readonly updatedAt: string;
+}
+
+export function listRepositories(): Promise<{ repositories: readonly ConnectedRepository[] }> {
+  return request('/repos');
+}
+
+export interface StagedUpload {
+  readonly targetId: string;
+  readonly key: string;
+  readonly archiveBytes: number;
+  readonly fileCount: number;
+  readonly totalUncompressedBytes: number;
+}
+
+/**
+ * Stage an archive. Not routed through `request` because it must not set
+ * `Content-Type` at all: the browser has to generate the multipart boundary,
+ * and a hand-set header would produce a body the server cannot parse.
+ */
+export async function uploadArchive(file: File): Promise<{ upload: StagedUpload }> {
+  const form = new FormData();
+  form.append('archive', file);
+
+  const headers: Record<string, string> = {};
+  if (accessToken !== undefined) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/scans/upload`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: form,
+  });
+
+  const text = await res.text();
+  const parsed: unknown = text === '' ? undefined : JSON.parse(text);
+  if (!res.ok) {
+    const errorBody = (parsed as { error?: { code?: string; message?: string; details?: unknown } })
+      ?.error;
+    throw new ApiError(
+      res.status,
+      errorBody?.code ?? 'UNKNOWN',
+      errorBody?.message ?? 'The archive could not be accepted.',
+      errorBody?.details,
+    );
+  }
+  return parsed as { upload: StagedUpload };
 }
 
 export function quoteScan(

@@ -25,6 +25,11 @@ export default tseslint.config(
       // `.next/types/routes.d.ts` is regenerated on every build, not a
       // lint-worthy choice this repo made.
       'apps/web/next-env.d.ts',
+      // Ad-hoc operator scripts for checking domain availability — not part of
+      // any deployable unit and not in a tsconfig, so the type-aware service
+      // cannot parse them and reports a parse error rather than a finding.
+      // Same category as the parked worktrees above.
+      'scripts/domain-*.mjs',
     ],
   },
   js.configs.recommended,

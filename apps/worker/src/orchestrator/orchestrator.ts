@@ -61,12 +61,13 @@ import { reconfirmControl, createSafeNetProbe } from '@webaudit/api/control-gate
 import { ensurePlatformCapabilities } from '@webaudit/api';
 import { markRecurrences } from '@webaudit/api/issues';
 import { createCodeLayerContext } from '@webaudit/capability-sdk';
-import type {
-  CapabilityInput,
-  CodeLayerContext,
-  ModuleSummary,
-} from '@webaudit/capability-sdk';
+import type { CapabilityInput, CodeLayerContext, ModuleSummary } from '@webaudit/capability-sdk';
 import { runModule, persistModuleResult } from '../module-runner/index.js';
+import {
+  materialiseSource,
+  type MaterialiseDeps,
+  type MaterialisedSource,
+} from '../intake/materialise.js';
 import type { ModuleResultWriter } from '../module-runner/persist.js';
 import { loadCapabilities } from './capability-loader.js';
 import { runMasterSynthesis } from './master-report.js';
@@ -85,14 +86,24 @@ const MODULE_RUNNING_PHASES: readonly ScanState[] = [
 ];
 
 /**
- * No probe pool, no attached-source workspace — both unwired in this
- * vertical slice (URL-only scans, no capability calls `ctx.withPage` yet).
- * `createCodeLayerContext` already refuses `readFile`/`glob` when
- * `workspaceRoot` is absent and rejects `withPage` when `pageProvider` is
- * absent, so this is a real, safe context, not a stub.
+ * The context factory for one module run.
+ *
+ * `workspaceRoot` is present exactly when source was materialised for this scan
+ * (T174) and absent otherwise — which is the whole confinement story:
+ * `createCodeLayerContext` refuses `readFile` and `glob` outright when it is
+ * absent, so a URL-only audit cannot read a file even if a capability tries,
+ * and a source audit can only read inside the one directory that will be
+ * destroyed with the scan. No probe pool yet; `withPage` still rejects.
  */
-function makeContext(signal: AbortSignal, capabilityId: string): CodeLayerContext {
-  return createCodeLayerContext({ signal, capabilityId });
+function contextFactory(
+  workspaceRoot: string | undefined,
+): (signal: AbortSignal, capabilityId: string) => CodeLayerContext {
+  return (signal, capabilityId) =>
+    createCodeLayerContext({
+      signal,
+      capabilityId,
+      ...(workspaceRoot === undefined ? {} : { workspaceRoot }),
+    });
 }
 
 /**
@@ -175,6 +186,16 @@ export interface OrchestratorOptions {
   readonly publisher: EventPublisher;
   readonly executor: AiExecutor;
   readonly moduleTimeoutMs?: number;
+  /**
+   * How an ARCHIVE or REPOSITORY target becomes a workspace (T174).
+   *
+   * Optional, and its absence is a hard failure rather than a quiet skip when
+   * a source scan arrives: a worker deployed without a workspace directory or
+   * an R2 credential can still audit URLs perfectly well, but reporting a
+   * source audit as "no source attached" would be a lie of exactly the kind
+   * this product exists to catch.
+   */
+  readonly source?: MaterialiseDeps;
 }
 
 async function planQueuePriorityFor(db: PrismaClient, userId: string): Promise<number> {
@@ -223,6 +244,34 @@ async function buildPriorModuleResults(
   return out;
 }
 
+/**
+ * The scan's attached source, or null when the target is a URL.
+ *
+ * Split out of the handler so the "configured for source but asked to audit
+ * source" failure has one place to live and one message. It throws rather than
+ * degrading, and the phase handler's own catch turns that into a FAILED scan —
+ * which refunds (Principle VI: never charge for our failures, and a worker
+ * missing its workspace configuration is unambiguously our failure).
+ */
+async function materialiseSourceFor(
+  options: OrchestratorOptions,
+  scan: { userId: string; target: { inputType: string; canonicalValue: string } },
+  scanId: string,
+): Promise<MaterialisedSource | null> {
+  if (scan.target.inputType === 'URL') return null;
+  if (options.source === undefined) {
+    throw new Error(
+      `This worker is not configured to audit source (${scan.target.inputType}). ` +
+        'WORKSPACE_BASE_DIR and the upload storage credentials must be set.',
+    );
+  }
+  return materialiseSource(
+    options.db,
+    { id: scanId, userId: scan.userId, target: scan.target },
+    options.source,
+  );
+}
+
 async function runAndPersistModule(
   options: OrchestratorOptions,
   scan: {
@@ -236,11 +285,16 @@ async function runAndPersistModule(
   effectiveControlLevel: ControlLevel,
   priorModuleResults: CapabilityInput['priorModuleResults'],
   enabledCapabilityIds: ReadonlySet<string>,
+  source: MaterialisedSource | null,
 ): Promise<void> {
   await emitter.emit({ type: 'module:started', scanId: scan.id, module }, () => Promise.resolve());
 
   const input: CapabilityInput = {
     ...(scan.target.inputType === 'URL' ? { targetUrl: scan.target.canonicalValue } : {}),
+    // Present only when source was attached (T174). Its absence is what makes
+    // the three source capabilities answer `canRun` false on a URL-only audit
+    // rather than failing — FR-021, proved by T170.
+    ...(source === null ? {} : { code: source.code }),
     // Summaries of every area that completed in an EARLIER phase (review
     // finding M7). Modules within a phase run concurrently, so this is empty
     // for phase 1 and carries phase-1's results into phase 2. `contradiction
@@ -260,11 +314,12 @@ async function runAndPersistModule(
     capabilities,
     input,
     executor: options.executor,
-    makeContext,
+    makeContext: contextFactory(source?.workspace.path),
     timeoutMs: options.moduleTimeoutMs ?? 60_000,
     scanId: scan.id,
     targetId: scan.targetId,
     requiredControlLevels,
+    ...(source === null ? {} : { workspaceRoot: source.workspace.path }),
   });
 
   // One transaction for the whole module result (review finding H2). Without
@@ -411,6 +466,12 @@ export function createPhaseHandler(
         const priorModuleResults = await buildPriorModuleResults(options.db, data.scanId);
         const enabledByModule = await enabledCapabilityIdsFor(options.db, data.modules);
 
+        // Once per phase job, before any module runs, and shared by all of
+        // them: every module in a phase audits the same tree, and extracting
+        // per-module would multiply the work by the module count and give
+        // concurrent extractors the same destination directory.
+        const source = await materialiseSourceFor(options, scan, data.scanId);
+
         await Promise.all(
           data.modules.map((module) =>
             runAndPersistModule(
@@ -422,6 +483,7 @@ export function createPhaseHandler(
               effectiveControlLevel,
               priorModuleResults,
               enabledByModule.get(module) ?? new Set<string>(),
+              source,
             ),
           ),
         );

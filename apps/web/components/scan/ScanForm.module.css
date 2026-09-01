@@ -13,75 +13,8 @@
   }
 }
 
-.tabs {
-  display: flex;
-  border-bottom: var(--border-width) solid var(--border-default);
-  margin-bottom: 20px;
-}
-
-.tab {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
-  padding: 10px 16px;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  font-weight: 400;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-.tabActive {
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-  color: var(--text-strong);
-}
-
-.repoList {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.repoRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-control);
-  padding: 12px 14px;
-}
-
-.repoName {
-  font-family: var(--font-mono);
-  font-size: 14px;
-}
-
-.repoBranch {
-  margin-inline-start: auto;
-  font: var(--type-small);
-  color: var(--text-muted);
-}
-
-.dropzone {
-  border: var(--border-width) dashed var(--border-default);
-  border-radius: var(--radius-card);
-  padding: 36px;
-  text-align: center;
-  background: var(--surface-raised);
-}
-
-.dropzoneTitle {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.dropzoneNote {
-  font: var(--type-small);
-  color: var(--text-secondary);
-  margin-top: 6px;
-}
+/* The tab strip, repository list and dropzone rules moved to
+ * InputTabs.module.css with the selector itself (T179). */
 
 .areasSection {
   margin-top: 28px;

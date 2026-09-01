@@ -44,10 +44,25 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createCodeLayerContext, runConformanceSuite } from '@webaudit/capability-sdk';
 import type { AuditCapability, CapabilityInput } from '@webaudit/capability-sdk';
 import { startDeficientSite, type FixtureSite } from './fixtures/deficient-site.js';
+import { createDeficientSource, type FixtureSource } from './fixtures/deficient-source.js';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
 
-const CAPABILITIES: readonly { readonly dir: string; readonly load: () => Promise<{ default: AuditCapability }> }[] = [
+interface CapabilityUnderTest {
+  readonly dir: string;
+  readonly load: () => Promise<{ default: AuditCapability }>;
+  /**
+   * T175-T177 read the scan workspace rather than the served page. Handing them
+   * the URL-only input every other capability gets would make `runCodeLayer`
+   * reject on the first `ctx.readFile` — `throwing-is-contained` would pass
+   * (a rejection is contained) while `fingerprint-stable` failed, and the
+   * failure would say nothing about the capability. They get a real temporary
+   * workspace and a real confined context instead.
+   */
+  readonly sourceBacked?: true;
+}
+
+const CAPABILITIES: readonly CapabilityUnderTest[] = [
   { dir: 'headers-checker', load: () => import('@webaudit/capability-headers-checker') },
   { dir: 'ssl-analyzer', load: () => import('@webaudit/capability-ssl-analyzer') },
   { dir: 'data-leak-scanner', load: () => import('@webaudit/capability-data-leak-scanner') },
@@ -64,12 +79,25 @@ const CAPABILITIES: readonly { readonly dir: string; readonly load: () => Promis
     dir: 'contradiction-detector',
     load: () => import('@webaudit/capability-contradiction-detector'),
   },
+  {
+    dir: 'dependency-scanner',
+    load: () => import('@webaudit/capability-dependency-scanner'),
+    sourceBacked: true,
+  },
+  {
+    dir: 'bundle-analyzer',
+    load: () => import('@webaudit/capability-bundle-analyzer'),
+    sourceBacked: true,
+  },
+  { dir: 'css-analyzer', load: () => import('@webaudit/capability-css-analyzer'), sourceBacked: true },
 ];
 
 let fixture: FixtureSite;
+let source: FixtureSource;
 
 beforeAll(async () => {
   fixture = await startDeficientSite();
+  source = await createDeficientSource();
   // ctx.fetch runs through the real, guarded safeFetch — a loopback fixture
   // needs the same allowlist T109's e2e spec uses, scoped to this process.
   process.env['SAFE_NET_ALLOW_TARGETS'] = fixture.origin;
@@ -78,9 +106,10 @@ beforeAll(async () => {
 afterAll(async () => {
   delete process.env['SAFE_NET_ALLOW_TARGETS'];
   await fixture.close();
+  await source.close();
 });
 
-describe.each(CAPABILITIES)('conformance: $dir', ({ dir, load }) => {
+describe.each(CAPABILITIES)('conformance: $dir', ({ dir, load, sourceBacked }) => {
   it('passes every conformance check', async () => {
     const capability = (await load()).default;
     const rawManifest: unknown = JSON.parse(
@@ -89,6 +118,7 @@ describe.each(CAPABILITIES)('conformance: $dir', ({ dir, load }) => {
 
     const input: CapabilityInput = {
       targetUrl: `${fixture.origin}/`,
+      ...(sourceBacked === true ? { code: source.tree } : {}),
       // A deliberately inconsistent sample so `contradiction-detector`
       // (T142) has something real to find: SECURITY here reports a CRITICAL
       // worst severity under a near-perfect score, which is exactly the
@@ -103,7 +133,12 @@ describe.each(CAPABILITIES)('conformance: $dir', ({ dir, load }) => {
     };
 
     const report = await runConformanceSuite(capability, {
-      makeContext: (signal) => createCodeLayerContext({ signal, capabilityId: capability.id }),
+      makeContext: (signal) =>
+        createCodeLayerContext({
+          signal,
+          capabilityId: capability.id,
+          ...(sourceBacked === true ? { workspaceRoot: source.root } : {}),
+        }),
       input,
       rawManifest,
       timeoutMs: 5_000,

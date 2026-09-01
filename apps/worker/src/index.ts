@@ -44,6 +44,7 @@ import { createQueues, redisConnection, type QueueSet } from './queue/queues.js'
 import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers.js';
 import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
+import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
 import { createPhaseHandler } from './orchestrator/orchestrator.js';
 import { createReverifyHandler } from './reverify/runner.js';
 import {
@@ -149,15 +150,17 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // a caller that wants the placeholders (or a fake) never pays for a real
   // database connection or AI executor it will not use.
   let publisherToClose: Redis | undefined;
+  let uploadStorage: UploadStorage | undefined;
   let uninstallTerminalRefund: (() => void) | undefined;
   let uninstallTerminalTeardown: (() => void) | undefined;
   const handlers =
     options.handlers ??
     (() => {
       const db = options.db ?? createWorkerDb();
+      const workspaceBaseDir = requiredEnv('WORKSPACE_BASE_DIR');
       uninstallTerminalRefund = installTerminalRefund({ db });
       uninstallTerminalTeardown = installTerminalTeardown({
-        baseDir: requiredEnv('WORKSPACE_BASE_DIR'),
+        baseDir: workspaceBaseDir,
         db,
       });
       const publisher =
@@ -174,7 +177,23 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         })();
       const executor = options.executor ?? createExecutorFromEnv();
       return {
-        phase: createPhaseHandler({ db, queues, publisher, executor }),
+        phase: createPhaseHandler({
+          db,
+          queues,
+          publisher,
+          executor,
+          // T174. `createUploadStorage` reads the R2 variables when it is
+          // first called rather than now, so a deployment that only audits
+          // URLs still boots without them — and one that is asked to audit an
+          // archive fails loudly at that point instead of silently reporting
+          // no source attached.
+          source: {
+            baseDir: workspaceBaseDir,
+            get uploadStorage() {
+              return (uploadStorage ??= createUploadStorage());
+            },
+          },
+        }),
         // FR-038: the repeatable sweep that terminates stuck scans and refunds
         // their undelivered share. Registered as a repeatable job below.
         timeoutSweep: createTimeoutSweepHandler({ db, publisher }),

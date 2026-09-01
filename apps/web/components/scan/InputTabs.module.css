@@ -1,0 +1,141 @@
+/*
+ * T179. The tab strip, repository list and dropzone rules moved here verbatim
+ * from ScanForm.module.css when the selector was extracted — same tokens, same
+ * measurements, so the visual diff is unchanged by the move.
+ *
+ * What is new is only the states the design has no artboard for: loading,
+ * unavailable, refused, and the browse affordance. Each reuses an existing
+ * token and an existing pattern rather than introducing a surface.
+ */
+
+.tabs {
+  display: flex;
+  border-bottom: var(--border-width) solid var(--border-default);
+  margin-bottom: 20px;
+}
+
+.tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 10px 16px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tabActive {
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.repoList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.repoRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.repoName {
+  font-family: var(--font-mono);
+  font-size: 14px;
+}
+
+.repoTag {
+  font: var(--type-small);
+  color: var(--text-muted);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  padding: 2px 6px;
+}
+
+.repoBranch {
+  margin-inline-start: auto;
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.note {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.noteStrong {
+  font: var(--type-small);
+  color: var(--text-primary);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-card);
+  background: var(--surface-raised);
+  padding: 20px;
+}
+
+.dropzone {
+  border: var(--border-width) dashed var(--border-default);
+  border-radius: var(--radius-card);
+  padding: 36px;
+  text-align: center;
+  background: var(--surface-raised);
+}
+
+.dropzoneTitle {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dropzoneNote {
+  font: var(--type-small);
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* Driven by the visible button beside it; never the thing a user clicks. */
+.fileInput {
+  display: none;
+}
+
+.browse {
+  background: none;
+  border: 0;
+  margin-top: 14px;
+  padding: 0;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/*
+ * The refusal reason, in the severity colour the rest of the product uses for
+ * a blocking problem. Deliberately inside the dropzone: it is about the file
+ * that was just dropped there, not about the form.
+ */
+.refused {
+  font: var(--type-small);
+  color: var(--sev-critical);
+  margin: 12px 0 0;
+  text-wrap: pretty;
+}

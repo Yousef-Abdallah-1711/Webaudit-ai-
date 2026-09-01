@@ -40,6 +40,16 @@ const CHECK_NAMESPACE_TO_CAPABILITY: Readonly<Record<string, string>> = {
   meta: 'meta-checker',
   content: 'content-checker',
   redaction: 'data-leak-scanner',
+  // T175-T177 — the source-only capabilities. Their `reverify` methods are
+  // real and answer honestly when a workspace exists, but the scan workspace
+  // is destroyed on every exit path (FR-090), so in production they almost
+  // always resolve UNVERIFIABLE with that reason. Mapping them anyway is what
+  // makes that answer *theirs* rather than a generic "no owner" — the user
+  // learns that re-checking a source finding needs the source re-attached,
+  // which is true and actionable, instead of nothing.
+  dependency: 'dependency-scanner',
+  bundle: 'bundle-analyzer',
+  css: 'css-analyzer',
 };
 
 export function capabilityIdForCheck(checkId: string): string | null {

@@ -12,6 +12,7 @@
     "./credits": "./src/services/credits/index.ts",
     "./control-gate": "./src/services/control-gate/index.ts",
     "./issues": "./src/services/issues/index.ts",
+    "./intake": "./src/services/intake/index.ts",
     "./test-db": "./tests/helpers/db.ts"
   },
   "scripts": {
@@ -27,6 +28,8 @@
     "@webaudit/config": "workspace:*",
     "@webaudit/scoring": "workspace:*",
     "@webaudit/safe-net": "workspace:*",
+    "@webaudit/safe-archive": "workspace:*",
+    "busboy": "1.6.0",
     "@webaudit/types": "workspace:*",
     "bullmq": "6.2.0",
     "cookie-parser": "1.4.7",
@@ -41,6 +44,7 @@
     "zod": "3.25.76"
   },
   "devDependencies": {
+    "@types/busboy": "1.5.4",
     "@types/cookie-parser": "1.4.8",
     "@types/cors": "2.8.17",
     "@types/ws": "8.18.1",

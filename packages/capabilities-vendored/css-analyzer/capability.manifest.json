@@ -1,0 +1,15 @@
+{
+  "id": "css-analyzer",
+  "name": "CSS Analyzer",
+  "version": "1.0.0",
+  "module": "UI",
+  "layer": "CODE",
+  "entrypoint": "src/index.ts",
+  "requiresCode": true,
+  "requiresScreenshot": false,
+  "requiredControlLevel": "NONE",
+  "estimatedTokens": 0,
+  "originalSource": "WebAudit AI, first-party",
+  "license": "UNLICENSED",
+  "vendoredAt": "2026-08-31"
+}

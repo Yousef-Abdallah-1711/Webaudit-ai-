@@ -13,11 +13,23 @@ export const VIEWPORTS = {
 /** Visual-regression threshold, constitution v1.1.0 Design Adherence. */
 export const VISUAL_DIFF_THRESHOLD = 0.005;
 
-/** FR-015 — archive intake bounds. */
+/**
+ * FR-015 — archive intake bounds.
+ *
+ * `maxUncompressedBytes` (T172) is an absolute ceiling that `maxRatio` alone
+ * does not provide. A 50 MB archive at the permitted 100× ratio would be 5 GB
+ * of extracted source, which is a denial of the worker's disk even though every
+ * per-entry rule was obeyed. The effective uncompressed budget is therefore
+ * `min(archiveBytes * maxRatio, maxUncompressedBytes)` — the ratio catches a
+ * small archive that explodes, the ceiling catches a large archive that
+ * expands honestly. 512 MB is comfortably above any real project checkout and
+ * far below anything that would fill a scan workspace.
+ */
 export const ARCHIVE_LIMITS = {
   maxBytes: 52_428_800,
   maxRatio: 100,
   maxEntries: 20_000,
+  maxUncompressedBytes: 536_870_912,
 } as const;
 
 /** FR-028 — untrusted execution bounds. */

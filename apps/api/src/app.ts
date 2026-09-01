@@ -26,6 +26,7 @@ import { authRoutes } from './routes/auth.routes.js';
 import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
 import { scansRoutes, type ScanRoutesDeps } from './routes/scans.routes.js';
+import { intakeRoutes, type IntakeRoutesDeps } from './routes/intake.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
 import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
 import { readinessRoutes, type ReadinessRoutesDeps } from './routes/readiness.routes.js';
@@ -69,6 +70,12 @@ export interface AppDeps {
    * storage (pass `null` to disable), and the web base URL for the email link.
    */
   readiness?: ReadinessRoutesDeps;
+  /**
+   * Seams for source intake — how GitHub is reached and where a staged archive
+   * is written. Both default to the real thing; a suite injects fakes so it
+   * needs neither a GitHub token nor an R2 bucket.
+   */
+  intake?: IntakeRoutesDeps;
 }
 
 /**
@@ -261,6 +268,14 @@ export function createApp(deps: AppDeps): Express {
   // Every route here is behind requireAuth, declared inside the router rather
   // than here, so mounting it cannot accidentally expose one.
   app.use('/targets', targetsRoutes(deps.db, deps.targets ?? {}));
+
+  // Root-mounted and deliberately *ahead* of scansRoutes: it declares
+  // `/repos` and `/scans/upload`, and the upload handler must reach the raw
+  // request body. Order matters only for the second — a router mounted at
+  // `/scans` that has no `/upload` route still falls through, but keeping the
+  // multipart handler first makes it impossible for a later `/scans` route to
+  // shadow it by accident.
+  app.use(intakeRoutes(deps.db, deps.intake ?? {}));
 
   // Every route here is behind requireAuth too, declared inside the router.
   app.use('/scans', scansRoutes(deps.db, deps.scans ?? {}));
