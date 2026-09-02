@@ -374,6 +374,24 @@ describe('FR-015: entry counts and structural damage', () => {
     await expectRefusal(archive.subarray(0, archive.length - 40), 'MALFORMED_ARCHIVE');
     expect(await everythingUnder(destRoot)).toEqual([]);
   });
+
+  it('refuses an entry carrying the Zip64 sentinel size with no Zip64 locator', () => {
+    // 0xFFFFFFFF in a 32-bit size field means "the real size is in the Zip64
+    // extra field, via a locator". No legitimate 32-bit zip entry ever carries
+    // it. `buildZip` writes no Zip64 locator, so this entry claims a Zip64
+    // escape hatch that isn't there.
+    const archive = buildZip([
+      {
+        path: 'huge.bin',
+        content: Buffer.alloc(64, 0),
+        mode: MODE_REGULAR,
+        declaredCompressedBytes: 0xffffffff,
+      },
+    ]);
+
+    const refusal = expectInspectRefusal(archive, 'MALFORMED_ARCHIVE');
+    expect(refusal.message).toMatch(/Zip64 sentinel/);
+  });
 });
 
 describe('the positive control', () => {

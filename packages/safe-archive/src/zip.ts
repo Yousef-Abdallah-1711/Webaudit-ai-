@@ -137,6 +137,17 @@ export function readCentralDirectory(bytes: Uint8Array): ZipDirectory {
     const externalAttributes = buffer.readUInt32LE(cursor + 38);
     const localHeaderOffset = buffer.readUInt32LE(cursor + 42);
 
+    if (
+      compressedBytes === 0xffffffff ||
+      uncompressedBytes === 0xffffffff ||
+      localHeaderOffset === 0xffffffff
+    ) {
+      throw malformed(
+        `central directory entry ${String(index)} carries a Zip64 sentinel value with no Zip64 ` +
+          'locator present; this is not a well-formed 32-bit zip entry',
+      );
+    }
+
     const nameStart = cursor + 46;
     const nameEnd = nameStart + nameLength;
     if (nameEnd > buffer.length) {
