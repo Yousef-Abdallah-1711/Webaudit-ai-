@@ -202,6 +202,35 @@ describe('FR-014 - a chain cannot be made to run for ever', () => {
   });
 });
 
+describe('FR-014 - a sensitive header does not survive a cross-origin redirect', () => {
+  it('drops the Authorization header on a redirect to a different origin', async () => {
+    const dest = await fixture(ok('DEST'));
+    const first = await fixture(redirectTo(`${dest.origin}/end`));
+
+    await guardedFetch(`${first.origin}/start`, {
+      policy: HOPS_ON_LOOPBACK,
+      headers: { authorization: 'Bearer secret-token' },
+    });
+
+    expect(first.requests[0]?.headers['authorization']).toBe('Bearer secret-token');
+    expect(dest.requests[0]?.headers['authorization']).toBeUndefined();
+  });
+
+  it('keeps the Authorization header when allowedRedirectHosts names the destination', async () => {
+    const dest = await fixture(ok('DEST'));
+    const first = await fixture(redirectTo(`${dest.origin}/end`));
+    const destHost = new URL(dest.origin).hostname;
+
+    await guardedFetch(`${first.origin}/start`, {
+      policy: HOPS_ON_LOOPBACK,
+      headers: { authorization: 'Bearer secret-token' },
+      allowedRedirectHosts: [destHost],
+    });
+
+    expect(dest.requests[0]?.headers['authorization']).toBe('Bearer secret-token');
+  });
+});
+
 describe('FR-014 - the default policy refuses the hops themselves', () => {
   it('refuses a loopback hop when no policy is supplied', async () => {
     const server = await fixture(ok('SHOULD-NOT-BE-READ'));

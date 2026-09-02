@@ -35,6 +35,14 @@ export interface SafeFetchInit {
   readonly maxRedirects?: number;
   readonly timeoutMs?: number;
   readonly maxResponseBytes?: number;
+  /**
+   * Hostnames a sensitive header (Authorization, Cookie, Proxy-Authorization)
+   * may still be sent to after a cross-origin redirect. Same-origin hops
+   * always keep their headers; this only widens what counts as "same enough"
+   * for a caller that knows its own redirect chain (e.g. GitHub's API
+   * redirecting to its CDN host).
+   */
+  readonly allowedRedirectHosts?: readonly string[];
 }
 
 export interface SafeResponse {
@@ -75,6 +83,40 @@ function methodAfterRedirect(status: number, method: string): string {
   return method;
 }
 
+const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'proxy-authorization']);
+
+/**
+ * Hop 0 always gets every header — it's the caller's own request. After a
+ * redirect, a sensitive header only survives to a hop whose full `host`
+ * (hostname *and* port) matches the previous hop — a same-origin redirect —
+ * or whose bare hostname is explicitly allowlisted; every other header
+ * passes through unchanged. `host`, not `hostname`, is what decides "same
+ * enough": two different ports on the same loopback address are different
+ * origins for this purpose (and are how the adverse suite can actually
+ * construct a "different destination" without a second real hostname).
+ * `allowedRedirectHosts` matches on the bare hostname, since a caller
+ * naming an allowed destination (e.g. GitHub's own CDN host) does not
+ * usually know or care which port fronts it.
+ */
+function headersForHop(
+  headers: Readonly<Record<string, string>> | undefined,
+  hop: number,
+  hostname: string,
+  host: string,
+  previousHost: string | undefined,
+  allowedRedirectHosts: readonly string[] | undefined,
+): Record<string, string> | undefined {
+  if (headers === undefined) return undefined;
+  if (hop === 0 || host === previousHost || (allowedRedirectHosts?.includes(hostname) ?? false)) {
+    return { ...headers };
+  }
+  const scoped: Record<string, string> = {};
+  for (const [key, value] of Object.entries(headers)) {
+    if (!SENSITIVE_HEADERS.has(key.toLowerCase())) scoped[key] = value;
+  }
+  return scoped;
+}
+
 export async function guardedFetch(
   url: string,
   options: GuardedFetchOptions = {},
@@ -94,11 +136,21 @@ export async function guardedFetch(
   let currentUrl = url;
   let method = (options.method ?? 'GET').toUpperCase();
   let body = options.body;
+  let previousHost: string | undefined;
 
   for (let hop = 0; hop <= maxRedirects; hop += 1) {
     // Layer 1, on the caller's URL at hop 0 and on a Location header after that.
     const target = validateUrl(currentUrl, policy, hop);
     redirects.push(target.url.href);
+    const hopHeaders = headersForHop(
+      options.headers,
+      hop,
+      target.hostname,
+      target.url.host,
+      previousHost,
+      options.allowedRedirectHosts,
+    );
+    previousHost = target.url.host;
 
     // Layer 2. Skipped for a literal address, which layer 1 already classified —
     // there is no name to resolve and nothing new to learn.
@@ -128,7 +180,7 @@ export async function guardedFetch(
         dispatcher,
         method,
         signal,
-        ...(options.headers === undefined ? {} : { headers: { ...options.headers } }),
+        ...(hopHeaders === undefined ? {} : { headers: hopHeaders }),
         ...(body === undefined || method === 'GET' || method === 'HEAD' ? {} : { body }),
       });
 

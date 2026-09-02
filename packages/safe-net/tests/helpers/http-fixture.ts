@@ -14,6 +14,7 @@ export interface RecordedRequest {
   readonly method: string;
   readonly url: string;
   readonly host: string | undefined;
+  readonly headers: Readonly<Record<string, string | string[] | undefined>>;
 }
 
 export interface FixtureServer {
@@ -28,7 +29,12 @@ export type FixtureHandler = (req: IncomingMessage, res: ServerResponse) => void
 export async function startFixture(handler: FixtureHandler): Promise<FixtureServer> {
   const requests: RecordedRequest[] = [];
   const server: Server = createServer((req, res) => {
-    requests.push({ method: req.method ?? '', url: req.url ?? '', host: req.headers.host });
+    requests.push({
+      method: req.method ?? '',
+      url: req.url ?? '',
+      host: req.headers.host,
+      headers: req.headers,
+    });
     handler(req, res);
   });
 

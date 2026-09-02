@@ -114,6 +114,12 @@ export async function materialiseRepository(
         'user-agent': 'WebAuditAI',
         'x-github-api-version': '2022-11-28',
       },
+      // api.github.com answers a zipball request with a 302 to
+      // codeload.github.com; without this, safe-net's cross-origin header
+      // scoping (packages/safe-net/src/safe-fetch.ts) would strip the bearer
+      // token on that hop and the fetch would fail. Any other redirect
+      // target still loses it.
+      allowedRedirectHosts: ['api.github.com', 'codeload.github.com'],
       // The one place the archive size limit is enforced *by the transport*.
       // Everything downstream of here has already accepted the bytes.
       maxResponseBytes: limits.maxBytes,

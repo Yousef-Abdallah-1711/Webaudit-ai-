@@ -46,6 +46,9 @@ export function safeFetch(url: string, init: SafeFetchInit = {}): Promise<SafeRe
     ...(init.maxRedirects === undefined ? {} : { maxRedirects: init.maxRedirects }),
     ...(init.timeoutMs === undefined ? {} : { timeoutMs: init.timeoutMs }),
     ...(init.maxResponseBytes === undefined ? {} : { maxResponseBytes: init.maxResponseBytes }),
+    ...(init.allowedRedirectHosts === undefined
+      ? {}
+      : { allowedRedirectHosts: init.allowedRedirectHosts }),
     ...(policy === undefined ? {} : { policy }),
   });
 }
