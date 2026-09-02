@@ -27,8 +27,10 @@ All but two are now fixed via a 14-task remediation plan
 executed subagent-driven, each task implementer→reviewer, one fix round on Tasks 2/4/5/7:
 
 - **Finding 1 (Critical)** — `owasp-checker`'s multi-cookie reverify could PASS a site where only
-  some of several vulnerable cookies had actually been fixed, because the recheck only asked "is at
-  least one cookie still bad" instead of "are all originally-flagged cookies now good." Fixed.
+  some of several vulnerable cookies had actually been fixed, because the recheck asked "is at least
+  one cookie now good" (a substring match against the whole joined `Set-Cookie` header) instead of
+  checking every originally-flagged cookie individually. Fixed: each cookie is now checked on its
+  own, and the check only PASSes if all of them are.
 - **Finding 3 (High)** — `safeFetch` forwarded the GitHub Bearer token used for repository intake to
   every redirect hop, with no host allowlist re-check per hop (SSRF-adjacent credential leak to a
   redirect target). Fixed: credential stripping now applied per-hop, not once at the start, closing a
@@ -37,9 +39,18 @@ executed subagent-driven, each task implementer→reviewer, one fix round on Tas
   real `POST /scans` path — dead code. Wired in. Running it against a live database for the first time
   (this remediation pass) surfaced a real, narrow interaction with a pre-existing FR-018
   duplicate-scan race test (a free-tier test user could now legitimately hit the new 403 instead of
-  the 409 it was written to isolate) — fixed as an unplanned "Task 3b."
+  the 409 it was written to isolate) — fixed as an unplanned "Task 3b." The final whole-branch review
+  caught a second gap in the same finding: `assertConcurrencyHeadroom` counts every non-terminal scan
+  across *all* of a user's targets, but only `create-scan.ts`'s path called it — a running readiness
+  pass consumed a slot there while nothing stopped starting a readiness pass itself over the limit.
+  Wired into `createReadinessScan` too, same place in the refuse-before-charge order.
 - **Finding 5 (High)** — `entitlements.middleware.ts` was never mounted; the cheapest-permitting-tier
-  lookup was duplicated ad hoc at each call site instead. Deduped behind one real function.
+  lookup was duplicated ad hoc at each call site instead. Deduped behind one real function (Task 4);
+  the final whole-branch review caught that this left the dead middleware in place while Task 3 added
+  a *third* copy of the same `EntitlementError` envelope mapping — resolved by deleting the unused
+  middleware and confirming (per the review's own Open Question #1) that ad hoc, per-route typed-error
+  mapping is the intended design, matching every other refusal `scans.routes.ts` already handles this
+  way.
 - **Finding 6 (High)** — the billing webhook applied its effect and wrote its idempotency-claim
   `appliedAt` as two separate steps, so a transient failure between them looked identical to "never
   applied" to a provider retry. Made retryable; a residual, narrower double-grant window
@@ -47,9 +58,20 @@ executed subagent-driven, each task implementer→reviewer, one fix round on Tas
   not-yet-built open item below — not silently expanded into this task's scope.
 - **Finding 7 (Medium)** — the Fixes board issued one HTTP request per failing-evidence row (client
   N+1). Batched into one lookup.
-- **Finding 10 (Medium)** — a cancelled scan's source workspace was destroyed by the in-process
-  terminal-transition observer only, with no cross-process path — a worker crash mid-cancel left it on
-  disk. Now enqueues a real teardown job the worker durably processes.
+- **Finding 10 (Medium)** — cancellation writes `CANCELLED` directly from `apps/api`, which never
+  goes through `apps/worker`'s `transition()` — so the in-process terminal-transition observer that
+  destroys a scan's workspace on FAILED/COMPLETED never fired for a cancelled scan at all, in any
+  circumstance, leaving source on disk indefinitely. Fixed by enqueuing a real teardown job the worker
+  durably processes instead. **The first version of this fix did not work**: the job's id
+  (`` `workspace-teardown:${scanId}` ``) contains a colon, and BullMQ 6.2.0 rejects a colon-bearing
+  custom job id unless it splits into exactly 3 segments — every single enqueue call threw
+  `Custom Id cannot contain :`, silently swallowed by the cancel route's fire-and-forget `try/catch`,
+  so every production cancellation of a source-bearing scan still left its workspace on disk. Caught
+  by the final whole-branch review (no per-task review had run against live Redis) and confirmed
+  4/4 with real cancellations before the second fix (hyphenate the id) made it 0/4. A test against a
+  real queue — this exact bug already bit `questionnaire-deadline` once before, see
+  `apps/worker/tests/adverse/questionnaire-jobid.test.ts` — now proves the job id is actually accepted,
+  plus a wiring test proving the cancel route calls the producer at all.
 - **Finding 11 (Medium)** — the webhook's fail-closed 503 (no signing secret configured) had no test.
   Added.
 - **Finding 12 (Low)** — `tasks.md` T153 overstated what the multi-cookie reverify fix actually
@@ -86,8 +108,11 @@ Verified at the end of this pass: `pnpm run lint` and `pnpm run lint:adherence` 
 `pnpm -r typecheck` clean across all 31 workspace projects; `pnpm run test:adverse` fully green
 (568 passed, 1 pre-existing skip — SSRF suites and credit/billing adverse suites specifically
 re-confirmed); `pnpm run test:visual` 6 passed / 7 todo / 0 failed; `next build` clean.
-`pnpm run format:check` fails on 94 files, but this predates the branch entirely — every failing file
-diffs byte-identical against `main`, confirmed file-by-file, not caused by this remediation.
+`pnpm run format:check` fails on 94 files. Of the 13 files this branch actually touches, 11 predate
+the branch entirely (diff byte-identical against their `main` blob, confirmed file-by-file) and 2 are
+new files this branch created (`apps/api/tests/integration/attempts-batch.test.ts`,
+`apps/api/tests/unit/entitlements.test.ts`) that also fail `prettier --check` — a real, if
+inconsequential, gap in this branch's own hygiene rather than something inherited.
 `pnpm run test`'s full 802-test run found exactly one failure, in a test this branch's baseline
 commit had already added (`readiness.certificate-email-guard.test.ts`'s 202-GENERATING case, unrelated
 to the 14 tasks). Root-caused, by reading the actual installed `superagent`/`supertest` source (not

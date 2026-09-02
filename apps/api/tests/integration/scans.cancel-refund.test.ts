@@ -250,10 +250,7 @@ describe('POST /scans/:id/cancel refunds the undelivered share', () => {
     const token = await signIn();
     const { scanId } = await createTwoModuleScan(token);
 
-    await request(appWithFakeProducer)
-      .post(`/scans/${scanId}/cancel`)
-      .set(auth(token))
-      .expect(200);
+    await request(appWithFakeProducer).post(`/scans/${scanId}/cancel`).set(auth(token)).expect(200);
 
     expect(calls).toEqual([{ scanId }]);
   });

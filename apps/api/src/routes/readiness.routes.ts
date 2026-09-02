@@ -158,7 +158,9 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
         res.status(403).json({
           error: {
             code:
-              error.feature === 'CONCURRENCY' ? 'CONCURRENT_LIMIT_REACHED' : 'PLAN_UPGRADE_REQUIRED',
+              error.feature === 'CONCURRENCY'
+                ? 'CONCURRENT_LIMIT_REACHED'
+                : 'PLAN_UPGRADE_REQUIRED',
             message: error.message,
             details: {
               feature: error.feature,

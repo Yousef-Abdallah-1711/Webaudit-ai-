@@ -15,13 +15,65 @@ beforeEach(resetDb);
 
 describe('listFailingEvidenceForScan', () => {
   it('returns the last FAILED attempt per issue, in one query', async () => {
-    const user = await testDb.user.create({ data: { email: 'batch@example.com', emailVerifiedAt: new Date() } });
-    const target = await testDb.target.create({ data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://batch.example.com', displayName: 'batch' } });
-    const scan = await testDb.scan.create({ data: { userId: user.id, targetId: target.id, kind: 'INITIAL', requestedModules: ['SECURITY'], capabilitySnapshot: {}, quotedCredits: 10, chargedCredits: 10, state: 'COMPLETED' } });
-    const mr = await testDb.moduleResult.create({ data: { scanId: scan.id, module: 'SECURITY', state: 'COMPLETE', score: 50 } });
-    const issue = await testDb.issue.create({ data: { scanId: scan.id, moduleResultId: mr.id, fingerprint: 'fp-1', checkId: 'headers.csp-missing', severity: 'HIGH', title: 't', explanation: 'e', consequence: 'c', attribution: 'MEASURED', fixPrompt: 'f', state: 'ASSERTED_FIXED' } });
-    await testDb.verificationAttempt.create({ data: { issueId: issue.id, outcome: 'FAILED', evidence: { first: true }, creditsCharged: 3, durationMs: 10 } });
-    await testDb.verificationAttempt.create({ data: { issueId: issue.id, outcome: 'FAILED', evidence: { second: true }, creditsCharged: 3, durationMs: 10 } });
+    const user = await testDb.user.create({
+      data: { email: 'batch@example.com', emailVerifiedAt: new Date() },
+    });
+    const target = await testDb.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://batch.example.com',
+        displayName: 'batch',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        kind: 'INITIAL',
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 10,
+        chargedCredits: 10,
+        state: 'COMPLETED',
+      },
+    });
+    const mr = await testDb.moduleResult.create({
+      data: { scanId: scan.id, module: 'SECURITY', state: 'COMPLETE', score: 50 },
+    });
+    const issue = await testDb.issue.create({
+      data: {
+        scanId: scan.id,
+        moduleResultId: mr.id,
+        fingerprint: 'fp-1',
+        checkId: 'headers.csp-missing',
+        severity: 'HIGH',
+        title: 't',
+        explanation: 'e',
+        consequence: 'c',
+        attribution: 'MEASURED',
+        fixPrompt: 'f',
+        state: 'ASSERTED_FIXED',
+      },
+    });
+    await testDb.verificationAttempt.create({
+      data: {
+        issueId: issue.id,
+        outcome: 'FAILED',
+        evidence: { first: true },
+        creditsCharged: 3,
+        durationMs: 10,
+      },
+    });
+    await testDb.verificationAttempt.create({
+      data: {
+        issueId: issue.id,
+        outcome: 'FAILED',
+        evidence: { second: true },
+        creditsCharged: 3,
+        durationMs: 10,
+      },
+    });
 
     const evidence = await listFailingEvidenceForScan(testDb, scan.id);
     expect(evidence[issue.id]).toEqual({ second: true }); // the most recent FAILED wins

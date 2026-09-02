@@ -55,7 +55,14 @@ async function signIn(plan: 'free' | 'pro'): Promise<{ token: string; userId: st
     });
     // Pro renewal grants credits; make sure a readiness pass is affordable.
     await testDb.creditLot.create({
-      data: { userId: user.id, kind: 'PLAN', source: 'PLAN_RENEWAL', amountGranted: 1200, amountRemaining: 1200, expiresAt: new Date(Date.now() + 30 * 86_400_000) },
+      data: {
+        userId: user.id,
+        kind: 'PLAN',
+        source: 'PLAN_RENEWAL',
+        amountGranted: 1200,
+        amountRemaining: 1200,
+        expiresAt: new Date(Date.now() + 30 * 86_400_000),
+      },
     });
   }
   const res = await request(app).post('/auth/login').send(CREDS).expect(200);
@@ -67,7 +74,12 @@ async function seedCompletedBaseline(
   blocking: readonly ('CRITICAL' | 'HIGH')[],
 ): Promise<string> {
   const target = await testDb.target.create({
-    data: { userId, inputType: 'URL', canonicalValue: 'https://fr066.example.com', displayName: 'fr066' },
+    data: {
+      userId,
+      inputType: 'URL',
+      canonicalValue: 'https://fr066.example.com',
+      displayName: 'fr066',
+    },
   });
   const scan = await testDb.scan.create({
     data: {
@@ -127,10 +139,15 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
       .send({ acceptedQuote: READINESS_PASS_COST })
       .expect(403);
     expect((res.body as { error: { code: string } }).error.code).toBe('READINESS_PREMATURE');
-    expect((res.body as { error: { details: { outstandingBlocking: number } } }).error.details.outstandingBlocking).toBe(2);
+    expect(
+      (res.body as { error: { details: { outstandingBlocking: number } } }).error.details
+        .outstandingBlocking,
+    ).toBe(2);
 
     expect(captured).toHaveLength(0);
-    const debits = await testDb.creditTransaction.count({ where: { type: 'DEBIT', reason: 'scan:readiness' } });
+    const debits = await testDb.creditTransaction.count({
+      where: { type: 'DEBIT', reason: 'scan:readiness' },
+    });
     expect(debits).toBe(0);
   });
 
@@ -138,8 +155,13 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
     const { token, userId } = await signIn('pro');
     const baselineId = await seedCompletedBaseline(userId, ['HIGH']);
 
-    const res = await request(app).get(`/scans/${baselineId}/readiness`).set(auth(token)).expect(200);
-    expect((res.body as { readiness: { premature: boolean; outstandingBlocking: number } }).readiness).toMatchObject({
+    const res = await request(app)
+      .get(`/scans/${baselineId}/readiness`)
+      .set(auth(token))
+      .expect(200);
+    expect(
+      (res.body as { readiness: { premature: boolean; outstandingBlocking: number } }).readiness,
+    ).toMatchObject({
       premature: true,
       outstandingBlocking: 1,
     });
@@ -154,7 +176,10 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
       data: { state: 'RESOLVED', resolvedAt: new Date() },
     });
 
-    const before = await request(app).get(`/scans/${baselineId}/readiness`).set(auth(token)).expect(200);
+    const before = await request(app)
+      .get(`/scans/${baselineId}/readiness`)
+      .set(auth(token))
+      .expect(200);
     expect((before.body as { readiness: { premature: boolean } }).readiness.premature).toBe(false);
 
     const res = await request(app)
@@ -180,7 +205,7 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
     expect((res.body as { error: { code: string } }).error.code).toBe('PLAN_UPGRADE_REQUIRED');
   });
 
-  it('refuses 403 CONCURRENT_LIMIT_REACHED once the plan\'s running-scan limit is already used, charging nothing (FR-079)', async () => {
+  it("refuses 403 CONCURRENT_LIMIT_REACHED once the plan's running-scan limit is already used, charging nothing (FR-079)", async () => {
     // `assertConcurrencyHeadroom` counts all of the user's non-terminal
     // scans, not just this target's — a readiness pass is a scan like any
     // other, so it must be refused just as `create-scan.ts`'s own path is
@@ -220,7 +245,9 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
     expect((res.body as { error: { code: string } }).error.code).toBe('CONCURRENT_LIMIT_REACHED');
 
     expect(captured).toHaveLength(0);
-    const debits = await testDb.creditTransaction.count({ where: { type: 'DEBIT', reason: 'scan:readiness' } });
+    const debits = await testDb.creditTransaction.count({
+      where: { type: 'DEBIT', reason: 'scan:readiness' },
+    });
     expect(debits).toBe(0);
   });
 });

@@ -79,10 +79,7 @@ export interface CreatedReadinessScan {
 }
 
 /** Outstanding CRITICAL/HIGH issues on a scan — anything not RESOLVED. */
-export async function countOutstandingBlocking(
-  db: PrismaClient,
-  scanId: string,
-): Promise<number> {
+export async function countOutstandingBlocking(db: PrismaClient, scanId: string): Promise<number> {
   return db.issue.count({
     where: {
       scanId,
@@ -161,7 +158,7 @@ export async function createReadinessScan(
 
   let created: CreatedReadinessScan;
   try {
-    created = await db.scan.create({
+    created = (await db.scan.create({
       data: {
         user: { connect: { id: input.userId } },
         target: { connect: { id: baseline.targetId } },
@@ -180,12 +177,9 @@ export async function createReadinessScan(
         quotedCredits: true,
         chargedCredits: true,
       },
-    }) as CreatedReadinessScan;
+    })) as CreatedReadinessScan;
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       const winner = await db.scan.findFirst({
         where: {
           userId: input.userId,
