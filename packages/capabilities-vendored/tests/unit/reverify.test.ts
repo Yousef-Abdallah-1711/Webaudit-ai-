@@ -107,6 +107,32 @@ describe('owasp-checker.reverify', () => {
     );
     expect(r.outcome).toBe('FAILED');
   });
+  it('cookie-missing-secure FAILED when one of two cookies still lacks the flag', async () => {
+    const r = await owaspChecker.reverify!(
+      at('owasp.cookie-missing-secure'),
+      ctxReturning(
+        res({
+          headers: {
+            'set-cookie': 'sid=abc; Secure; HttpOnly, tracking=xyz; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+          },
+        }),
+      ),
+    );
+    expect(r.outcome).toBe('FAILED');
+  });
+  it('cookie-missing-secure PASSED only when every cookie carries Secure', async () => {
+    const r = await owaspChecker.reverify!(
+      at('owasp.cookie-missing-secure'),
+      ctxReturning(
+        res({
+          headers: {
+            'set-cookie': 'sid=abc; Secure; HttpOnly, tracking=xyz; Secure; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+          },
+        }),
+      ),
+    );
+    expect(r.outcome).toBe('PASSED');
+  });
   it('server-version-disclosed PASSED when no version header', async () => {
     const r = await owaspChecker.reverify!(
       at('owasp.server-version-disclosed'),
