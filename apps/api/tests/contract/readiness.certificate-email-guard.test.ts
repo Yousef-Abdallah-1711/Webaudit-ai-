@@ -193,4 +193,29 @@ describe('readiness certificate + email guard are independent (Finding 1 regress
     await request(app).get(`/scans/${scanId}/readiness`).set(auth(token)).expect(200);
     expect(sent).toEqual([1]);
   });
+
+  it('returns 202 GENERATING for the certificate while it is mid-claim, not a plain 404', async () => {
+    // A storage whose putObject never resolves during this test's own request,
+    // so the claim placeholder ('') is still in place when /certificate is hit.
+    const stallingStorage: ReportStorage = {
+      putObject: () => new Promise(() => {}),
+      getObject: () => Promise.reject(new Error('not used')),
+      deleteScanObjects: () => Promise.resolve(0),
+    };
+    const { mailer } = flakyMailer(-1);
+    const app = createApp({
+      db: testDb,
+      mailer,
+      readiness: { storage: stallingStorage, producer: fakeProducer },
+    });
+    const { token, userId } = await signIn(app);
+    const { scanId } = await seedGoVerdict(userId);
+
+    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)); // triggers the claim, don't await
+    await new Promise((r) => setTimeout(r, 50)); // let the claim's updateMany land
+
+    const res = await request(app).get(`/scans/${scanId}/readiness/certificate`).set(auth(token));
+    expect(res.status).toBe(202);
+    expect((res.body as { error: { code: string } }).error.code).toBe('CERTIFICATE_GENERATING');
+  });
 });

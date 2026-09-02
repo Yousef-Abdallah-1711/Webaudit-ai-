@@ -339,6 +339,15 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
         .json({ error: { code: 'NOT_FOUND', message: 'No certificate for this scan.' } });
       return;
     }
+    if (scan.verdict.certificateKey === '') {
+      res.status(202).json({
+        error: {
+          code: 'CERTIFICATE_GENERATING',
+          message: 'The certificate is being generated; try again shortly.',
+        },
+      });
+      return;
+    }
     if (storage === null) {
       res.status(503).json({
         error: { code: 'STORAGE_UNAVAILABLE', message: 'Certificate storage is not configured.' },
