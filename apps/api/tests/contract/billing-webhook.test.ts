@@ -150,4 +150,18 @@ describe('POST /webhooks/billing', () => {
       .expect(200);
     expect(await testDb.billingEvent.findUniqueOrThrow({ where: { id: 'evt_x' } })).toBeTruthy();
   });
+
+  it('fails closed with 503 when no webhook secret is configured', async () => {
+    const unconfigured = createApp({ db: testDb, mailer, webhooks: { secret: '' } });
+    const { raw, sig } = sign({ id: 'evt_unconfigured', type: 'credits.purchased', data: {} });
+
+    const res = await request(unconfigured)
+      .post('/webhooks/billing')
+      .set('content-type', 'application/json')
+      .set('x-webhook-signature', sig)
+      .send(raw)
+      .expect(503);
+    expect((res.body as { error: { code: string } }).error.code).toBe('WEBHOOK_NOT_CONFIGURED');
+    expect(await testDb.billingEvent.count({ where: { id: 'evt_unconfigured' } })).toBe(0);
+  });
 });
