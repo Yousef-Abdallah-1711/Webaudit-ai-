@@ -126,7 +126,7 @@ export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep')
  * A cancelled scan's workspace, torn down out-of-band from `apps/api` (T104 gap
  * fix, Finding 10). `.strict()` for the same reason as the other schemas.
  */
-const workspaceTeardownJobSchema = z.object({ scanId: z.string().min(1).max(64) }).strict();
+export const workspaceTeardownJobSchema = z.object({ scanId: z.string().min(1).max(64) }).strict();
 
 /**
  * A targeted re-verification (T154). `.strict()` for the same reason as the
@@ -295,7 +295,7 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       if (handler === undefined) {
         throw new JobNotImplementedError(
           job,
-          'this task',
+          'the 2026-09-02 remediation, Task 7',
           'Cancellation-triggered workspace teardown',
         );
       }

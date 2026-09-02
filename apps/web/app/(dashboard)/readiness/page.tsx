@@ -69,8 +69,7 @@ function ReadinessPageContent(): React.ReactElement {
 
   // A readiness scan in flight: refresh when it completes.
   useEffect(() => {
-    const readinessScanId =
-      status?.scanId ?? (status?.readinessScanId ?? undefined);
+    const readinessScanId = status?.scanId ?? status?.readinessScanId ?? undefined;
     if (readinessScanId === undefined) return undefined;
     const client = connectRealtime({
       scanId: readinessScanId,
@@ -102,7 +101,11 @@ function ReadinessPageContent(): React.ReactElement {
   if (scanId === '') {
     return (
       <div>
-        <PageHead eyebrow="Readiness" title="No audit selected" meta="Open a completed report first." />
+        <PageHead
+          eyebrow="Readiness"
+          title="No audit selected"
+          meta="Open a completed report first."
+        />
       </div>
     );
   }
@@ -121,7 +124,11 @@ function ReadinessPageContent(): React.ReactElement {
     if (status.readinessScanId) {
       return (
         <div>
-          <PageHead eyebrow="Readiness" title="Production readiness pass" meta="A pass is under way." />
+          <PageHead
+            eyebrow="Readiness"
+            title="Production readiness pass"
+            meta="A pass is under way."
+          />
           <Card padding={22}>
             <p>
               A readiness pass is {String(status.readinessScanState ?? 'running').toLowerCase()}.{' '}
@@ -143,8 +150,8 @@ function ReadinessPageContent(): React.ReactElement {
             <>
               <p>
                 {String(status.outstandingBlocking ?? 0)} critical or high issue
-                {status.outstandingBlocking === 1 ? '' : 's'} still outstanding. The readiness pass is
-                available, but running it now is premature — resolve the blocking issues first.
+                {status.outstandingBlocking === 1 ? '' : 's'} still outstanding. The readiness pass
+                is available, but running it now is premature — resolve the blocking issues first.
               </p>
               <Button disabled>Run readiness pass — {READINESS_PASS_COST} cr</Button>
             </>
@@ -208,7 +215,11 @@ function ReadinessPageContent(): React.ReactElement {
       />
 
       {verdict.regressions.length > 0 && (
-        <Card padding={20} title="Regressions since the original audit" style={{ marginTop: 'var(--space-4)' }}>
+        <Card
+          padding={20}
+          title="Regressions since the original audit"
+          style={{ marginTop: 'var(--space-4)' }}
+        >
           <ul>
             {verdict.regressions.map((r) => (
               <li key={r.name}>{r.name}</li>
@@ -227,13 +238,24 @@ function ReadinessPageContent(): React.ReactElement {
         </Card>
       )}
 
-      {verdict.isReady && verdict.certificateKey !== null && status.scanId !== undefined && (
-        <Card padding={20} style={{ marginTop: 'var(--space-4)' }}>
-          <a href={`${API_BASE}/scans/${status.scanId}/readiness/certificate`} target="_blank" rel="noreferrer">
-            Open the shareable readiness certificate
-          </a>
-        </Card>
-      )}
+      {/* '' is the claim placeholder while the certificate is mid-generation
+          (see readiness.routes.ts's 202 CERTIFICATE_GENERATING) -- not yet a
+          real key, so the link must wait for it rather than linking to a raw
+          JSON error body. */}
+      {verdict.isReady &&
+        verdict.certificateKey !== null &&
+        verdict.certificateKey !== '' &&
+        status.scanId !== undefined && (
+          <Card padding={20} style={{ marginTop: 'var(--space-4)' }}>
+            <a
+              href={`${API_BASE}/scans/${status.scanId}/readiness/certificate`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Open the shareable readiness certificate
+            </a>
+          </Card>
+        )}
     </div>
   );
 }
