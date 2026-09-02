@@ -23,10 +23,11 @@ Positioning, competitive standing, and the commercial model are in [PRODUCT.md](
 
 ## Status — read this before forming an opinion of the code
 
-**195 of 250 tasks complete (78%). The core product loop works end to end, on source too.** A real
-audit runs against a live URL, an uploaded `.zip`, or a connected GitHub repository; a human drives
-it through the UI; issues turn green only when a re-check passes; and a production-readiness pass
-returns an explicit go/no-go.
+**209 of 250 tasks complete (84%). The core product loop works end to end, on source too, and it is
+billable.** A real audit runs against a live URL, an uploaded `.zip`, or a connected GitHub
+repository; a human drives it through the UI; issues turn green only when a re-check passes; a
+production-readiness pass returns an explicit go/no-go; and the account can subscribe to a plan, buy
+non-expiring credits, and is never charged for a platform failure.
 
 Built and verified in dependency order:
 
@@ -39,13 +40,13 @@ Built and verified in dependency order:
 | 4 — US2: The fix loop | ✅ done | assert-fixed → narrow re-verification queue → green only on a passing check (**SC-007**); `reverify()` on 6 capabilities; recurrence detection; fixes board |
 | 5 — US3: Readiness verdict | ✅ done | Fresh full re-audit, fingerprint regression diff, go/no-go with named blockers, shareable certificate, `/readiness` UI |
 | 6 — US4: Source audit | ✅ done | Archive upload + connected-repo input, streaming extraction guard (refused before extraction, before charging), dependency/bundle/css capabilities |
-| 7 — US5: Billing | ⬜ not started | Subscriptions, entitlements, credit purchase, webhook, retention, export (**SC-008**) |
+| 7 — US5: Billing | ✅ done | Subscription lifecycle, entitlements refused before charging, non-expiring purchased credits, signed idempotent webhook, retention + self-contained export (**SC-008**) |
 | 8 — US6: Design-intent questionnaire | ⬜ not started | `AWAITING_QUESTIONNAIRE` without holding a worker slot |
 | 9 — US7: Operator admin | ⬜ not started | Margin attribution, capability toggles, provider config, queue ops (**SC-009, SC-010**); first `requireOperator` routes |
 | 10 — Sandbox runner | ⬜ not started | The no-egress, no-credential service for untrusted uploaded capabilities (**SC-017**). Until it exists the upload path returns `503`. |
 | 11 — Polish | 🟡 1/10 | a11y assertions, dark-mode contrast, structured logging, deploy runbooks, doc corrections |
 
-**9 of 11 adversarial gates green.** SC-008 lands with Phase 7, SC-017 with Phase 10.
+**10 of 11 adversarial gates green.** SC-017 lands with Phase 10.
 
 [PROGRESS.md](PROGRESS.md) is the honest scoreboard — what is verified rather than merely written,
 which adversarial gates are green, and what is still an open decision.

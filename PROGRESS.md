@@ -1,18 +1,19 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-01 · **Tasks** 195 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **752/753** (1 confirmed-flaky timing test — `gated-check-partial.test.ts`'s first
-case, 5000ms default timeout under full-suite load; reproduces green in isolation every time,
-2/2 — not an assertion failure), `adverse` **561 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
-plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` clean across the monorepo;
-`next build` clean. A real `Cannot find name 'refPath'` typecheck error in
-`apps/worker/src/intake/repo-clone.ts` (the GitHub zipball ref-path helper had never been written)
-was found and fixed during this verification pass — recorded rather than silently folded in.
+**Updated** 2026-09-02 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **794/794**, `adverse` **564 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
+plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
+the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
+(`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
+test expectation (`upload.test.ts` naming `pro` for archive input while the test helper seeded only
+two tiers — the spec's Plan Tiers table says Starter); both fixed and recorded below.
 🎯 **Phase 3 (US1) complete — T105–T143.** ✅ **Phase 4 (US2, the fix loop) complete — T144–T157;
 SC-007 now has its adversarial gate.** ✅ **Phase 5 (US3, the readiness verdict) complete —
 T158–T168; the full journey audit→fix→verify→ship is deliverable.** ✅ **Phase 6 (US4, audit source)
 complete — T169–T179; archive and repository input, refused before extraction and before charging.**
-Two review passes on Phases 1–3 also folded in (§§ below).
+✅ **Phase 7 (US5, pay for capacity) complete — T180–T193; subscriptions, entitlements, credit
+purchase, the signed idempotent billing webhook, retention + self-contained export. SC-008 now has
+its adversarial gate — 10 of 11 green.** Two review passes on Phases 1–3 also folded in (§§ below).
 
 ## Phase 3 engineering review (2026-08-30) — findings fixed
 
@@ -99,6 +100,83 @@ Verified: `pnpm test` **666/666**, `pnpm test:adverse` **532/533** (1 skip), `pn
 Human-readable roll-up and handoff. **Starting a fresh session? Read § Resume here first.**
 
 ---
+
+## Phase 7 (User Story 5) — pay for capacity with plans and credits, T180–T193 — done
+
+**Revenue is collectable and the margin is recorded, and nobody is billed for a failure.** The lot
+ledger from Phase 1 (research R2) already had the shape; this phase adds the subscription lifecycle
+that grants and expires PLAN lots, the entitlement layer that refuses an input type or feature
+*before* any debit while naming the tier that would permit it (FR-016), a credit purchase that
+creates non-expiring PURCHASED lots, and the external-payment surface — a signed, idempotent
+webhook — that drives all of it in production.
+
+**SC-008 is the gate, and it is structural, not a matter of statement order.** `refund-on-failure`
+(T180, adverse) asserts a scan that fails before any area ran is refunded in full, a scan that
+delivered one of two areas is refunded the undelivered half, and — the part a balance-only assertion
+would miss — the refund appears in `GET /billing/credits` with amount, reason, and timestamp
+(FR-076). The refund returns to the originating lot, so an expiring-credit refund does not silently
+become a permanent one.
+
+**FR-078's two credit lifetimes never collapse into one number.** `balanceOf` returns `{ plan,
+purchased, planExpiresAt }` and nothing sums them for display. `GET /billing/credits` carries the
+full movement history and, for every `DEBIT`, a `drewFrom` map built from `CreditAllocation` → lot
+kind, so scenario 6 ("the account shows which balance was drawn against") is answerable from one
+call. Plan credits are spent before purchased (SC-022, already enforced in `debit`); renewal
+*replaces* the plan lot rather than topping it up (`renewSubscription` expires the closing period's
+PLAN lots, then grants the new period's); a cancelled subscription lapses and grants nothing.
+
+**The webhook fails closed and is idempotent on the provider's event id.** No secret configured →
+`503`, never a silent accept. Body signature recomputed HMAC-SHA256 and compared `timingSafeEqual`;
+a forged "you were paid" is `401` with nothing applied. The first thing a verified handler does is
+`INSERT` the event id into `BillingEvent`; a duplicate delivery hits the P2002 and returns `200`
+with nothing re-applied. It mounts its own `express.raw` ahead of the app's `express.json` because
+the raw bytes are what the signature covers. An application-level failure (webhook for a deleted
+user, a removed plan) is logged and answered `200 { applied: false }` — the event row is the
+reconciliation record; spinning the provider on a retry that cannot succeed helps no one.
+
+**Retention and export (T189/T190, FR-092/FR-093).** The worker's billing sweep — one repeatable
+maintenance job, `CONCURRENCY.maintenance = 1` — renews due subscriptions, sends the pre-renewal
+expiry warning once per period for subscriptions whose plan credits are about to lapse, then warns
+about and removes reports past their plan's retention window. A removal clears the findings, module
+results and readiness verdict and nulls the score/summary, keeps the `Scan` row, sets
+`reportRemovedAt`, and (when R2 storage is configured — it is `null` in the worker for now) deletes
+the stored objects. `GET /scans/:id/report` then answers `410 REPORT_REMOVED`; `GET
+/scans/:id/export` produces a single self-contained HTML file (no external CSS, fonts, or scripts)
+with the score, summary, every area and issue, each issue's fix prompt (FR-051), and the
+attribution — refused `404`/`410`/`409` by reason for a report that is missing, removed, or not yet
+finished.
+
+**Frontend (T192/T193).** `apps/web/app/(dashboard)/billing/page.tsx` shows the two balances as two
+figures that never add — plan credits carry "expire at renewal" with the date, purchased carry
+"never expire" — with a movement list that names the balance every row moved (and the per-lot split
+for a debit), the plan chooser wired to `subscribe`/`change-plan`, a top-up control, and the
+always-present refund line. `apps/web/app/(public)/pricing/page.tsx` ports `Pricing.jsx` verbatim;
+its dollar figures are the vendored source's own placeholders (monetary price points remain an open
+item). Both are covered by the adherence-lint gate (the `apps/web/app/**/*.tsx` glob picks them up
+automatically) and by `apps/web/tests/unit/billing-and-pricing.test.ts`. Visual diff for `/billing`
+is N/A (no `/billing` artboard in `design-system/reference-pages/`, as with the other dashboard
+screens); `/pricing` stays an `it.todo` for the same reason the Home and auth pages do — the shared
+`PublicHeader` has no mobile-nav treatment and overflows every public page at 390, and a few
+desktop comparisons land ~1.5–3% over the 0.5% bar from the same header. Not this task's call to
+invent a fix for ("port, never author").
+
+**Two pre-existing issues surfaced and fixed:**
+
+- **`scripts/seed.ts` could not resolve `@webaudit/config`.** An earlier Phase 7 change pointed the
+  seed script at `PLAN_TIERS` so the script, the test helper, and the billing services never drift —
+  but `@webaudit/config` was not a dependency of the root `package.json`, so pnpm never linked it
+  into the root `node_modules` and `tsc -p tsconfig.json` / `eslint .` both failed. Fixed by adding
+  the `workspace:*` dependency.
+- **`upload.test.ts` named `pro` as the tier that permits an uploaded archive.** The spec's Plan
+  Tiers table says Starter ("Uploaded archive: No | Yes | Yes | Yes"). The assertion only read
+  `pro` because the old two-tier `seedPlans()` helper seeded just `free` + `pro`; Phase 7's helper
+  seeds all four, so the "cheapest active tier that permits ARCHIVE" is now correctly `starter`.
+  Test updated, spec unchanged.
+
+Verified: `pnpm -r typecheck` clean (32 projects), `pnpm lint` + `pnpm run lint:adherence` clean,
+`pnpm test` **794/794**, `pnpm test:adverse` **564 passed / 1 pre-existing skip**, `pnpm test:visual`
+6 + 7 todo (baseline unchanged), `next build` clean (`/billing` and `/pricing` both build).
+`pnpm format:check` remains red on files that predate this phase — see § Resume here.
 
 ## Phase 6 (User Story 4) — audit source, not just the served page, T169–T179 — done
 
@@ -418,21 +496,23 @@ pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:adver
 
 Seven of the eight pass. **`pnpm format:check` is red, and was already red before Phase 6** — about
 two dozen files from Phases 4 and 5, `apps/probe-pool`, and several vendored capabilities were
-committed unformatted. Every file Phase 6 touched is formatted; the pre-existing ones were left alone
-deliberately so this phase's diff stays reviewable. Fixing it is one mechanical
+committed unformatted. Every file Phases 6 and 7 touched is formatted; the pre-existing ones were
+left alone deliberately so each phase's diff stays reviewable. Fixing it is one mechanical
 `npx prettier --write .` whenever someone is willing to own the whitespace-only churn, and it should
 happen on its own commit rather than inside a feature phase. `pnpm lint` (code lint plus
 design-adherence lint), `pnpm -r typecheck`, `pnpm test`, `pnpm test:adverse`, `pnpm test:visual`, the
 T109 e2e spec, and `next build` are all green.
 
-### Next task: T180 (Phase 7, US5 — pay for capacity with plans and credits) — Phases 3, 4, 5, 6 complete
+### Next task: T194 (Phase 8, US6 — tailor the design audit to brand intent) — Phases 3–7 complete
 
-Phase 6 (audit source, T169–T179) is done — see § Phase 6 near the top. **Next is Phase 7, User Story 5
-("Pay for capacity with plans and credits")**, T180–T193, starting at **T180, which is SC-008's
-adversarial gate**: *zero users are charged for an operation the platform failed to deliver*. The rest
-of the phase is subscription lifecycle, entitlement enforcement, non-expiring purchased lots, a
-signature-verified idempotent billing webhook, retention, export, and the two billing surfaces.
-(The sandbox and the capability marketplace are Phase 9, T218's SC-017 — not this one.)
+Phase 7 (billing, T180–T193) is done — see § Phase 7 near the top; **SC-008 is now green, 10 of 11
+adversarial gates**. **Next is Phase 8, User Story 6 ("Tailor the design audit to brand intent")**,
+T194–T201, starting at **T194**: a failing test asserting the mid-audit intent questionnaire pause
+holds no worker slot (R4). The pause/resume plumbing already exists from Phase 2J
+(`awaitQuestionnaire` writes state, emits the prompt, schedules a delayed job, and returns — no timer,
+no polling); Phase 8 wires the questionnaire content into the design area and makes findings reference
+the stated intent. (The sandbox and capability marketplace are Phase 10, T218's SC-017 — not this
+one.)
 
 Two pre-existing gate failures were fixed during Phase 6 rather than worked around, and both are worth
 knowing about before the next session runs the gates:
@@ -1222,7 +1302,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 4 — US2 fix loop | T144–T157 | ✅ done | **SC-007 green** — the red-to-green loop, async re-verify queue, `reverify` on all 6 first-slice capabilities, recurrence, fixes board. § Phase 4 near top |
 | 5 — US3 readiness | T158–T168 | ✅ done | Fresh full re-audit, fingerprint diff, go/no-go verdict with named blockers, shareable certificate. § Phase 5 near top |
 | 6 — US4 source audit | T169–T179 | ✅ done | Archive + repo input, streaming extraction guard, refused before extraction and before charging. § Phase 6 near top |
-| 7 — US5 billing | T180–T193 | ⬜ | SC-008 |
+| 7 — US5 billing | T180–T193 | ✅ done | **SC-008 green** — subscriptions, entitlements before charging, credit purchase, signed idempotent webhook, retention + self-contained export. § Phase 7 near top |
 | 8 — US6 questionnaire | T194–T201 | ⬜ | |
 | 9 — US7 admin | T202–T215 | ⬜ | SC-009, SC-010. **First `requireOperator` route lands here** |
 | 10 — Sandbox runner | T216–T226 | ⬜ | SC-017. Complete or not at all |
@@ -1236,7 +1316,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | SC-018 | SSRF refused including DNS rebinding | T044 | ✅ **GREEN** — 99 assertions, 4 layers |
 | SC-007 | Nothing turns green without a passing check | T144 | ✅ **GREEN** — schema + `outcomeToState` total function + single RESOLVED writer; adversarial suite: unchanged assertion, bulk assert-all, throwing check, + positive control |
 | SC-006 | No unattributed finding reaches a user | T084 | ✅ **GREEN** — 8 seeds × 25 random module shapes, 3 locks |
-| SC-008 | Nobody charged for our failures | T180 | ⬜ |
+| SC-008 | Nobody charged for our failures | T180 | ✅ **GREEN** — full refund before any area ran, partial refund for the undelivered half, and the refund visible in `GET /billing/credits` with amount/reason/time; refund returns to the originating lot |
 | SC-011 | Disabling any capability leaves audits completable | T066 | ✅ **GREEN** — resolution half at 2G, execution half at 2I |
 | SC-012 | Total provider failure still delivers measured findings | T077 | ✅ **GREEN** — 4 outage shapes, plus total exhaustion |
 | SC-015 | Source destroyed on all four exit paths | T102 | ✅ **GREEN** — four exit paths, confinement mutation-tested |
@@ -1244,7 +1324,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | SC-017 | Six escape attempts refused, host survives | T218 | ⬜ |
 | SC-021 | Load generation refused without verified control | T052 | ✅ **GREEN** — 3 named bypasses + 2 forged-state cases |
 
-**9 of 11 green.** SC-008 (T180) and SC-017 (T218) land with their phases.
+**10 of 11 green.** SC-017 (T218) lands with Phase 10.
 
 ---
 
@@ -1640,16 +1720,15 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 ## Reality check on "production ready"
 
-The core loop works and CI genuinely gates merges. Honest state as of Phase 6:
+The core loop works and CI genuinely gates merges. Honest state as of Phase 7:
 
-- **195 of 250 tasks (78%).** Phases 1, 2, 2L, 3, 4, 5, 6 are complete. A real audit runs against a
+- **209 of 250 tasks (84%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7 are complete. A real audit runs against a
   live URL, an uploaded archive, or a connected GitHub repository, through the real orchestrator and
   16 vendored capabilities; a human drives it through the UI; the fix loop turns issues green only on
-  a passing re-check; and a readiness pass returns a go/no-go verdict with named blockers and a
-  shareable certificate.
-- **Still not built (Phases 7–11, 57 tasks):**
-  - **Phase 7 (US5)** — subscriptions, entitlement enforcement, credit purchase, the billing
-    webhook, retention + export. **SC-008** (nobody charged for our failures) lands here.
+  a passing re-check; a readiness pass returns a go/no-go verdict with named blockers and a
+  shareable certificate; and the account can be subscribed to a plan, buy non-expiring credits, and
+  is never billed for a platform failure (refunds are visible on the ledger).
+- **Still not built (Phases 8–11, 41 tasks):**
   - **Phase 8 (US6)** — the design-intent questionnaire pause. The orchestrator currently always
     proceeds straight past the UI phase on defaults.
   - **Phase 9 (US7)** — the entire operator surface. **The first `requireOperator` route lands
@@ -1662,17 +1741,20 @@ The core loop works and CI genuinely gates merges. Honest state as of Phase 6:
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
-- **9 of 11 adversarial gates green** (SC-007 added at Phase 4). SC-008 → Phase 7, SC-017 → Phase 10.
+- **10 of 11 adversarial gates green** (SC-007 added at Phase 4, SC-008 at Phase 7). SC-017 → Phase 10.
 - **`pnpm format:check` is red** on ~two dozen files from Phases 4–5, `apps/probe-pool`, and several
-  vendored capabilities, committed unformatted before Phase 6 started. Everything Phase 6 touched is
-  formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
+  vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–7 touched
+  is formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
-  is deliverable as of Phase 5; source-level depth (repos and archives) is deliverable as of Phase 6.
+  is deliverable as of Phase 5; source-level depth (repos and archives) as of Phase 6; the account
+  is billable as of Phase 7.
 
 ## Commit log
 
 | | |
 | --- | --- |
+| `99dcff4` | feat(us5): pay for capacity with plans and credits (T180–T193) |
+| `2a22d46` | feat(us4): audit source code, not just the served page (T169–T179) |
 | `8e64e88` | docs: task board + progress through phase 5; ignore parked worktree dirs |
 | `8792ef7` | feat(us3): production-readiness verdict (T158–T168) |
 | `e75ac61` | feat(us2): verified fix loop, plus phase 1–3 engineering-review remediations (T144–T157) |

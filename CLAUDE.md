@@ -33,24 +33,29 @@ three deployable units where we have five (R16). Do not implement from it withou
 current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
-are complete. **195 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2), 5 (US3) and 6 (US4) are
-complete. Next is **Phase 7** (T180–T193, US5 — pay for capacity with plans and credits), which opens
-with **T180, SC-008's gate**: nobody is charged for an operation the platform failed to deliver. See
-PROGRESS.md "Resume here".
+are complete. **209 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2), 5 (US3), 6 (US4) and
+7 (US5) are complete. Next is **Phase 8** (T194–T201, US6 — tailor the design audit to brand
+intent), which opens with **T194**: a failing test asserting the mid-audit questionnaire pause holds
+no worker slot (R4). See PROGRESS.md "Resume here".
 
-**9 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
+**10 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
 redaction, SC-011 capability disable, SC-012 provider exhaustion, SC-006 attribution, SC-015
 workspace destruction, **SC-007 verified-fix loop** (T144, added at Phase 4 — schema + a total
-`outcomeToState` function + a single RESOLVED writer + an adversarial suite). SC-008 and SC-017 land
-with their phases (T180, T218). `tasks.md` is authoritative for task state; PROGRESS.md carries the
-honest scoreboard and the reasoning behind each one.
+`outcomeToState` function + a single RESOLVED writer + an adversarial suite), **SC-008 never-billed-
+for-a-failure** (T180, added at Phase 7 — full and partial refunds before/after an area ran, visible
+on the `GET /billing/credits` ledger, returned to the originating lot). SC-017 lands with Phase 10
+(T218). `tasks.md` is authoritative for task state; PROGRESS.md carries the honest scoreboard and the
+reasoning behind each one.
 
 A real audit runs end to end (URL scans, SECURITY + SEO + the other three areas' `ctx.fetch`-based
 checks) and is drivable by a human through the UI; the red-to-green fix loop works; a
 production-readiness pass (fresh full re-audit, fingerprint regression diff, go/no-go verdict with
 named blockers, shareable certificate) closes the journey; and **a `.zip` upload or a connected GitHub
 repository is a first-class input**, refused before extraction and before charging if hostile,
-audited by three source-only capabilities, and destroyed on every exit path. The first sellable
+audited by three source-only capabilities, and destroyed on every exit path. **The account is
+billable** — subscription lifecycle, entitlements refused before any debit (naming the permitting
+tier), non-expiring purchased credits, a signature-verified idempotent billing webhook, retention
+enforcement with a pre-removal warning, and a self-contained HTML export. The first sellable
 artifact was **T135**, end of Phase 3.
 
 Two rounds of defects are recorded rather than forgotten. A full engineering review of Phases 1–2B

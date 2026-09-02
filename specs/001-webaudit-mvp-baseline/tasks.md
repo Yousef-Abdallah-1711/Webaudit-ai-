@@ -425,23 +425,23 @@ asserted the debit-wins outcome.
 
 ### Tests for User Story 5
 
-- [ ] T180 [P] [US5] Write failing test asserting a platform-fault failure restores credits visibly (**SC-008**) in `apps/api/tests/adverse/refund-on-failure.test.ts`
-- [ ] T181 [P] [US5] Write failing test asserting plan credits expire at renewal while purchased credits survive in `apps/api/tests/integration/renewal.test.ts`
-- [ ] T182 [P] [US5] Write failing test asserting credit purchase is refused on the free tier (FR-078) in `apps/api/tests/contract/purchase-free-tier.test.ts`
-- [ ] T183 [P] [US5] Write failing test asserting entitlement refusal names the permitting tier before charging (FR-016) in `apps/api/tests/contract/entitlements.test.ts`
+- [X] T180 [P] [US5] Write failing test asserting a platform-fault failure restores credits visibly (**SC-008**) in `apps/api/tests/adverse/refund-on-failure.test.ts`
+- [X] T181 [P] [US5] Write failing test asserting plan credits expire at renewal while purchased credits survive in `apps/api/tests/integration/renewal.test.ts`
+- [X] T182 [P] [US5] Write failing test asserting credit purchase is refused on the free tier (FR-078) in `apps/api/tests/contract/purchase-free-tier.test.ts`
+- [X] T183 [P] [US5] Write failing test asserting entitlement refusal names the permitting tier before charging (FR-016) in `apps/api/tests/contract/entitlements.test.ts`
 
 ### Implementation for User Story 5
 
-- [ ] T184 [US5] Implement subscription lifecycle (subscribe, change, cancel) in `apps/api/src/services/billing/subscription.service.ts`
-- [ ] T185 [US5] Implement entitlement enforcement middleware in `apps/api/src/middleware/entitlements.middleware.ts`
-- [ ] T186 [US5] Implement credit purchase creating non-expiring lots in `apps/api/src/services/billing/purchase.service.ts`
-- [ ] T187 [US5] Implement signature-verified idempotent billing webhook in `apps/api/src/routes/webhooks.routes.ts`
-- [ ] T188 [P] [US5] Implement pre-renewal expiry warning notification in `apps/api/src/services/billing/renewal-warning.ts`
-- [ ] T189 [P] [US5] Implement retention enforcement with pre-removal warning (FR-092) in `apps/api/src/services/storage/retention.ts`
-- [ ] T190 [P] [US5] Implement self-contained report export (FR-093) in `apps/api/src/services/storage/export.ts`
-- [ ] T191 [US5] Wire billing routes in `apps/api/src/routes/billing.routes.ts`
-- [ ] T192 [P] [US5] Port billing and plans from `design-system/ui_kits/app/Account.jsx` into `apps/web/app/(dashboard)/billing/page.tsx` - two credit lifetimes shown distinctly with the refund line visible (FR-078) - adherence lint clean, visual diff <=0.5% at 1440/390
-- [ ] T193 [P] [US5] Port `design-system/ui_kits/marketing/Pricing.jsx` into `apps/web/app/(public)/pricing/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T184 [US5] Implement subscription lifecycle (subscribe, change, cancel) in `apps/api/src/services/billing/subscription.service.ts`
+- [X] T185 [US5] Implement entitlement enforcement middleware in `apps/api/src/middleware/entitlements.middleware.ts`
+- [X] T186 [US5] Implement credit purchase creating non-expiring lots in `apps/api/src/services/billing/purchase.service.ts`
+- [X] T187 [US5] Implement signature-verified idempotent billing webhook in `apps/api/src/routes/webhooks.routes.ts`
+- [X] T188 [P] [US5] Implement pre-renewal expiry warning notification in `apps/api/src/services/billing/renewal-warning.ts`
+- [X] T189 [P] [US5] Implement retention enforcement with pre-removal warning (FR-092) in `apps/api/src/services/storage/retention.ts`
+- [X] T190 [P] [US5] Implement self-contained report export (FR-093) in `apps/api/src/services/storage/export.ts`
+- [X] T191 [US5] Wire billing routes in `apps/api/src/routes/billing.routes.ts`
+- [X] T192 [P] [US5] Port billing and plans from `design-system/ui_kits/app/Account.jsx` into `apps/web/app/(dashboard)/billing/page.tsx` - two credit lifetimes shown distinctly with the refund line visible (FR-078) - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T193 [P] [US5] Port `design-system/ui_kits/marketing/Pricing.jsx` into `apps/web/app/(public)/pricing/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
 
 **Checkpoint**: The business works. Revenue is collectable and margin is recorded.
 
