@@ -29,7 +29,7 @@ operational/capacity-planning note, not a code defect.
 | 2 | High | 5 | Certificate/email guard permanently drops the congratulations email on partial failure | ✅ Fixed |
 | 3 | High | 6 | `safeFetch` forwards the GitHub Bearer token to every redirect hop with no host allowlist | ✅ Fixed (Task 2) |
 | 4 | High | 7 | FR-079 concurrent-scan limit is dead code, never enforced | ✅ Fixed (Task 3) |
-| 5 | High | 7 | `entitlements.middleware.ts` never mounted; routes duplicate the policy ad hoc | ✅ Fixed (Task 4) |
+| 5 | High | 7 | `entitlements.middleware.ts` never mounted; routes duplicate the policy ad hoc | ✅ Fixed (Task 4 + final-review follow-up: dead middleware deleted, ad hoc design confirmed) |
 | 6 | High | 7 | Webhook effect application isn't transactional with the idempotency claim | ✅ Fixed (Task 5) |
 | 7 | Medium | 4 | Client-side N+1 for failing-evidence hydration on the Fixes board | ✅ Fixed (Task 6) |
 | 8 | Medium | 5 | No test exercised the route-level certificate/email guard at all | ✅ Fixed (new test added) |
@@ -390,6 +390,17 @@ HTTP-shell deliverable T185 built, and it isn't wired in.
 *Fix:* route the two callers through `assertEntitled`, or delete the unused middleware/functions if
 the ad hoc checks are the intended final design — and record that decision rather than leaving a
 silent duplication.
+**Resolved (2026-09-02 remediation, final whole-branch review):** the initial remediation pass (Task
+4) deduped the "cheapest permitting tier" query but left `entitlements.middleware.ts` in place, unused
+— and Task 3's own new FR-079 enforcement then added a *third*, inline copy of the same
+`EntitlementError` → HTTP-envelope mapping directly in `scans.routes.ts`'s catch block, worsening
+exactly the drift this finding named. Per this doc's own Assumptions note and Open Question #1: the
+ad hoc, per-route typed-error → route-status mapping is confirmed as the intended final design — it
+is the pattern `scans.routes.ts` already uses consistently for every other refusal in `POST /scans`
+(`DuplicateScanError`, `PlanUpgradeRequiredError`, `ControlLevelRequiredError`, etc.), and
+`entitlements.middleware.ts` was the road not taken, not a parallel supported path. Deleted the dead
+middleware file rather than wiring it in; `services/billing/entitlements.ts`'s module docstring
+updated to describe the actual, single pattern instead of pointing at removed code.
 
 **6. HIGH — Webhook effect application isn't transactional with the idempotency claim.**
 `apps/api/src/routes/webhooks.routes.ts:104-151`. The `BillingEvent` row is inserted first
@@ -472,8 +483,10 @@ not something resolvable from the code alone.
 
 ## Open questions for a maintainer
 
-1. Is `entitlements.middleware.ts` meant to be wired in, or is the ad hoc per-route enforcement in
-   `create-scan.ts`/`readiness/create.ts` the intended final design? (Findings 4, 5)
+1. ~~Is `entitlements.middleware.ts` meant to be wired in, or is the ad hoc per-route enforcement in
+   `create-scan.ts`/`readiness/create.ts` the intended final design? (Findings 4, 5)~~ **Answered
+   (2026-09-02, final whole-branch review): ad hoc per-route enforcement is the intended design — it
+   matches every other refusal in the same route's catch block. `entitlements.middleware.ts` deleted.**
 2. Should the CSS-Modules adherence-lint blind spot (Findings 15/15) be closed by extending the
    oxlint rule to `.module.css` files, or is raw px acceptable there by a documented exception?
 3. Is FR-072's "exactly once" guarantee meant to cover the certificate and email as one unit, or two

@@ -15,9 +15,15 @@
  * period" is a *retention* concern (`retention.ts`), not an entitlement one —
  * a lapsed user can still read what they have, they just cannot start new work.
  *
- * The middleware in `entitlements.middleware.ts` composes these: a route that
- * needs an entitlement runs the check *before* the handler that charges, so an
- * `EntitlementError` is a refusal, never a refund (FR-016: "before charging").
+ * A route that needs an entitlement calls `assertEntitled`/
+ * `assertConcurrencyHeadroom` directly and catches `EntitlementError` inline,
+ * the same typed-error -> route-status pattern `scans.routes.ts` already uses
+ * for every other refusal in `POST /scans` — the check runs *before* the
+ * handler that charges, so an `EntitlementError` is a refusal, never a refund
+ * (FR-016: "before charging"). An earlier Express-middleware wrapper
+ * (`entitlements.middleware.ts`) duplicated this same mapping and was never
+ * mounted anywhere; removed rather than kept as a second, drifting copy
+ * (2026-09-02 remediation review, Finding 5).
  */
 
 import { PLAN_TIERS } from '@webaudit/config';

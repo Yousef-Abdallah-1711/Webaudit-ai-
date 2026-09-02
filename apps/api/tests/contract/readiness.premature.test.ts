@@ -179,4 +179,48 @@ describe('FR-066 — the readiness pass is offered but marked premature', () => 
       .expect(403);
     expect((res.body as { error: { code: string } }).error.code).toBe('PLAN_UPGRADE_REQUIRED');
   });
+
+  it('refuses 403 CONCURRENT_LIMIT_REACHED once the plan\'s running-scan limit is already used, charging nothing (FR-079)', async () => {
+    // `assertConcurrencyHeadroom` counts all of the user's non-terminal
+    // scans, not just this target's — a readiness pass is a scan like any
+    // other, so it must be refused just as `create-scan.ts`'s own path is
+    // once the limit is reached (2026-09-02 remediation review, final
+    // whole-branch pass: this path had no such check at all).
+    const { token, userId } = await signIn('pro'); // pro: concurrentScanLimit 3
+    const baselineId = await seedCompletedBaseline(userId, []);
+
+    for (let i = 0; i < 3; i += 1) {
+      const otherTarget = await testDb.target.create({
+        data: {
+          userId,
+          inputType: 'URL',
+          canonicalValue: `https://fr079-readiness-${String(i)}.example.com`,
+          displayName: `fr079-${String(i)}`,
+        },
+      });
+      await testDb.scan.create({
+        data: {
+          userId,
+          targetId: otherTarget.id,
+          kind: 'INITIAL',
+          requestedModules: ['SECURITY'],
+          capabilitySnapshot: {},
+          quotedCredits: 20,
+          chargedCredits: 20,
+          state: 'RUNNING_PHASE_1',
+        },
+      });
+    }
+
+    const res = await request(app)
+      .post(`/scans/${baselineId}/readiness`)
+      .set(auth(token))
+      .send({ acceptedQuote: READINESS_PASS_COST })
+      .expect(403);
+    expect((res.body as { error: { code: string } }).error.code).toBe('CONCURRENT_LIMIT_REACHED');
+
+    expect(captured).toHaveLength(0);
+    const debits = await testDb.creditTransaction.count({ where: { type: 'DEBIT', reason: 'scan:readiness' } });
+    expect(debits).toBe(0);
+  });
 });

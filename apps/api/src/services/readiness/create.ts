@@ -22,7 +22,7 @@
 import { ALL_AREAS, READINESS_PASS_COST } from '@webaudit/config';
 import { SCAN_STATES_TERMINAL, SEVERITIES_BLOCKING } from '@webaudit/types';
 import { Prisma, type PrismaClient } from '../../../prisma/generated/client/index.js';
-import { cheapestActiveTierId } from '../billing/entitlements.js';
+import { assertConcurrencyHeadroom, cheapestActiveTierId } from '../billing/entitlements.js';
 import { debit, InsufficientCreditsError } from '../credits/debit.js';
 import { totalAvailable } from '../credits/balance.js';
 import { DuplicateScanError, QuoteMismatchError } from '../intake/create-scan.js';
@@ -131,6 +131,13 @@ export async function createReadinessScan(
   // FR-066 — premature while any blocking issue is unresolved.
   const outstanding = await countOutstandingBlocking(db, baseline.id);
   if (outstanding > 0) throw new ReadinessPrematureError(outstanding);
+
+  // FR-079: refuse before any debit once the plan's concurrent-scan limit is
+  // already reached. Enforced on `create-scan.ts`'s path but not this one
+  // until the 2026-09-02 remediation review's final whole-branch pass caught
+  // the asymmetry — a running readiness pass consumed a slot there while
+  // nothing stopped starting a readiness pass itself over the limit.
+  await assertConcurrencyHeadroom(db, input.userId);
 
   // FR-018 — no other scan of this target may be running.
   const running = await db.scan.findFirst({

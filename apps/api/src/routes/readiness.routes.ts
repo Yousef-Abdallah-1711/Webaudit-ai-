@@ -31,6 +31,7 @@ import { createConsoleMailer } from '../services/email/mailer.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 import { InsufficientCreditsError } from '../services/credits/debit.js';
 import { QuoteMismatchError } from '../services/intake/create-scan.js';
+import { EntitlementError } from '../services/billing/entitlements.js';
 import {
   BaselineNotEligibleError,
   ReadinessNotOnPlanError,
@@ -148,6 +149,22 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
             code: 'QUOTE_MISMATCH',
             message: error.message,
             details: { currentCredits: error.currentCredits, acceptedQuote: error.acceptedQuote },
+          },
+        });
+        return;
+      }
+      // FR-079, same envelope as /scans's own EntitlementError case.
+      if (error instanceof EntitlementError) {
+        res.status(403).json({
+          error: {
+            code:
+              error.feature === 'CONCURRENCY' ? 'CONCURRENT_LIMIT_REACHED' : 'PLAN_UPGRADE_REQUIRED',
+            message: error.message,
+            details: {
+              feature: error.feature,
+              current: error.currentTier,
+              requiredTier: error.requiredTier,
+            },
           },
         });
         return;
