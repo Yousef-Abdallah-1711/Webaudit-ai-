@@ -760,6 +760,11 @@ model BillingEvent {
   id         String   @id
   type       String
   receivedAt DateTime @default(now())
+  /// Set only once the event's effect (subscribe/renew/purchase/...) has
+  /// actually applied. Null means "received but not yet applied" — a retry
+  /// of such an event re-attempts the effect rather than treating the row's
+  /// mere existence as "handled" (2026-09-02 review, Finding 6).
+  appliedAt  DateTime?
   /// The verified payload, for an operator reconciling a disputed charge.
   payload    Json?
 

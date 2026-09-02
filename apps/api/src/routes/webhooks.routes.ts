@@ -100,17 +100,25 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
         return;
       }
 
-      // Idempotency claim. A duplicate delivery stops here.
+      // Idempotency: a row that already exists AND was already applied is a
+      // genuine duplicate delivery — no-op. A row that exists but was never
+      // applied (a prior attempt's effect failed) is retried below rather
+      // than treated as handled.
       try {
         await db.billingEvent.create({
           data: { id: event.id, type: event.type, payload: parsedBody as Prisma.InputJsonValue },
         });
       } catch (error) {
         if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-          res.status(200).json({ received: true, duplicate: true });
-          return;
+          const existing = await db.billingEvent.findUniqueOrThrow({ where: { id: event.id } });
+          if (existing.appliedAt !== null) {
+            res.status(200).json({ received: true, duplicate: true });
+            return;
+          }
+          // Fall through: received but never applied, retry the effect now.
+        } else {
+          throw error;
         }
-        throw error;
       }
 
       const { userId, planId, credits, external } = event.data;
@@ -137,16 +145,28 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
             if (userId && credits) await purchaseCredits(db, { userId, credits });
             break;
           default:
-            // Acknowledged, ignored.
+            // Acknowledged, ignored — still counts as applied.
             break;
         }
+        await db.billingEvent.update({ where: { id: event.id }, data: { appliedAt: new Date() } });
       } catch (error) {
-        // The event is recorded; log the application failure but still 200 so
-        // the provider does not spin on a retry we cannot succeed at (a webhook
-        // for a deleted user, a plan that was removed). An operator reconciles
-        // from `BillingEvent.payload`.
+        // Unlike before: this is a 500, not a 200. The row exists with
+        // appliedAt still null, so the provider's retry re-enters this same
+        // branch and tries the effect again. changePlan/cancelSubscription
+        // converge to a target state and are safe to re-invoke.
+        // subscribe/renewSubscription/purchaseCredits are NOT fully
+        // idempotent under retry: each unconditionally grants a credit lot
+        // (grantLot has no dedup key), so a crash in the single await
+        // between the effect committing above and the appliedAt write above
+        // could cause a retry to double-grant. That is a known, narrower
+        // residual risk versus the old bug this fixes (any transient failure,
+        // anywhere in this flow, permanently and silently lost the grant).
+        // Closing it fully needs an idempotency key on the grant itself
+        // (e.g. a billingEventId column on CreditTransaction) — deferred as
+        // its own follow-up, not part of this fix. BillingEvent.payload
+        // still allows manual reconciliation either way.
         console.error(`[webhook] ${event.type} (${event.id}) failed to apply:`, error);
-        res.status(200).json({ received: true, applied: false });
+        res.status(500).json({ error: { code: 'WEBHOOK_APPLY_FAILED', message: 'Failed to apply webhook effect.' } });
         return;
       }
 

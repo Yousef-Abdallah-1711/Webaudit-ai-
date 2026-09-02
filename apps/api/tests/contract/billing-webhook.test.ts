@@ -106,6 +106,40 @@ describe('POST /webhooks/billing', () => {
     expect(await testDb.billingEvent.count({ where: { id: 'evt_purchase_1' } })).toBe(1);
   });
 
+  it('retries the effect on a re-delivery when the first attempt never applied it', async () => {
+    const userId = await makeUser('wh4@example.com');
+    await testDb.subscription.create({
+      data: { userId, planId: 'pro', status: 'ACTIVE', periodStart: new Date(), periodEnd: new Date(Date.now() + 30 * 86_400_000) },
+    });
+    // Simulate a prior attempt that inserted the event row but crashed before
+    // the effect ran: appliedAt is null, no credits were granted.
+    await testDb.billingEvent.create({ data: { id: 'evt_retry_1', type: 'credits.purchased' } });
+
+    const { raw, sig } = sign({ id: 'evt_retry_1', type: 'credits.purchased', data: { userId, credits: 500 } });
+    const res = await request(app)
+      .post('/webhooks/billing')
+      .set('content-type', 'application/json')
+      .set('x-webhook-signature', sig)
+      .send(raw)
+      .expect(200);
+    expect((res.body as { applied: boolean }).applied).toBe(true);
+    expect((await balanceOf(testDb, userId)).purchased).toBe(500);
+  });
+
+  it('responds 500 (not 200) when the effect throws, so the provider retries', async () => {
+    // No such user id -> subscribe() throws.
+    const { raw, sig } = sign({ id: 'evt_fail_1', type: 'subscription.activated', data: { userId: 'does-not-exist', planId: 'pro' } });
+    await request(app)
+      .post('/webhooks/billing')
+      .set('content-type', 'application/json')
+      .set('x-webhook-signature', sig)
+      .send(raw)
+      .expect(500);
+
+    const event = await testDb.billingEvent.findUniqueOrThrow({ where: { id: 'evt_fail_1' } });
+    expect(event.appliedAt).toBeNull();
+  });
+
   it('acknowledges an unknown event type without applying anything', async () => {
     const { raw, sig } = sign({ id: 'evt_x', type: 'invoice.finalized', data: {} });
     await request(app)
