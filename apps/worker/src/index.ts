@@ -51,12 +51,13 @@ import {
   createTimeoutSweepHandler,
   scheduleTimeoutSweep,
 } from './orchestrator/timeout-scheduler.js';
-import {
-  createBillingSweepHandler,
-  scheduleBillingSweeps,
-} from './orchestrator/billing-sweeps.js';
+import { createBillingSweepHandler, scheduleBillingSweeps } from './orchestrator/billing-sweeps.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
-import { installTerminalTeardown } from './workspace/teardown.js';
+import {
+  installTerminalTeardown,
+  destroyScanWorkspace,
+  processCleanupOwner,
+} from './workspace/teardown.js';
 import type { EventPublisher } from './orchestrator/emit.js';
 
 export const SERVICE_NAME = '@webaudit/worker' as const;
@@ -206,6 +207,19 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         reverify: createReverifyHandler({ db, publisher }),
         // FR-078 / FR-092 (T188/T189): renewals, renewal warnings, retention.
         billingSweep: createBillingSweepHandler({ db }),
+        // T104 gap fix (Finding 10): apps/api's /scans/:id/cancel writes
+        // CANCELLED directly and never reaches this process's transition(),
+        // so the terminal-teardown observer above never fires for it. This
+        // handler is the out-of-band path apps/api's teardown-producer.ts
+        // enqueues onto the maintenance queue instead.
+        workspaceTeardown: async (data) => {
+          await destroyScanWorkspace({
+            baseDir: workspaceBaseDir,
+            scanId: data.scanId,
+            db,
+            owner: processCleanupOwner,
+          });
+        },
       };
     })();
   const workers = createWorkers({ connection, handlers });

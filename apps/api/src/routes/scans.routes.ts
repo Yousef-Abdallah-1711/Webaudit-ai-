@@ -16,11 +16,12 @@
  * with the timeout sweep and `apps/worker`'s `terminal-refund.ts` observer)
  * and `refundPartial` (single-shot per debit) that those call sites use —
  * cancellation never goes through `transition()`, so it cannot rely on that
- * observer and has to do this at the source. What it does *not* do: the
- * workspace-teardown observers registered in `state-machine.ts` are
- * process-local to `apps/worker` and never fire for a row this process
- * writes. That gap is follow-up work; recorded in PROGRESS.md rather than
- * left as a silent gap.
+ * observer and has to do this at the source. The workspace-teardown observers
+ * registered in `state-machine.ts` are process-local to `apps/worker` and
+ * likewise never fire for a row this process writes, so this handler enqueues
+ * a `workspace-teardown` job onto the maintenance queue directly (see
+ * `teardown-producer.ts`) instead of relying on that observer (2026-09-02
+ * review, Finding 10 — previously a documented gap).
  */
 
 import { Router, type Response } from 'express';
@@ -59,12 +60,17 @@ import {
   createScanPhaseProducer,
   type ScanPhaseProducer,
 } from '../services/queue/scan-phase-producer.js';
+import {
+  createTeardownProducer,
+  type TeardownProducer,
+} from '../services/queue/teardown-producer.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
 
 export interface ScanRoutesDeps {
   probe?: ControlProbe;
   producer?: ScanPhaseProducer;
+  teardownProducer?: TeardownProducer;
   resolveRequiredControlLevel?: (moduleType: string) => ControlLevel | Promise<ControlLevel>;
   /** T171's seam — see `CreateScanDeps.checkRepositoryConnection`. */
   checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
@@ -96,6 +102,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
   const router = Router();
   const probe = deps.probe ?? createSafeNetProbe();
   const producer = deps.producer ?? createScanPhaseProducer();
+  const teardownProducer = deps.teardownProducer ?? createTeardownProducer();
   const resolveRequiredControlLevel = deps.resolveRequiredControlLevel ?? (() => 'NONE' as const);
 
   router.use(requireAuth);
@@ -159,9 +166,16 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       if (error instanceof EntitlementError) {
         res.status(403).json({
           error: {
-            code: error.feature === 'CONCURRENCY' ? 'CONCURRENT_LIMIT_REACHED' : 'PLAN_UPGRADE_REQUIRED',
+            code:
+              error.feature === 'CONCURRENCY'
+                ? 'CONCURRENT_LIMIT_REACHED'
+                : 'PLAN_UPGRADE_REQUIRED',
             message: error.message,
-            details: { feature: error.feature, current: error.currentTier, requiredTier: error.requiredTier },
+            details: {
+              feature: error.feature,
+              current: error.currentTier,
+              requiredTier: error.requiredTier,
+            },
           },
         });
         return;
@@ -248,6 +262,17 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
             : { error: { code: 'ALREADY_TERMINAL', message: 'This scan has already ended.' } },
         );
       return;
+    }
+
+    // FR-090/SC-015's fourth exit path: cancellation never reaches apps/worker's
+    // transition() (see this route's own module note), so the workspace
+    // teardown observer registered there never fires. Enqueue it directly,
+    // out-of-band — a failure here must not undo the cancellation that already
+    // committed above.
+    try {
+      await teardownProducer.enqueueTeardown({ scanId: pathId(req) });
+    } catch (error) {
+      console.error(`[scans.cancel] teardown enqueue failed for scan ${pathId(req)}:`, error);
     }
 
     // Refund whatever was charged for work that had not yet run. Cancellation

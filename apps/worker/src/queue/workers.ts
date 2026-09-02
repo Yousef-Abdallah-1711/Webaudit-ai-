@@ -67,6 +67,8 @@ export const JOB_NAMES = {
   reverify: 'reverify',
   /** `billing-sweeps.ts` → `maintenanceQueue.add('billing-sweep', …, { repeat })` (T188/T189). */
   billingSweep: 'billing-sweep',
+  /** `apps/api`'s `teardown-producer.ts` -> `maintenanceQueue.add('workspace-teardown', ...)`. */
+  workspaceTeardown: 'workspace-teardown',
 } as const;
 
 export type KnownJobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -119,6 +121,12 @@ export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep')
 
 /** The repeatable billing sweep (renewals, renewal warnings, retention) carries no per-run data. */
 export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep') }).strict();
+
+/**
+ * A cancelled scan's workspace, torn down out-of-band from `apps/api` (T104 gap
+ * fix, Finding 10). `.strict()` for the same reason as the other schemas.
+ */
+const workspaceTeardownJobSchema = z.object({ scanId: z.string().min(1).max(64) }).strict();
 
 /**
  * A targeted re-verification (T154). `.strict()` for the same reason as the
@@ -184,6 +192,8 @@ export interface JobHandlers {
   readonly billingSweep?: () => Promise<void>;
   /** A targeted re-verification (T150). */
   readonly reverify?: (data: ReverifyJobData, job: JobRef) => Promise<void>;
+  /** A cancelled scan's workspace, torn down out-of-band from apps/api (T104 gap fix). */
+  readonly workspaceTeardown?: (data: { scanId: string }, job: JobRef) => Promise<void>;
 }
 
 /**
@@ -259,7 +269,11 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       billingSweepJobSchema.parse(job.data);
       const handler = handlers.billingSweep;
       if (handler === undefined) {
-        throw new JobNotImplementedError(job, 'T188', 'The billing sweep (renewals, warnings, retention)');
+        throw new JobNotImplementedError(
+          job,
+          'T188',
+          'The billing sweep (renewals, warnings, retention)',
+        );
       }
       await handler();
       return;
@@ -270,6 +284,20 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       const handler = handlers.reverify;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T150', 'The targeted re-verification runner');
+      }
+      await handler(data, job);
+      return;
+    }
+
+    case JOB_NAMES.workspaceTeardown: {
+      const data = workspaceTeardownJobSchema.parse(job.data);
+      const handler = handlers.workspaceTeardown;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(
+          job,
+          'this task',
+          'Cancellation-triggered workspace teardown',
+        );
       }
       await handler(data, job);
       return;
