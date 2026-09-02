@@ -547,9 +547,9 @@ component's own module note — is what makes the exception visible rather than 
 
 ## Open items carried into planning
 
-Three items are recorded rather than resolved. The first two are amendments to documents this
+Four items are recorded rather than resolved. The first two are amendments to documents this
 command must not silently rewrite; the third is a product decision engineering has defaulted rather
-than made:
+than made; the fourth is a lint-coverage gap patched by hand pending a proper rule:
 
 1. **FR-025 needs amending** to distinguish platform egress from auditing-browser egress (R6). As
    written it is unsatisfiable without breaking realistic page measurement.
@@ -565,3 +565,4 @@ than made:
    the limiter. The mechanism is correct and adversarially tested; the *value* needs product
    sign-off, and it is a number customers and audited third parties can both read, so it is not
    purely internal. Raising or lowering it is a one-line change with no code impact.
+4. **CSS Modules are not covered by the design-adherence lint's raw-value rule.** `_adherence.oxlintrc.json`'s `no-restricted-syntax` matches JS/JSX `Literal` AST nodes only, so a `.module.css` file with a raw `px` value passes `pnpm lint` today even though CLAUDE.md states "a raw hex or raw px value fails `pnpm lint`." Two known instances fixed by hand (2026-09-02 review, Finding 15); the rule itself is not yet extended to `.css` files. Needs either a CSS-aware lint rule or a documented exception.

@@ -3,18 +3,18 @@
 .layout {
   display: grid;
   grid-template-columns: 1fr 320px;
-  gap: 20px;
+  gap: var(--space-5);
   align-items: start;
 }
 .mainCol {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 .sideCol {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .notice {
@@ -31,7 +31,7 @@
 .balanceGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: var(--space-5);
 }
 .balanceValue {
   font: var(--type-h3);
@@ -60,7 +60,7 @@
   width: 96px;
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 12px; /* no --type-* token equals 12px; excepted (Finding 15) */
   color: var(--text-muted);
 }
 .moveReason {
@@ -69,14 +69,14 @@
 .drewFrom {
   margin-left: 8px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 11px; /* no --type-* token equals 11px; excepted (Finding 15) */
   color: var(--text-muted);
 }
 .moveAmount {
   margin-left: auto;
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: 13px; /* no --type-* token equals 13px; excepted (Finding 15) */
   color: var(--text-secondary);
 }
 .moveAmountUp {
@@ -93,7 +93,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px;
+  padding: var(--space-4);
   border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-card);
   background: var(--surface-page);
@@ -107,12 +107,12 @@
   gap: 8px;
 }
 .tierName {
-  font-size: 15px;
+  font-size: 15px; /* no --type-* token equals 15px; nearest is --type-eyebrow at 15.2px, not exact — excepted (Finding 15) */
   font-weight: 700;
 }
 .tierCredits {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 12px; /* no --type-* token equals 12px; excepted (Finding 15) */
   color: var(--text-secondary);
 }
 .tierFeat {
@@ -138,7 +138,7 @@
   border-radius: var(--radius-control);
   background: var(--surface-page);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 14px; /* matches --type-small's 14px, but that token is a font shorthand (weight/line-height/font-family) that would override this rule's font-family: var(--font-mono) — excepted (Finding 15) */
   color: var(--text-primary);
 }
 
