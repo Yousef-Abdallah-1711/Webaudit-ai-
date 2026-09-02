@@ -119,4 +119,39 @@ describe('FR-016 / FR-079 — entitlements name the permitting tier', () => {
     const err = new EntitlementError('CUSTOM_CAPABILITY', 'free', null, 'x');
     expect(err.requiredTier).toBeNull();
   });
+
+  it('refuses a second concurrent scan on a different target once the plan limit is reached', async () => {
+    const userId = await makeUser();
+    const res = await request(app).post('/auth/login').send(CREDS).expect(200);
+    const token = (res.body as { accessToken: string }).accessToken;
+    const auth = { Authorization: `Bearer ${token}` };
+
+    const targetA = await testDb.target.create({
+      data: { userId, inputType: 'URL', canonicalValue: 'https://concurrency-a.example.com', displayName: 'a' },
+    });
+    const targetB = await testDb.target.create({
+      data: { userId, inputType: 'URL', canonicalValue: 'https://concurrency-b.example.com', displayName: 'b' },
+    });
+    const quote = (
+      await request(app).post('/scans/quote').set(auth).send({ targetId: targetA.id, modules: ['SECURITY'] })
+    ).body as { quote: { credits: number } };
+
+    await request(app)
+      .post('/scans')
+      .set(auth)
+      .send({ targetId: targetA.id, modules: ['SECURITY'], acceptedQuote: quote.quote.credits })
+      .expect(201);
+
+    const before = await testDb.creditTransaction.count({ where: { userId, type: 'DEBIT' } });
+
+    const second = await request(app)
+      .post('/scans')
+      .set(auth)
+      .send({ targetId: targetB.id, modules: ['SECURITY'], acceptedQuote: quote.quote.credits })
+      .expect(403);
+    expect((second.body as { error: { code: string } }).error.code).toBe('CONCURRENT_LIMIT_REACHED');
+
+    const after = await testDb.creditTransaction.count({ where: { userId, type: 'DEBIT' } });
+    expect(after).toBe(before);
+  });
 });

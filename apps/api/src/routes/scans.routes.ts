@@ -35,6 +35,7 @@ import {
 import { refundForUndelivered } from '@webaudit/config';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
+import { EntitlementError } from '../services/billing/entitlements.js';
 import { InsufficientCreditsError } from '../services/credits/debit.js';
 import { refundPartial } from '../services/credits/refund.js';
 import { ControlLevelRequiredError } from '../services/control-gate/reconfirm.js';
@@ -151,6 +152,16 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
             code: 'PLAN_UPGRADE_REQUIRED',
             message: error.message,
             details: { inputType: error.inputType, requiredTier: error.requiredTier },
+          },
+        });
+        return;
+      }
+      if (error instanceof EntitlementError) {
+        res.status(403).json({
+          error: {
+            code: error.feature === 'CONCURRENCY' ? 'CONCURRENT_LIMIT_REACHED' : 'PLAN_UPGRADE_REQUIRED',
+            message: error.message,
+            details: { feature: error.feature, current: error.currentTier, requiredTier: error.requiredTier },
           },
         });
         return;

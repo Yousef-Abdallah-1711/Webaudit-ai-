@@ -46,6 +46,7 @@ function isUniqueConstraintViolation(error: unknown, columns: readonly string[])
       : '';
   return columns.every((c) => asText.includes(c)) || asText === '';
 }
+import { assertConcurrencyHeadroom } from '../billing/entitlements.js';
 import { debit, InsufficientCreditsError } from '../credits/debit.js';
 import { totalAvailable } from '../credits/balance.js';
 import { TargetNotAvailableError, type ControlProbe } from '../control-gate/verify.js';
@@ -167,6 +168,12 @@ export async function createScan(
     });
     throw new PlanUpgradeRequiredError(target.inputType, permitting[0]?.id ?? null);
   }
+
+  // FR-079: refuse before any debit once the plan's concurrent-scan limit is
+  // already reached. `assertConcurrencyHeadroom` re-resolves the effective
+  // plan itself (a fresh, small query) rather than reusing the narrower
+  // `plan` shape fetched above, which only selected the fields FR-016 needs.
+  await assertConcurrencyHeadroom(db, input.userId);
 
   // T171 / FR-007: a REPOSITORY audit cannot be delivered without a working
   // GitHub credential, and whether the credential still works is only knowable
