@@ -221,7 +221,12 @@ describe('POST /scans/upload', () => {
     };
     expect(body.error.code).toBe('PLAN_UPGRADE_REQUIRED');
     expect(body.error.details.inputType).toBe('ARCHIVE');
-    expect(body.error.details.requiredTier).toBe('pro');
+    // The cheapest active tier that permits an uploaded archive. Per the
+    // spec's Plan Tiers table that is Starter ("Uploaded archive: No | Yes |
+    // Yes | Yes"); this assertion read `pro` only while the test helper
+    // seeded just free + pro. Phase 7's `seedPlans()` seeds all four tiers,
+    // so the named tier is now the correct one.
+    expect(body.error.details.requiredTier).toBe('starter');
     expect(storage.puts).toEqual([]);
   });
 

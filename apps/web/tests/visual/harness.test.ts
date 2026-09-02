@@ -186,9 +186,15 @@ describe('apps/web vs. design-system/reference-pages/, at both viewports', () =>
   it.todo(
     `Home page matches within ${String(MAX_DIFF_RATIO * 100)}% at ${forEachViewport} — blocked on a mobile-nav design decision, not on T240's own port; see PROGRESS.md`,
   );
-  // T193 (Phase 7, US5) ports Pricing.jsx. Not this phase.
+  // T193 (Phase 7, US5) ports Pricing.jsx — done. It stays `it.todo` for the
+  // same reason the Home page and the five auth pages above do: `PricingPage`
+  // renders inside the same `PublicPage`/`PublicHeader` shell, whose
+  // pre-existing lack of a mobile-nav treatment overflows every public page at
+  // 390 regardless of the page's own content, and a few desktop-1440
+  // comparisons land ~1.5-3% over the 0.5% bar from the same shared header.
+  // The port itself is asserted in `apps/web/tests/unit/billing-and-pricing.test.ts`.
   it.todo(
-    `Pricing matches within ${String(MAX_DIFF_RATIO * 100)}% at ${forEachViewport} — unblocked by T193, not this phase`,
+    `Pricing matches within ${String(MAX_DIFF_RATIO * 100)}% at ${forEachViewport} — T193's port is done; blocked at 390 on PublicHeader's mobile-nav gap (same root cause as the Home page above), with a few desktop comparisons also ~1.5-3% over. See PROGRESS.md's known-deviations list`,
   );
 });
 

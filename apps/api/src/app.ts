@@ -27,6 +27,8 @@ import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
 import { scansRoutes, type ScanRoutesDeps } from './routes/scans.routes.js';
 import { intakeRoutes, type IntakeRoutesDeps } from './routes/intake.routes.js';
+import { billingRoutes } from './routes/billing.routes.js';
+import { webhooksRoutes, type WebhookRoutesDeps } from './routes/webhooks.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
 import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
 import { readinessRoutes, type ReadinessRoutesDeps } from './routes/readiness.routes.js';
@@ -76,6 +78,12 @@ export interface AppDeps {
    * needs neither a GitHub token nor an R2 bucket.
    */
   intake?: IntakeRoutesDeps;
+  /**
+   * Seam for the billing webhook — the HMAC signing secret and the header it
+   * arrives in. Defaults to `BILLING_WEBHOOK_SECRET` / `x-webhook-signature`;
+   * a suite injects a known secret so it can sign a test payload.
+   */
+  webhooks?: WebhookRoutesDeps;
 }
 
 /**
@@ -238,6 +246,13 @@ export function createApp(deps: AppDeps): Express {
 
   app.use(securityHeaders());
   app.use(cors(corsOptions()));
+
+  // Ahead of `express.json()`: the billing webhook verifies an HMAC over the
+  // *raw* request body, and the provider sends `application/json` — so the JSON
+  // parser would consume the stream before the signature could be checked. The
+  // router installs its own `express.raw` on that one path (T187).
+  app.use(webhooksRoutes(deps.db, deps.webhooks ?? {}));
+
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 
@@ -293,6 +308,10 @@ export function createApp(deps: AppDeps): Express {
   // Root-mounted for the same reason — `/scans/:id/readiness[...]`. The mailer
   // is threaded through so the congratulations email uses the same transport.
   app.use(readinessRoutes(deps.db, { mailer, ...(deps.readiness ?? {}) }));
+
+  // `/billing/*` — plans, the movement-history receipt, subscribe/change/cancel,
+  // and credit purchase. All behind requireAuth, declared inside the router.
+  app.use(billingRoutes(deps.db));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'No such route.' } });

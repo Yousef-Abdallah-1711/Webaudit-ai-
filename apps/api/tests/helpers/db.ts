@@ -7,6 +7,7 @@
  */
 
 import { PrismaClient } from '../../prisma/generated/client/index.js';
+import { PLAN_TIERS } from '@webaudit/config';
 
 const TEST_DB_URL =
   process.env['TEST_DATABASE_URL'] ??
@@ -40,6 +41,7 @@ const TABLES_TO_CLEAR = [
   'TargetVerification',
   'Target',
   'Subscription',
+  'BillingEvent',
   'RefreshToken',
   'EmailToken',
   'OAuthIdentity',
@@ -54,41 +56,16 @@ export async function resetDb(): Promise<void> {
   await testDb.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE;`);
 }
 
-/** The four tiers from spec.md. Idempotent, so any test may call it. */
+/**
+ * The four tiers from spec.md, from the one shared definition in
+ * `@webaudit/config` (so a test never drifts from `scripts/seed.ts`).
+ * Idempotent, so any test may call it.
+ */
 export async function seedPlans(): Promise<void> {
-  const plans = [
-    {
-      id: 'free',
-      name: 'Free',
-      monthlyCredits: 50,
-      creditsRecur: false,
-      allowedInputTypes: ['URL' as const],
-      allowLoadGeneration: false,
-      allowReadinessPass: false,
-      allowCreditPurchase: false,
-      allowCustomCapability: false,
-      concurrentScanLimit: 1,
-      queuePriority: 40,
-      retentionDays: 7,
-    },
-    {
-      id: 'pro',
-      name: 'Pro',
-      monthlyCredits: 1200,
-      creditsRecur: true,
-      allowedInputTypes: ['URL' as const, 'ARCHIVE' as const, 'REPOSITORY' as const],
-      allowLoadGeneration: true,
-      allowReadinessPass: true,
-      allowCreditPurchase: true,
-      allowCustomCapability: false,
-      concurrentScanLimit: 3,
-      queuePriority: 20,
-      retentionDays: 365,
-    },
-  ];
-  for (const p of plans) {
-    const { id, ...rest } = p;
-    await testDb.plan.upsert({ where: { id }, create: { id, ...rest }, update: rest });
+  for (const tier of PLAN_TIERS) {
+    const { id, ...rest } = tier;
+    const row = { ...rest, allowedInputTypes: [...rest.allowedInputTypes] };
+    await testDb.plan.upsert({ where: { id }, create: { id, ...row }, update: row });
   }
 }
 

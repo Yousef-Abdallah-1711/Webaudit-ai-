@@ -1,4 +1,9 @@
-import type { Mailer, ReadinessAchievedMail } from '../../src/services/email/mailer.js';
+import type {
+  Mailer,
+  ReadinessAchievedMail,
+  RenewalWarningMail,
+  RetentionWarningMail,
+} from '../../src/services/email/mailer.js';
 
 export interface CapturingMailer extends Mailer {
   clear(): void;
@@ -6,6 +11,8 @@ export interface CapturingMailer extends Mailer {
   lastResetToken(): string;
   sent(): ReadonlyArray<{ kind: string; email: string; token: string }>;
   readinessMails(): ReadonlyArray<{ email: string; mail: ReadinessAchievedMail }>;
+  renewalWarnings(): ReadonlyArray<{ email: string; mail: RenewalWarningMail }>;
+  retentionWarnings(): ReadonlyArray<{ email: string; mail: RetentionWarningMail }>;
 }
 
 /**
@@ -15,6 +22,8 @@ export interface CapturingMailer extends Mailer {
 export function createCapturingMailer(): CapturingMailer {
   const log: { kind: string; email: string; token: string }[] = [];
   const readiness: { email: string; mail: ReadinessAchievedMail }[] = [];
+  const renewal: { email: string; mail: RenewalWarningMail }[] = [];
+  const retention: { email: string; mail: RetentionWarningMail }[] = [];
   const lastOf = (kind: string): string => {
     const hit = [...log].reverse().find((e) => e.kind === kind);
     if (!hit) throw new Error(`no ${kind} email was sent`);
@@ -33,13 +42,25 @@ export function createCapturingMailer(): CapturingMailer {
       readiness.push({ email, mail });
       return Promise.resolve();
     },
+    sendRenewalWarning: (email, mail) => {
+      renewal.push({ email, mail });
+      return Promise.resolve();
+    },
+    sendRetentionWarning: (email, mail) => {
+      retention.push({ email, mail });
+      return Promise.resolve();
+    },
     clear: () => {
       log.length = 0;
       readiness.length = 0;
+      renewal.length = 0;
+      retention.length = 0;
     },
     lastVerificationToken: () => lastOf('verify'),
     lastResetToken: () => lastOf('reset'),
     sent: () => log,
     readinessMails: () => readiness,
+    renewalWarnings: () => renewal,
+    retentionWarnings: () => retention,
   };
 }

@@ -51,6 +51,10 @@ import {
   createTimeoutSweepHandler,
   scheduleTimeoutSweep,
 } from './orchestrator/timeout-scheduler.js';
+import {
+  createBillingSweepHandler,
+  scheduleBillingSweeps,
+} from './orchestrator/billing-sweeps.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
 import { installTerminalTeardown } from './workspace/teardown.js';
 import type { EventPublisher } from './orchestrator/emit.js';
@@ -200,6 +204,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // FR-059 (T150): the targeted re-verification runner. `apps/api`'s
         // assert-fixed route is its only producer.
         reverify: createReverifyHandler({ db, publisher }),
+        // FR-078 / FR-092 (T188/T189): renewals, renewal warnings, retention.
+        billingSweep: createBillingSweepHandler({ db }),
       };
     })();
   const workers = createWorkers({ connection, handlers });
@@ -213,6 +219,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       console.error(
         `[worker] could not schedule the timeout sweep; stuck scans will not be ` +
           `recovered until this is resolved: ` +
+          `${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+    void scheduleBillingSweeps(queues.maintenance).catch((error: unknown) => {
+      console.error(
+        `[worker] could not schedule the billing sweep; renewals, renewal warnings and ` +
+          `report retention will not run until this is resolved: ` +
           `${error instanceof Error ? error.message : String(error)}`,
       );
     });

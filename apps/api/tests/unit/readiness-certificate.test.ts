@@ -59,6 +59,7 @@ describe('generateReadinessCertificate', () => {
         return Promise.resolve();
       },
       getObject: () => Promise.reject(new Error('not used')),
+      deleteScanObjects: () => Promise.resolve(0),
     };
 
     const { certificateKey } = await generateReadinessCertificate(storage, input);

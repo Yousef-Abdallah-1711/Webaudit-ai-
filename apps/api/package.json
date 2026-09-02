@@ -13,6 +13,9 @@
     "./control-gate": "./src/services/control-gate/index.ts",
     "./issues": "./src/services/issues/index.ts",
     "./intake": "./src/services/intake/index.ts",
+    "./billing": "./src/services/billing/index.ts",
+    "./storage-retention": "./src/services/storage/retention.ts",
+    "./email": "./src/services/email/mailer.ts",
     "./test-db": "./tests/helpers/db.ts"
   },
   "scripts": {

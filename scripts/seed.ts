@@ -11,73 +11,17 @@
 
 import { PrismaClient } from '../apps/api/prisma/generated/client/index.js';
 import { ensurePlatformCapabilities } from '../apps/api/src/services/registry/platform-capabilities.js';
+import { PLAN_TIERS } from '@webaudit/config';
 
 const prisma = new PrismaClient();
 
 /**
- * The free allocation is deliberately below the 80 credits a full audit costs.
- * A new user audits two or three areas of their choosing and sees real findings,
- * but complete coverage requires a plan. That is the conversion mechanism, not
- * an oversight — see spec.md, Plan Tiers and Entitlements.
+ * The tier table now lives in `@webaudit/config` (`PLAN_TIERS`) so this script,
+ * the test helper, and the billing services never drift. The free allocation is
+ * deliberately below the 80 credits a full audit costs — the conversion
+ * mechanism, not an oversight (spec.md, Plan Tiers and Entitlements).
  */
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    monthlyCredits: 50,
-    creditsRecur: false, // one-time grant
-    allowedInputTypes: ['URL'] as const,
-    allowLoadGeneration: false,
-    allowReadinessPass: false,
-    allowCreditPurchase: false, // keeps the free tier an evaluation, not a route around subscribing
-    allowCustomCapability: false,
-    concurrentScanLimit: 1,
-    queuePriority: 40, // lower runs sooner
-    retentionDays: 7,
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    monthlyCredits: 300,
-    creditsRecur: true,
-    allowedInputTypes: ['URL', 'ARCHIVE'] as const,
-    allowLoadGeneration: false,
-    allowReadinessPass: true,
-    allowCreditPurchase: true,
-    allowCustomCapability: false,
-    concurrentScanLimit: 1,
-    queuePriority: 30,
-    retentionDays: 30,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    monthlyCredits: 1_200,
-    creditsRecur: true,
-    allowedInputTypes: ['URL', 'ARCHIVE', 'REPOSITORY'] as const,
-    allowLoadGeneration: true, // still gated on VERIFIED control per FR-017
-    allowReadinessPass: true,
-    allowCreditPurchase: true,
-    allowCustomCapability: false,
-    concurrentScanLimit: 3,
-    queuePriority: 20,
-    retentionDays: 365,
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    monthlyCredits: 4_000,
-    creditsRecur: true,
-    allowedInputTypes: ['URL', 'ARCHIVE', 'REPOSITORY'] as const,
-    allowLoadGeneration: true,
-    allowReadinessPass: true,
-    allowCreditPurchase: true,
-    allowCustomCapability: true, // requires sandbox-runner; upload returns 503 until then
-    concurrentScanLimit: 6,
-    queuePriority: 10,
-    retentionDays: 730,
-  },
-];
+const PLANS = PLAN_TIERS;
 
 async function main(): Promise<void> {
   console.log('Seeding plan tiers...');

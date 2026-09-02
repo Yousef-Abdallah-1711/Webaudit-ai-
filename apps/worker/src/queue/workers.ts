@@ -65,6 +65,8 @@ export const JOB_NAMES = {
   timeoutSweep: 'timeout-sweep',
   /** `apps/api`'s `reverify-producer.ts` → `reverifyQueue.add('reverify', …)` (T154). */
   reverify: 'reverify',
+  /** `billing-sweeps.ts` → `maintenanceQueue.add('billing-sweep', …, { repeat })` (T188/T189). */
+  billingSweep: 'billing-sweep',
 } as const;
 
 export type KnownJobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -114,6 +116,9 @@ export const questionnaireTimeoutJobSchema = z
 
 /** The repeatable FR-038 sweep carries no per-run data. */
 export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep') }).strict();
+
+/** The repeatable billing sweep (renewals, renewal warnings, retention) carries no per-run data. */
+export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep') }).strict();
 
 /**
  * A targeted re-verification (T154). `.strict()` for the same reason as the
@@ -175,6 +180,8 @@ export interface JobHandlers {
   ) => Promise<void>;
   /** The repeatable FR-038 sweep. Carries no data. */
   readonly timeoutSweep?: () => Promise<void>;
+  /** The repeatable billing sweep (T188/T189). Carries no data. */
+  readonly billingSweep?: () => Promise<void>;
   /** A targeted re-verification (T150). */
   readonly reverify?: (data: ReverifyJobData, job: JobRef) => Promise<void>;
 }
@@ -243,6 +250,16 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       const handler = handlers.timeoutSweep;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T101', 'The FR-038 scan timeout sweep');
+      }
+      await handler();
+      return;
+    }
+
+    case JOB_NAMES.billingSweep: {
+      billingSweepJobSchema.parse(job.data);
+      const handler = handlers.billingSweep;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T188', 'The billing sweep (renewals, warnings, retention)');
       }
       await handler();
       return;

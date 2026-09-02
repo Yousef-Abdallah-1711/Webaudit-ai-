@@ -270,6 +270,11 @@ model Subscription {
   externalCustomerId     String?
   externalSubscriptionId String?
 
+  /// FR-078: set when the pre-renewal "you are about to lose N plan credits"
+  /// warning has been sent for the current period, so the sweep does not
+  /// re-send it. Cleared on renewal.
+  renewalWarningSentAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -418,6 +423,15 @@ model Scan {
   startedAt     DateTime?
   completedAt   DateTime?
   failureReason String?
+
+  /// FR-092: set when the "this report is approaching removal" warning has been
+  /// sent, so the retention sweep does not re-send it.
+  retentionWarningSentAt DateTime?
+  /// FR-092: set when the retention sweep has removed the report's findings and
+  /// artifacts. The report route then returns a "removed" response rather than a
+  /// synthesized one; the row itself survives so the movement history still
+  /// references it.
+  reportRemovedAt DateTime?
 
   /// FR-090: the cleanup owner reads this and destroys it on every exit path.
   workspacePath String?
@@ -728,4 +742,22 @@ model AuditLogEntry {
 
   @@index([actorId, createdAt])
   @@index([subjectType, subjectId])
+}
+
+/// T187 — the billing webhook's idempotency ledger.
+///
+/// The `id` is the *external* event id from the payment provider. A second
+/// delivery of the same event (providers retry aggressively) finds the row
+/// already here and is acknowledged without re-applying its effect — a renewal
+/// granted twice, or a purchase credited twice, is exactly the class of bug
+/// FR-078/SC-022 forbid.
+model BillingEvent {
+  /// The provider's event id, verbatim. Not a cuid.
+  id         String   @id
+  type       String
+  receivedAt DateTime @default(now())
+  /// The verified payload, for an operator reconciling a disputed charge.
+  payload    Json?
+
+  @@index([type, receivedAt])
 }

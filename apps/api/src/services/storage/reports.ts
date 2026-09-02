@@ -20,12 +20,24 @@
  * bucket.
  */
 
-import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  ListObjectsV2Command,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 
 export interface ReportStorage {
   /** `key` is relative to the scan's own prefix — callers never see the full path. */
   putObject(scanId: string, key: string, body: Uint8Array, contentType: string): Promise<void>;
   getObject(scanId: string, key: string): Promise<Uint8Array>;
+  /**
+   * Delete every object under `scans/<scanId>/`. This is what makes FR-092's
+   * retention removal (and FR-090's workspace destruction, once screenshots are
+   * stored) a single prefix operation. Returns the count removed.
+   */
+  deleteScanObjects(scanId: string): Promise<number>;
 }
 
 /** `scans/<scanId>/<key>` — every object for a scan lives under one prefix. */
@@ -84,6 +96,37 @@ export function createReportStorage(options: ReportStorageOptions = optionsFromE
         throw new Error(`No object at scans/${scanId}/${key}.`);
       }
       return result.Body.transformToByteArray();
+    },
+    async deleteScanObjects(scanId): Promise<number> {
+      if (scanId.trim() === '' || scanId.includes('..') || scanId.includes('/')) {
+        throw new Error(`Refusing a scan prefix of an unexpected shape: "${scanId}".`);
+      }
+      const prefix = `scans/${scanId}/`;
+      let removed = 0;
+      let continuationToken: string | undefined;
+      do {
+        const listed = await client.send(
+          new ListObjectsV2Command({
+            Bucket: options.bucket,
+            Prefix: prefix,
+            ...(continuationToken === undefined ? {} : { ContinuationToken: continuationToken }),
+          }),
+        );
+        const keys = (listed.Contents ?? [])
+          .map((o) => o.Key)
+          .filter((k): k is string => typeof k === 'string');
+        if (keys.length > 0) {
+          await client.send(
+            new DeleteObjectsCommand({
+              Bucket: options.bucket,
+              Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+            }),
+          );
+          removed += keys.length;
+        }
+        continuationToken = listed.IsTruncated === true ? listed.NextContinuationToken : undefined;
+      } while (continuationToken !== undefined);
+      return removed;
     },
   };
 }

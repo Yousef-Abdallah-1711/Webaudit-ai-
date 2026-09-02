@@ -364,3 +364,86 @@ export function startReadiness(
     body: { acceptedQuote },
   });
 }
+
+// ─── Billing and plans (US5) ────────────────────────────────────────────────
+
+export type PlanId = 'free' | 'starter' | 'pro' | 'business';
+export type SubscribablePlanId = 'starter' | 'pro' | 'business';
+
+export interface Plan {
+  readonly id: PlanId;
+  readonly name: string;
+  readonly monthlyCredits: number;
+  readonly creditsRecur: boolean;
+  readonly allowedInputTypes: readonly string[];
+  readonly allowLoadGeneration: boolean;
+  readonly allowReadinessPass: boolean;
+  readonly allowCreditPurchase: boolean;
+  readonly allowCustomCapability: boolean;
+  readonly concurrentScanLimit: number;
+  readonly queuePriority: number;
+  readonly retentionDays: number;
+}
+
+export function getPlans(): Promise<{ plans: readonly Plan[] }> {
+  return request('/billing/plans');
+}
+
+/**
+ * FR-078: the two credit lifetimes stay distinct. `plan` credits expire at
+ * renewal, `purchased` credits never do, and a debit's `drewFrom` records
+ * which balance each movement was taken from (scenario 6).
+ */
+export interface CreditBalanceView {
+  readonly plan: number;
+  readonly purchased: number;
+  readonly planExpiresAt: string | null;
+}
+
+export interface CreditMovement {
+  readonly id: string;
+  readonly type: 'GRANT' | 'DEBIT' | 'REFUND' | 'EXPIRE';
+  readonly amount: number;
+  readonly reason: string | null;
+  readonly scanId: string | null;
+  readonly issueId: string | null;
+  readonly createdAt: string;
+  readonly drewFrom: Record<string, number>;
+}
+
+export interface SubscriptionView {
+  readonly planId: PlanId;
+  readonly status: string;
+  readonly periodStart?: string;
+  readonly periodEnd: string;
+  readonly cancelAtPeriodEnd: boolean;
+}
+
+export function getCredits(): Promise<{
+  balance: CreditBalanceView;
+  subscription: SubscriptionView | null;
+  movements: readonly CreditMovement[];
+}> {
+  return request('/billing/credits');
+}
+
+export function subscribe(planId: SubscribablePlanId): Promise<{ subscription: SubscriptionView }> {
+  return request('/billing/subscribe', { method: 'POST', body: { planId } });
+}
+
+export function changePlan(planId: SubscribablePlanId): Promise<{ subscription: SubscriptionView }> {
+  return request('/billing/change-plan', { method: 'POST', body: { planId } });
+}
+
+export function cancelSubscription(): Promise<{
+  subscription: SubscriptionView;
+  reportsReadableUntil: string;
+}> {
+  return request('/billing/cancel', { method: 'POST' });
+}
+
+export function purchaseCredits(
+  credits: number,
+): Promise<{ purchase: { creditsAdded: number; kind: 'PURCHASED' } }> {
+  return request('/billing/credits/purchase', { method: 'POST', body: { credits } });
+}

@@ -34,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "@prisma/client": "6.1.0",
+    "@webaudit/config": "workspace:*",
     "@types/node": "22.20.1",
     "eslint": "9.39.5",
     "oxlint": "0.13.2",

@@ -27,6 +27,7 @@ import { z } from 'zod';
 import { SEVERITIES, ISSUE_STATES } from '@webaudit/types';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
+import { ReportNotExportableError, exportReport } from '../services/storage/export.js';
 
 const NOT_FOUND_SCAN = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
 const NOT_FOUND_ISSUE = { error: { code: 'NOT_FOUND', message: 'No such issue.' } };
@@ -68,6 +69,19 @@ export function reportsRoutes(db: PrismaClient): Router {
     });
     if (scan === null) {
       res.status(404).json(NOT_FOUND_SCAN);
+      return;
+    }
+
+    // FR-092: a report whose retention period lapsed is removed, not returned.
+    // The row survives so the credit history still resolves it.
+    if (scan.reportRemovedAt !== null) {
+      res.status(410).json({
+        error: {
+          code: 'REPORT_REMOVED',
+          message: 'This report passed its retention period and has been removed.',
+          details: { removedAt: scan.reportRemovedAt },
+        },
+      });
       return;
     }
 
@@ -119,6 +133,29 @@ export function reportsRoutes(db: PrismaClient): Router {
       orderBy: [{ severity: 'asc' }, { createdAt: 'asc' }],
     });
     res.status(200).json({ issues });
+  });
+
+  router.get('/scans/:id/export', async (req: AuthedRequest, res: Response) => {
+    // FR-093 — a self-contained artifact so the report outlives retention.
+    try {
+      const { html, filename } = await exportReport(db, {
+        scanId: pathParam(req, 'id'),
+        userId: req.auth!.userId,
+      });
+      res
+        .status(200)
+        .type('text/html; charset=utf-8')
+        .set('Content-Disposition', `attachment; filename="${filename}"`)
+        .send(html);
+    } catch (error) {
+      if (error instanceof ReportNotExportableError) {
+        res
+          .status(error.reason === 'not-found' ? 404 : error.reason === 'removed' ? 410 : 409)
+          .json({ error: { code: 'NOT_EXPORTABLE', message: error.message, details: { reason: error.reason } } });
+        return;
+      }
+      throw error;
+    }
   });
 
   router.get('/issues/:id', async (req: AuthedRequest, res: Response) => {
