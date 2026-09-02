@@ -229,6 +229,33 @@ describe('FR-014 - a sensitive header does not survive a cross-origin redirect',
 
     expect(dest.requests[0]?.headers['authorization']).toBe('Bearer secret-token');
   });
+
+  it('does not resurrect a stripped header when a later hop returns to an already cross-origin host', async () => {
+    // first (has the header) -> b/mid (cross-origin: stripped) -> b/end (same
+    // host as the *previous* hop, but that hop was already cross-origin and
+    // already stripped — the header must not come back just because the host
+    // matches again).
+    const chain: { b?: FixtureServer } = {};
+    const b = await fixture((req, res) => {
+      if (req.url === '/mid') {
+        redirectTo(`${chain.b!.origin}/end`)(req, res);
+        return;
+      }
+      ok('B-END')(req, res);
+    });
+    chain.b = b;
+    const first = await fixture(redirectTo(`${b.origin}/mid`));
+
+    await guardedFetch(`${first.origin}/start`, {
+      policy: HOPS_ON_LOOPBACK,
+      headers: { authorization: 'Bearer secret-token' },
+    });
+
+    expect(first.requests[0]?.headers['authorization']).toBe('Bearer secret-token');
+    expect(b.requests).toHaveLength(2);
+    expect(b.requests[0]?.headers['authorization']).toBeUndefined();
+    expect(b.requests[1]?.headers['authorization']).toBeUndefined();
+  });
 });
 
 describe('FR-014 - the default policy refuses the hops themselves', () => {

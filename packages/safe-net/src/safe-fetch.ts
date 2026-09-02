@@ -97,6 +97,13 @@ const SENSITIVE_HEADERS = new Set(['authorization', 'cookie', 'proxy-authorizati
  * `allowedRedirectHosts` matches on the bare hostname, since a caller
  * naming an allowed destination (e.g. GitHub's own CDN host) does not
  * usually know or care which port fronts it.
+ *
+ * `headers` here is *not* the caller's original `options.headers` — see the
+ * call site. It is whatever the previous hop actually carried, so once a
+ * sensitive header has been stripped it stays stripped for the rest of the
+ * chain: a later hop whose host happens to match an earlier, already-
+ * cross-origin hop must not resurrect it from the untouched original.
+ * Stripping is a one-way narrowing, never a re-evaluation from scratch.
  */
 function headersForHop(
   headers: Readonly<Record<string, string>> | undefined,
@@ -137,13 +144,18 @@ export async function guardedFetch(
   let method = (options.method ?? 'GET').toUpperCase();
   let body = options.body;
   let previousHost: string | undefined;
+  // Carried forward and narrowed each hop — never re-read from
+  // `options.headers` after hop 0. That is what makes stripping monotonic:
+  // once a sensitive header is dropped for crossing an origin, no later hop
+  // (even one back on a previously-seen host) can bring it back.
+  let carriedHeaders = options.headers;
 
   for (let hop = 0; hop <= maxRedirects; hop += 1) {
     // Layer 1, on the caller's URL at hop 0 and on a Location header after that.
     const target = validateUrl(currentUrl, policy, hop);
     redirects.push(target.url.href);
     const hopHeaders = headersForHop(
-      options.headers,
+      carriedHeaders,
       hop,
       target.hostname,
       target.url.host,
@@ -151,6 +163,7 @@ export async function guardedFetch(
       options.allowedRedirectHosts,
     );
     previousHost = target.url.host;
+    carriedHeaders = hopHeaders;
 
     // Layer 2. Skipped for a literal address, which layer 1 already classified —
     // there is no name to resolve and nothing new to learn.
