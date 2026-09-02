@@ -213,8 +213,9 @@ describe('readiness certificate + email guard are independent (Finding 1 regress
 
     // supertest's Test object is a thenable that only dispatches once .then()/.end()/await
     // is invoked on it — a bare, unchained call never sends the request at all. Attaching
-    // .then() here forces dispatch while still not awaiting the response.
-    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)).then(() => {});
+    // .catch() here forces dispatch while still not awaiting the response, and swallows
+    // (rather than leaving unhandled) a rejection if this request ever settles non-2xx.
+    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)).catch(() => {});
     await new Promise((r) => setTimeout(r, 50)); // let the claim's updateMany land
 
     const res = await request(app).get(`/scans/${scanId}/readiness/certificate`).set(auth(token));
