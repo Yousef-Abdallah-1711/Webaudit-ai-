@@ -20,6 +20,7 @@ import { createApp } from '../../src/app.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
+import type { TeardownProducer } from '../../src/services/queue/teardown-producer.js';
 
 const mailer = createCapturingMailer();
 const app = createApp({ db: testDb, mailer });
@@ -224,5 +225,36 @@ describe('POST /scans/:id/cancel refunds the undelivered share', () => {
       where: { scanId, type: 'REFUND' },
     });
     expect(refunds).toHaveLength(0);
+  });
+
+  it('enqueues a workspace-teardown job for the cancelled scan (Finding 10)', async () => {
+    // The module-level `app` falls back to a real `createTeardownProducer()`
+    // against real Redis, so a wiring test needs its own app with a fake
+    // producer — the point here is proving the route calls the producer with
+    // the right scan id, not re-proving BullMQ accepts the job id (that's
+    // `tests/adverse/teardown-producer-jobid.test.ts`, against a real queue).
+    const calls: { scanId: string }[] = [];
+    const fakeTeardownProducer: TeardownProducer = {
+      enqueueTeardown: (input) => {
+        calls.push({ scanId: input.scanId });
+        return Promise.resolve({ jobId: `fake:${input.scanId}` });
+      },
+      close: () => Promise.resolve(),
+    };
+    const appWithFakeProducer = createApp({
+      db: testDb,
+      mailer,
+      scans: { teardownProducer: fakeTeardownProducer },
+    });
+
+    const token = await signIn();
+    const { scanId } = await createTwoModuleScan(token);
+
+    await request(appWithFakeProducer)
+      .post(`/scans/${scanId}/cancel`)
+      .set(auth(token))
+      .expect(200);
+
+    expect(calls).toEqual([{ scanId }]);
   });
 });

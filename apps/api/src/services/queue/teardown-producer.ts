@@ -30,7 +30,11 @@ export function createTeardownProducer(
 
   return {
     async enqueueTeardown(input): Promise<{ readonly jobId: string }> {
-      const jobId = `workspace-teardown:${input.scanId}`;
+      // BullMQ 6.2.0 rejects a colon-bearing custom jobId unless it splits into
+      // exactly 3 segments (a legacy repeatable-job carve-out) -- see
+      // packages/config/src/queues.ts's own note on QUEUE_NAMES. Hyphenated,
+      // not colon-namespaced, for the same reason.
+      const jobId = `workspace-teardown-${input.scanId}`;
       await queue.add('workspace-teardown', { scanId: input.scanId }, { jobId });
       return { jobId };
     },
