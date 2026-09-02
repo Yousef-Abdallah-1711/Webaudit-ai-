@@ -1,0 +1,12 @@
+-- Fixes a real bug (Phase 5 engineering review, 2026-09-02): the readiness
+-- congratulations email reused `certificateKey`'s placeholder-claim guard.
+-- A mailer failure after the certificate was already committed made the
+-- release-on-failure `updateMany` match nothing (it filtered on the old
+-- placeholder value, already overwritten), so the email was silently and
+-- permanently skipped with no retry.
+--
+-- `certificateEmailSentAt` is now a second, independent claim/release guard
+-- so a certificate-generation failure can never block the email, and an
+-- email failure can never block (or falsely appear to complete) certificate
+-- generation.
+ALTER TABLE "ReadinessVerdict" ADD COLUMN "certificateEmailSentAt" TIMESTAMP(3);

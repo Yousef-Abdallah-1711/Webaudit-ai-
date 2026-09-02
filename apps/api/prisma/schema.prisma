@@ -688,6 +688,10 @@ model ReadinessVerdict {
 
   blockers       String[] // FR-070
   certificateKey String? // FR-072
+  // Independent of certificateKey: a mailer failure must retry without
+  // re-generating the certificate, and a certificate-generation failure must
+  // not be blocked on the email ever sending. See T166/T167's guard note.
+  certificateEmailSentAt DateTime?
 
   createdAt DateTime @default(now())
 

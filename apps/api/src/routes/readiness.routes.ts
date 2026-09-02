@@ -11,11 +11,15 @@
  * the readiness scan's id (→ the verdict once it is computed).
  *
  * **The certificate and the congratulations email are generated lazily here**,
- * on the first `GET` that sees a *go* verdict with no `certificateKey` yet —
- * `run.ts` (the worker) writes only the verdict itself, because R2 and the
- * mailer live in `apps/api`. A guarded `updateMany` on `certificateKey: null`
- * makes it happen exactly once; if R2 is not configured the verdict still
- * returns and `certificateKey` stays null (documented, matching how
+ * on a `GET` that sees a *go* verdict — `run.ts` (the worker) writes only the
+ * verdict itself, because R2 and the mailer live in `apps/api`. The two are
+ * guarded independently: a `updateMany` on `certificateKey: null` claims
+ * certificate generation exactly once, and a separate `updateMany` on
+ * `certificateEmailSentAt: null` claims the email exactly once. They do not
+ * share a guard — a mailer failure must retry on the next `GET` without
+ * regenerating an already-stored certificate, and a certificate failure must
+ * not be gated on the email ever sending. If R2 is not configured the verdict
+ * still returns and `certificateKey` stays null (documented, matching how
  * `storage/reports.ts` is real-but-unconsumed until something needs it).
  */
 
@@ -47,6 +51,14 @@ import {
 } from '../services/queue/scan-phase-producer.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
+
+/**
+ * Placeholder claim value for `certificateEmailSentAt`, distinguishable from
+ * any real send timestamp (which will always be long after this date). Never
+ * read back as a real "sent at" time — only written by the claim, and only
+ * ever followed by either a real timestamp (success) or `null` (release).
+ */
+const EMAIL_CLAIM_SENTINEL = new Date(0);
 
 export interface ReadinessRoutesDeps {
   producer?: ScanPhaseProducer;
@@ -86,9 +98,9 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
     const userId = req.auth!.userId;
     const parsed = createBody.safeParse(req.body);
     if (!parsed.success) {
-      res
-        .status(400)
-        .json({ error: { code: 'INVALID_REQUEST', message: 'A readiness pass needs an acceptedQuote.' } });
+      res.status(400).json({
+        error: { code: 'INVALID_REQUEST', message: 'A readiness pass needs an acceptedQuote.' },
+      });
       return;
     }
 
@@ -101,9 +113,13 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
       res.status(201).json({ scan });
     } catch (error) {
       if (error instanceof BaselineNotEligibleError) {
-        res
-          .status(error.reason === 'not-found' ? 404 : 409)
-          .json({ error: { code: 'BASELINE_NOT_ELIGIBLE', message: error.message, details: { reason: error.reason } } });
+        res.status(error.reason === 'not-found' ? 404 : 409).json({
+          error: {
+            code: 'BASELINE_NOT_ELIGIBLE',
+            message: error.message,
+            details: { reason: error.reason },
+          },
+        });
         return;
       }
       if (error instanceof ReadinessNotOnPlanError) {
@@ -167,7 +183,11 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
         completedAt: true,
         target: { select: { displayName: true, canonicalValue: true } },
         verdict: true,
-        derivedScans: { select: { id: true, state: true }, orderBy: { createdAt: 'desc' }, take: 1 },
+        derivedScans: {
+          select: { id: true, state: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
     });
     if (scan === null) {
@@ -204,8 +224,10 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
 
     let verdict = scan.verdict;
 
-    // FR-072 — first read of a go verdict: generate the certificate + send the
-    // congratulations email, exactly once.
+    // FR-072 — first read of a go verdict: generate the certificate, exactly
+    // once. Independent of the email step below: a failure here must not be
+    // able to leave the email guard stuck, and vice versa (see the fix note
+    // on the email step for the regression this split closes).
     if (verdict.isReady && verdict.certificateKey === null && storage !== null) {
       const claimed = await db.readinessVerdict.updateMany({
         where: { id: verdict.id, certificateKey: null },
@@ -228,6 +250,44 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
             where: { id: verdict.id },
             data: { certificateKey: cert.certificateKey },
           });
+        } catch (error) {
+          // Never fail a verdict read over the certificate. Release the claim
+          // so a later read retries.
+          console.error(`[readiness] certificate for ${scan.id} failed:`, error);
+          await db.readinessVerdict.updateMany({
+            where: { id: verdict.id, certificateKey: '' },
+            data: { certificateKey: null },
+          });
+          verdict = { ...verdict, certificateKey: null };
+        }
+      }
+    }
+
+    // FR-072 / T166 — send the congratulations email, exactly once, guarded
+    // on its own field rather than reusing certificateKey's placeholder.
+    //
+    // Fix (2026-09-02 engineering review, Finding 1): the email used to share
+    // certificateKey's guard. If the email step threw *after* the block above
+    // had already committed the real certificateKey, the release-on-failure
+    // `updateMany` filtered on the old placeholder value ('') — which no
+    // longer matched anything, since the success path had just overwritten
+    // it — so the reset silently no-op'd and the email was skipped forever
+    // with no retry. certificateEmailSentAt is a second, independent
+    // claim/release guard: nothing but this block ever writes it, so its
+    // claim-then-release pair can't be defeated by another block's success
+    // write the way certificateKey's was.
+    if (
+      verdict.isReady &&
+      verdict.certificateKey !== null &&
+      verdict.certificateKey !== '' &&
+      verdict.certificateEmailSentAt === null
+    ) {
+      const claimedEmail = await db.readinessVerdict.updateMany({
+        where: { id: verdict.id, certificateEmailSentAt: null },
+        data: { certificateEmailSentAt: EMAIL_CLAIM_SENTINEL },
+      });
+      if (claimedEmail.count === 1) {
+        try {
           const user = await db.user.findUniqueOrThrow({
             where: { id: userId },
             select: { email: true },
@@ -239,15 +299,17 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
             certificateUrl: `${webUrl}/scans/${scan.id}/readiness/certificate`,
             reportUrl: `${webUrl}/reports/${scan.id}`,
           });
-        } catch (error) {
-          // Never fail a verdict read over the certificate. Release the claim so
-          // a later read retries.
-          console.error(`[readiness] certificate/email for ${scan.id} failed:`, error);
-          await db.readinessVerdict.updateMany({
-            where: { id: verdict.id, certificateKey: '' },
-            data: { certificateKey: null },
+          verdict = await db.readinessVerdict.update({
+            where: { id: verdict.id },
+            data: { certificateEmailSentAt: new Date() },
           });
-          verdict = { ...verdict, certificateKey: null };
+        } catch (error) {
+          console.error(`[readiness] congratulations email for ${scan.id} failed:`, error);
+          await db.readinessVerdict.updateMany({
+            where: { id: verdict.id, certificateEmailSentAt: EMAIL_CLAIM_SENTINEL },
+            data: { certificateEmailSentAt: null },
+          });
+          verdict = { ...verdict, certificateEmailSentAt: null };
         }
       }
     }
@@ -272,18 +334,24 @@ export function readinessRoutes(db: PrismaClient, deps: ReadinessRoutesDeps = {}
       select: { id: true, verdict: { select: { certificateKey: true } } },
     });
     if (scan === null || scan.verdict?.certificateKey === null || scan.verdict === null) {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'No certificate for this scan.' } });
+      res
+        .status(404)
+        .json({ error: { code: 'NOT_FOUND', message: 'No certificate for this scan.' } });
       return;
     }
     if (storage === null) {
-      res.status(503).json({ error: { code: 'STORAGE_UNAVAILABLE', message: 'Certificate storage is not configured.' } });
+      res.status(503).json({
+        error: { code: 'STORAGE_UNAVAILABLE', message: 'Certificate storage is not configured.' },
+      });
       return;
     }
     try {
       const bytes = await storage.getObject(scan.id, READINESS_CERTIFICATE_KEY);
       res.status(200).type('text/html; charset=utf-8').send(Buffer.from(bytes));
     } catch {
-      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'No certificate for this scan.' } });
+      res
+        .status(404)
+        .json({ error: { code: 'NOT_FOUND', message: 'No certificate for this scan.' } });
     }
   });
 
