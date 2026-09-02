@@ -9,17 +9,22 @@
  * exactly one of them, which is why this file hangs teardown off the *state
  * machine* rather than off any job.
  *
- * **One hook, not four call sites — with one known gap.** `COMPLETED`, `FAILED`,
- * and `TIMED_OUT` are written by `transition` in `state-machine.ts` and by
- * nothing else, so `installTerminalTeardown` registering a terminal observer
- * there once, at worker boot, covers all three by construction. `CANCELLED` is
- * the exception: `apps/api`'s `/scans/:id/cancel` route writes it directly via
- * its own `updateMany`, in a different process, and never calls this process's
- * `transition` — so this mechanism does not fire on cancellation today. (Its
- * credit refund is still handled, separately, at the source in that route; only
- * workspace teardown is left uncovered.) Closing that gap needs a real
- * cross-process design — a maintenance-queue job, or moving cancellation
- * through the worker — and is out of scope here.
+ * **One hook, not four call sites — plus one job for the state this process
+ * never writes.** `COMPLETED`, `FAILED`, and `TIMED_OUT` are written by
+ * `transition` in `state-machine.ts` and by nothing else, so
+ * `installTerminalTeardown` registering a terminal observer there once, at
+ * worker boot, covers all three by construction. `CANCELLED` is the
+ * exception: `apps/api`'s `/scans/:id/cancel` route writes it directly via
+ * its own `updateMany`, in a different process, and never calls this
+ * process's `transition` — so this observer does not, and structurally
+ * cannot, fire on cancellation. (Its credit refund is handled, separately, at
+ * the source in that route.) The fourth path is covered instead by a second,
+ * independent mechanism (2026-09-02 remediation, Task 7 / Finding 10): the
+ * cancel route enqueues a `workspace-teardown` job on the maintenance queue
+ * after its `CANCELLED` write commits, and `apps/worker`'s boot wiring
+ * (`index.ts`) registers a real handler that calls `destroyScanWorkspace`
+ * below directly — the same function this observer calls, with the same
+ * baseDir/db/owner triple.
  *
  * **Idempotent by three independent mechanisms**, because the sweep runs on a
  * schedule and can overlap itself:
@@ -431,10 +436,12 @@ export interface InstallTeardownOptions {
  *
  * The observer runs after a terminal transition has actually moved the row, so
  * completion, failure, and timeout are all covered without any of them knowing
- * that a workspace exists. Cancellation is not — see the module note above: it
- * is written by `apps/api`'s own process and never reaches this observer. A
- * lost race does not fire it either — a stale job that thought the scan was
- * elsewhere must not delete a running audit's source.
+ * that a workspace exists. Cancellation is not, by design — see the module
+ * note above: it is written by `apps/api`'s own process and never reaches
+ * this observer. That path is covered by the separate `workspace-teardown`
+ * queue job instead, not by this function. A lost race does not fire this
+ * observer either — a stale job that thought the scan was elsewhere must not
+ * delete a running audit's source.
  *
  * @returns an unregister function. Tests use it; production does not need it.
  */

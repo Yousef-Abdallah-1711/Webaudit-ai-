@@ -32,12 +32,15 @@
  * writes: `apps/api`'s `/scans/:id/cancel` route sets it directly, in a
  * different process, without calling `transition`. An observer registered
  * here therefore covers three of the four exit paths by construction, not
- * all four; cancellation's workspace teardown is a known, separate gap (see
- * `workspace/teardown.ts`'s module note). Observers run only after a
- * transition actually moved the row, so a lost race does not fire them, and
- * an observer that throws is reported and swallowed: the state is already
- * committed, and failing a finished audit because its scratch directory
- * would not delete is the wrong trade.
+ * all four — cancellation's workspace teardown does not go through this
+ * observer and never will, by design. It is instead covered by a second,
+ * independent mechanism: the cancel route enqueues a `workspace-teardown`
+ * maintenance-queue job that a dedicated handler runs (see
+ * `workspace/teardown.ts`'s module note, and the 2026-09-02 remediation's
+ * Task 7). Observers run only after a transition actually moved the row, so
+ * a lost race does not fire them, and an observer that throws is reported
+ * and swallowed: the state is already committed, and failing a finished
+ * audit because its scratch directory would not delete is the wrong trade.
  */
 
 import { SCAN_STATES_TERMINAL, type ScanState } from '@webaudit/types';

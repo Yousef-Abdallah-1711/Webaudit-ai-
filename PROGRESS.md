@@ -87,10 +87,12 @@ A follow-on review of the pre-Phase-3 foundation for "built but never connected"
   cleanly (`[api] listening on …`, `[worker] consuming …`). The stale "placeholders until T113"
   worker log line is corrected.
 
-**Not fixed** — workspace teardown still does not fire on an API-side `POST /scans/:id/cancel`
-(SC-015's cross-process gap, PROGRESS open item 7). It needs the API to enqueue a maintenance
-teardown job; deferred rather than done half-way, and low-frequency while Phase 3 is URL-only (few
-workspaces created).
+**Fixed (2026-09-02 remediation)** — workspace teardown now fires on an API-side
+`POST /scans/:id/cancel` (closing SC-015's cross-process gap, PROGRESS open item 7). The route
+enqueues a `workspace-teardown` job on the maintenance queue (`apps/api/src/services/queue/
+teardown-producer.ts`); `apps/worker` registers a real handler (`apps/worker/src/index.ts`) that
+calls `destroyScanWorkspace` with the same baseDir/db/owner triple the in-process
+terminal-transition observer already uses.
 
 Verified: `pnpm test` **666/666**, `pnpm test:adverse` **532/533** (1 skip), `pnpm lint` clean.
 (A concurrent-session collaboration on Phase 4 is in the same worktree; run tests against your own
@@ -1666,19 +1668,20 @@ files uncommitted, that work is real and in progress — do not discard it.
    helmet/CORS, README, drift test — passes all gates, and the drift test was verified by
    execution. But nobody has reviewed the rate limiter's design intent. Worth a read before it
    carries production traffic.
-7. **SC-015 teardown is now wired in, but the four-path guarantee is still not fully true — and
-   that's a distinct, real gap this fix did not close.** `installTerminalTeardown` is now called
-   once at worker boot (`apps/worker/src/index.ts`, alongside `installTerminalRefund`), guarded by
-   a required `WORKSPACE_BASE_DIR` env var, exactly as this note asked. But the same remediation
-   plan's own final review found that workspace teardown genuinely does **not** fire on
-   cancellation: `apps/api`'s `/scans/:id/cancel` route writes `CANCELLED` directly via its own
-   `updateMany`, in a different process, and never reaches `apps/worker`'s observer registry —
-   `teardown.ts`'s and `state-machine.ts`'s docstrings were corrected to say so plainly rather than
-   continue claiming "all four paths covered by construction." Cancellation's *credit refund* is
-   handled (at the source, in `apps/api`'s own route — see Open Decision #11 above), but its
-   *workspace teardown* is not. Closing this needs a real cross-process design (a maintenance-queue
-   job the API enqueues on cancel, or moving cancellation through the worker) — not attempted here,
-   and worth its own task once Phase 6 (T169+) makes workspace creation a live concern.
+7. **SC-015 teardown is now wired in, and the four-path guarantee is now fully true.**
+   `installTerminalTeardown` is called once at worker boot (`apps/worker/src/index.ts`, alongside
+   `installTerminalRefund`), guarded by a required `WORKSPACE_BASE_DIR` env var, exactly as this
+   note asked. That covers `COMPLETED`/`FAILED`/`TIMED_OUT` by construction. The fourth path —
+   `CANCELLED`, written directly by `apps/api`'s `/scans/:id/cancel` route via its own `updateMany`,
+   in a different process, which never reached `apps/worker`'s observer registry — was closed by
+   the 2026-09-02 remediation plan (Task 7, Finding 10): the cancel route now enqueues a
+   `workspace-teardown` job on the maintenance queue (`apps/api/src/services/queue/
+   teardown-producer.ts`) after its `CANCELLED` write commits, and `apps/worker` registers a real
+   handler (`apps/worker/src/index.ts`) that calls `destroyScanWorkspace` with the same
+   baseDir/db/owner triple the in-process observer uses. Cancellation's *credit refund* was already
+   handled at the source (Open Decision #11 above); its *workspace teardown* now is too.
+   `teardown.ts`'s and `state-machine.ts`'s docstrings, and this route's own module comment, were
+   updated to match — none of them still claim the gap is open.
 8. **The redaction detector cannot see a credential split by whitespace.** `AKIA IOSFODNN7EXAMPLE`
    (a space) or a GitHub token folded across two lines the way a YAML `>` scalar or a wrapped `.env`
    value commonly is — `packages/redaction/src/detect.ts`'s named patterns require the credential body
