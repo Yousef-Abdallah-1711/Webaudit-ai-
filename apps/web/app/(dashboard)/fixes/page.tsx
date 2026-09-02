@@ -29,6 +29,7 @@ import { FixesBoard } from '../../../components/fixes';
 import { connectRealtime } from '../../../lib/realtime';
 import { getAccessToken } from '../../../lib/api';
 import {
+  ApiError,
   assertIssueFixed,
   getFailingEvidence,
   getIssues,
@@ -95,8 +96,12 @@ function FixesPageContent(): React.ReactElement {
       );
       try {
         await assertIssueFixed(issueId);
-      } catch {
-        setError('That re-check could not be started. You were not charged.');
+      } catch (err) {
+        setError(
+          err instanceof ApiError && (err.status === 402 || err.status === 409)
+            ? 'That re-check could not be started. You were not charged.'
+            : 'That re-check could not be started. Refresh to see your current balance.',
+        );
         void refresh();
       }
     },
