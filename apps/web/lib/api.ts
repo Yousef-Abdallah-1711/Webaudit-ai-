@@ -307,6 +307,17 @@ export function getIssueAttempts(
   return request(`/issues/${issueId}/attempts`);
 }
 
+/**
+ * The last FAILED attempt's evidence for every issue in the scan that has
+ * one, in a single request — the batched counterpart to `getIssueAttempts`
+ * for the Fixes board, which previously issued one `getIssueAttempts` call
+ * per issue needing evidence, refired on every realtime `issue:verified`
+ * event (2026-09-02 review, Finding 7).
+ */
+export function getFailingEvidence(scanId: string): Promise<{ evidence: Record<string, unknown> }> {
+  return request(`/scans/${scanId}/issues/failing-evidence`);
+}
+
 export function assertIssueFixed(issueId: string): Promise<{
   issue: { id: string; state: IssueState; scanId: string };
   reverification: { jobId: string; creditsCharged: number };

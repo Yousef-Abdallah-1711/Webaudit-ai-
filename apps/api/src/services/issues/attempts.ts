@@ -177,3 +177,23 @@ export async function listVerificationAttempts(
     },
   });
 }
+
+/**
+ * The last FAILED attempt's evidence per issue in one scan, in a single
+ * query — the batched counterpart to `listVerificationAttempts`, for a
+ * caller (the Fixes board) that previously issued one request per issue
+ * (2026-09-02 review, Finding 7).
+ */
+export async function listFailingEvidenceForScan(
+  db: PrismaClient,
+  scanId: string,
+): Promise<Record<string, unknown>> {
+  const attempts = await db.verificationAttempt.findMany({
+    where: { outcome: 'FAILED', issue: { scanId } },
+    orderBy: { createdAt: 'asc' },
+    select: { issueId: true, evidence: true },
+  });
+  const out: Record<string, unknown> = {};
+  for (const attempt of attempts) out[attempt.issueId] = attempt.evidence;
+  return out;
+}

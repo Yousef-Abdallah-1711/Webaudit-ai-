@@ -1,9 +1,13 @@
 /**
  * T118 — report and issue read routes, from contracts/http-api.md:
  *
- *   GET /scans/:id/report    FR-048. Score, summary, per-area results.
- *   GET /scans/:id/issues    FR-057. Filter by severity and state.
- *   GET /issues/:id          FR-050, FR-051.
+ *   GET /scans/:id/report                    FR-048. Score, summary, per-area results.
+ *   GET /scans/:id/issues                    FR-057. Filter by severity and state.
+ *   GET /scans/:id/issues/failing-evidence   The last FAILED attempt's evidence per
+ *                                             issue, batched (2026-09-02 review, Finding 7)
+ *                                             so the Fixes board stops issuing one
+ *                                             `GET /issues/:id/attempts` per issue.
+ *   GET /issues/:id                          FR-050, FR-051.
  *
  * **There is no `Report` row anywhere in the schema.** data-model.md is
  * explicit that a report is synthesized on read from `Scan` +
@@ -27,6 +31,7 @@ import { z } from 'zod';
 import { SEVERITIES, ISSUE_STATES } from '@webaudit/types';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
+import { listFailingEvidenceForScan } from '../services/issues/attempts.js';
 import { ReportNotExportableError, exportReport } from '../services/storage/export.js';
 
 const NOT_FOUND_SCAN = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
@@ -133,6 +138,20 @@ export function reportsRoutes(db: PrismaClient): Router {
       orderBy: [{ severity: 'asc' }, { createdAt: 'asc' }],
     });
     res.status(200).json({ issues });
+  });
+
+  router.get('/scans/:id/issues/failing-evidence', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+    const scan = await db.scan.findFirst({
+      where: { id: pathParam(req, 'id'), userId },
+      select: { id: true },
+    });
+    if (scan === null) {
+      res.status(404).json(NOT_FOUND_SCAN);
+      return;
+    }
+    const evidence = await listFailingEvidenceForScan(db, scan.id);
+    res.status(200).json({ evidence });
   });
 
   router.get('/scans/:id/export', async (req: AuthedRequest, res: Response) => {

@@ -15,8 +15,11 @@
  *   - `issue:verified` over the realtime socket (T135) re-fetches the issue
  *     list, so a row turns green (or comes back red with fresh evidence)
  *     without a reload (FR-044). `onResync` re-fetches too, covering a gap.
- *   - `GET /issues/:id/attempts` for any issue that has been re-checked and
- *     did not pass, so the current failing evidence renders inline (FR-061).
+ *   - `GET /scans/:id/issues/failing-evidence` batches the current failing
+ *     evidence for every issue in the scan into the same round trip as the
+ *     issue list itself, so it renders inline for any issue that has been
+ *     re-checked and did not pass (FR-061), without one request per issue
+ *     (2026-09-02 review, Finding 7).
  */
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
@@ -27,32 +30,10 @@ import { connectRealtime } from '../../../lib/realtime';
 import { getAccessToken } from '../../../lib/api';
 import {
   assertIssueFixed,
-  getIssueAttempts,
+  getFailingEvidence,
   getIssues,
   type FixesIssue,
 } from '../../../lib/api';
-
-async function loadFailingEvidence(
-  issues: readonly FixesIssue[],
-): Promise<Record<string, unknown>> {
-  const needsEvidence = issues.filter(
-    (i) => i.assertedFixedAt !== null && i.state !== 'RESOLVED' && i.state !== 'ASSERTED_FIXED',
-  );
-  const entries = await Promise.all(
-    needsEvidence.map(async (issue) => {
-      try {
-        const { attempts } = await getIssueAttempts(issue.id);
-        const lastFailed = [...attempts].reverse().find((a) => a.outcome === 'FAILED');
-        return lastFailed === undefined
-          ? null
-          : ([issue.id, lastFailed.evidence] as const);
-      } catch {
-        return null;
-      }
-    }),
-  );
-  return Object.fromEntries(entries.filter((e): e is readonly [string, unknown] => e !== null));
-}
 
 export default function FixesPage(): React.ReactElement {
   // `useSearchParams` needs a Suspense boundary for static rendering (Next 15).
@@ -72,9 +53,12 @@ function FixesPageContent(): React.ReactElement {
   const refresh = useCallback(async () => {
     if (scanId === '') return;
     try {
-      const { issues: fetched } = await getIssues(scanId);
+      const [{ issues: fetched }, { evidence }] = await Promise.all([
+        getIssues(scanId),
+        getFailingEvidence(scanId),
+      ]);
       setIssues(fetched);
-      setFailingEvidence(await loadFailingEvidence(fetched));
+      setFailingEvidence(evidence);
     } catch {
       setError('This audit could not be loaded.');
     }
