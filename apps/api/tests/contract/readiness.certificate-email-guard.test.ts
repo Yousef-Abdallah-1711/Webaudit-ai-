@@ -211,7 +211,10 @@ describe('readiness certificate + email guard are independent (Finding 1 regress
     const { token, userId } = await signIn(app);
     const { scanId } = await seedGoVerdict(userId);
 
-    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)); // triggers the claim, don't await
+    // supertest's Test object is a thenable that only dispatches once .then()/.end()/await
+    // is invoked on it — a bare, unchained call never sends the request at all. Attaching
+    // .then() here forces dispatch while still not awaiting the response.
+    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)).then(() => {});
     await new Promise((r) => setTimeout(r, 50)); // let the claim's updateMany land
 
     const res = await request(app).get(`/scans/${scanId}/readiness/certificate`).set(auth(token));
