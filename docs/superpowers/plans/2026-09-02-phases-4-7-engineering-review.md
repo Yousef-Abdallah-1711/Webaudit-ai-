@@ -12,30 +12,37 @@ guarded `updateMany` instead of read-then-write). Anywhere that inference could 
 out explicitly under each phase's "Assumptions" line.
 **Status column:** ✅ Fixed in this review cycle · 🔴 Open · — Not applicable (informational only).
 
+**Update (2026-09-02, remediation pass):** all findings below except 9 and 17 are now ✅ Fixed, via
+[2026-09-02-phases-4-7-remediation.md](2026-09-02-phases-4-7-remediation.md)'s 14 tasks (plus one
+unplanned regression fix, Task 3b, discovered when Task 3's new check was run against a live database
+for the first time). Findings 9 and 17 are deliberately excluded per that plan's own Global
+Constraints — 9 is a systemic pattern shared elsewhere in the codebase, not a targeted fix; 17 is an
+operational/capacity-planning note, not a code defect.
+
 ---
 
 ## Consolidated findings, most severe first
 
 | # | Sev | Phase | Finding | Status |
 |---|-----|-------|---------|--------|
-| 1 | **Critical** | 4 | `owasp-checker` reverify can PASS a still-vulnerable multi-cookie site | 🔴 Open |
+| 1 | **Critical** | 4 | `owasp-checker` reverify can PASS a still-vulnerable multi-cookie site | ✅ Fixed (Task 1) |
 | 2 | High | 5 | Certificate/email guard permanently drops the congratulations email on partial failure | ✅ Fixed |
-| 3 | High | 6 | `safeFetch` forwards the GitHub Bearer token to every redirect hop with no host allowlist | 🔴 Open |
-| 4 | High | 7 | FR-079 concurrent-scan limit is dead code, never enforced | 🔴 Open |
-| 5 | High | 7 | `entitlements.middleware.ts` never mounted; routes duplicate the policy ad hoc | 🔴 Open |
-| 6 | High | 7 | Webhook effect application isn't transactional with the idempotency claim | 🔴 Open |
-| 7 | Medium | 4 | Client-side N+1 for failing-evidence hydration on the Fixes board | 🔴 Open |
+| 3 | High | 6 | `safeFetch` forwards the GitHub Bearer token to every redirect hop with no host allowlist | ✅ Fixed (Task 2) |
+| 4 | High | 7 | FR-079 concurrent-scan limit is dead code, never enforced | ✅ Fixed (Task 3) |
+| 5 | High | 7 | `entitlements.middleware.ts` never mounted; routes duplicate the policy ad hoc | ✅ Fixed (Task 4) |
+| 6 | High | 7 | Webhook effect application isn't transactional with the idempotency claim | ✅ Fixed (Task 5) |
+| 7 | Medium | 4 | Client-side N+1 for failing-evidence hydration on the Fixes board | ✅ Fixed (Task 6) |
 | 8 | Medium | 5 | No test exercised the route-level certificate/email guard at all | ✅ Fixed (new test added) |
-| 9 | Medium | 5 | `moduleOutcomes` JSON cast bypasses type safety at the DB boundary (pre-existing pattern) | 🔴 Open (systemic) |
-| 10 | Medium | 6 | Source workspace teardown does not fire on cancellation | 🔴 Open (known, self-disclosed) |
-| 11 | Medium | 7 | No test for the webhook's fail-closed 503 (no secret configured) | 🔴 Open |
-| 12 | Low | 4 | `tasks.md` T153 overstates reverify correctness for the multi-cookie case | 🔴 Open |
-| 13 | Low | 4 | Fixes page shows "You were not charged" even after a lost-in-transit success response | 🔴 Open |
-| 14 | Low | 5 | Certificate `GET` 404s indistinguishably during the sub-second generation window | 🔴 Open |
-| 15 | Low | 5 / 7 | CSS Modules mix raw px/font-size with design tokens — adherence lint has a blind spot for `.css` files | 🔴 Open |
-| 16 | Low | 6 | Zip64 sentinel field not explicitly rejected (fails safe today via other checks) | 🔴 Open |
-| 17 | Low | 6 | Per-request memory ceiling is not fleet-aware (operational note, not a code defect) | — |
-| 18 | Low | 7 | Retention boundary uses `<=`, removing a report at the exact expiry instant | 🔴 Open |
+| 9 | Medium | 5 | `moduleOutcomes` JSON cast bypasses type safety at the DB boundary (pre-existing pattern) | 🔴 Open (systemic, deliberately excluded) |
+| 10 | Medium | 6 | Source workspace teardown does not fire on cancellation | ✅ Fixed (Task 7) |
+| 11 | Medium | 7 | No test for the webhook's fail-closed 503 (no secret configured) | ✅ Fixed (Task 8) |
+| 12 | Low | 4 | `tasks.md` T153 overstates reverify correctness for the multi-cookie case | ✅ Fixed (Task 9) |
+| 13 | Low | 4 | Fixes page shows "You were not charged" even after a lost-in-transit success response | ✅ Fixed (Task 10) |
+| 14 | Low | 5 | Certificate `GET` 404s indistinguishably during the sub-second generation window | ✅ Fixed (Task 11) |
+| 15 | Low | 5 / 7 | CSS Modules mix raw px/font-size with design tokens — adherence lint has a blind spot for `.css` files | ✅ Fixed (Task 12) |
+| 16 | Low | 6 | Zip64 sentinel field not explicitly rejected (fails safe today via other checks) | ✅ Fixed (Task 13) |
+| 17 | Low | 6 | Per-request memory ceiling is not fleet-aware (operational note, not a code defect) | — (deliberately excluded) |
+| 18 | Low | 7 | Retention boundary uses `<=`, removing a report at the exact expiry instant | ✅ Fixed (Task 14) |
 
 ---
 

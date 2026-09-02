@@ -1,7 +1,8 @@
 # WebAudit AI — Build Progress
 
 **Updated** 2026-09-02 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **794/794**, `adverse` **564 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
+**Tests** `unit` **801/802** (one pre-existing test-infra bug, not a regression — see the Phases 4–7
+remediation section below), `adverse` **568 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
 plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
 the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
 (`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
@@ -13,7 +14,84 @@ T158–T168; the full journey audit→fix→verify→ship is deliverable.** ✅ 
 complete — T169–T179; archive and repository input, refused before extraction and before charging.**
 ✅ **Phase 7 (US5, pay for capacity) complete — T180–T193; subscriptions, entitlements, credit
 purchase, the signed idempotent billing webhook, retention + self-contained export. SC-008 now has
-its adversarial gate — 10 of 11 green.** Two review passes on Phases 1–3 also folded in (§§ below).
+its adversarial gate — 10 of 11 green.** Three review passes on Phases 1–7 also folded in
+(§§ below) — most recently, a Phases 4–7 engineering review's 18 findings, 16 of them now fixed.
+
+## Phases 4–7 engineering review (2026-09-02) — findings fixed
+
+A strict senior-engineering review of T144–T193 (Phases 4–7) produced 18 findings; see
+[docs/superpowers/plans/2026-09-02-phases-4-7-engineering-review.md](docs/superpowers/plans/2026-09-02-phases-4-7-engineering-review.md).
+All but two are now fixed via a 14-task remediation plan
+([2026-09-02-phases-4-7-remediation.md](docs/superpowers/plans/2026-09-02-phases-4-7-remediation.md)),
+executed subagent-driven, each task implementer→reviewer, one fix round on Tasks 2/4/5/7:
+
+- **Finding 1 (Critical)** — `owasp-checker`'s multi-cookie reverify could PASS a site where only
+  some of several vulnerable cookies had actually been fixed, because the recheck only asked "is at
+  least one cookie still bad" instead of "are all originally-flagged cookies now good." Fixed.
+- **Finding 3 (High)** — `safeFetch` forwarded the GitHub Bearer token used for repository intake to
+  every redirect hop, with no host allowlist re-check per hop (SSRF-adjacent credential leak to a
+  redirect target). Fixed: credential stripping now applied per-hop, not once at the start, closing a
+  found-in-review gap where a stripped-then-same-host-again hop could resurrect the header.
+- **Finding 4 (High)** — FR-079's concurrent-scan-per-user limit was written but never called from the
+  real `POST /scans` path — dead code. Wired in. Running it against a live database for the first time
+  (this remediation pass) surfaced a real, narrow interaction with a pre-existing FR-018
+  duplicate-scan race test (a free-tier test user could now legitimately hit the new 403 instead of
+  the 409 it was written to isolate) — fixed as an unplanned "Task 3b."
+- **Finding 5 (High)** — `entitlements.middleware.ts` was never mounted; the cheapest-permitting-tier
+  lookup was duplicated ad hoc at each call site instead. Deduped behind one real function.
+- **Finding 6 (High)** — the billing webhook applied its effect and wrote its idempotency-claim
+  `appliedAt` as two separate steps, so a transient failure between them looked identical to "never
+  applied" to a provider retry. Made retryable; a residual, narrower double-grant window
+  (`grantLot` has no idempotency key of its own) was found during this task and is recorded as a new,
+  not-yet-built open item below — not silently expanded into this task's scope.
+- **Finding 7 (Medium)** — the Fixes board issued one HTTP request per failing-evidence row (client
+  N+1). Batched into one lookup.
+- **Finding 10 (Medium)** — a cancelled scan's source workspace was destroyed by the in-process
+  terminal-transition observer only, with no cross-process path — a worker crash mid-cancel left it on
+  disk. Now enqueues a real teardown job the worker durably processes.
+- **Finding 11 (Medium)** — the webhook's fail-closed 503 (no signing secret configured) had no test.
+  Added.
+- **Finding 12 (Low)** — `tasks.md` T153 overstated what the multi-cookie reverify fix actually
+  guaranteed. Wording corrected.
+- **Finding 13 (Low)** — the Fixes board's re-check failure message said "you were not charged" even
+  when the failure was a lost-in-transit success response (i.e., possibly charged) — now distinguishes
+  a genuine 402/409 refusal from every other failure mode.
+- **Finding 14 (Low)** — a certificate mid-generation and a certificate that will never exist both
+  produced a plain 404. Added a distinct 202 `CERTIFICATE_GENERATING`.
+- **Finding 15 (Low)** — two CSS Modules mixed raw px/font-size values with design tokens; the
+  adherence lint doesn't parse `.css` files at all (a real blind spot, recorded in research.md, not
+  fixed here). Values with an exact token match were swapped; values with none (several font-sizes,
+  because every `--type-*` token is a `font` shorthand never usable as a bare `font-size`, confirmed
+  by a 117-usage codebase check) were correctly left raw with an explanatory comment.
+- **Finding 16 (Low)** — a Zip64 sentinel size field (`0xFFFFFFFF`) with no Zip64 locator fell through
+  to whichever unrelated size check happened to catch it, if any — sometimes accepted outright at the
+  pre-charge inspection stage. Now explicitly refused with a precise reason.
+- **Finding 18 (Low)** — the retention sweep's `expiry <= now` removed a report at the exact expiry
+  millisecond instead of strictly after it. Changed to `<`.
+
+**Deliberately not fixed** (per the remediation plan's own Global Constraints): **Finding 9**
+(`moduleOutcomes` JSON-cast type safety) is a systemic pattern shared elsewhere in the codebase, not a
+targeted fix. **Finding 17** (per-request memory ceiling not fleet-aware) is an operational/capacity
+note, not a code defect.
+
+**New open item, not one of the 18 findings:** `grantLot` (`apps/api/src/services/credits/grant.ts`)
+has no idempotency key, so `subscribe`/`renewSubscription`/`purchaseCredits` can double-grant credits
+if a provider retries a webhook in the narrow window between the effect's own commit and the
+following `appliedAt` write (Finding 6's fix narrows this window; a prior version of the code had no
+narrowing at all). Closing it fully needs a dedicated task: a nullable `billingEventId` column with a
+unique constraint on `CreditTransaction`/`CreditLot`, threaded through the three effect functions.
+
+Verified at the end of this pass: `pnpm run lint` and `pnpm run lint:adherence` clean;
+`pnpm -r typecheck` clean across all 31 workspace projects; `pnpm run test:adverse` fully green
+(568 passed, 1 pre-existing skip — SSRF suites and credit/billing adverse suites specifically
+re-confirmed); `pnpm run test:visual` 6 passed / 7 todo / 0 failed; `next build` clean.
+`pnpm run format:check` fails on 94 files, but this predates the branch entirely — every failing file
+diffs byte-identical against `main`, confirmed file-by-file, not caused by this remediation.
+`pnpm run test`'s full 802-test run found exactly one failure, in a test this branch's baseline
+commit had already added (`readiness.certificate-email-guard.test.ts`'s 202-GENERATING case, unrelated
+to the 14 tasks) — root-caused to supertest's `Test` object never dispatching a request with no
+`.then()`/`.end()`/`await` chained onto it, so the test's own fire-and-forget trigger request
+sometimes never fired. Fixed directly (one line, forcing dispatch without awaiting the response).
 
 ## Phase 3 engineering review (2026-08-30) — findings fixed
 
@@ -1594,6 +1672,7 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 12 | `ssl-analyzer` scoped to header-inferable checks only (T120) | **User decision.** `CodeLayerContext` has no TLS-inspection door; user chose not to add one over widening the SDK contract or deferring the capability. Real cert/cipher checks are future work if a later capability genuinely needs the door |
 | 13 | Capability loader is a static import table, not filesystem-driven (T119–125) | **Made, not settled.** `apps/worker/src/orchestrator/capability-loader.ts` hardcodes six `import()`s rather than reusing `apps/api`'s `discoverCapabilities` (would cross the api/worker production boundary). Clean fix: extract manifest-walking into `@webaudit/capability-sdk`; not done, six known capabilities don't yet force it |
 | 14 | Per-module control-level gating not wired into orchestrator execution (T108's remaining gap) | **Resolved.** A code-review remediation plan (`docs/superpowers/plans/2026-08-27-control-gate-enforcement.md`, R2) exposed `apps/api`'s control-gate service to `apps/worker` via a `@webaudit/api/control-gate` package subpath (the same shape R1 established for `@webaudit/api/credits`), wired a real `buildResolveRequiredControlLevel` at API boot (closing the intake-time 403 the seam had always supported but nothing built), and gave the orchestrator a real per-phase `requiredControlLevelsFor`/live-reconfirmation step — `resolveEffectiveControlLevel` skips the network-touching `reconfirmControl` call entirely when nothing in a phase requires more than `NONE` (true of every scan shape in production today), and calls it at most once per phase job when something does. A later fix pass on the same plan closed a real vulnerability the first cut introduced: `reconfirmControl` could not tell a rate-limit refusal from a genuinely removed token and would revoke a legitimate `TargetVerification` on the former — closed by a wait-and-retry in the probe (`verify.ts`'s `acquireOrWait`) plus a same-key check against `level1RateBound` in `reconfirmControl` itself before ever treating a negative as removal. `gated-check-partial.test.ts`'s second assertion (Open Decision #11's own note) and `apps/api/tests/adverse/control-gate.test.ts`'s "the enum is a cache, the verification row is the truth" block are now backed end to end, not just at the service layer — see `apps/worker/tests/integration/orchestrator-control-gate.test.ts` for the orchestrator-level proof, including a stale-cached-column case matching SC-021 bypass 3 |
+| 15 | `grantLot` has no idempotency key (2026-09-02 Phases 4–7 remediation, Task 5) | **Needs a call.** `subscribe`/`renewSubscription`/`purchaseCredits` can double-grant credits if a billing-webhook provider retries in the narrow window between the effect's own commit and the following `appliedAt` write. Closing it needs a nullable `billingEventId` column with a unique constraint on `CreditTransaction`/`CreditLot`, threaded through all three effect functions — real work deserving its own task and test suite, not built here |
 
 ## Carried corrections — still open
 
