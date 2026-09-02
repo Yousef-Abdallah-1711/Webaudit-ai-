@@ -6,9 +6,9 @@ Conventions: JSON bodies. Access token in `Authorization: Bearer`. Refresh token
 cookie. All money-adjacent and state-changing routes are idempotent on an `Idempotency-Key` header.
 Error shape is uniform: `{ error: { code, message, details? } }`.
 
-Status codes that carry meaning in this API: `402` insufficient credits (FR-074), `403` plan or
-control-level refusal (FR-016, FR-017), `409` duplicate concurrent scan (FR-018), `422` validation
-including SSRF and archive refusal (FR-014, FR-015).
+Status codes that carry meaning in this API: `402` insufficient credits (FR-074), `403` plan,
+control-level, or concurrent-scan-limit refusal (FR-016, FR-017, FR-079), `409` duplicate concurrent
+scan (FR-018), `422` validation including SSRF and archive refusal (FR-014, FR-015).
 
 ---
 
@@ -81,12 +81,14 @@ check is gated out.
 | --- | --- | --- |
 | GET | `/scans/:id/report` | FR-048. Score, summary, per-area results. |
 | GET | `/scans/:id/issues` | FR-057. Filter by severity and state. |
+| GET | `/scans/:id/issues/failing-evidence` | FR-061, FR-065. The last FAILED attempt's evidence per issue on the scan, batched into one query — the Fixes board's alternative to one `GET /issues/:id/attempts` per row. |
 | GET | `/issues/:id` | FR-050, FR-051 |
 | POST | `/issues/:id/assert-fixed` | FR-058. Charges 3 credits; queues re-verification. |
 | GET | `/issues/:id/attempts` | FR-061, FR-065 |
 | GET | `/scans/:id/export` | FR-093. Self-contained artifact. |
-| POST | `/scans/:id/readiness` | FR-066, FR-067. `403` while critical/high remain. |
+| POST | `/scans/:id/readiness` | FR-066, FR-067, FR-079. `403` while critical/high remain, or while the plan's concurrent-scan limit is already reached. |
 | GET | `/scans/:id/readiness` | FR-068 through FR-072 |
+| GET | `/scans/:id/readiness/certificate` | FR-072. `202 CERTIFICATE_GENERATING` while the certificate is mid-claim (distinct from `404` when the verdict never reached *go*, or hasn't been claimed at all). |
 
 `POST /issues/:id/assert-fixed` returns the attempt, not a success:
 
@@ -109,7 +111,7 @@ The response never asserts resolution on the user's word. `state` transitions on
 | POST | `/billing/change-plan` | FR-080 |
 | POST | `/billing/cancel` | FR-080. Reports retention consequence. |
 | POST | `/billing/credits/purchase` | FR-078. `403` on free tier. |
-| POST | `/webhooks/billing` | Signature-verified. Idempotent on event id. |
+| POST | `/webhooks/billing` | Signature-verified. Idempotent on event id: the `BillingEvent` row claims the id first, race-safe. If the effect (`subscribe`/`renewSubscription`/`purchaseCredits`) then throws, returns `500 WEBHOOK_APPLY_FAILED` (not `200 { applied: false }`) so the provider retries the same event id rather than the failure being silently and permanently swallowed. |
 
 ## Administration
 
