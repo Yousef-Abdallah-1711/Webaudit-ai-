@@ -234,3 +234,9 @@ Carried forward and not yet resolved:
    break realistic page measurement. Platform egress and auditing-browser egress need separating.
 2. **`WebAuditAI_ARCHITECTURE.md` needs correcting** on the three points above.
 3. **Monetary price points** are unset; credits and entitlements are fixed.
+4. **CSS Modules are not covered by the design-adherence lint's raw-value rule.**
+   `_adherence.oxlintrc.json`'s `no-restricted-syntax` matches JS/JSX `Literal` AST nodes only, so a
+   `.module.css` file with a raw `px` value passes `pnpm lint` today even though this file's UI
+   section states "a raw hex or raw px value fails `pnpm lint`." Two known instances fixed by hand
+   (2026-09-02 review, Finding 15); the rule itself is not yet extended to `.css` files. Needs either
+   a CSS-aware lint rule or a documented exception.

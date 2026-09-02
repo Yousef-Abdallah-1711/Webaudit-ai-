@@ -111,6 +111,16 @@ function toRepository(raw: RawRepository): ConnectedRepository | null {
 /**
  * Call GitHub with the user's credential, turning an auth failure into the
  * typed revocation every caller branches on.
+ *
+ * No `allowedRedirectHosts` here, unlike `repo-clone.ts`'s zipball fetch —
+ * this function only ever calls `${GITHUB_API}/user` and `${GITHUB_API}/user/
+ * repos` (see the exported functions below), neither of which redirects
+ * cross-origin, and a same-host GitHub redirect keeps the bearer token
+ * regardless (safe-net's stripping is cross-origin only). Currently safe by
+ * construction, not by an allowlist — if a call site here ever starts hitting
+ * an endpoint that can redirect elsewhere, it needs the same option
+ * `repo-clone.ts` uses (2026-09-02 remediation review, final whole-branch
+ * pass).
  */
 export async function githubRequest(
   token: string,
