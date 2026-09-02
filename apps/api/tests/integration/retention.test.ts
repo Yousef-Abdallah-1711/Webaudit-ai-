@@ -94,4 +94,29 @@ describe('enforceRetention', () => {
     const result = await enforceRetention(testDb, deps);
     expect(result).toEqual({ warned: 0, removed: 0 });
   });
+
+  it('does not remove a report at the exact expiry instant, only strictly after it', async () => {
+    const completedAt = new Date('2026-08-01T00:00:00.000Z');
+    const user = await testDb.user.create({ data: { email: 'ret-boundary@example.com', emailVerifiedAt: new Date() } });
+    const target = await testDb.target.create({
+      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://ret-boundary.example.com', displayName: 'ret' },
+    });
+    await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 20,
+        chargedCredits: 20,
+        state: 'COMPLETED',
+        overallScore: 70,
+        completedAt,
+      },
+    });
+
+    const exactExpiry = new Date(completedAt.getTime() + 7 * DAY); // free tier: retentionDays 7
+    const result = await enforceRetention(testDb, deps, exactExpiry);
+    expect(result.removed).toBe(0);
+  });
 });

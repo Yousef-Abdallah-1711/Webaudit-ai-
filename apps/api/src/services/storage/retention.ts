@@ -82,7 +82,7 @@ export async function enforceRetention(
     const expiry = await retentionExpiryFor(db, scan);
     if (expiry === null) continue;
 
-    if (expiry <= now) {
+    if (expiry < now) {
       await db.$transaction([
         db.issue.deleteMany({ where: { scanId: scan.id } }),
         db.moduleResult.deleteMany({ where: { scanId: scan.id } }),
