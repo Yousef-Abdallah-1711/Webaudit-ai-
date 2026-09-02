@@ -46,7 +46,7 @@ function isUniqueConstraintViolation(error: unknown, columns: readonly string[])
       : '';
   return columns.every((c) => asText.includes(c)) || asText === '';
 }
-import { assertConcurrencyHeadroom } from '../billing/entitlements.js';
+import { assertConcurrencyHeadroom, cheapestActiveTierId } from '../billing/entitlements.js';
 import { debit, InsufficientCreditsError } from '../credits/debit.js';
 import { totalAvailable } from '../credits/balance.js';
 import { TargetNotAvailableError, type ControlProbe } from '../control-gate/verify.js';
@@ -161,12 +161,10 @@ export async function createScan(
       select: { id: true, allowedInputTypes: true, queuePriority: true },
     }));
   if (!plan.allowedInputTypes.includes(target.inputType)) {
-    const permitting = await db.plan.findMany({
-      where: { isActive: true, allowedInputTypes: { has: target.inputType } },
-      orderBy: { monthlyCredits: 'asc' },
-      select: { id: true },
+    const requiredTier = await cheapestActiveTierId(db, {
+      allowedInputTypes: { has: target.inputType },
     });
-    throw new PlanUpgradeRequiredError(target.inputType, permitting[0]?.id ?? null);
+    throw new PlanUpgradeRequiredError(target.inputType, requiredTier);
   }
 
   // FR-079: refuse before any debit once the plan's concurrent-scan limit is

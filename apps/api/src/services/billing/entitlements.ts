@@ -22,7 +22,7 @@
 
 import { PLAN_TIERS } from '@webaudit/config';
 import type { InputType } from '@webaudit/types';
-import type { PrismaClient } from '../../../prisma/generated/client/index.js';
+import type { Prisma, PrismaClient } from '../../../prisma/generated/client/index.js';
 
 /** The Plan fields every entitlement decision reads. */
 export interface EffectivePlan {
@@ -135,6 +135,26 @@ export function permittingTierFor(feature: EntitlementFeature): string | null {
     }
   }
   return null;
+}
+
+/**
+ * The cheapest currently-active plan matching `where`, or null if none do.
+ * Shared by every "requires the X plan or higher" refusal so there is exactly
+ * one place that decides what "cheapest" and "active" mean — `create-scan.ts`
+ * and `readiness/create.ts` used to each write this query by hand (2026-09-02
+ * engineering review, Finding 5).
+ */
+export async function cheapestActiveTierId(
+  db: PrismaClient,
+  where: Prisma.PlanWhereInput,
+): Promise<string | null> {
+  const permitting = await db.plan.findMany({
+    where: { ...where, isActive: true },
+    orderBy: { monthlyCredits: 'asc' },
+    select: { id: true },
+    take: 1,
+  });
+  return permitting[0]?.id ?? null;
 }
 
 /** Throws `EntitlementError` if the user's effective plan does not permit the feature. */

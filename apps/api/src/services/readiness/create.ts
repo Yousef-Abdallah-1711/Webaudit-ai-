@@ -22,6 +22,7 @@
 import { ALL_AREAS, READINESS_PASS_COST } from '@webaudit/config';
 import { SCAN_STATES_TERMINAL, SEVERITIES_BLOCKING } from '@webaudit/types';
 import { Prisma, type PrismaClient } from '../../../prisma/generated/client/index.js';
+import { cheapestActiveTierId } from '../billing/entitlements.js';
 import { debit, InsufficientCreditsError } from '../credits/debit.js';
 import { totalAvailable } from '../credits/balance.js';
 import { DuplicateScanError, QuoteMismatchError } from '../intake/create-scan.js';
@@ -123,12 +124,8 @@ export async function createReadinessScan(
       select: { allowReadinessPass: true, queuePriority: true },
     }));
   if (!plan.allowReadinessPass) {
-    const permitting = await db.plan.findMany({
-      where: { isActive: true, allowReadinessPass: true },
-      orderBy: { monthlyCredits: 'asc' },
-      select: { id: true },
-    });
-    throw new ReadinessNotOnPlanError(permitting[0]?.id ?? null);
+    const requiredTier = await cheapestActiveTierId(db, { allowReadinessPass: true });
+    throw new ReadinessNotOnPlanError(requiredTier);
   }
 
   // FR-066 — premature while any blocking issue is unresolved.
