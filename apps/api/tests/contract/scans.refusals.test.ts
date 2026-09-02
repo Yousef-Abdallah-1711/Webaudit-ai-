@@ -31,6 +31,7 @@ import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
+import { subscribe } from '../../src/services/billing/subscription.service.js';
 
 const mailer = createCapturingMailer();
 
@@ -226,6 +227,20 @@ describe('POST /scans — 409 duplicate concurrent scan (FR-018)', () => {
     // partial unique index Scan_one_active_per_target is the backstop — exactly
     // one INSERT wins, the rest get 23505 -> P2002 -> 409, and only the winner
     // debits.
+    //
+    // This test isolates that backstop specifically — it must not also trip
+    // FR-079's concurrent-scan-limit refusal (403 CONCURRENT_LIMIT_REACHED),
+    // which is a real, independent guard now that it's wired in (2026-09-02
+    // remediation, Task 3). Since only one scan for this target can ever
+    // actually commit (the unique index guarantees it), any limit above 1 is
+    // structurally enough headroom regardless of how the 8 requests
+    // interleave — subscribed here to the highest tier for a wide margin.
+    const user = await testDb.user.findUniqueOrThrow({
+      where: { email: CREDS.email },
+      select: { id: true },
+    });
+    await subscribe(testDb, { userId: user.id, planId: 'business' });
+
     const cost = await quote(token, targetId, ['SECURITY']);
     const attempts = await Promise.all(
       Array.from({ length: 8 }, () =>
