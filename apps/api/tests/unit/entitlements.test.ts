@@ -13,13 +13,16 @@ beforeEach(async () => {
   await resetDb();
   // `resetDb` deliberately leaves `Plan` untouched — it is shared reference
   // data most suites seed once via `seedPlans()` and never mutate. This suite
-  // plants its own rows under the real tier ids to control `isActive` and
-  // `monthlyCredits` precisely, so it clears just those ids first: otherwise,
-  // running after any suite that already called `seedPlans()` in the same
-  // `--no-file-parallelism` run, `createMany` below would collide with
-  // already-seeded 'free'/'starter'/'pro' rows instead of exercising this
-  // test's own fixture.
-  await testDb.plan.deleteMany({ where: { id: { in: ['free', 'starter', 'pro'] } } });
+  // builds its own fixture plans from scratch in every test below and never
+  // reads a `seedPlans()` default, so it clears the *entire* table rather
+  // than naming specific ids: naming ids is fragile the moment `PLAN_TIERS`
+  // gains a fifth tier, and it already under-covered 'business' once (that
+  // tier's `allowReadinessPass: true` / `isActive: true` / `monthlyCredits:
+  // 4000` survived an id-scoped delete and made the "no active plan matches"
+  // case find 'business' instead of nothing, since at least 16 other test
+  // files call `seedPlans()` — which upserts all four `PLAN_TIERS`, including
+  // 'business' — ahead of this file in the same `--no-file-parallelism` run).
+  await testDb.plan.deleteMany();
 });
 
 afterAll(closeDb);
