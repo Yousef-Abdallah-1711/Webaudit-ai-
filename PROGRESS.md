@@ -1,8 +1,9 @@
 # WebAudit AI — Build Progress
 
 **Updated** 2026-09-02 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **801/802** (one pre-existing test-infra bug, not a regression — see the Phases 4–7
-remediation section below), `adverse` **568 passed / 1 pre-existing skip**, `visual` 6 + 7 todo,
+**Tests** `unit` **802/802** (one pre-existing test-infra bug found and fixed during this pass, not a
+regression — see the Phases 4–7 remediation section below), `adverse` **568 passed / 1 pre-existing
+skip**, `visual` 6 + 7 todo,
 plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
 the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
 (`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
@@ -89,9 +90,13 @@ re-confirmed); `pnpm run test:visual` 6 passed / 7 todo / 0 failed; `next build`
 diffs byte-identical against `main`, confirmed file-by-file, not caused by this remediation.
 `pnpm run test`'s full 802-test run found exactly one failure, in a test this branch's baseline
 commit had already added (`readiness.certificate-email-guard.test.ts`'s 202-GENERATING case, unrelated
-to the 14 tasks) — root-caused to supertest's `Test` object never dispatching a request with no
-`.then()`/`.end()`/`await` chained onto it, so the test's own fire-and-forget trigger request
-sometimes never fired. Fixed directly (one line, forcing dispatch without awaiting the response).
+to the 14 tasks). Root-caused, by reading the actual installed `superagent`/`supertest` source (not
+just inferring): a `Test` object with no `.then()`/`.end()`/`await` chained onto it never dispatches
+its request at all — deterministically, confirmed by reverting the fix and reproducing the failure
+4/4 times in isolation. This test's own fire-and-forget trigger request had exactly this shape, so it
+never fired; the earlier "known flake" label from an even-earlier investigation was a misdiagnosis.
+Fixed directly (forcing dispatch via `.catch(() => {})`, verified clean across two full 802/802
+suite runs — the exact load conditions that originally exposed it).
 
 ## Phase 3 engineering review (2026-08-30) — findings fixed
 
