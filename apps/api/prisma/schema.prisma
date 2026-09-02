@@ -752,9 +752,13 @@ model AuditLogEntry {
 ///
 /// The `id` is the *external* event id from the payment provider. A second
 /// delivery of the same event (providers retry aggressively) finds the row
-/// already here and is acknowledged without re-applying its effect — a renewal
-/// granted twice, or a purchase credited twice, is exactly the class of bug
-/// FR-078/SC-022 forbid.
+/// already here — but "the row exists" is not by itself "handled": see
+/// `appliedAt` below. Only a delivery whose row is already *applied* is
+/// acknowledged without re-running its effect; a received-but-not-applied
+/// row is retried. Getting this distinction right is what keeps a renewal
+/// granted twice, or a purchase credited twice, from being possible — exactly
+/// the class of bug FR-078/SC-022 forbid — while still letting a genuinely
+/// failed attempt recover instead of silently vanishing.
 model BillingEvent {
   /// The provider's event id, verbatim. Not a cuid.
   id         String   @id

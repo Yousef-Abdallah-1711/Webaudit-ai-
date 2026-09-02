@@ -8,11 +8,17 @@
  * balance. The raw bytes are required for this, so the route mounts its own
  * `express.raw` parser ahead of the app's `express.json`.
  *
- * **Idempotent on the provider's event id.** Providers retry deliveries
- * aggressively; a renewal or a purchase applied twice is exactly the SC-022
- * failure. The first thing the handler does after verifying is `INSERT` the
- * event id into `BillingEvent`; a duplicate `INSERT` (P2002) means "already
- * handled" and the response is `200` with nothing re-applied.
+ * **Idempotent on the provider's event id — but "received" is not "applied."**
+ * Providers retry deliveries aggressively; a renewal or a purchase applied
+ * twice is exactly the SC-022 failure. The first thing the handler does after
+ * verifying is `INSERT` the event id into `BillingEvent`; a duplicate
+ * `INSERT` (P2002) means this event id was seen before, but only a row whose
+ * `appliedAt` is already set is a genuine duplicate — that one short-circuits
+ * to `200` with nothing re-applied. A row that exists with `appliedAt` still
+ * null means a prior attempt's effect never finished (a transient failure),
+ * so this delivery retries the effect instead of silently treating the row's
+ * mere existence as "handled." An effect that still fails here responds
+ * `500` (not `200`) so the provider actually retries again.
  *
  * Event → effect:
  *   subscription.activated  → subscribe(userId, planId)
