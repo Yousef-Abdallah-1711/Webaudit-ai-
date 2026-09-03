@@ -25,6 +25,10 @@ const fakeProducer = {
     captured.push({ scanId: input.scanId });
     return Promise.resolve({ jobId: `fake:${input.scanId}` });
   },
+  // No route under test here reaches the questionnaire — present only so this
+  // fake still satisfies ScanPhaseProducer's full shape.
+  enqueuePhaseTwo: (input: { scanId: string }) =>
+    Promise.resolve({ jobId: `fake:${input.scanId}` }),
   close: () => Promise.resolve(),
 };
 

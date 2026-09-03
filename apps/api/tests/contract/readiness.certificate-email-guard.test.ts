@@ -24,6 +24,7 @@ const CREDS = { email: 'fr072-guard@example.com', password: 'correct-horse-batte
 // queue connection, matching readiness.premature.test.ts's convention.
 const fakeProducer = {
   enqueueFirstPhase: () => Promise.resolve({ jobId: 'fake:unused' }),
+  enqueuePhaseTwo: () => Promise.resolve({ jobId: 'fake:unused' }),
   close: () => Promise.resolve(),
 };
 
@@ -215,7 +216,10 @@ describe('readiness certificate + email guard are independent (Finding 1 regress
     // is invoked on it — a bare, unchained call never sends the request at all. Attaching
     // .catch() here forces dispatch while still not awaiting the response, and swallows
     // (rather than leaving unhandled) a rejection if this request ever settles non-2xx.
-    void request(app).get(`/scans/${scanId}/readiness`).set(auth(token)).catch(() => {});
+    void request(app)
+      .get(`/scans/${scanId}/readiness`)
+      .set(auth(token))
+      .catch(() => {});
     await new Promise((r) => setTimeout(r, 50)); // let the claim's updateMany land
 
     const res = await request(app).get(`/scans/${scanId}/readiness/certificate`).set(auth(token));

@@ -27,6 +27,20 @@ export interface ScanPhaseProducer {
     readonly modules: readonly ModuleType[];
     readonly planQueuePriority: number;
   }): Promise<{ readonly jobId: string }>;
+  /**
+   * T199 — the questionnaire routes' side of the same resume the worker's own
+   * `resumeAfterQuestionnaire` (`apps/worker/src/orchestrator/phases.ts`)
+   * performs when the deadline wins the race instead. Same job id shape
+   * (`${scanId}:RUNNING_PHASE_2:1`), same job name, same payload shape, same
+   * queue — `apps/api` cannot import `enqueuePhase` from `apps/worker` (see
+   * this file's own module note), so this duplicates that tiny shape rather
+   * than the cross-app import.
+   */
+  enqueuePhaseTwo(input: {
+    readonly scanId: string;
+    readonly modules: readonly ModuleType[];
+    readonly planQueuePriority: number;
+  }): Promise<{ readonly jobId: string }>;
   close(): Promise<void>;
 }
 
@@ -62,6 +76,15 @@ export function createScanPhaseProducer(
       await queue.add(
         'phase',
         { scanId: input.scanId, phase: 'RUNNING_PHASE_1', modules: input.modules, attempt: 1 },
+        { jobId, priority: priorityForPlan(input.planQueuePriority) },
+      );
+      return { jobId };
+    },
+    async enqueuePhaseTwo(input): Promise<{ readonly jobId: string }> {
+      const jobId = `${input.scanId}:RUNNING_PHASE_2:1`;
+      await queue.add(
+        'phase',
+        { scanId: input.scanId, phase: 'RUNNING_PHASE_2', modules: input.modules, attempt: 1 },
         { jobId, priority: priorityForPlan(input.planQueuePriority) },
       );
       return { jobId };

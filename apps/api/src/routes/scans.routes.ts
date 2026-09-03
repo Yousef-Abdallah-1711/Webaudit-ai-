@@ -33,7 +33,11 @@ import {
   type ControlLevel,
   type ModuleState,
 } from '@webaudit/types';
-import { refundForUndelivered } from '@webaudit/config';
+import {
+  DESIGN_INTENT_QUESTIONS,
+  DESIGN_INTENT_WAIT_MS,
+  refundForUndelivered,
+} from '@webaudit/config';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 import { EntitlementError } from '../services/billing/entitlements.js';
@@ -64,6 +68,12 @@ import {
   createTeardownProducer,
   type TeardownProducer,
 } from '../services/queue/teardown-producer.js';
+import {
+  QuestionnaireAlreadyResolvedError,
+  QuestionnaireScanNotFoundError,
+  answerQuestionnaire,
+  skipQuestionnaire,
+} from '../services/scans/questionnaire.service.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
 
@@ -85,6 +95,14 @@ const createBody = z.object({
   targetId: z.string().trim().min(1),
   modules: z.array(z.enum(MODULE_TYPES)).min(1),
   acceptedQuote: z.number().int().nonnegative(),
+});
+
+/** FR-040: every field optional — a partial answer is still an answer. */
+const questionnaireAnswerBody = z.object({
+  audience: z.string().trim().min(1).optional(),
+  stylePreference: z.string().trim().min(1).optional(),
+  admiredReferences: z.array(z.string()).optional(),
+  brandColors: z.array(z.string()).optional(),
 });
 
 function pathId(req: AuthedRequest): string {
@@ -328,6 +346,98 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       scan ??= await fetchScanWithResults();
     }
 
+    res.status(200).json({ scan });
+  });
+
+  // T199/T200 — FR-040/FR-041/FR-042. The route side of the questionnaire
+  // race against `apps/worker`'s own delayed deadline job; see
+  // `services/scans/questionnaire.service.ts`'s module note for the ordering
+  // discipline and why this cannot simply call into `apps/worker`.
+  router.get('/:id/questionnaire', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+    const scan = await db.scan.findFirst({
+      where: { id: pathId(req), userId },
+      select: { state: true, questionnaireDeadline: true },
+    });
+    if (scan === null) {
+      res.status(404).json(NOT_FOUND);
+      return;
+    }
+    // Valid at any state, not only mid-pause: a client polling this route
+    // needs to know the deadline while waiting, and needs an unambiguous
+    // signal to stop showing the prompt once the pause has ended, however it
+    // ended (answered, skipped, or defaulted).
+    res.status(200).json({
+      questionnaire: {
+        state: scan.state,
+        resolved: scan.state !== 'AWAITING_QUESTIONNAIRE',
+        questionnaireDeadline: scan.questionnaireDeadline,
+        questions: DESIGN_INTENT_QUESTIONS,
+        waitMs: DESIGN_INTENT_WAIT_MS,
+      },
+    });
+  });
+
+  router.post('/:id/questionnaire', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+    const parsed = questionnaireAnswerBody.safeParse(req.body);
+    if (!parsed.success) {
+      badRequest(res, 'The questionnaire answer is malformed.', parsed.error.flatten());
+      return;
+    }
+
+    try {
+      await answerQuestionnaire(db, producer, {
+        scanId: pathId(req),
+        userId,
+        answer: parsed.data,
+      });
+    } catch (error) {
+      if (error instanceof QuestionnaireScanNotFoundError) {
+        res.status(404).json(NOT_FOUND);
+        return;
+      }
+      if (error instanceof QuestionnaireAlreadyResolvedError) {
+        res.status(409).json({
+          error: {
+            code: 'QUESTIONNAIRE_ALREADY_RESOLVED',
+            message:
+              'This questionnaire is no longer waiting for an answer — it was already answered, skipped, or its deadline already passed.',
+          },
+        });
+        return;
+      }
+      throw error;
+    }
+
+    const scan = await db.scan.findUniqueOrThrow({ where: { id: pathId(req) } });
+    res.status(200).json({ scan });
+  });
+
+  router.post('/:id/questionnaire/skip', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+
+    try {
+      await skipQuestionnaire(db, producer, { scanId: pathId(req), userId });
+    } catch (error) {
+      if (error instanceof QuestionnaireScanNotFoundError) {
+        res.status(404).json(NOT_FOUND);
+        return;
+      }
+      if (error instanceof QuestionnaireAlreadyResolvedError) {
+        res.status(409).json({
+          error: {
+            code: 'QUESTIONNAIRE_ALREADY_RESOLVED',
+            message:
+              'This questionnaire is no longer waiting for an answer — it was already answered, skipped, or its deadline already passed.',
+          },
+        });
+        return;
+      }
+      throw error;
+    }
+
+    const scan = await db.scan.findUniqueOrThrow({ where: { id: pathId(req) } });
     res.status(200).json({ scan });
   });
 
