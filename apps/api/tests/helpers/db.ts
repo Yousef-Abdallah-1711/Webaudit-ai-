@@ -47,6 +47,7 @@ const TABLES_TO_CLEAR = [
   'OAuthIdentity',
   'User',
   'AuditLogEntry',
+  'ProviderChainEntry',
 ] as const;
 
 export async function resetDb(): Promise<void> {

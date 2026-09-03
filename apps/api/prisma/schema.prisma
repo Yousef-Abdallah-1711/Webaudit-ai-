@@ -661,6 +661,37 @@ model AiInvocation {
   @@index([provider, createdAt]) // provider health + spend
 }
 
+// ─── AI provider chain administration ────────────────────────────────── T208 ──
+
+/// T208 — the operator's declared AI provider chain (FR-087). Read
+/// providers.service.ts's module note before touching this: this table
+/// records what an operator has *chosen* and validates it with the real
+/// `buildChain` guard (packages/ai-executor/src/chain.ts) at write time. It
+/// is NOT read by any running process today — `apps/worker/src/index.ts`
+/// still boots its executor once, from `AI_CHAIN` / per-vendor env vars, via
+/// `createExecutorFromEnv` (packages/ai-executor/src/from-env.ts). Wiring a
+/// live process to re-read this table on a schedule or on demand is a real,
+/// separate, larger change that is out of scope here.
+model ProviderChainEntry {
+  id     String @id @default(cuid())
+  vendor String
+  model  String
+
+  /// The fallback order — position 0 is primary. Unique so "the chain" has
+  /// exactly one order, never a tie a reader has to break.
+  position Int @unique
+
+  /// Lets an operator pull a vendor from the (eventual) live chain without
+  /// losing its configuration. See providers.service.ts's module note for
+  /// what this flag does and does not gate today.
+  isEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([vendor])
+}
+
 // ─── Design intent, verdicts, audit log ─────────────────────────────── T018 ──
 
 model DesignIntent {
