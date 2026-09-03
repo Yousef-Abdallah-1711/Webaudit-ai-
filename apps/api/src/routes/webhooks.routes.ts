@@ -85,14 +85,21 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
       if (secret === '') {
         // Fail closed: an unconfigured webhook secret means we cannot trust any
         // payload, so we accept none.
-        res.status(503).json({ error: { code: 'WEBHOOK_NOT_CONFIGURED', message: 'Billing webhook is not configured.' } });
+        res.status(503).json({
+          error: {
+            code: 'WEBHOOK_NOT_CONFIGURED',
+            message: 'Billing webhook is not configured.',
+          },
+        });
         return;
       }
 
       const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body));
       const signature = req.header(sigHeader) ?? undefined;
       if (!verify(raw, signature, secret)) {
-        res.status(401).json({ error: { code: 'BAD_SIGNATURE', message: 'Signature verification failed.' } });
+        res
+          .status(401)
+          .json({ error: { code: 'BAD_SIGNATURE', message: 'Signature verification failed.' } });
         return;
       }
 
@@ -102,7 +109,9 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
         parsedBody = JSON.parse(raw.toString('utf8'));
         event = eventSchema.parse(parsedBody);
       } catch {
-        res.status(400).json({ error: { code: 'BAD_PAYLOAD', message: 'Unparseable webhook body.' } });
+        res
+          .status(400)
+          .json({ error: { code: 'BAD_PAYLOAD', message: 'Unparseable webhook body.' } });
         return;
       }
 
@@ -132,11 +141,18 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
         switch (event.type) {
           case 'subscription.activated':
           case 'subscription.created':
-            if (userId && planId) await subscribe(db, { userId, planId, ...(external ? { external } : {}) });
+            if (userId && planId) {
+              await subscribe(db, {
+                userId,
+                planId,
+                ...(external ? { external } : {}),
+                billingEventId: event.id,
+              });
+            }
             break;
           case 'subscription.renewed':
           case 'invoice.paid':
-            if (userId) await renewSubscription(db, { userId });
+            if (userId) await renewSubscription(db, { userId, billingEventId: event.id });
             break;
           case 'subscription.updated':
             if (userId && planId) await changePlan(db, { userId, planId });
@@ -145,10 +161,11 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
             if (userId) await cancelSubscription(db, { userId });
             break;
           case 'subscription.expired':
-            if (userId) await renewSubscription(db, { userId });
+            if (userId) await renewSubscription(db, { userId, billingEventId: event.id });
             break;
           case 'credits.purchased':
-            if (userId && credits) await purchaseCredits(db, { userId, credits });
+            if (userId && credits)
+              await purchaseCredits(db, { userId, credits, billingEventId: event.id });
             break;
           default:
             // Acknowledged, ignored — still counts as applied.
@@ -160,19 +177,19 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
         // appliedAt still null, so the provider's retry re-enters this same
         // branch and tries the effect again. changePlan/cancelSubscription
         // converge to a target state and are safe to re-invoke.
-        // subscribe/renewSubscription/purchaseCredits are NOT fully
-        // idempotent under retry: each unconditionally grants a credit lot
-        // (grantLot has no dedup key), so a crash in the single await
-        // between the effect committing above and the appliedAt write above
-        // could cause a retry to double-grant. That is a known, narrower
-        // residual risk versus the old bug this fixes (any transient failure,
-        // anywhere in this flow, permanently and silently lost the grant).
-        // Closing it fully needs an idempotency key on the grant itself
-        // (e.g. a billingEventId column on CreditTransaction) — deferred as
-        // its own follow-up, not part of this fix. BillingEvent.payload
-        // still allows manual reconciliation either way.
+        // subscribe/renewSubscription/purchaseCredits are now fully
+        // idempotent under retry too (PROGRESS.md Open Decision #15,
+        // resolved): each passes this event's id into grantLot, which keys
+        // the grant on `CreditTransaction.billingEventId` (unique) — a
+        // second attempt at the same event throws `DuplicateBillingEventGrantError`
+        // instead of creating a second lot, and each effect function catches
+        // that specifically to return the already-committed state rather
+        // than re-throwing. BillingEvent.payload still allows manual
+        // reconciliation for anything this doesn't cover.
         console.error(`[webhook] ${event.type} (${event.id}) failed to apply:`, error);
-        res.status(500).json({ error: { code: 'WEBHOOK_APPLY_FAILED', message: 'Failed to apply webhook effect.' } });
+        res.status(500).json({
+          error: { code: 'WEBHOOK_APPLY_FAILED', message: 'Failed to apply webhook effect.' },
+        });
         return;
       }
 

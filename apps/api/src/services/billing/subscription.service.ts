@@ -23,7 +23,7 @@
 
 import { BILLING_PERIOD_DAYS } from '@webaudit/config';
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
-import { grantLot } from '../credits/grant.js';
+import { DuplicateBillingEventGrantError, grantLot } from '../credits/grant.js';
 import { expireRenewedLots } from '../credits/expiry.js';
 
 const DAY_MS = 86_400_000;
@@ -66,6 +66,28 @@ async function loadSubscribablePlan(db: PrismaClient, planId: string) {
 }
 
 /**
+ * Re-fetches the current, already-persisted subscription state. Used only
+ * when a `$transaction` rolled back on a `DuplicateBillingEventGrantError` —
+ * the row this reads was written by whichever attempt granted the credits
+ * for real; this call never re-writes anything.
+ */
+async function loadSubscriptionSummary(
+  db: PrismaClient,
+  userId: string,
+): Promise<SubscriptionSummary> {
+  return db.subscription.findUniqueOrThrow({
+    where: { userId },
+    select: {
+      planId: true,
+      status: true,
+      periodStart: true,
+      periodEnd: true,
+      cancelAtPeriodEnd: true,
+    },
+  });
+}
+
+/**
  * Start (or restart) a paid subscription and grant the first period's credits.
  */
 export async function subscribe(
@@ -77,6 +99,8 @@ export async function subscribe(
       customerId?: string | undefined;
       subscriptionId?: string | undefined;
     };
+    /** The billing-webhook event this call is applying, if any (see grant.ts). */
+    readonly billingEventId?: string;
   },
   now: Date = new Date(),
 ): Promise<SubscriptionSummary> {
@@ -84,39 +108,50 @@ export async function subscribe(
   const periodStart = now;
   const periodEnd = new Date(now.getTime() + PERIOD_MS);
 
-  return db.$transaction(async (tx) => {
-    const subData = {
-      planId: plan.id,
-      status: 'ACTIVE' as const,
-      periodStart,
-      periodEnd,
-      cancelAtPeriodEnd: false,
-      renewalWarningSentAt: null,
-      externalCustomerId: input.external?.customerId ?? null,
-      externalSubscriptionId: input.external?.subscriptionId ?? null,
-    };
-    const sub = await tx.subscription.upsert({
-      where: { userId: input.userId },
-      create: { userId: input.userId, ...subData },
-      update: subData,
-    });
+  try {
+    return await db.$transaction(async (tx) => {
+      const subData = {
+        planId: plan.id,
+        status: 'ACTIVE' as const,
+        periodStart,
+        periodEnd,
+        cancelAtPeriodEnd: false,
+        renewalWarningSentAt: null,
+        externalCustomerId: input.external?.customerId ?? null,
+        externalSubscriptionId: input.external?.subscriptionId ?? null,
+      };
+      const sub = await tx.subscription.upsert({
+        where: { userId: input.userId },
+        create: { userId: input.userId, ...subData },
+        update: subData,
+      });
 
-    await grantLot(tx, {
-      userId: input.userId,
-      amount: plan.monthlyCredits,
-      kind: 'PLAN',
-      source: 'PLAN_RENEWAL',
-      expiresAt: periodEnd,
-    });
+      await grantLot(tx, {
+        userId: input.userId,
+        amount: plan.monthlyCredits,
+        kind: 'PLAN',
+        source: 'PLAN_RENEWAL',
+        expiresAt: periodEnd,
+        billingEventId: input.billingEventId ?? null,
+      });
 
-    return {
-      planId: sub.planId,
-      status: sub.status,
-      periodStart: sub.periodStart,
-      periodEnd: sub.periodEnd,
-      cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
-    };
-  });
+      return {
+        planId: sub.planId,
+        status: sub.status,
+        periodStart: sub.periodStart,
+        periodEnd: sub.periodEnd,
+        cancelAtPeriodEnd: sub.cancelAtPeriodEnd,
+      };
+    });
+  } catch (error) {
+    if (error instanceof DuplicateBillingEventGrantError) {
+      // Already applied by an earlier attempt at this same event — the
+      // upsert above rolled back with it, but it only ever re-wrote the same
+      // values the earlier attempt already committed, so nothing is lost.
+      return loadSubscriptionSummary(db, input.userId);
+    }
+    throw error;
+  }
 }
 
 /**
@@ -132,7 +167,7 @@ export async function subscribe(
  */
 export async function renewSubscription(
   db: PrismaClient,
-  input: { readonly userId: string },
+  input: { readonly userId: string; readonly billingEventId?: string },
   now: Date = new Date(),
 ): Promise<SubscriptionSummary> {
   const sub = await db.subscription.findUnique({
@@ -153,7 +188,13 @@ export async function renewSubscription(
     const lapsed = await db.subscription.update({
       where: { userId: input.userId },
       data: { status: 'EXPIRED', renewalWarningSentAt: null },
-      select: { planId: true, status: true, periodStart: true, periodEnd: true, cancelAtPeriodEnd: true },
+      select: {
+        planId: true,
+        status: true,
+        periodStart: true,
+        periodEnd: true,
+        cancelAtPeriodEnd: true,
+      },
     });
     return lapsed;
   }
@@ -164,29 +205,46 @@ export async function renewSubscription(
   const nextStart = sub.periodEnd > now ? sub.periodEnd : now;
   const nextEnd = new Date(nextStart.getTime() + PERIOD_MS);
 
-  return db.$transaction(async (tx) => {
-    const updated = await tx.subscription.update({
-      where: { userId: input.userId },
-      data: {
-        status: 'ACTIVE',
-        periodStart: nextStart,
-        periodEnd: nextEnd,
-        renewalWarningSentAt: null,
-      },
-      select: { planId: true, status: true, periodStart: true, periodEnd: true, cancelAtPeriodEnd: true },
-    });
-
-    if (sub.plan.isActive) {
-      await grantLot(tx, {
-        userId: input.userId,
-        amount: sub.plan.monthlyCredits,
-        kind: 'PLAN',
-        source: 'PLAN_RENEWAL',
-        expiresAt: nextEnd,
+  try {
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.subscription.update({
+        where: { userId: input.userId },
+        data: {
+          status: 'ACTIVE',
+          periodStart: nextStart,
+          periodEnd: nextEnd,
+          renewalWarningSentAt: null,
+        },
+        select: {
+          planId: true,
+          status: true,
+          periodStart: true,
+          periodEnd: true,
+          cancelAtPeriodEnd: true,
+        },
       });
+
+      if (sub.plan.isActive) {
+        await grantLot(tx, {
+          userId: input.userId,
+          amount: sub.plan.monthlyCredits,
+          kind: 'PLAN',
+          source: 'PLAN_RENEWAL',
+          expiresAt: nextEnd,
+          billingEventId: input.billingEventId ?? null,
+        });
+      }
+      return updated;
+    });
+  } catch (error) {
+    if (error instanceof DuplicateBillingEventGrantError) {
+      // Same reasoning as subscribe()'s own catch: the boundary-move update
+      // rolled back with the duplicate grant attempt, but an earlier attempt
+      // at this event already committed the same target values for real.
+      return loadSubscriptionSummary(db, input.userId);
     }
-    return updated;
-  });
+    throw error;
+  }
 }
 
 /**
@@ -199,13 +257,22 @@ export async function changePlan(
   input: { readonly userId: string; readonly planId: string },
 ): Promise<SubscriptionSummary> {
   const plan = await loadSubscribablePlan(db, input.planId);
-  const existing = await db.subscription.findUnique({ where: { userId: input.userId }, select: { id: true } });
+  const existing = await db.subscription.findUnique({
+    where: { userId: input.userId },
+    select: { id: true },
+  });
   if (existing === null) throw new NoSubscriptionError();
 
   const updated = await db.subscription.update({
     where: { userId: input.userId },
     data: { planId: plan.id, status: 'ACTIVE', cancelAtPeriodEnd: false },
-    select: { planId: true, status: true, periodStart: true, periodEnd: true, cancelAtPeriodEnd: true },
+    select: {
+      planId: true,
+      status: true,
+      periodStart: true,
+      periodEnd: true,
+      cancelAtPeriodEnd: true,
+    },
   });
   return updated;
 }
@@ -234,13 +301,17 @@ export async function cancelSubscription(
   const updated = await db.subscription.update({
     where: { userId: input.userId },
     data: { cancelAtPeriodEnd: true },
-    select: { planId: true, status: true, periodStart: true, periodEnd: true, cancelAtPeriodEnd: true },
+    select: {
+      planId: true,
+      status: true,
+      periodStart: true,
+      periodEnd: true,
+      cancelAtPeriodEnd: true,
+    },
   });
 
   return {
     ...updated,
-    reportsReadableUntil: new Date(
-      updated.periodEnd.getTime() + sub.plan.retentionDays * DAY_MS,
-    ),
+    reportsReadableUntil: new Date(updated.periodEnd.getTime() + sub.plan.retentionDays * DAY_MS),
   };
 }

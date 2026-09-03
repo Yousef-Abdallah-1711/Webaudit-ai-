@@ -324,6 +324,13 @@ model CreditTransaction {
   /// A REFUND points at the DEBIT it reverses, so a debit can be reversed once.
   reversesId String? @unique
 
+  /// The BillingEvent whose effect produced this GRANT, so a provider retry
+  /// of the same event can never grant credits twice (grantLot's own
+  /// idempotency key). Null for every non-webhook grant (registration's free
+  /// allocation, the direct dev/test billing routes) -- Postgres treats
+  /// multiple nulls as distinct, so those never collide with each other.
+  billingEventId String? @unique
+
   createdAt DateTime @default(now())
 
   user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -160,28 +160,45 @@ Decision #15.
 fixed).
 
 ### Tasks
-- [ ] Read `apps/api/src/services/credits/grant.ts` and the `subscribe`/`renewSubscription`/
-      `purchaseCredits` call chain in `apps/api/src/services/billing/` before writing anything.
-- [ ] Read `docs/superpowers/plans/2026-08-27-credit-refund-integrity.md` (the R1 plan) before
-      touching credits code at all — it encodes hard-won rules about lot ordering and refund
-      single-shot guarantees that are easy to break by accident.
-- [ ] Write the failing test first: force the `BillingEvent.appliedAt` update to fail after the
-      effect's own transaction commits; assert a webhook retry with the same event id does NOT grant
-      credits twice.
-- [ ] Add a nullable `billingEventId` column with a unique constraint on `CreditTransaction` and/or
-      `CreditLot` (confirm which table is the right anchor from what you read above, don't guess).
-- [ ] Thread the billing event id through all three effect functions so each becomes safely
-      re-invokable under retry.
-- [ ] Confirm the fix doesn't change `refund`/`refundPartial`'s existing single-shot-per-debit
-      guarantee (Ruling E from the R1 plan).
-- [ ] Full adverse-suite re-run, specifically: `credits.property.test.ts`, `credits.expiry-race.test.ts`,
-      `credits.refund-partial.test.ts`, `credits.concurrency.test.ts`, `refund-on-failure.test.ts`,
-      `billing-webhook.test.ts`.
-- [ ] Update PROGRESS.md's Open Decision #15 from "needs a call" to resolved, matching the style of
-      Open Decision #11/#14's own resolution write-ups.
+- [x] Read `apps/api/src/services/credits/grant.ts` and the `subscribe`/`renewSubscription`/
+      `purchaseCredits` call chain in `apps/api/src/services/billing/` before writing anything. →
+      Done — `grantLot` creates a `CreditLot` + `CreditTransaction` pair with no dedup key; all three
+      effect functions call it inside their own `$transaction`.
+- [x] Read `docs/superpowers/plans/2026-08-27-credit-refund-integrity.md` (the R1 plan) before
+      touching credits code at all. → Done. The refund single-shot guarantee ("Ruling E") turned out
+      to live on `CreditTransaction.reversesId`'s own `@unique` constraint, not in the R1 plan's prose
+      — a completely separate field from what this session adds, so the fix here doesn't touch it at
+      all (confirmed, not just assumed).
+- [x] Write the failing test first — Done, `billing-webhook.test.ts`'s new "does not double-grant
+      credits..." test, using a `db.billingEvent.update` proxy that fails only its first call
+      (matching `scans.cancel-refund.test.ts`'s established `withFlaky...` pattern). Confirmed RED
+      first (`800` granted instead of `400`), for the right reason.
+- [x] Add a nullable `billingEventId` column with a unique constraint → **On `CreditTransaction`**,
+      matching the existing `reversesId String? @unique` field's exact convention on the same model
+      (not `CreditLot` — a lot has no natural "this is the ledger row for event X" semantics the way
+      a transaction already does via its `reason` field). Migration
+      `20260903050000_credit_transaction_billing_event_id`, applied to both dev and test databases.
+- [x] Thread the billing event id through all three effect functions. → Done. Also required reordering
+      `grantLot`'s two inserts (transaction row first, lot second) — a subtle point worth recording:
+      catching a Postgres unique-violation *inside* the same interactive `$transaction` and continuing
+      to use it is unsafe (Postgres marks the transaction aborted after any failed statement; a
+      later `COMMIT` on an aborted transaction silently rolls back everything, including whatever
+      already succeeded earlier in the same call). So the fix lets the error propagate all the way
+      out of `$transaction` (a clean, whole-transaction rollback) and catches
+      `DuplicateBillingEventGrantError` one level up, in each effect function, returning the
+      already-committed state instead of re-throwing.
+- [x] Confirm the fix doesn't change `refund`/`refundPartial`'s single-shot guarantee. → Confirmed —
+      untouched file, unrelated field, all of `credits.refund-partial.test.ts`'s 7 tests still pass.
+- [x] Full adverse-suite re-run, specifically the six named files → all pass (38 tests), plus the
+      broader `renewal.test.ts`/`subscription-lifecycle.test.ts`/`billing-routes.test.ts`/
+      `entitlements.test.ts` sweep (17 more) and the full adverse suite (570/571) and full unit suite
+      (**805/805**, isolated — two separate contamination false-alarms hit and resolved during this
+      verification, see the roadmap's Environment gotchas; neither was a real regression).
+- [x] Update PROGRESS.md's Open Decision #15 → Done, resolved.
 
 ### Definition of done
-New test passes, full adverse suite still green, Open Decision #15 marked resolved.
+New test passes, full adverse suite still green, Open Decision #15 marked resolved. **All met —
+Session 2 complete.**
 
 ---
 

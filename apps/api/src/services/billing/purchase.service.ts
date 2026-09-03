@@ -21,7 +21,7 @@
  */
 
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
-import { grantLot } from '../credits/grant.js';
+import { DuplicateBillingEventGrantError, grantLot } from '../credits/grant.js';
 import { assertEntitled } from './entitlements.js';
 
 export class InvalidPurchaseAmountError extends Error {
@@ -38,7 +38,12 @@ export interface PurchaseResult {
 
 export async function purchaseCredits(
   db: PrismaClient,
-  input: { readonly userId: string; readonly credits: number },
+  input: {
+    readonly userId: string;
+    readonly credits: number;
+    /** The billing-webhook event this call is applying, if any (see grant.ts). */
+    readonly billingEventId?: string;
+  },
 ): Promise<PurchaseResult> {
   if (!Number.isInteger(input.credits) || input.credits <= 0) {
     throw new InvalidPurchaseAmountError();
@@ -47,15 +52,22 @@ export async function purchaseCredits(
   // FR-078: not on the free tier. Throws EntitlementError (→ 403) if refused.
   await assertEntitled(db, input.userId, 'CREDIT_PURCHASE');
 
-  await db.$transaction((tx) =>
-    grantLot(tx, {
-      userId: input.userId,
-      amount: input.credits,
-      kind: 'PURCHASED',
-      source: 'PURCHASE',
-      expiresAt: null,
-    }),
-  );
+  try {
+    await db.$transaction((tx) =>
+      grantLot(tx, {
+        userId: input.userId,
+        amount: input.credits,
+        kind: 'PURCHASED',
+        source: 'PURCHASE',
+        expiresAt: null,
+        billingEventId: input.billingEventId ?? null,
+      }),
+    );
+  } catch (error) {
+    if (!(error instanceof DuplicateBillingEventGrantError)) throw error;
+    // Already applied by an earlier attempt at this same event -- nothing
+    // else was written by this call, so there is nothing further to reconcile.
+  }
 
   return { creditsAdded: input.credits, kind: 'PURCHASED' };
 }
