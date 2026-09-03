@@ -37,7 +37,7 @@ let service: QueueAdminService;
 function buildApp() {
   const app = express();
   app.use(express.json());
-  app.use(adminQueueRoutes(testDb, service));
+  app.use(adminQueueRoutes(testDb, { service }));
   return app;
 }
 let app: express.Express;

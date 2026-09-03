@@ -10,10 +10,14 @@
  * in this directory — T211 mounts everything under `/admin` behind the
  * operator gate.
  *
- * Built on a single `QueueAdminService`, constructed once per process (three
- * long-lived Redis connections, not one per request) and passed in — mirrors
- * how `apps/api/src/index.ts` already constructs `ScanPhaseProducer` once at
- * startup rather than per request.
+ * `deps.service` defaults to a real `QueueAdminService`, built once when this
+ * router is constructed (three long-lived Redis connections, not one per
+ * request) — the same `deps.producer ?? createXProducer()` seam
+ * `scans.routes.ts` already uses for its own BullMQ producer, so a test can
+ * inject one and production gets a real one for free. Nothing in this
+ * codebase explicitly closes a production BullMQ connection on shutdown
+ * (`scan-phase-producer.ts`'s `close()` is likewise only ever called from
+ * test teardown) — these live for the process, same as that one.
  */
 
 import { Router, type Response } from 'express';
@@ -24,8 +28,13 @@ import {
   JobNotCancelableError,
   JobNotFoundError,
   JobNotRetryableError,
+  createQueueAdminService,
   type QueueAdminService,
 } from '../../services/admin/queue.service.js';
+
+export interface AdminQueueRoutesDeps {
+  readonly service?: QueueAdminService;
+}
 
 const INSPECTABLE_STATES = ['waiting', 'active', 'delayed', 'failed', 'completed'] as const;
 
@@ -49,8 +58,9 @@ function jobIdParam(req: AuthedRequest): string {
   return typeof raw === 'string' ? raw : '';
 }
 
-export function adminQueueRoutes(db: PrismaClient, service: QueueAdminService): Router {
+export function adminQueueRoutes(db: PrismaClient, deps: AdminQueueRoutesDeps = {}): Router {
   const router = Router();
+  const service = deps.service ?? createQueueAdminService();
   router.use(requireAuth);
 
   router.get('/queue', async (req: AuthedRequest, res: Response) => {

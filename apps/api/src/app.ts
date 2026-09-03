@@ -32,6 +32,7 @@ import { webhooksRoutes, type WebhookRoutesDeps } from './routes/webhooks.routes
 import { reportsRoutes } from './routes/reports.routes.js';
 import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
 import { readinessRoutes, type ReadinessRoutesDeps } from './routes/readiness.routes.js';
+import { adminRoutes, type AdminRoutesDeps } from './routes/admin/index.js';
 import { env } from './config/env.js';
 import { createRateLimiters, type RateLimiters } from './middleware/ratelimit.middleware.js';
 
@@ -84,6 +85,12 @@ export interface AppDeps {
    * a suite injects a known secret so it can sign a test payload.
    */
   webhooks?: WebhookRoutesDeps;
+  /**
+   * Seam for the admin surface (T211) — currently only the queue router has
+   * one of its own (its `QueueAdminService`, which opens real BullMQ/Redis
+   * connections). Defaults to a real one.
+   */
+  admin?: AdminRoutesDeps;
 }
 
 /**
@@ -312,6 +319,12 @@ export function createApp(deps: AppDeps): Express {
   // `/billing/*` — plans, the movement-history receipt, subscribe/change/cancel,
   // and credit purchase. All behind requireAuth, declared inside the router.
   app.use(billingRoutes(deps.db));
+
+  // `/admin/*` — users, plans, margin, capabilities, providers, queue.
+  // requireAuth then requireOperator, both declared inside adminRoutes so no
+  // route added under `routes/admin/` in the future can be reached by a
+  // non-operator "however constructed" (FR-008, T202).
+  app.use('/admin', adminRoutes(deps.db, deps.admin ?? {}));
 
   app.use((_req: Request, res: Response) => {
     res.status(404).json({ error: { code: 'NOT_FOUND', message: 'No such route.' } });
