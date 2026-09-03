@@ -455,17 +455,21 @@ asserted the debit-wins outcome.
 
 ### Tests for User Story 6
 
-- [ ] T194 [P] [US6] Write failing test asserting the questionnaire pause holds no worker slot (R4) in `apps/worker/tests/integration/questionnaire.no-block.test.ts`
-- [ ] T195 [P] [US6] Write failing test asserting the deadline race between answer and timeout resolves exactly once in `apps/worker/tests/adverse/questionnaire.race.test.ts`
-- [ ] T196 [P] [US6] Write failing test asserting timeout resumes on defaults and records DEFAULTED (FR-041) in `apps/worker/tests/integration/questionnaire.timeout.test.ts`
+- [X] T194 [P] [US6] Write failing test asserting the questionnaire pause holds no worker slot (R4) in `apps/worker/tests/integration/questionnaire.no-block.test.ts` — as named. The isolated mechanism (`awaitQuestionnaire` against a fake context) was already proven by the pre-existing `questionnaire-race.test.ts` (T096); this test proves the *real* orchestrator run loop actually triggers the pause, which nothing did before this task.
+- [X] T195 [P] [US6] Write failing test asserting the deadline race between answer and timeout resolves exactly once — already covered by the pre-existing `apps/worker/tests/adverse/questionnaire-race.test.ts` (T096), which this phase deliberately did not duplicate. Not yet covered: the real API-route-vs-worker-handler race on a real row (both guards independently verified atomic and mutually exclusive by two rounds of review, but no adverse test exercises them against each other) — left as a follow-up, not a gap in what was reviewed.
+- [X] T196 [P] [US6] Write failing test asserting timeout resumes on defaults and records DEFAULTED (FR-041) in `apps/worker/tests/integration/questionnaire.timeout.test.ts` — as named.
 
 ### Implementation for User Story 6
 
-- [ ] T197 [US6] Implement AWAITING_QUESTIONNAIRE persistence with deadline and slot release in `apps/worker/src/orchestrator/questionnaire.ts`
-- [ ] T198 [US6] Implement the delayed timeout job and optimistic single-transition guard in `apps/worker/src/orchestrator/questionnaire-timeout.ts`
-- [ ] T199 [US6] Implement answer submission triggering resume in `apps/api/src/services/scans/questionnaire.service.ts`
-- [ ] T200 [P] [US6] Thread `DesignIntent` into the design area's AI context in `apps/worker/src/module-runner/design-intent.ts`
-- [ ] T201 [P] [US6] Build the questionnaire interrupt with visible deadline and skip in `apps/web/components/scan/UIQuestionnaire.tsx`
+- [X] T197 [US6] Implement AWAITING_QUESTIONNAIRE persistence with deadline and slot release — substance landed in `apps/worker/src/orchestrator/{phases.ts,orchestrator.ts}` rather than a new `questionnaire.ts` file; `awaitQuestionnaire` (T096) already did the persistence/slot-release half, this task wired it into the real run loop.
+- [X] T198 [US6] Implement the delayed timeout job and optimistic single-transition guard — substance landed in `apps/worker/src/orchestrator/questionnaire-timeout-handler.ts` rather than `questionnaire-timeout.ts`; the guard (T096) already existed, this task built the handler that actually calls it and records FR-041's DEFAULTED outcome.
+- [X] T199 [US6] Implement answer submission triggering resume in `apps/api/src/services/scans/questionnaire.service.ts` — as named.
+- [X] T200 [P] [US6] Thread `DesignIntent` into the design area's AI context — substance landed as `buildDesignIntentInput` in `apps/worker/src/orchestrator/orchestrator.ts` rather than a new `module-runner/design-intent.ts` file (computed once per phase job, not once per module, and threaded through the existing `CapabilityInput` construction site).
+- [X] T201 [P] [US6] Build the questionnaire interrupt with visible deadline and skip in `apps/web/components/scan/UIQuestionnaire.tsx` — as named. No design artboard exists for this surface; built under an explicit, user-authorized governance exception recorded in three places (component's own module note, `design/screen-map.md`'s "Documented exceptions" table, `research.md`'s R19), following the R18/T143 precedent.
+
+**Post-implementation, whole-feature review found and fixed one Critical regression**: both resume paths transitioned the scan to `RUNNING_PHASE_2` before enqueueing the phase-2 job, colliding with the phase job's own entry transition (an illegal self-transition) and silently no-opping it — no UI-requesting audit ever actually ran the UI area. Fixed by adding an `alreadyTransitioned` flag to the phase-job payload, set only by the two resume paths, that lets the entry step skip its own transition attempt while still checking the already-fetched scan row against the target phase (preserving the cancellation-race guarantee). A new end-to-end test actually runs the enqueued phase-2 job through the real handler and asserts a real `UI` `ModuleResult` — the missing assertion class that let this regression through five individually-reviewed commits. See PROGRESS.md's Phase 8 section for the full account.
+
+**Known, pre-existing gap surfaced but not fixed by this phase**: a scan requesting only `UI` (no other module) cannot start at all — `modulesForPhase('RUNNING_PHASE_1', ['UI'])` is empty, and the phase-1 job schema refuses an empty module list at the queue boundary. Not introduced or worsened by this phase; recorded in `phase-modules.ts`'s module note as a product decision, not built here.
 
 ---
 

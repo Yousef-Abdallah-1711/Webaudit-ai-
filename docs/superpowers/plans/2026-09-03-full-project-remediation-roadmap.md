@@ -250,6 +250,17 @@ All three new tests pass, they were RED before the implementation for the stated
 regression in the existing orchestrator/questionnaire suites, and the jobId trap above has been
 explicitly checked (not assumed safe).
 
+**Status: done.** Built across 5 sequential implementer→reviewer commits, then a 6th whole-feature
+review found the feature was entirely non-functional in production — both resume paths pre-transitioned
+the scan to `RUNNING_PHASE_2`, colliding with the phase job's own entry transition and silently
+no-opping it, so no UI-requesting audit ever actually ran. Fixed (a new `alreadyTransitioned` flag on
+the phase-job payload, set only by the two resume paths) and re-reviewed clean, with a new end-to-end
+test that actually runs the enqueued phase-2 job rather than just asserting it was enqueued — the
+missing assertion class that let the regression through. Full detail in PROGRESS.md's own "Phase 8
+(US6) — a Critical regression only a whole-feature review caught" section. `tasks.md`'s T194-T201
+marked `[X]`. Full verification clean: `lint`, `tsc --noEmit` (every touched package), `pnpm run test`
+835/835, `pnpm run test:adverse` 570/571 (1 pre-existing skip), production build clean.
+
 ---
 
 ## Session 4 — US7 admin: backend services & routes (spec-kit Phase 9a)

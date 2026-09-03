@@ -1,15 +1,15 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-03 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
-**Merged to `main`** at `c31139a` (Session 1 of the [full-project remediation roadmap]
-(docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md), fast-forward, all 29 commits
-preserved, zero conflicts — `main` was an exact ancestor of the remediation branch). Re-verified from
-scratch on the merged result, in isolation to avoid the shared-test-DB contamination two concurrent
-suites produce (a real trap hit during this exact re-verification — see that roadmap's Environment
-gotchas): `pnpm run test` **804/804** (the one previously-flaky adherence-lint cold-start case passed
-clean this run too), `adverse` **570 passed / 1 pre-existing skip**, `visual` 6 + 7 todo (0 failed),
-`lint` + `lint:adherence` + `pnpm -r typecheck` (31 packages, after regenerating the Prisma client for
-the merged schema) all clean, production build clean.
+**Updated** 2026-09-03 · **Tasks** 217 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **835/835**, `adverse` **570 passed / 1 pre-existing skip**, `lint` + `lint:adherence`
++ `pnpm -r typecheck` clean, production build clean. 🎯 **Phase 8 (US6, the mid-audit design-intent
+questionnaire) complete — T194–T201.** Built across five separately-reviewed commits (Session 3 of the
+[full-project remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)),
+then a sixth, whole-feature review found the entire feature was non-functional in production — see
+"Phase 8 (US6) — a Critical regression only a whole-feature review caught" below. Fixed, re-reviewed,
+re-verified. Merged to `main` at `c31139a` before this phase started (Session 1 of the same roadmap,
+fast-forward, all 29 commits preserved, zero conflicts — `main` was an exact ancestor of the
+remediation branch).
 plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
 the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
 (`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
@@ -23,6 +23,84 @@ complete — T169–T179; archive and repository input, refused before extractio
 purchase, the signed idempotent billing webhook, retention + self-contained export. SC-008 now has
 its adversarial gate — 10 of 11 green.** Three review passes on Phases 1–7 also folded in
 (§§ below) — most recently, a Phases 4–7 engineering review's 18 findings, 16 of them now fixed.
+
+## Phase 8 (US6) — a Critical regression only a whole-feature review caught
+
+T194–T201 build the mid-audit design-intent questionnaire (FR-040 through FR-043): a scan requesting
+the `UI` module pauses before the design area runs, asks the user four questions (audience, style
+preference, admired references, brand colors), and resumes on either an answer, a skip, or — if the
+10-minute published wait expires — documented defaults, recorded as such. The generic "pause without
+holding a worker" mechanism (R4, `awaitQuestionnaire`/`resumeAfterQuestionnaire`) already existed from
+an earlier phase (T096) and was already tested against a fake queue; nothing in the real orchestrator
+run loop had ever called it.
+
+Built across five commits, each individually implemented then independently reviewed:
+1. Wired `awaitQuestionnaire` into the real orchestrator's phase-1-to-phase-2 handoff, plus two new
+   published config constants (`DESIGN_INTENT_WAIT_MS`, `DESIGN_INTENT_QUESTIONS`).
+2. Built the worker-side deadline-timeout handler — resumes on expiry, records `DesignIntent(source:
+   DEFAULTED)`, but only after confirming it actually won the race against a real answer/skip.
+3. Built the `apps/api` routes (`GET/POST /scans/:id/questionnaire`, `POST .../skip`). `apps/api`
+   cannot import `apps/worker` (only the reverse dependency is allowed), so this hand-duplicates the
+   guarded-transition-then-enqueue logic, matching the established `scan-phase-producer.ts` precedent
+   exactly (same job-id shape, same payload schema).
+4. Threaded the real `DesignIntent` DB row into `CapabilityInput.designIntent` — the shape the UI/design
+   AI-layer capability (`impeccable`) already read but nothing had ever populated.
+5. Built and wired in the React component, under an explicit, user-authorized governance exception —
+   no design artboard exists for this surface (`design/screen-map.md`'s own "Coverage gaps" table said
+   so). Recorded in the three places this project's process requires, following the R18/T143
+   (`AnnotatedScreenshot`) precedent exactly: the component's own module note, a new row in
+   `screen-map.md`'s "Documented exceptions" table (and — correctly, matching what T143's own
+   resolution did and unlike this task's first draft — removed from the "Coverage gaps" table, not
+   left contradicting itself in both places at once), and `research.md`'s new R19 entry.
+
+**Then a sixth pass — a whole-feature review, deliberately scoped to look across all five commits at
+once rather than re-verify any one of them — found the feature did not work at all.** Both resume
+paths transitioned the scan straight to `RUNNING_PHASE_2` before enqueueing the phase-2 job. The phase
+job's own entry step (`handlePhase`, in every phase job, not specific to this feature) then attempted
+`RUNNING_PHASE_2 → RUNNING_PHASE_2` — an illegal self-transition under `state-machine.ts`'s `ALLOWED`
+table, since no state has a self-edge — and silently no-opped. **No UI-requesting audit ever actually
+ran the UI area.** Confirmed empirically with a real-DB probe before the fix: `ModuleResults =
+["SECURITY"]` only, the scan permanently stuck at `RUNNING_PHASE_2` until the FR-038 timeout sweep
+eventually caught it and refunded (no billing harm, but US6's own Independent Test — "run without
+answering and confirm the audit still completes" — failed outright, and so did the answered case).
+
+Two "obvious" fixes were considered and rejected, each for a real reason confirmed by reading the code,
+not assumed:
+- **Changing `AWAITING_QUESTIONNAIRE`'s legal target to `RUNNING_PHASE_1`** in `state-machine.ts`
+  would contradict that file's own documented, deliberate design intent ("reachable only from phase 1
+  and leads only into phase 2") — and wouldn't even fix the API-side resume, which hand-rolls its own
+  guarded `updateMany` and never consults `ALLOWED` at all.
+- **Relaxing `handlePhase`'s entry guard to accept any self-transition** would reopen a real risk for
+  a *different* scenario the guard exists to protect against: a BullMQ stalled-job redelivery of an
+  already-run phase job would silently re-run all of that phase's modules a second time. `ModuleResult`
+  upserts and `Issue` uses `createMany({ skipDuplicates: true })` against real unique constraints, so
+  those wouldn't duplicate — but `CapabilityExecution` and `AiInvocation` have no unique constraint at
+  all and would, corrupting per-capability cost attribution (SC-009) and causing genuine double
+  provider spend.
+
+The actual fix: `PhaseJobData` gained an optional `alreadyTransitioned` flag, set only by the two
+resume paths (the API's producer hardcodes it rather than exposing it as a parameter, so no future
+caller can accidentally omit it and reintroduce the bug). When flagged, `handlePhase` skips its own
+entry transition attempt — but still checks the already-fetched scan row against the target phase and
+returns early on a mismatch, preserving the existing guarantee that a cancellation racing in between
+resume and job-delivery is still caught. A new end-to-end test actually runs the phase-2 job the resume
+enqueues through the real `handlePhase` (not just asserts it was enqueued — the exact assertion class
+missing from all three of this feature's per-commit test suites, which is how the regression survived
+five individually-thorough reviews) and confirms a real `UI` `ModuleResult` exists afterward. The same
+pass also closed a second, related TOCTOU: `DesignIntent` was being written *after* the phase-2 job was
+enqueued rather than before, so a fast worker could theoretically run before the row existed and
+silently drop the user's answers — reordered on both resume paths.
+
+**Known, pre-existing gap surfaced but correctly left alone**: a scan requesting only `UI` (no other
+module) cannot start an audit at all — phase 1's module list would be empty, and the job schema refuses
+an empty module list at the queue boundary. Not introduced or worsened by this phase; a product
+decision about what a design-only audit should mean, not a code defect. Recorded in
+`phase-modules.ts`'s module note.
+
+Verified at the end, from a clean perspective: `pnpm run lint` clean, `pnpm -r exec tsc --noEmit` clean
+across every touched package, full `pnpm run test` **835/835**, full `pnpm run test:adverse` **570
+passed / 1 pre-existing skip** (one transient re-run needed — a single flake that did not reproduce on
+a clean rerun, confirmed not a regression), `next build` clean.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -1419,7 +1497,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 5 — US3 readiness | T158–T168 | ✅ done | Fresh full re-audit, fingerprint diff, go/no-go verdict with named blockers, shareable certificate. § Phase 5 near top |
 | 6 — US4 source audit | T169–T179 | ✅ done | Archive + repo input, streaming extraction guard, refused before extraction and before charging. § Phase 6 near top |
 | 7 — US5 billing | T180–T193 | ✅ done | **SC-008 green** — subscriptions, entitlements before charging, credit purchase, signed idempotent webhook, retention + self-contained export. § Phase 7 near top |
-| 8 — US6 questionnaire | T194–T201 | ⬜ | |
+| 8 — US6 questionnaire | T194–T201 | ✅ done | Mid-audit design-intent pause, wired end to end; one Critical regression found and fixed by the whole-feature review — § below |
 | 9 — US7 admin | T202–T215 | ⬜ | SC-009, SC-010. **First `requireOperator` route lands here** |
 | 10 — Sandbox runner | T216–T226 | ⬜ | SC-017. Complete or not at all |
 | 11 — Polish | T227–T236 | 🟡 1/10 | T230 done early (finding M7) |
