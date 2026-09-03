@@ -1,9 +1,15 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-02 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **802/802** (one pre-existing test-infra bug found and fixed during this pass, not a
-regression — see the Phases 4–7 remediation section below), `adverse` **568 passed / 1 pre-existing
-skip**, `visual` 6 + 7 todo,
+**Updated** 2026-09-03 · **Tasks** 209 / 250 (+T236a, not in the original 250) ·
+**Merged to `main`** at `c31139a` (Session 1 of the [full-project remediation roadmap]
+(docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md), fast-forward, all 29 commits
+preserved, zero conflicts — `main` was an exact ancestor of the remediation branch). Re-verified from
+scratch on the merged result, in isolation to avoid the shared-test-DB contamination two concurrent
+suites produce (a real trap hit during this exact re-verification — see that roadmap's Environment
+gotchas): `pnpm run test` **804/804** (the one previously-flaky adherence-lint cold-start case passed
+clean this run too), `adverse` **570 passed / 1 pre-existing skip**, `visual` 6 + 7 todo (0 failed),
+`lint` + `lint:adherence` + `pnpm -r typecheck` (31 packages, after regenerating the Prisma client for
+the merged schema) all clean, production build clean.
 plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
 the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
 (`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
