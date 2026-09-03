@@ -46,6 +46,7 @@ import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
 import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
 import { createPhaseHandler } from './orchestrator/orchestrator.js';
+import { createQuestionnaireTimeoutHandler } from './orchestrator/questionnaire-timeout-handler.js';
 import { createReverifyHandler } from './reverify/runner.js';
 import {
   createTimeoutSweepHandler,
@@ -198,6 +199,14 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
               return (uploadStorage ??= createUploadStorage());
             },
           },
+        }),
+        // FR-041 (T196): the deadline side of the design-intent questionnaire
+        // — resumes on documented defaults and records a DEFAULTED
+        // DesignIntent when nobody answers or skips in time.
+        questionnaireDeadline: createQuestionnaireTimeoutHandler({
+          db,
+          queues: { scanPhase: queues.scanPhase, maintenance: queues.maintenance },
+          publisher,
         }),
         // FR-038: the repeatable sweep that terminates stuck scans and refunds
         // their undelivered share. Registered as a repeatable job below.

@@ -206,7 +206,14 @@ export interface OrchestratorOptions {
   readonly source?: MaterialiseDeps;
 }
 
-async function planQueuePriorityFor(db: PrismaClient, userId: string): Promise<number> {
+/**
+ * Exported so `questionnaire-timeout-handler.ts` (T196) can recompute the same
+ * priority the phase job used — the delayed deadline job carries only the scan
+ * id, so the priority the original phase-1 job resolved is not available to it
+ * and must be looked up again rather than duplicated as a second copy of this
+ * query.
+ */
+export async function planQueuePriorityFor(db: PrismaClient, userId: string): Promise<number> {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: { subscription: { select: { plan: { select: { queuePriority: true } } } } },
