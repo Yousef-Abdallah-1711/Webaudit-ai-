@@ -19,14 +19,15 @@
  * visited — it is a documented, honest gap, not a silent one: a future stage
  * may need it, and nothing here presumes what for.
  *
- * **The questionnaire pause itself is not wired by this vertical slice.**
- * `awaitQuestionnaire`/`resumeAfterQuestionnaire` (T096) already exist and
- * are already tested, but nothing yet calls `awaitQuestionnaire` from inside
- * the orchestrator's run loop — there are no UI capabilities yet (T119-124 is
- * SECURITY/SEO only; UI capabilities are stage 10) to signal "this scan's UI
- * module actually needs design intent", and asking unconditionally whenever
- * UI is merely *selected* would be inventing a trigger with no real signal
- * behind it. Full FR-040/041/042/043 wiring belongs to US6 (T194-201).
+ * **The questionnaire pause is now wired (T194).** `orchestrator.ts`'s
+ * walk-forward loop calls `awaitQuestionnaire` instead of enqueueing
+ * `RUNNING_PHASE_2` whenever `modulesForPhase('RUNNING_PHASE_2', ...)`
+ * includes `'UI'` — i.e. whenever UI was *selected*, unconditionally. That is
+ * deliberately the whole trigger: UI capabilities exist now (T136-142), and
+ * "the scan will judge design" is itself the real signal FR-040 asks for,
+ * not some finer-grained per-capability need. The deadline-timeout handler,
+ * the API routes to answer or skip, the `DesignIntent` write, and threading
+ * answers into `CapabilityInput` remain separate, later tasks (T198-201).
  */
 
 import type { ModuleType, ScanState } from '@webaudit/types';

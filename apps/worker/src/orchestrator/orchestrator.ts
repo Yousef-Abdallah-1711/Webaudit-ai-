@@ -27,10 +27,12 @@
  * **What this file honestly still does not do, each recorded rather than
  * silently skipped:**
  *
- * - The design-intent questionnaire is never triggered. See
- *   `phase-modules.ts`'s module note — full FR-040/041/042/043 wiring is
- *   US6 (T194-201). `RUNNING_PHASE_1` always proceeds straight to
- *   `RUNNING_PHASE_2` rather than pausing.
+ * - The design-intent questionnaire (T194) now pauses `RUNNING_PHASE_1`
+ *   whenever `RUNNING_PHASE_2` would run `UI` — see the walk-forward loop
+ *   below, which calls `awaitQuestionnaire` instead of `enqueuePhase` in
+ *   exactly that case. The deadline-timeout handler, the API routes that let a
+ *   user answer or skip, the `DesignIntent` write, and threading the answers
+ *   into `CapabilityInput` remain unbuilt (T198-201).
  * - A phase job that throws transitions the scan to `FAILED` via `failScan`,
  *   which refunds the undelivered share through `installTerminalRefund`
  *   (`terminal-refund.ts`, a terminal observer that runs inside the awaited
@@ -52,7 +54,7 @@
  *   covered.
  */
 
-import { modulesForPhase } from '@webaudit/config';
+import { modulesForPhase, DESIGN_INTENT_WAIT_MS, DESIGN_INTENT_QUESTIONS } from '@webaudit/config';
 import type { ModuleType, ScanState, Severity } from '@webaudit/types';
 import { controlLevelRank, SEVERITY_ORDER, type ControlLevel } from '@webaudit/types';
 import type { AiExecutor } from '@webaudit/ai-executor';
@@ -74,7 +76,13 @@ import { runMasterSynthesis } from './master-report.js';
 import { enrichFixPrompts } from './fix-prompt.js';
 import { finalizeReadiness } from '../readiness/run.js';
 import { transition, nextPhase } from './state-machine.js';
-import { moveAndAnnounce, enqueuePhase, type EnqueueContext, type PhaseJobData } from './phases.js';
+import {
+  moveAndAnnounce,
+  enqueuePhase,
+  awaitQuestionnaire,
+  type EnqueueContext,
+  type PhaseJobData,
+} from './phases.js';
 import { createScanEmitter, type EventPublisher } from './emit.js';
 import type { JobRef } from '../queue/workers.js';
 import type { QueueSet } from '../queue/queues.js';
@@ -515,10 +523,29 @@ export function createPhaseHandler(
         if (next === null) return; // Should not happen mid-run; nothing further to do.
 
         if (MODULE_RUNNING_PHASES.includes(next)) {
+          const nextModules = modulesForPhase(next, scan.requestedModules);
+
+          // FR-040: pause for design intent instead of enqueueing phase 2
+          // when it would run UI. Safe precisely because `nextModules`
+          // being non-empty here means the walk-forward loop above never
+          // looped (phase-modules.ts's own contract: UI can only appear in
+          // RUNNING_PHASE_2, and RUNNING_PHASE_3 always resolves empty), so
+          // `current` is still `RUNNING_PHASE_1` — the only state
+          // `awaitQuestionnaire`'s hardcoded transition accepts as `from`.
+          if (nextModules.includes('UI')) {
+            await awaitQuestionnaire(context, {
+              scanId: data.scanId,
+              questions: DESIGN_INTENT_QUESTIONS,
+              waitMs: DESIGN_INTENT_WAIT_MS,
+              modules: nextModules,
+            });
+            return;
+          }
+
           await enqueuePhase(context, {
             scanId: data.scanId,
             phase: next,
-            modules: modulesForPhase(next, scan.requestedModules),
+            modules: nextModules,
             attempt: 1,
           });
           return;

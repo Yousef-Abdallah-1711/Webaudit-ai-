@@ -4,3 +4,4 @@ export * from './plans.js';
 export * from './queues.js';
 export * from './phase-modules.js';
 export * from './refund.js';
+export * from './design-intent.js';
