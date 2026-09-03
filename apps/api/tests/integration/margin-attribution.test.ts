@@ -171,7 +171,30 @@ describe('SC-009 — margin/cost is attributable to the individual capability', 
     // floor(80/3) = 26 per module, 26*3 = 78 -- 2 credits are not attributed
     // to any area. This is the exact, documented tradeoff in margin.service.ts's
     // module note and the response's own `note` field, not an accident.
+    //
+    // Passes an explicit, deliberately wide window rather than relying on
+    // `getMarginReport`'s default (computed from `new Date()` at call time):
+    // this test flaked intermittently in full-suite runs with the default
+    // window (never in isolation, and not merely a wrong-value mismatch --
+    // the scan's own area rows were entirely absent, `afterAreas.length`
+    // came back 0). A default window's boundary sits within milliseconds of
+    // `Scan.createdAt` (`@default(now())`, Postgres's own clock, not Node's),
+    // which is exactly the kind of edge a slow, loaded full-suite run can tip
+    // over -- an explicit multi-year window removes that edge entirely
+    // without touching the aggregation logic under test, which does not
+    // depend on window computation at all (proven separately by the first
+    // test in this file, which asserts capability-level attribution with no
+    // window sensitivity).
+    //
+    // Also asserted as a BEFORE/AFTER delta, not an absolute value: `perArea`
+    // is a window-wide aggregate across every scan in range, not scoped to
+    // this test's own scan alone, so a delta assertion is correct regardless
+    // of whatever else exists in the (now explicit) window.
+    const window = { from: new Date('2020-01-01T00:00:00.000Z'), to: new Date('2099-01-01T00:00:00.000Z') };
     const { user, target } = await seedUserAndTarget();
+    const before = await getMarginReport(testDb, window);
+    const beforeByModule = new Map(before.perArea.map((r) => [r.module, r.chargedCredits]));
+
     const scan = await testDb.scan.create({
       data: {
         userId: user.id,
@@ -184,18 +207,21 @@ describe('SC-009 — margin/cost is attributable to the individual capability', 
       },
     });
 
-    const report = await getMarginReport(testDb, {});
-    const scanAreas = report.perArea.filter((r) =>
+    const after = await getMarginReport(testDb, window);
+    const afterAreas = after.perArea.filter((r) =>
       ['SECURITY', 'SEO', 'TESTING'].includes(r.module),
     );
-    expect(scanAreas).toHaveLength(3);
-    for (const area of scanAreas) {
-      expect(area.chargedCredits).toBe(26); // floor(80 / 3)
+    expect(afterAreas).toHaveLength(3);
+
+    let summedDelta = 0;
+    for (const area of afterAreas) {
+      const delta = area.chargedCredits - (beforeByModule.get(area.module) ?? 0);
+      expect(delta).toBe(26); // floor(80 / 3)
+      summedDelta += delta;
     }
-    const summedBack = scanAreas.reduce((sum, a) => sum + a.chargedCredits, 0);
-    // Strictly less than the scan's real chargedCredits -- the 2-credit
+    // Strictly less than this scan's real chargedCredits -- the 2-credit
     // remainder is not attributed anywhere, exactly as documented.
-    expect(summedBack).toBe(78);
-    expect(summedBack).toBeLessThan(scan.chargedCredits);
+    expect(summedDelta).toBe(78);
+    expect(summedDelta).toBeLessThan(scan.chargedCredits);
   });
 });
