@@ -1,0 +1,59 @@
+/* T201 — original design, no design-system counterpart to port from. See the component's own module note. */
+
+.deadline {
+  margin: 0 0 var(--space-5);
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.deadlineUrgent {
+  color: var(--sev-high);
+  font-weight: 600;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font: var(--type-body-bold);
+  color: var(--text-strong);
+}
+
+.hint {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-muted);
+}
+
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+.error {
+  margin: var(--space-3) 0 0;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.note {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

@@ -545,6 +545,64 @@ component's own module note — is what makes the exception visible rather than 
 
 ---
 
+## R19. A minimal original design for T201's mid-audit questionnaire — a documented exception, not a precedent
+
+**Forced by**: the same Constitution Design Adherence clause R18 was forced by ("A surface with no
+entry in `design/screen-map.md` has no approved design. It MUST NOT be invented — request a design
+instead"), this time colliding with T201's task text. `design/screen-map.md`'s "Coverage gaps — no
+design exists" table already named this surface explicitly: "Design intent questionnaire | T201 |
+Referenced in the app kit but no dedicated screen." — with that section's own header instruction,
+"Request a design before implementing. Do not invent these."
+
+### Decision
+
+The user was asked directly, via the constitution's own governance clause for this situation, the
+same clause R18 used first. This time the authorization was narrower than T143's: build a **minimal,
+functional** version — plain markup using only existing tokens and already-ported primitives,
+functionally correct (visible deadline, skip button, answer fields), but explicitly **not** claiming
+full visual design adherence, and not attempting to closely replicate any specific unreviewed mockup.
+
+`apps/web/components/scan/UIQuestionnaire.tsx` was built accordingly. Reused, not invented: `Card`,
+`Button`, and `Input` exactly as ported (T237), and only `var(--space-*)`, `var(--type-*)`,
+`var(--text-*)`, and `var(--sev-*)` tokens in `UIQuestionnaire.module.css` — the same discipline R18
+states for `AnnotatedScreenshot.tsx`. The four fields are read from `GET /scans/:id/questionnaire`,
+which serves `packages/config/src/design-intent.ts`'s own `DESIGN_INTENT_QUESTIONS` — so the
+component's copy can never drift from what the worker actually asks, and no question text or choice
+list is hand-copied into the component. Nothing beyond layout (the field order, the two-button
+action row, the countdown line) was invented.
+
+Unlike T143, this component **is** wired in: `ScanProgress.tsx` already tracks `scanState` from real
+`scan:state` events (T130), so rendering `UIQuestionnaire` instead of the normal progress view when
+`scanState === 'AWAITING_QUESTIONNAIRE'` cost nothing extra to wire — there was no missing pipeline
+to invent ahead of signal, the gap T143's own note declined to fill for itself. A component nobody
+renders is not a working feature; wiring this one in was in scope precisely because it was cheap.
+
+### Rationale
+
+Same tension R18 resolved, applied to a narrower authorization: the constitution's rule stops a
+surface quietly diverging from a decision record while looking finished. Building this without
+asking would violate it; refusing to build a task the user explicitly authorized would not honour it
+either — the constitution's own release valve is a documented exception with a stated path to remove
+it, not silence in either direction. This entry, `design/screen-map.md`'s exceptions table, and the
+component's own module note are the three records that make the exception visible.
+
+### The general process, matching R18's, applied here
+
+1. Confirmed the gap was real by re-reading `design/screen-map.md`'s own coverage-gaps table — already
+   explicit for this row, so no further `design-system/` content search was needed beyond what T143's
+   entry already established as the search discipline.
+2. Asked the user directly rather than defaulting either way; this time the authorization was scoped
+   down to "minimal and functional," not "a full original design" — the record reflects the narrower
+   grant, not R18's.
+3. Reused every existing token and component that fit before inventing anything: `Card`/`Button`/
+   `Input` verbatim, the same severity/text/space tokens every other ported surface uses.
+4. Recorded the exception in three places: `UIQuestionnaire.tsx`'s own module note, `design/
+   screen-map.md`'s exceptions table, and this entry.
+5. `pnpm test:visual` is not run against this surface and is not extended to cover it — there is no
+   reference artboard to diff against, the same reason R18 gives for `AnnotatedScreenshot`.
+
+---
+
 ## Open items carried into planning
 
 Four items are recorded rather than resolved. The first two are amendments to documents this

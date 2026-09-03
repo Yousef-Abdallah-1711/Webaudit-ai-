@@ -376,6 +376,47 @@ export function startReadiness(
   });
 }
 
+// ─── Design intent questionnaire (US6) ─────────────────────────────────────
+
+export interface QuestionnaireQuestion {
+  readonly id: string;
+  readonly prompt: string;
+  readonly kind: 'text' | 'choice' | 'colors';
+  readonly choices?: readonly string[];
+}
+
+export interface QuestionnaireStatus {
+  readonly state: string;
+  /** False only while the scan is genuinely paused waiting on this answer. */
+  readonly resolved: boolean;
+  readonly questionnaireDeadline: string | null;
+  readonly questions: readonly QuestionnaireQuestion[];
+  readonly waitMs: number;
+}
+
+export function getQuestionnaire(scanId: string): Promise<{ questionnaire: QuestionnaireStatus }> {
+  return request(`/scans/${scanId}/questionnaire`);
+}
+
+/** FR-040: every field optional — a partial answer is still an answer. */
+export interface QuestionnaireAnswer {
+  readonly audience?: string;
+  readonly stylePreference?: string;
+  readonly admiredReferences?: readonly string[];
+  readonly brandColors?: readonly string[];
+}
+
+export function submitQuestionnaire(
+  scanId: string,
+  answer: QuestionnaireAnswer,
+): Promise<{ scan: ScanSummary }> {
+  return request(`/scans/${scanId}/questionnaire`, { method: 'POST', body: answer });
+}
+
+export function skipQuestionnaire(scanId: string): Promise<{ scan: ScanSummary }> {
+  return request(`/scans/${scanId}/questionnaire/skip`, { method: 'POST' });
+}
+
 // ─── Billing and plans (US5) ────────────────────────────────────────────────
 
 export type PlanId = 'free' | 'starter' | 'pro' | 'business';

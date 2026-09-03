@@ -15,6 +15,18 @@
  *
  * **Preserves the safe-to-close line** via `ProgressRow`'s own
  * `safeToClose` default — nothing here overrides it.
+ *
+ * **T201: swaps to `UIQuestionnaire` while `scanState === 'AWAITING_
+ * QUESTIONNAIRE'`**, using the same `scanState` this component already
+ * tracks from `scan:state` events rather than reading the `questionnaire:
+ * needed` payload itself — the event's `scanId` is all this component
+ * needs, and `UIQuestionnaire` fetches its own question/deadline detail
+ * over `GET /scans/:id/questionnaire` (the resync pattern FR-047 already
+ * establishes here for `refetch`). Whichever side ends the pause — this
+ * user answering, another tab answering, or the server-side deadline
+ * (`questionnaire-timeout-handler.ts`, untouched by this change) — a
+ * `scan:state` event moves `scanState` off `AWAITING_QUESTIONNAIRE` and
+ * this component stops rendering the form on its own.
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { ModuleState, ModuleType, ScanEvent, ScanState } from '@webaudit/types';
@@ -23,6 +35,7 @@ import { PageHead } from '../dashboard';
 import { ModuleStatus, ProgressRow, type ModuleStatusProps } from '../report';
 import { getAccessToken, getScan } from '../../lib/api';
 import { connectRealtime } from '../../lib/realtime';
+import { UIQuestionnaire } from './UIQuestionnaire';
 import styles from './ScanProgress.module.css';
 
 type UiState = ModuleStatusProps['state'];
@@ -137,32 +150,41 @@ export function ScanProgress({
           ) : undefined
         }
       />
-      <div className={styles.stack}>
-        <ProgressRow
-          phase={
-            finished
-              ? 'Audit complete'
-              : running !== undefined
-                ? `Running ${MODULE_LABEL[running].toLowerCase()} checks`
-                : 'Preparing'
-          }
-          elapsed={elapsed}
-          done={done}
-          total={modules.length || 1}
-        />
-        {modules.map((module) => (
-          <ModuleStatus
-            key={module}
-            area={MODULE_LABEL[module]}
-            state={moduleStates[module] ?? 'waiting'}
+      {scanState === 'AWAITING_QUESTIONNAIRE' ? (
+        // T201/FR-040: the mid-audit design-intent pause. `refetch` doubles
+        // as the "resolved" callback — the same authoritative re-fetch this
+        // component already uses on reconnect (FR-047), so the moment the
+        // user answers or skips, scanState is re-read from the database
+        // rather than assumed.
+        <UIQuestionnaire scanId={scanId} onResolved={refetch} />
+      ) : (
+        <div className={styles.stack}>
+          <ProgressRow
+            phase={
+              finished
+                ? 'Audit complete'
+                : running !== undefined
+                  ? `Running ${MODULE_LABEL[running].toLowerCase()} checks`
+                  : 'Preparing'
+            }
+            elapsed={elapsed}
+            done={done}
+            total={modules.length || 1}
           />
-        ))}
-        {finished && (
-          <div className={styles.done}>
-            <Button {...(onDone ? { onClick: onDone } : {})}>Open report</Button>
-          </div>
-        )}
-      </div>
+          {modules.map((module) => (
+            <ModuleStatus
+              key={module}
+              area={MODULE_LABEL[module]}
+              state={moduleStates[module] ?? 'waiting'}
+            />
+          ))}
+          {finished && (
+            <div className={styles.done}>
+              <Button {...(onDone ? { onClick: onDone } : {})}>Open report</Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
