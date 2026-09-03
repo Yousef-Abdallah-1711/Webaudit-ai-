@@ -260,6 +260,71 @@ async function buildPriorModuleResults(
 }
 
 /**
+ * `CapabilityInput.designIntent` from the real `DesignIntent` row (Phase 8,
+ * US6 — FR-040 through FR-043). The consuming side already exists and needs
+ * no change: `impeccable` (`packages/capabilities-vendored/impeccable`)
+ * already reads `input.designIntent`'s four optional fields defensively
+ * (`if (intent.audience !== undefined) ...`), so an all-undefined object is
+ * exactly as safe to pass as no object at all — this function leans on that.
+ *
+ * Computed once per phase job, in `handlePhase`, and passed down to every
+ * `runAndPersistModule` call for that phase — the same "compute once, pass
+ * down" convention `priorModuleResults` and `enabledByModule` already use one
+ * call site over, and for the same reason: `runAndPersistModule` runs once
+ * per module inside a `Promise.all`, and the row is a per-scan singleton, so
+ * querying inside it would fire the identical query once per module in the
+ * phase for no benefit.
+ *
+ * Two absences, deliberately different:
+ *
+ *   - **No row at all** (UI was never requested, so the questionnaire's pause
+ *     never ran) → returns `undefined`. The caller's conditional spread then
+ *     omits the `designIntent` key from `CapabilityInput` entirely, matching
+ *     how `code`/`targetUrl` are already conditionally spread there today.
+ *   - **A row exists but carries no content** (`SKIPPED`, or `DEFAULTED` —
+ *     the deadline-timeout handler's write when the wait expired unanswered)
+ *     → returns `{}` (every field absent). The key is present; there is
+ *     simply nothing in it. `impeccable`'s own `if` checks make that a no-op
+ *     for the prompt rather than an error.
+ *
+ * Field mapping (no existing precedent; chosen here):
+ *
+ *   - `audience`          -> `audience`    direct passthrough.
+ *   - `stylePreference`   -> `tone`        renamed — the DB's questionnaire
+ *                                          vocabulary and the SDK's leaner,
+ *                                          AI-facing one do not share a word
+ *                                          for this field.
+ *   - `brandColors`       -> `brandColors` direct passthrough, both `string[]`.
+ *   - `admiredReferences` -> folded into `notes` as
+ *                            "Admired references: a, b, c" when non-empty,
+ *                            omitted otherwise. There is no SDK field shaped
+ *                            for a reference list, and dropping the data
+ *                            silently would throw away something the user
+ *                            typed in answer to a direct question — folding
+ *                            it into free-text `notes` is the considered
+ *                            choice made here rather than an oversight.
+ */
+export async function buildDesignIntentInput(
+  db: PrismaClient,
+  scanId: string,
+): Promise<CapabilityInput['designIntent']> {
+  const row = await db.designIntent.findUnique({ where: { scanId } });
+  if (row === null) return undefined;
+
+  const notes =
+    row.admiredReferences.length > 0
+      ? `Admired references: ${row.admiredReferences.join(', ')}`
+      : undefined;
+
+  return {
+    ...(row.audience === null ? {} : { audience: row.audience }),
+    ...(row.stylePreference === null ? {} : { tone: row.stylePreference }),
+    ...(row.brandColors.length === 0 ? {} : { brandColors: row.brandColors }),
+    ...(notes === undefined ? {} : { notes }),
+  };
+}
+
+/**
  * The scan's attached source, or null when the target is a URL.
  *
  * Split out of the handler so the "configured for source but asked to audit
@@ -301,6 +366,7 @@ async function runAndPersistModule(
   priorModuleResults: CapabilityInput['priorModuleResults'],
   enabledCapabilityIds: ReadonlySet<string>,
   source: MaterialisedSource | null,
+  designIntent: CapabilityInput['designIntent'],
 ): Promise<void> {
   await emitter.emit({ type: 'module:started', scanId: scan.id, module }, () => Promise.resolve());
 
@@ -310,6 +376,11 @@ async function runAndPersistModule(
     // the three source capabilities answer `canRun` false on a URL-only audit
     // rather than failing — FR-021, proved by T170.
     ...(source === null ? {} : { code: source.code }),
+    // Present only when a DesignIntent row exists for this scan (Phase 8,
+    // US6) — see `buildDesignIntentInput`'s own note for the two-absences
+    // distinction. Only `impeccable` (UI) reads it; harmless to pass to every
+    // module, so no module-specific branching here.
+    ...(designIntent === undefined ? {} : { designIntent }),
     // Summaries of every area that completed in an EARLIER phase (review
     // finding M7). Modules within a phase run concurrently, so this is empty
     // for phase 1 and carries phase-1's results into phase 2. `contradiction
@@ -487,6 +558,10 @@ export function createPhaseHandler(
         // concurrent extractors the same destination directory.
         const source = await materialiseSourceFor(options, scan, data.scanId);
 
+        // Once per phase job as well (see `buildDesignIntentInput`'s own
+        // note) — a per-scan singleton row, not a per-module one.
+        const designIntent = await buildDesignIntentInput(options.db, data.scanId);
+
         await Promise.all(
           data.modules.map((module) =>
             runAndPersistModule(
@@ -499,6 +574,7 @@ export function createPhaseHandler(
               priorModuleResults,
               enabledByModule.get(module) ?? new Set<string>(),
               source,
+              designIntent,
             ),
           ),
         );
