@@ -84,7 +84,28 @@ export function createScanPhaseProducer(
       const jobId = `${input.scanId}:RUNNING_PHASE_2:1`;
       await queue.add(
         'phase',
-        { scanId: input.scanId, phase: 'RUNNING_PHASE_2', modules: input.modules, attempt: 1 },
+        {
+          scanId: input.scanId,
+          phase: 'RUNNING_PHASE_2',
+          modules: input.modules,
+          attempt: 1,
+          // Not a parameter, for the same reason `phase` is not one: this
+          // method exists only for the questionnaire resume, and that resume
+          // always performs `AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2` before
+          // calling it (`questionnaire.service.ts`'s `resume`). The worker's
+          // `handlePhase` otherwise opens by transitioning the scan into the
+          // phase the job names, which here is the self-edge `RUNNING_PHASE_2
+          // -> RUNNING_PHASE_2` — refused by `state-machine.ts`'s table for
+          // every state, so the job ran zero modules and the UI area was never
+          // audited. Threading it as an argument would let a caller pass
+          // `false` and reintroduce that; hardcoding it here cannot.
+          // `enqueueFirstPhase` deliberately does NOT set it: a first-phase job
+          // does its own entry transition, and the guard it would bypass is
+          // what stops a redelivered job re-running a whole phase. See
+          // `apps/worker/src/orchestrator/phases.ts`'s
+          // `PhaseJobData.alreadyTransitioned`.
+          alreadyTransitioned: true,
+        },
         { jobId, priority: priorityForPlan(input.planQueuePriority) },
       );
       return { jobId };

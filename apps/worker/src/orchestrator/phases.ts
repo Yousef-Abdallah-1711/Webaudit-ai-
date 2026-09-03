@@ -50,6 +50,42 @@ export interface PhaseJobData {
    * assembles its own prompt on the far side.
    */
   readonly attempt: number;
+  /**
+   * "The scan is already in `phase`; do not transition it there again."
+   *
+   * `handlePhase` normally OPENS by transitioning the scan into the phase its
+   * job names — `enqueuePhase` deliberately does not move the scan (see its
+   * own note), so entering the phase is the running job's first act. Exactly
+   * one caller breaks that pattern, and has to: a questionnaire resume
+   * performs `AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2` itself, because
+   * `state-machine.ts`'s table makes phase 2 the *only* way out of the pause
+   * ("a pause in the middle of the audit, not a state an audit can start or
+   * finish in") and leaving the scan parked in `AWAITING_QUESTIONNAIRE` while
+   * a job for it sits in the queue would keep telling the user it is still
+   * waiting for an answer they already gave.
+   *
+   * So the resumed job arrives at a scan that is already `RUNNING_PHASE_2`,
+   * and `handlePhase`'s entry transition would be `RUNNING_PHASE_2 ->
+   * RUNNING_PHASE_2` — a self-edge, which the `ALLOWED` table has for no
+   * state. That returned `moved: false`, `handlePhase` returned having run
+   * nothing, and the UI area was never audited on any scan that paused for
+   * design intent. This flag is how the resume says "entry already happened",
+   * and it is set at exactly the two resume call sites.
+   *
+   * **Absent or `false` on every other phase job, and that matters.** The
+   * entry transition is also what stops a phase job that is *redelivered*
+   * (BullMQ's stall detection, a mechanism separate from the `attempts: 1`
+   * retry budget in `DEFAULT_JOB_OPTIONS`) after a worker crashed mid-phase
+   * from re-running every module in it: the scan is already at `data.phase`
+   * from the crashed attempt, the self-edge is refused, and the job stops.
+   * Re-running would mean paying a second time for the same AI calls and
+   * writing a second set of `CapabilityExecution`/`AiInvocation` rows (those
+   * are plain `create`s, not upserts), which corrupts per-capability cost
+   * attribution. So this is a per-job opt-out for the one caller that has
+   * genuinely already done the transition — never a general relaxation of the
+   * guard.
+   */
+  readonly alreadyTransitioned?: boolean | undefined;
 }
 
 /** The delayed job that fires at the questionnaire deadline. */
@@ -83,6 +119,12 @@ function jobIdFor(scanId: string, phase: ScanState, attempt: number): string {
  * when it starts running. Enqueueing and running are different moments, and
  * marking a scan `RUNNING_PHASE_2` while it sits in a queue would make the
  * progress bar claim work that has not begun.
+ *
+ * The one caller that must break that rule — `resumeAfterQuestionnaire`, which
+ * has to leave `AWAITING_QUESTIONNAIRE` because it is the only edge out of the
+ * pause — says so on the payload via `alreadyTransitioned`, so the running job
+ * skips an entry transition that would otherwise be an illegal self-edge. Read
+ * `PhaseJobData.alreadyTransitioned` before setting it anywhere else.
  */
 export async function enqueuePhase(
   context: EnqueueContext,
@@ -188,6 +230,31 @@ export async function resumeAfterQuestionnaire(
     readonly scanId: string;
     readonly reason: ResumeReason;
     readonly modules: readonly ModuleType[];
+    /**
+     * Runs after the guarded transition is confirmed won and **before** phase 2
+     * is enqueued. The `DesignIntent` write goes here, and the ordering is the
+     * whole reason this hook exists rather than the caller writing after
+     * `resumeAfterQuestionnaire` returns.
+     *
+     * Both halves matter:
+     *
+     *   - *after the win*, because `DesignIntent.scanId` is `@unique` and the
+     *     loser of the race must write nothing — writing speculatively would
+     *     let both sides attempt the insert and could record DEFAULTED over
+     *     intent that was actually supplied;
+     *   - *before the enqueue*, because the enqueue is the moment the job
+     *     becomes visible to a worker. A fast worker that dequeued it first
+     *     would run `buildDesignIntentInput`, find no row, and silently audit
+     *     the design with no answers at all — discarding exactly the data this
+     *     feature exists to deliver.
+     *
+     * A throw here therefore stops the enqueue, leaving the scan at
+     * `RUNNING_PHASE_2` with no job — recoverable by the FR-038 timeout sweep,
+     * which refunds (Principle VI). That is the deliberate trade against the
+     * alternative: enqueueing anyway and auditing design against answers the
+     * user gave but we failed to store.
+     */
+    readonly beforeEnqueue?: (() => Promise<void>) | undefined;
   },
 ): Promise<{ readonly resumed: boolean; readonly reason: ResumeReason }> {
   const outcome = await moveAndAnnounce(context, {
@@ -204,11 +271,18 @@ export async function resumeAfterQuestionnaire(
     return { resumed: false, reason: input.reason };
   }
 
+  if (input.beforeEnqueue !== undefined) await input.beforeEnqueue();
+
   await enqueuePhase(context, {
     scanId: input.scanId,
     phase: 'RUNNING_PHASE_2',
     modules: input.modules,
     attempt: 1,
+    // The transition above IS phase 2's entry. Without this the resumed job's
+    // own entry transition is the self-edge `RUNNING_PHASE_2 ->
+    // RUNNING_PHASE_2`, which the state machine refuses, and the job returns
+    // having audited nothing. See `PhaseJobData.alreadyTransitioned`.
+    alreadyTransitioned: true,
   });
 
   return { resumed: true, reason: input.reason };

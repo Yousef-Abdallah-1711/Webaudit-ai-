@@ -22,11 +22,27 @@
  * needed` payload itself — the event's `scanId` is all this component
  * needs, and `UIQuestionnaire` fetches its own question/deadline detail
  * over `GET /scans/:id/questionnaire` (the resync pattern FR-047 already
- * establishes here for `refetch`). Whichever side ends the pause — this
- * user answering, another tab answering, or the server-side deadline
- * (`questionnaire-timeout-handler.ts`, untouched by this change) — a
- * `scan:state` event moves `scanState` off `AWAITING_QUESTIONNAIRE` and
- * this component stops rendering the form on its own.
+ * establishes here for `refetch`).
+ *
+ * **How the form goes away, honestly — the three sides are not equal.**
+ * `scan:state` is published by `apps/worker` alone
+ * (`orchestrator/phases.ts`'s `moveAndAnnounce`); `apps/api` only *subscribes*
+ * to that Redis channel and fans it out to sockets (`realtime/fanout.ts`) and
+ * has no publisher of its own. So:
+ *
+ *   - **This tab answering or skipping** ends the pause via `onResolved` ->
+ *     `refetch`, which re-reads the scan over HTTP. That is the real
+ *     mechanism, and it is immediate.
+ *   - **The server-side deadline** (`questionnaire-timeout-handler.ts`) runs
+ *     inside the worker, so its transition really does emit `scan:state` and
+ *     this component really does react to the push.
+ *   - **Another tab answering** does NOT produce a push: the resume happened
+ *     in `apps/api`, which publishes nothing. This tab learns on its own next
+ *     resync (`onResync` -> `refetch`, on reconnect) — not from an event. Its
+ *     `POST` then answers 409 `QUESTIONNAIRE_ALREADY_RESOLVED`, which
+ *     `UIQuestionnaire` already treats as success. Making that case a push
+ *     needs an event publisher in `apps/api` that does not exist today;
+ *     recorded rather than implied.
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { ModuleState, ModuleType, ScanEvent, ScanState } from '@webaudit/types';

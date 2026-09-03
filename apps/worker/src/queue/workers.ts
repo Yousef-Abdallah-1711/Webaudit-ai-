@@ -98,6 +98,19 @@ export const phaseJobSchema = z
     // nothing, and complete — a silent no-op audit phase.
     modules: z.array(z.enum(MODULE_TYPES)).min(1),
     attempt: z.number().int().positive(),
+    /**
+     * Set only by the two questionnaire resume paths, which perform
+     * `AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2` themselves — see
+     * `PhaseJobData.alreadyTransitioned` for why that one caller has to, and
+     * why the guard it opts out of must stay in place for every other job.
+     *
+     * `.optional()` rather than `.default(false)`: `.strict()` refuses keys the
+     * schema does not know, but an optional key it does know may simply be
+     * absent, so every existing producer keeps emitting the payload it emits
+     * today with no change and no explicit `false`. Same pattern as
+     * `reverifyJobSchema`'s `debitTransactionId`.
+     */
+    alreadyTransitioned: z.boolean().optional(),
   })
   .strict();
 

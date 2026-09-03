@@ -18,16 +18,18 @@
  *      so that priority is not available to it and must be looked up again).
  *   2. Call `resumeAfterQuestionnaire` with `reason: 'DEADLINE'`. Its own guard
  *      decides whether this side wins the race against an answer or a skip.
- *   3. **Only on a genuine win** (`resumed === true`) write a `DesignIntent` row
- *      with `source: 'DEFAULTED'` — FR-041's "record in the report that intent
- *      was not supplied". A lost race means an answer or a skip already got
- *      here first and already owns writing its own `DesignIntent` row (a
- *      separate, later task); writing one here too would violate
+ *   3. **Only on a genuine win**, and **before phase 2 is enqueued**, write a
+ *      `DesignIntent` row with `source: 'DEFAULTED'` — FR-041's "record in the
+ *      report that intent was not supplied". Both halves of that ordering live
+ *      in `resumeAfterQuestionnaire`'s `beforeEnqueue` hook, which is called
+ *      after the guarded transition and before the enqueue; see its own note.
+ *      A lost race means an answer or a skip already got here first and already
+ *      owns writing its own `DesignIntent` row (`apps/api`'s
+ *      `questionnaire.service.ts`); writing one here too would violate
  *      `DesignIntent.scanId`'s `@unique` constraint and would misrecord
- *      DEFAULTED over an answer that was actually supplied. The ordering is
- *      deliberate: call `resumeAfterQuestionnaire` first, inspect its result,
- *      and only then write — never write speculatively before knowing this
- *      side won.
+ *      DEFAULTED over an answer that was actually supplied. Never write
+ *      speculatively before knowing this side won — and never after the job is
+ *      already visible to a worker that reads the row.
  *
  * A scan that is already gone (e.g. cancelled and later garbage-collected) is
  * handled the same way the phase handler treats a missing scan elsewhere in
@@ -64,7 +66,7 @@ export function createQuestionnaireTimeoutHandler(
     const modules = modulesForPhase('RUNNING_PHASE_2', scan.requestedModules);
     const emitter = createScanEmitter(data.scanId, { publisher: deps.publisher });
 
-    const outcome = await resumeAfterQuestionnaire(
+    await resumeAfterQuestionnaire(
       {
         scanPhaseQueue: deps.queues.scanPhase,
         maintenanceQueue: deps.queues.maintenance,
@@ -72,17 +74,33 @@ export function createQuestionnaireTimeoutHandler(
         emitter,
         planQueuePriority: await planQueuePriorityFor(deps.db, scan.userId),
       },
-      { scanId: data.scanId, reason: 'DEADLINE', modules },
+      {
+        scanId: data.scanId,
+        reason: 'DEADLINE',
+        modules,
+        // Runs only if the guarded transition won, and before phase 2 is
+        // enqueued — `resumeAfterQuestionnaire`'s `beforeEnqueue` owns both
+        // halves of that ordering, and its own note explains why each matters.
+        //
+        // Lost the race (or the scan was cancelled/timed out while waiting)?
+        // Then this never runs: an answer or a skip already owns whatever
+        // DesignIntent row exists or will exist, and writing here too would
+        // violate scanId's @unique constraint and would record DEFAULTED over
+        // intent that was actually supplied.
+        //
+        // The practical stakes of the *before the enqueue* half are mild for
+        // this side specifically — a DEFAULTED row carries no content, and
+        // `buildDesignIntentInput` maps it to `{}`, which `impeccable` treats
+        // identically to an absent key. It is done anyway so both resume paths
+        // have one ordering rather than two, and so the row FR-041 requires
+        // ("record in the report that intent was not supplied") is durable
+        // before anything can read the report.
+        beforeEnqueue: async () => {
+          await deps.db.designIntent.create({
+            data: { scanId: data.scanId, source: 'DEFAULTED' },
+          });
+        },
+      },
     );
-
-    // Lost the race (or the scan was cancelled/timed out while waiting): an
-    // answer or a skip already owns whatever DesignIntent row exists or will
-    // exist. Writing here too would violate scanId's @unique constraint and
-    // would record DEFAULTED over intent that was actually supplied.
-    if (!outcome.resumed) return;
-
-    await deps.db.designIntent.create({
-      data: { scanId: data.scanId, source: 'DEFAULTED' },
-    });
   };
 }

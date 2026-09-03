@@ -27,12 +27,18 @@
  * **What this file honestly still does not do, each recorded rather than
  * silently skipped:**
  *
- * - The design-intent questionnaire (T194) now pauses `RUNNING_PHASE_1`
- *   whenever `RUNNING_PHASE_2` would run `UI` — see the walk-forward loop
- *   below, which calls `awaitQuestionnaire` instead of `enqueuePhase` in
- *   exactly that case. The deadline-timeout handler, the API routes that let a
- *   user answer or skip, the `DesignIntent` write, and threading the answers
- *   into `CapabilityInput` remain unbuilt (T198-201).
+ * - The design-intent questionnaire is now complete end to end (Phase 8, US6).
+ *   The walk-forward loop below calls `awaitQuestionnaire` instead of
+ *   `enqueuePhase` whenever `RUNNING_PHASE_2` would run `UI` (T194); the
+ *   deadline-timeout handler resumes an unanswered scan and records
+ *   `DEFAULTED` (`questionnaire-timeout-handler.ts`, T196); the API routes let
+ *   a user answer or skip (`apps/api`'s `questionnaire.service.ts`, T199/200);
+ *   `UIQuestionnaire.tsx` renders the pause (T201); and the answers reach the
+ *   design capability through `buildDesignIntentInput` below, which this file
+ *   calls once per phase job and threads into `CapabilityInput.designIntent`.
+ *   Both resume paths flag their phase-2 job `alreadyTransitioned` — see the
+ *   entry transition in `handlePhase` below, and
+ *   `PhaseJobData.alreadyTransitioned`'s own note, for why they must.
  * - A phase job that throws transitions the scan to `FAILED` via `failScan`,
  *   which refunds the undelivered share through `installTerminalRefund`
  *   (`terminal-refund.ts`, a terminal observer that runs inside the awaited
@@ -525,14 +531,41 @@ export function createPhaseHandler(
     };
 
     try {
-      const outcome = await moveAndAnnounce(context, {
-        scanId: data.scanId,
-        from: scan.state,
-        to: data.phase,
-      });
-      // Lost the race, or someone else already handled this phase (e.g. a
-      // cancellation). Either way, this job's work is done.
-      if (!outcome.moved) return;
+      // A questionnaire resume has already performed this phase's entry
+      // transition (`AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2`, the only edge
+      // out of the pause) and says so on the payload. Attempting it again here
+      // would be the self-edge `RUNNING_PHASE_2 -> RUNNING_PHASE_2`, which
+      // `state-machine.ts`'s `ALLOWED` table refuses for every state — so this
+      // job returned having audited nothing, and the UI area was never audited
+      // on any scan that paused for design intent
+      // (`questionnaire.resume-runs-phase-two.test.ts` is the guard).
+      //
+      // Every other phase job still transitions, because that transition is
+      // also what stops a redelivered job from re-running a phase's modules —
+      // see `PhaseJobData.alreadyTransitioned`. This is a per-job opt-out for
+      // the one caller that genuinely already transitioned, not a relaxation of
+      // the guard.
+      //
+      // The flagged path still refuses to run a scan that is no longer in this
+      // phase — a cancellation between the resume and this job's delivery is
+      // exactly what the ordinary entry transition would have caught
+      // (`CANCELLED -> RUNNING_PHASE_2` is illegal, so it returned). No extra
+      // query: `scan` was read at the top of this function. It narrows that
+      // window rather than closing it atomically, which is the same guarantee
+      // the rest of the phase body already has — a cancellation landing
+      // mid-phase is caught by the *next* transition losing its race.
+      if (data.alreadyTransitioned === true) {
+        if (scan.state !== data.phase) return;
+      } else {
+        const outcome = await moveAndAnnounce(context, {
+          scanId: data.scanId,
+          from: scan.state,
+          to: data.phase,
+        });
+        // Lost the race, or someone else already handled this phase (e.g. a
+        // cancellation). Either way, this job's work is done.
+        if (!outcome.moved) return;
+      }
 
       if (MODULE_RUNNING_PHASES.includes(data.phase)) {
         const requiredControlLevelsByModule = new Map(

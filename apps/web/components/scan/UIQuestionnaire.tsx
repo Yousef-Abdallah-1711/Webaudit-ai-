@@ -41,13 +41,20 @@
  * scan is moving on either way, so this component shows a short message and
  * calls `onResolved` rather than surfacing a crash or a retry prompt.
  *
- * **Does not own the realtime socket.** `ScanProgress` already holds the
- * `connectRealtime` connection and already tracks `scanState`; when a
- * `scan:state` event (from either this user's own answer or the deadline
- * firing) moves the scan off `AWAITING_QUESTIONNAIRE`, `ScanProgress` simply
- * stops rendering this component. `onResolved` exists only to make the
- * user's own submit/skip feel immediate rather than waiting on the next
- * event round-trip.
+ * **Does not own the realtime socket.** `ScanProgress` holds the
+ * `connectRealtime` connection and tracks `scanState`; this component stops
+ * being rendered the moment that state leaves `AWAITING_QUESTIONNAIRE`.
+ *
+ * `onResolved` is the primary mechanism, not a nicety: it re-reads the scan
+ * over HTTP (`ScanProgress`'s own `refetch`). Answering or skipping resumes the
+ * scan inside `apps/api`, and `apps/api` has no event publisher — `scan:state`
+ * is published by `apps/worker` alone, and `apps/api` only subscribes to that
+ * channel and fans it out to sockets. So this user's own submit ends the pause
+ * through `onResolved`, and the *deadline* firing (inside the worker) is the
+ * case that genuinely arrives as a `scan:state` push. A second tab watching the
+ * same scan learns of this tab's answer on its own next resync rather than from
+ * an event; its own `POST` then answers 409, handled below. See
+ * `ScanProgress.tsx`'s module note.
  */
 import { useEffect, useState } from 'react';
 import { Button, Card, Input } from '../ui';

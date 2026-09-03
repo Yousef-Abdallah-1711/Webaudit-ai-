@@ -26,15 +26,37 @@ import { createCapturingMailer } from '../helpers/mailer.js';
 const mailer = createCapturingMailer();
 
 const enqueuedFirst: { scanId: string }[] = [];
-const enqueuedSecond: { scanId: string; modules: readonly string[] }[] = [];
+const enqueuedSecond: {
+  scanId: string;
+  modules: readonly string[];
+  /**
+   * Whether a `DesignIntent` row for this scan was already durable at the
+   * instant the enqueue happened.
+   *
+   * The enqueue is the moment the phase-2 job becomes visible to a worker, and
+   * reading that row is among the job's first acts
+   * (`buildDesignIntentInput`). `resume()` used to write the row *after* the
+   * enqueue, so a fast worker could find nothing, omit `designIntent` from
+   * `CapabilityInput` entirely, and silently audit the design with none of the
+   * answers the user just typed. This fake stands in for that fast worker: it
+   * observes the database from inside the enqueue, which is the only place the
+   * ordering is visible at all.
+   */
+  designIntentAlreadyWritten: boolean;
+}[] = [];
 const fakeProducer = {
   enqueueFirstPhase: (input: { scanId: string }) => {
     enqueuedFirst.push({ scanId: input.scanId });
     return Promise.resolve({ jobId: `fake:${input.scanId}:1` });
   },
-  enqueuePhaseTwo: (input: { scanId: string; modules: readonly string[] }) => {
-    enqueuedSecond.push({ scanId: input.scanId, modules: input.modules });
-    return Promise.resolve({ jobId: `fake:${input.scanId}:2` });
+  enqueuePhaseTwo: async (input: { scanId: string; modules: readonly string[] }) => {
+    const intent = await testDb.designIntent.findUnique({ where: { scanId: input.scanId } });
+    enqueuedSecond.push({
+      scanId: input.scanId,
+      modules: input.modules,
+      designIntentAlreadyWritten: intent !== null,
+    });
+    return { jobId: `fake:${input.scanId}:2` };
   },
   close: () => Promise.resolve(),
 };
@@ -193,6 +215,12 @@ describe('POST /scans/:id/questionnaire (FR-040)', () => {
     expect(enqueuedSecond).toHaveLength(1);
     expect(enqueuedSecond[0]?.scanId).toBe(scanId);
     expect(enqueuedSecond[0]?.modules).toEqual(['UI']);
+    // The answers were durable before the job a worker could pick up existed.
+    expect(
+      enqueuedSecond[0]?.designIntentAlreadyWritten,
+      'the DesignIntent row must be written before phase 2 is enqueued, or a fast ' +
+        'worker audits the design with no answers at all',
+    ).toBe(true);
   });
 
   it('accepts a partial answer — every field is optional', async () => {
@@ -293,6 +321,9 @@ describe('POST /scans/:id/questionnaire/skip (FR-042)', () => {
 
     expect(enqueuedSecond).toHaveLength(1);
     expect(enqueuedSecond[0]?.scanId).toBe(scanId);
+    // Same ordering on the skip path — the SKIPPED row is what tells the report
+    // intent was declined rather than never asked for.
+    expect(enqueuedSecond[0]?.designIntentAlreadyWritten).toBe(true);
   });
 
   it('409s when already resolved, and writes nothing', async () => {

@@ -43,6 +43,15 @@ interface AddedJob {
   readonly name: string;
   readonly data: unknown;
   readonly opts: unknown;
+  /**
+   * Whether a `DesignIntent` row for this scan was already durable at the
+   * instant the enqueue happened — the fast-worker observation. The enqueue is
+   * when the phase-2 job becomes visible to a worker, and reading that row is
+   * among the job's first acts (`buildDesignIntentInput`), so the write has to
+   * land first. Recorded here because inside the enqueue is the only place the
+   * ordering is observable at all.
+   */
+  readonly designIntentAtEnqueue: unknown;
 }
 
 function fakeQueues(): {
@@ -52,9 +61,11 @@ function fakeQueues(): {
   const added: AddedJob[] = [];
   const make = (queue: 'scanPhase' | 'maintenance'): Queue =>
     ({
-      add: (name: string, data: unknown, opts: unknown) => {
-        added.push({ queue, name, data, opts });
-        return Promise.resolve({ id: 'stub-job' });
+      add: async (name: string, data: unknown, opts: unknown) => {
+        const scanId = (data as { scanId?: string }).scanId ?? '';
+        const designIntentAtEnqueue = await db.designIntent.findUnique({ where: { scanId } });
+        added.push({ queue, name, data, opts, designIntentAtEnqueue });
+        return { id: 'stub-job' };
       },
     }) as unknown as Queue;
   return { queues: { scanPhase: make('scanPhase'), maintenance: make('maintenance') }, added };
@@ -125,7 +136,21 @@ describe('T196 — the questionnaire deadline handler', () => {
 
       const phaseJobs = added.filter((job) => job.queue === 'scanPhase');
       expect(phaseJobs).toHaveLength(1);
-      expect(phaseJobs[0]?.data).toMatchObject({ scanId, phase: 'RUNNING_PHASE_2', modules: ['UI'] });
+      expect(phaseJobs[0]?.data).toMatchObject({
+        scanId,
+        phase: 'RUNNING_PHASE_2',
+        modules: ['UI'],
+        // The resume performed AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2 itself,
+        // so the job must tell `handlePhase` not to attempt that entry
+        // transition again — the self-edge the state machine refuses, which
+        // made the resumed job audit nothing at all.
+        alreadyTransitioned: true,
+      });
+      // And the DEFAULTED row was durable before that job could be picked up.
+      expect(
+        phaseJobs[0]?.designIntentAtEnqueue,
+        'the DesignIntent row must be written before phase 2 is enqueued',
+      ).not.toBeNull();
 
       const intent = await db.designIntent.findUnique({ where: { scanId } });
       expect(intent).not.toBeNull();
