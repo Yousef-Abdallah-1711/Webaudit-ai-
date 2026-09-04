@@ -417,15 +417,62 @@ tasks.md's description of it, cross-checked against CLAUDE.md's seven non-negoti
   of mind while building T205–T209.
 
 ### Tasks
-- [ ] Dedicated adversarial review of every admin route and every `requireOperator` boundary.
-- [ ] Write up findings the same way the two prior review documents did (severity table, files
+- [x] Dedicated adversarial review of every admin route and every `requireOperator` boundary.
+- [x] Write up findings the same way the two prior review documents did (severity table, files
       reviewed, fix/test-to-add per finding).
-- [ ] One consolidated fix wave addressing Critical + Important findings directly; Minor findings
+- [x] One consolidated fix wave addressing Critical + Important findings directly; Minor findings
       recorded, fixed only if cheap.
-- [ ] Full whole-branch verification gate: `pnpm run lint && pnpm run lint:adherence`,
+- [x] Full whole-branch verification gate: `pnpm run lint && pnpm run lint:adherence`,
       `pnpm -r typecheck`, `pnpm run test`, `pnpm run test:adverse`, `pnpm run test:visual`, build.
-- [ ] Update PROGRESS.md with a dated section recording this review, matching the style of the
+- [x] Update PROGRESS.md with a dated section recording this review, matching the style of the
       existing "Phase N engineering review — findings fixed" sections.
+
+### Definition of done
+Every finding at Critical/Important severity fixed and reviewed; all gates green; PROGRESS.md updated.
+
+**Status: done.** Two independent review passes (backend, frontend — full write-up in
+[2026-09-04-us7-admin-adversarial-review.md](2026-09-04-us7-admin-adversarial-review.md)), each explicitly
+instructed to hunt for the two defect shapes this session's own brief named (Finding-4-shaped dead code;
+Finding-6-shaped comment-claims-a-guarantee-the-code-doesn't-keep). Both found exactly one Important
+finding and nothing Critical:
+
+- **Backend**: `PATCH /admin/capabilities/:id`'s combined `{isEnabled, planIds}` body was not atomic — a
+  bad `planIds` value could 400 the request *after* an `isEnabled` change had already committed and been
+  audited (the dangerous direction: `{isEnabled: true, planIds: ["bad-id"]}` left a capability live and
+  unrestricted for every plan behind an apparently-failed response). Confirmed empirically with a
+  temporary, since-deleted repro before being reported. Fixed by validating `planIds` existence — a pure
+  read, no side effects — before either mutation runs, with a new contract test proving neither half lands
+  and zero audit rows are written when validation fails.
+- **Frontend**: the admin Users page was the one screen among five built in Session 5 that skipped the
+  "don't show a real-looking figure before data arrives" guard every sibling page already had — a plain
+  `useState(0)` rendered a fabricated-looking "0 accounts" during loading and on a 401/403 refusal. Fixed
+  with the same null-guard pattern already established elsewhere in the same session's own pages.
+
+Every one of the "specific things to verify" both review briefs listed (audit-log completeness across all
+five services; the T202 authz test's exhaustiveness against every real mounted route, confirmed
+one-for-one; the full service→route→aggregator→app mount chain for every capability; capability-delete/
+provider-chain/queue-cancel guarantees under race and partial-failure conditions; no client-side
+authorization anywhere; frontend/backend shape parity re-verified field-by-field; the margin page's
+no-fabricated-percentage claim re-confirmed under every code path) came back clean — "checked, no defect
+found," not just assumed. Minor/Informational findings (a `balanceOf` N+1 pattern, an unconfirmed
+low-likelihood audit-log race, `AdminShell`'s pre-existing hardcoded operator identity, the already-
+documented CSS-Modules token gap, thin error-path test coverage) recorded, not fixed, per this session's
+own "Minor findings recorded, fixed only if cheap" rule.
+
+Full whole-branch gate after both fixes: `pnpm run lint` clean for `apps/api`/`apps/web` (failures are
+confined to the unrelated, untracked `showcase-trimora/` directory); `pnpm run lint:adherence` clean (0/0,
+97 files); `pnpm run test` **109 files / 905 tests**; `pnpm run test:adverse` **33 files / 624 passed, 1
+pre-existing skip**; `pnpm run test:visual` **6/6 passing**, 7 pre-existing `it.todo`, unchanged — and
+that harness runs a real `next build` internally, directly confirming `apps/web`'s production build is
+clean. Root `pnpm run typecheck`/`pnpm run build` both still fail on the pre-existing, unrelated turbo
+cyclic-dependency warning (PROGRESS.md's Open Decision #16, updated this session to record it also breaks
+`build`, not only `typecheck`) — confirmed not introduced by this session, and the one package that
+script would meaningfully build (`apps/web`, the only one with its own `build` script) is independently
+verified clean regardless. PROGRESS.md's "US7 admin console engineering review (2026-09-04)" section
+carries the full account.
+
+**This closes US7 end to end.** Sessions 4, 5, and 6 are all done — the operator admin console is built,
+reviewed, and its remaining honest gaps (Open Decisions #16 and #17) are named rather than hidden.
 
 ### Definition of done
 Every finding at Critical/Important severity fixed and reviewed; all gates green; PROGRESS.md updated.

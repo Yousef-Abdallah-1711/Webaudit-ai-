@@ -1,11 +1,19 @@
 # WebAudit AI — Build Progress
 
 **Updated** 2026-09-04 · **Tasks** 231 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **903/903**, `adverse` **624 passed / 1 pre-existing skip** (apps/api and apps/worker
-only — this session's changes were `apps/web`-only, so the adverse suite is unaffected and was not
-re-run), `apps/api`/`apps/web` lint + typecheck clean (per-package — see Open Decision #16 for why the
-root `pnpm run typecheck` script itself currently fails, on a pre-existing turbo cyclic-dependency
-warning unrelated to any change in this or the prior session). 🎯 **Phase 9b (US7 frontend) complete —
+**Tests** `unit` **905/905**, `adverse` **624 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
+typecheck clean per-package (root `pnpm run typecheck`/`pnpm run build` both still fail on a pre-existing
+turbo cyclic-dependency warning unrelated to any change in this or prior sessions — Open Decision #16;
+`apps/web`'s real production build is independently confirmed clean via `pnpm test:visual`'s own
+internal `next build`). 🎯 **US7 (the operator admin console) complete end to end — Sessions 4, 5, and
+6.** Backend (T202–T211), frontend (T212–T215), and a dedicated adversarial review all done. The review
+(Session 6, Phase 9c) found and fixed one Important defect on each side: a combined
+`PATCH /admin/capabilities/:id` body that could commit an `isEnabled` change and audit it before a bad
+`planIds` value 400'd the response, and an admin Users page that rendered a fabricated-looking "0
+accounts" during loading or on a 401/403 refusal. No Critical findings either side. Full write-up:
+[2026-09-04-us7-admin-adversarial-review.md](docs/superpowers/plans/2026-09-04-us7-admin-adversarial-review.md)
+and "US7 admin console engineering review" below.
+🎯 **Phase 9b (US7 frontend) complete —
 T212–T215.** Four admin screens (margin, capabilities, queue, users+plans) wired to Phase 9a's real
 backend, replacing `AdminScreens.jsx`'s static placeholder rows. Session 5 of the [full-project
 remediation
@@ -14,7 +22,9 @@ frontend)" below for the full account, including a design-fidelity call carried 
 page's own backend design (no fabricated margin percentage or price figure, ever) and a real,
 pre-existing route mismatch this phase fixed (`AdminShell.tsx`'s nav linked two screens to the wrong
 paths). One gate honestly unmet: no per-screen visual-regression baseline exists for this admin console
-at all, a pre-existing gap now tracked as Open Decision #17. 🎯 **Phase 9a (US7 backend) complete —
+at all, a pre-existing gap tracked as Open Decision #17 (still open — Session 6 named it again but did
+not resolve it, since building reference images is design/tooling work outside an engineering review's
+scope). 🎯 **Phase 9a (US7 backend) complete —
 T202–T211.** Operator administration of users, plans, margin, capabilities, AI providers, and the BullMQ
 queue, all behind `requireOperator`, all audit-logged. Session 4 of the same roadmap — see "Phase 9a (US7
 backend)" below for the full account, including a real gap (silent, permanent workspace orphaning on a
@@ -261,6 +271,69 @@ this session) both re-run clean.
 **Not built in this phase**: Session 6, the dedicated admin-surface adversarial review — which should also
 weigh in on whether the visual-baseline gap named above is worth closing as its own finding, now that the
 console has five real, data-backed pages instead of two.
+
+## US7 admin console engineering review (2026-09-04) — findings fixed
+
+Session 6 of the roadmap: the dedicated adversarial review of the whole US7 admin surface (Sessions 4-5,
+T202–T215), run the same way the two prior engineering reviews were — two independent passes (one backend,
+one frontend), each reading the actual shipped code and tests directly, cross-checked against CLAUDE.md's
+seven non-negotiables, explicitly hunting for the two defect shapes the Phases 4-7 review's own Findings 4
+and 6 found (a check that exists but is never wired into the real request path; a guarantee a comment
+claims that the code doesn't quite keep under a specific timing case). Full write-up:
+[2026-09-04-us7-admin-adversarial-review.md](../docs/superpowers/plans/2026-09-04-us7-admin-adversarial-review.md).
+
+**Backend pass — one Important finding, fixed.** `PATCH /admin/capabilities/:id`'s combined
+`{isEnabled, planIds}` body was not atomic: sending a bad `planIds` value alongside an `isEnabled` change
+let the `isEnabled` half commit and get audited *before* the `planIds` half's validation threw and the
+route answered 400 — a response telling the caller the request failed, sitting next to a real, committed
+mutation. Empirically confirmed with a temporary (since-deleted) repro before being reported. The more
+dangerous direction: `{isEnabled: true, planIds: ["bad-id"]}` left a capability live and **unrestricted for
+every plan** while the caller saw only a 400. Fixed by extracting the plan-existence check into a new
+exported, side-effect-free `validatePlanIdsExist` (`capabilities.service.ts`) and calling it — as a pure
+read, before either mutation — from the route whenever `planIds` is present. A new contract test sends both
+dangerous orderings and asserts neither mutation lands and zero audit rows are written. Everything else the
+backend pass checked (audit-log completeness across all five services; `admin-authz.test.ts`'s 16-route
+array matching the real router files one-for-one; the full service→route→aggregator→app mount chain for
+every capability; capability-delete/provider-chain/queue-cancel guarantees under race and partial-failure
+conditions; no dead/unmounted service export anywhere) came back clean — "checked, no defect found."
+
+**Frontend pass — one Important finding, fixed.** The admin Users page (`admin/users/page.tsx`) was the
+one screen, among five built the same prior session, that skipped the "don't show a real-looking figure
+before data arrives" guard every sibling page already had: a plain `useState(0)` rendered a fabricated-
+looking `"0 accounts"` in the header during the loading window and on a genuine 401/403 refusal —
+indistinguishable from a real empty system. Fixed by making the count `number | null`, defaulting to
+`null`, and conditionally omitting the header's `meta` prop entirely while `total === null`. A new test
+asserts the string `"accounts"` never appears in the pre-data shell. Everything else the frontend pass
+checked (no client-side authorization anywhere, matching this codebase's documented "frontend guards are
+usability, never security" design; every page's typed interface genuinely matching the real backend shape,
+re-verified field-by-field against the service files, not the frontend's own type declarations; the margin
+page's no-fabricated-percentage claim re-confirmed under every code path including the loading state and an
+empty `perScan` array; the queue page's Cancel button re-confirmed to never special-case the two
+system-protected job names; zero raw hex/px literals in any admin `.tsx` file, confirmed by direct grep, not
+just a passing lint run) came back clean.
+
+**Minor/Informational findings recorded, not fixed** (per this project's own "Minor findings recorded,
+fixed only if cheap" rule): `listUsers`'s per-row `balanceOf` calls (a `balanceOf`-batching change is
+shared code, broader-scoped than this review); an unconfirmed, very-low-likelihood race in two services'
+audit-log `before` snapshots being read outside their own transaction; `AdminShell`'s hardcoded operator
+identity/queue-depth stats (pre-existing since T243, already deliberately tested, out of this review's
+admin-*surface-correctness* mandate to re-wire); the admin console's CSS Modules mixing raw px with tokens
+(an already-documented, cross-cutting adherence-lint blind spot, CLAUDE.md's Known open items #4, not new);
+and no admin page yet having a full error-path test beyond the one new regression test this review added.
+
+**Full whole-branch verification gate**, run after both fixes: `pnpm run lint` clean for `apps/api`/
+`apps/web` (the only failures are in the unrelated, untracked `showcase-trimora/` directory);
+`pnpm run lint:adherence` clean (0/0, 97 files); `pnpm run test` **109 files / 905 tests**;
+`pnpm run test:adverse` **33 files / 624 passed, 1 pre-existing skip**; `pnpm run test:visual` **6/6
+passing**, 7 pre-existing `it.todo`, unchanged — and that harness runs a real `next build` internally as
+part of its own mechanism, which is the actual, direct confirmation that `apps/web`'s production build is
+clean. The root `pnpm run typecheck`/`pnpm run build` scripts both still fail on the pre-existing, unrelated
+turbo cyclic-dependency warning — Open Decision #16, updated this session to record that it breaks `build`
+too, not only `typecheck`; neither `apps/api` nor `apps/worker` has its own build script, so the one package
+this would meaningfully build (`apps/web`) is independently confirmed clean regardless.
+
+**This closes US7 (the operator admin console) end to end.** Sessions 4 (backend), 5 (frontend), and 6
+(this review) are all done.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -1947,7 +2020,7 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 13 | Capability loader is a static import table, not filesystem-driven (T119–125) | **Made, not settled.** `apps/worker/src/orchestrator/capability-loader.ts` hardcodes six `import()`s rather than reusing `apps/api`'s `discoverCapabilities` (would cross the api/worker production boundary). Clean fix: extract manifest-walking into `@webaudit/capability-sdk`; not done, six known capabilities don't yet force it |
 | 14 | Per-module control-level gating not wired into orchestrator execution (T108's remaining gap) | **Resolved.** A code-review remediation plan (`docs/superpowers/plans/2026-08-27-control-gate-enforcement.md`, R2) exposed `apps/api`'s control-gate service to `apps/worker` via a `@webaudit/api/control-gate` package subpath (the same shape R1 established for `@webaudit/api/credits`), wired a real `buildResolveRequiredControlLevel` at API boot (closing the intake-time 403 the seam had always supported but nothing built), and gave the orchestrator a real per-phase `requiredControlLevelsFor`/live-reconfirmation step — `resolveEffectiveControlLevel` skips the network-touching `reconfirmControl` call entirely when nothing in a phase requires more than `NONE` (true of every scan shape in production today), and calls it at most once per phase job when something does. A later fix pass on the same plan closed a real vulnerability the first cut introduced: `reconfirmControl` could not tell a rate-limit refusal from a genuinely removed token and would revoke a legitimate `TargetVerification` on the former — closed by a wait-and-retry in the probe (`verify.ts`'s `acquireOrWait`) plus a same-key check against `level1RateBound` in `reconfirmControl` itself before ever treating a negative as removal. `gated-check-partial.test.ts`'s second assertion (Open Decision #11's own note) and `apps/api/tests/adverse/control-gate.test.ts`'s "the enum is a cache, the verification row is the truth" block are now backed end to end, not just at the service layer — see `apps/worker/tests/integration/orchestrator-control-gate.test.ts` for the orchestrator-level proof, including a stale-cached-column case matching SC-021 bypass 3 |
 | 15 | `grantLot` has no idempotency key (2026-09-02 Phases 4–7 remediation, Task 5) | **Resolved (2026-09-03, Session 2 of the [full-project remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)).** Added a nullable, unique `billingEventId` column to `CreditTransaction` (migration `20260903050000_credit_transaction_billing_event_id`) — Postgres treats multiple `NULL`s as distinct, so registration's free grant and the direct dev/test billing routes (neither passes an id) are unaffected. `grantLot` now creates the `CreditTransaction` *before* the `CreditLot` specifically so a duplicate `billingEventId` is caught before any lot exists to roll back; a conflict throws `DuplicateBillingEventGrantError`, which `subscribe`/`renewSubscription`/`purchaseCredits` each catch around their own `$transaction` and answer with the already-committed state instead of re-throwing — letting Postgres roll back the whole retry attempt (including, in `subscribe`'s case, a harmless re-write of the subscription row to the same values an earlier attempt already committed) rather than trying to catch-and-continue mid-transaction, which would risk committing an orphaned lot if Postgres marks the transaction aborted after the failed insert. `webhooks.routes.ts` now passes `event.id` into all three effect calls. New test in `billing-webhook.test.ts` proves the exact residual scenario this closes: an effect that commits for real, followed by a rigged `appliedAt` write failure, followed by a genuine retry — balance stays at the single grant, not double. Full adverse suite (570/571) and full unit suite (805/805) both green, run in isolation to avoid the shared-test-DB contamination this roadmap's Environment gotchas section warns about (hit twice again during this session's own verification, each time confirmed as contamination — not a regression — by re-running alone) |
-| 16 | Root `pnpm run typecheck` fails on a pre-existing turbo cyclic-dependency warning, unrelated to any code change (surfaced 2026-09-04, Session 4 wrap-up) | **Needs a call, not urgent.** `apps/worker`'s `package.json` has depended on `@webaudit/api` as a real workspace dependency since T113 (Open Decision #10 above — the generated Prisma client, judged a shared ORM artifact rather than application logic). `turbo run typecheck` (the second half of the root script, after the plain `tsc --noEmit -p tsconfig.json` that runs first and passes) walks the `^build` graph and refuses outright: `apps/api` and `apps/worker` each list the other as a dependency somewhere (api's own `package.json` has no runtime dependency on worker — confirmed by reading it — so this is almost certainly turbo conflating a test-only/dev dependency with a build-graph edge), and turbo treats any A-depends-on-B-depends-on-A as fatal regardless of which edge is dev-only. Confirmed pre-existing and not introduced by Phase 9a: `git show d519cb2:apps/worker/package.json` (the commit immediately before this session's work began) already lists `@webaudit/api` as a dependency. Every verification in this session and the two before it ran `tsc --noEmit` per-package (`pnpm --filter @webaudit/api exec tsc --noEmit -p .`) rather than the root `pnpm run typecheck` script, which is why this had gone unnoticed. Not fixed here — out of scope for the admin-backend task list — but worth a real decision: either accept `apps/worker`'s dependency on `@webaudit/api` needs to be a devDependency turbo's graph can be told to ignore, or the root `typecheck` script needs to stop shelling out to `turbo run typecheck` and just walk packages directly the way this session (and, per its own account, prior sessions) already does by hand |
+| 16 | Root `pnpm run typecheck` **and `pnpm run build`** both fail on a pre-existing turbo cyclic-dependency warning, unrelated to any code change (surfaced 2026-09-04, Session 4 wrap-up; confirmed to also break `build` during Session 6's whole-branch gate) | **Needs a call, not urgent.** `apps/worker`'s `package.json` has depended on `@webaudit/api` as a real workspace dependency since T113 (Open Decision #10 above — the generated Prisma client, judged a shared ORM artifact rather than application logic). `turbo run typecheck` (the second half of the root `typecheck` script, after the plain `tsc --noEmit -p tsconfig.json` that runs first and passes) and, identically, `turbo run build` (the entire root `build` script) both walk the same `^build` dependency graph and refuse outright: `apps/api` and `apps/worker` each list the other as a dependency somewhere (api's own `package.json` has no runtime dependency on worker — confirmed by reading it — so this is almost certainly turbo conflating a test-only/dev dependency with a build-graph edge), and turbo treats any A-depends-on-B-depends-on-A as fatal regardless of which edge is dev-only. Confirmed pre-existing and not introduced by Phase 9a: `git show d519cb2:apps/worker/package.json` (the commit immediately before Session 4's work began) already lists `@webaudit/api` as a dependency. Neither `apps/api` nor `apps/worker` has its own `build` script at all (only `apps/web` does, `next build`) — Session 6's whole-branch gate confirmed that one directly (`apps/web/tests/visual/harness.test.ts` runs a real `next build` internally as part of its own mechanism, and it passed clean), so the only package this root script would meaningfully build is unaffected by the graph error in practice; the failure is purely turbo's own dependency-graph bookkeeping refusing to proceed before it would even reach that step. Every verification in this session and the three before it ran `tsc --noEmit`/`eslint` per-package rather than the root scripts, which is why this had gone unnoticed until Session 4's wrap-up (for `typecheck`) and Session 6's (for `build`). Not fixed here — out of scope for an admin-surface task list — but worth a real decision: either accept `apps/worker`'s dependency on `@webaudit/api` needs to be a devDependency turbo's graph can be told to ignore, or both root scripts need to stop shelling out to `turbo run {typecheck,build}` and just walk packages directly the way every session so far has already done by hand |
 | 17 | The admin console (`apps/web/app/(admin)/`) has no per-screen visual-regression baseline for any of its 6 real screens (surfaced 2026-09-04, Session 5 wrap-up) | **Needs a call.** `apps/web/tests/visual/harness.test.ts` has zero coverage for any `/admin/*` route — confirmed by reading the whole file. This predates Session 5: the first two admin pages (`AdminProvidersPage`, `AdminScansPage`, T244) shipped with none either, and Session 5's four new pages (T212–T215) inherited the same gap rather than introducing it, since `design-system/reference-pages/` only exports one combined "Admin Console" HTML page, not one per screen, so there is no per-screen reference image to diff against without first producing one. Every admin page instead gets the console's own already-established `renderToStaticMarkup`/no-jsdom structural test (`admin-shell.test.ts`, `admin-screens.test.ts`, and Session 5's five new `admin-*.test.ts` files), which proves the pre-data shell renders correctly but proves nothing about pixel-level token/spacing fidelity. Needs a real decision: extract one reference screenshot per admin screen from the combined console export and wire real `pnpm test:visual` coverage, or explicitly accept structural-test-only coverage for this console as a permanent, documented choice (distinct from a "no design exists" gap — a design exists for every admin screen; only the *test* baseline is missing). Session 6 (the dedicated admin-surface adversarial review) is the natural place to make this call, since it already reviews the whole admin surface as one unit. |
 
 ## Carried corrections — still open

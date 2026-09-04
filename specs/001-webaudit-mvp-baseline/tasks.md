@@ -538,9 +538,22 @@ in this codebase (Open Decision #3) — and the plans screen (T215) drops the mo
 column for the identical reason. Two independent reviews (one per group of pages) found no blocking or
 should-fix issues. Full `apps/web` unit suite (23 files / 147 tests) and `pnpm test:visual` (6/6 passing, 7
 pre-existing `it.todo`, unchanged from before this session) both re-run clean. See PROGRESS.md's Phase 9b
-section for the full account. **Not done in this session**: Session 6 (the dedicated admin-surface
-adversarial review, which should also decide whether to close the visual-baseline gap named above as its
-own finding).
+section for the full account.
+
+**Session 6 (the dedicated US7 admin adversarial review) is done.** Two independent review passes (backend,
+frontend) each found one genuine Important-severity defect and fixed it: a combined
+`PATCH /admin/capabilities/:id` body was not atomic (a bad `planIds` value could 400 the request after an
+`isEnabled` half had already committed and been audited — fixed by validating `planIds` before either
+mutation runs), and the admin Users page rendered a fabricated-looking `"0 accounts"` during loading and on
+a 401/403 refusal (fixed with a null-guard matching every sibling page's own precedent). No Critical
+findings. Full whole-branch gate re-run: `pnpm run lint`/`lint:adherence` clean (apps/api and apps/web);
+`pnpm run test` 109 files / 905 tests; `pnpm run test:adverse` 33 files / 624 passed, 1 pre-existing skip;
+`pnpm run test:visual` 6/6 passing (unchanged, and its own harness runs a real `next build` internally,
+confirming apps/web's production build directly); root `pnpm run typecheck`/`pnpm run build` both still
+fail on the pre-existing, unrelated turbo cyclic-dependency warning (Open Decision #16, now confirmed to
+affect `build` too). Full findings and fixes recorded in
+`docs/superpowers/plans/2026-09-04-us7-admin-adversarial-review.md` and PROGRESS.md's dated review section.
+This closes US7 (admin console) end to end — Sessions 4, 5, and 6 all done.
 
 ---
 
