@@ -1,15 +1,24 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-03 · **Tasks** 217 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **835/835**, `adverse` **570 passed / 1 pre-existing skip**, `lint` + `lint:adherence`
-+ `pnpm -r typecheck` clean, production build clean. 🎯 **Phase 8 (US6, the mid-audit design-intent
+**Updated** 2026-09-04 · **Tasks** 227 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **890/890**, `adverse` **624 passed / 1 pre-existing skip**, `apps/api` lint +
+typecheck clean (per-package — see Open Decision #16 for why the root `pnpm run typecheck` script
+itself currently fails, on a pre-existing turbo cyclic-dependency warning unrelated to any change in
+this session). 🎯 **Phase 9a (US7 backend) complete — T202–T211.** Operator administration of users,
+plans, margin, capabilities, AI providers, and the BullMQ queue, all behind `requireOperator`, all
+audit-logged. Session 4 of the [full-project remediation
+roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md) — see "Phase 9a (US7
+backend)" below for the full account, including a real gap (silent, permanent workspace orphaning on a
+maintenance-queue job cancel) an adversarial review found and closed before commit. Frontend (T212–T217)
+and the dedicated admin-surface adversarial review are Sessions 5 and 6 of the same roadmap, not yet
+started.
+🎯 **Phase 8 (US6, the mid-audit design-intent
 questionnaire) complete — T194–T201.** Built across five separately-reviewed commits (Session 3 of the
-[full-project remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)),
-then a sixth, whole-feature review found the entire feature was non-functional in production — see
-"Phase 8 (US6) — a Critical regression only a whole-feature review caught" below. Fixed, re-reviewed,
-re-verified. Merged to `main` at `c31139a` before this phase started (Session 1 of the same roadmap,
-fast-forward, all 29 commits preserved, zero conflicts — `main` was an exact ancestor of the
-remediation branch).
+same roadmap), then a sixth, whole-feature review found the entire feature was non-functional in
+production — see "Phase 8 (US6) — a Critical regression only a whole-feature review caught" below.
+Fixed, re-reviewed, re-verified. Merged to `main` at `c31139a` before this phase started (Session 1 of
+the same roadmap, fast-forward, all 29 commits preserved, zero conflicts — `main` was an exact ancestor
+of the remediation branch).
 plus the T109 Playwright e2e spec fully green. `typecheck` + `lint` + `lint:adherence` clean across
 the monorepo; `next build` clean. Phase 7 surfaced one pre-existing lint regression
 (`scripts/seed.ts` importing `@webaudit/config`, which was never a root dependency) and one stale
@@ -101,6 +110,78 @@ Verified at the end, from a clean perspective: `pnpm run lint` clean, `pnpm -r e
 across every touched package, full `pnpm run test` **835/835**, full `pnpm run test:adverse` **570
 passed / 1 pre-existing skip** (one transient re-run needed — a single flake that did not reproduce on
 a clean rerun, confirmed not a regression), `next build` clean.
+
+## Phase 9a (US7 backend) — admin surface for users, plans, margin, capabilities, providers, queue
+
+T202–T211 build the backend half of operator administration (FR-008, FR-085 through FR-089): user and
+plan CRUD, a margin report attributing real provider cost per scan/area/capability alongside revenue in
+credits, capability enable/disable/tier-restriction, AI provider-chain configuration, and BullMQ queue
+inspection/retry/cancel — all behind `requireOperator`, all writing through the single
+`recordAuditLog` (FR-089). Session 4 of the roadmap. Five commits, each independently reviewed:
+
+1. `users.service.ts`/`plans.service.ts` and their routes, plus `recordAuditLog` itself (T205, T210).
+   Review fix: `admin.plans.test.ts` was leaving `Plan.starter.isActive: false` uncleaned, corrupting
+   shared reference data for later test files — added an `afterAll` restoring it.
+2. `margin.service.ts` (T206, T203): per-scan, per-area, per-capability revenue (`chargedCredits`) and
+   real cost (`costMicros`) reported side by side, never blended into an invented dollar figure — this
+   codebase has no published credit-to-dollar rate (Open Decision #3 below), and inventing one here
+   would have been a fabrication a customer-facing "margin" report cannot afford. Per-area revenue is
+   split evenly across a scan's `requestedModules`, floored, with the remainder documented as
+   unattributed rather than silently absorbed anywhere. A genuine intermittent flake in
+   `margin-attribution.test.ts` (real, reproduced on roughly half of several full-suite runs, never in
+   isolation) was root-caused to the default report window's `to: new Date()` sitting within
+   milliseconds of the test's own `Scan.createdAt` (`@default(now())`, Postgres's clock, not Node's) —
+   fixed with an explicit multi-year window and a before/after delta assertion, not a guess at
+   "flakiness."
+3. `capabilities.service.ts` (T207, T204): enable/disable takes effect on the very next scan snapshot
+   with no deploy, because `CapabilityRegistry.build`/`resolveSnapshot` already read `isEnabled` and
+   `CapabilityPlan` fresh every time (SC-010, proven by `capability-enable.test.ts` driving the real
+   registry, not a fake). `removeCapability` refuses (409, audited even on refusal) whenever the row has
+   any `CapabilityExecution` history — `reconcile.ts`'s "a capability row is never deleted" is a claim
+   about reconciliation specifically, not every code path, and the FK (`ON DELETE RESTRICT`) would
+   refuse the delete regardless; a capability with zero history may still be removed.
+4. `providers.service.ts` (T208): validates a replacement AI provider chain with the real `buildChain`
+   from `@webaudit/ai-executor` — the same function `createExecutorFromEnv` calls at worker boot —
+   rather than a parallel check that could drift from it. Replace-the-set in one transaction. Honestly
+   does **not** live-reconfigure a running worker; no such mechanism exists today (the worker reads
+   `AI_CHAIN`/per-vendor env vars once, at boot). Review added a test proving a rejected replacement
+   leaves a *previously valid* chain untouched — the original suite only proved "nothing written to an
+   empty table," a narrower claim.
+5. `queue.service.ts` (T209): inspects waiting/active/delayed/failed/completed jobs across all three
+   BullMQ queues, retries a genuinely `failed` job, cancels a job that is not `active` — all driven
+   against a real local Redis with a real BullMQ `Worker` (not a mock; BullMQ validates state
+   transitions server-side via Lua scripts). **A dispatched adversarial review of this task, before
+   commit, found a real gap**: cancelling a queued `workspace-teardown` or `questionnaire-deadline` job
+   on the maintenance queue has no backstop — `sweepOrphanedWorkspaces` is not wired into any production
+   entrypoint (only ever called from tests), and workspace destruction on the `CANCELLED` scan-cancel
+   path depends *exclusively* on the `workspace-teardown` job the cancel route enqueues. A name-agnostic
+   cancel would have let an operator silently and permanently orphan a cancelled scan's on-disk source —
+   a direct violation of R15/FR-090's "destroyed on every exit path." Fixed by refusing cancel (not
+   retry — retry is the correct recovery path) on both job names by construction, proven by two new
+   tests. The reviewer's other two flagged concerns — refusing to cancel an `active` job, and requiring
+   `failed` state before a retry — were verified empirically against real BullMQ races (a genuine active
+   job's `remove()` throws inside BullMQ itself; a second concurrent `retry()` on the same job throws
+   "not in the failed state") rather than merely argued.
+
+T211/T202 close the phase: a new `routes/admin/index.ts` aggregates all six admin routers under one
+`requireAuth` + `requireOperator` gate, mounted at `/admin` in `app.ts`, so a future admin route
+inherits the gate structurally rather than by every file remembering to add it. `admin-authz.test.ts`
+drives the real `createApp()` — not a standalone router around one file, unlike every other
+`admin.*.test.ts` in this tree — against all 16 admin endpoints, three ways each: no Authorization
+header, a genuine non-operator's valid token, and a token whose JWT claims `isOperator: true` against
+an account that is not one in the database (the forged/stale-claim case `requireOperator`'s own module
+note names as the reason it reads the database rather than the token claim). A closing positive case
+proves a real operator gets 200 on every no-parameter GET route — proof the refusal above is the
+operator gate itself, not a mis-typed path 404ing for everyone. 54/54 green.
+
+Verified after each commit and again at the end: `pnpm --filter @webaudit/api exec tsc --noEmit`
+clean, `eslint` clean on every touched file, full `apps/api` `pnpm test` (45 files / 316 tests) and
+`pnpm test:adverse` (16 files / 191 tests) both green after mounting `/admin`.
+
+**Not built in this phase** (Sessions 5 and 6 of the roadmap, not yet started): T212–T217 (the four
+admin screens ported from `design-system/ui_kits/admin/AdminScreens.jsx`) and the dedicated adversarial
+review pass on the whole admin surface — the first `requireOperator`-gated surface in this codebase,
+worth a review of its own beyond T202's authz sweep.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -1787,6 +1868,7 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 13 | Capability loader is a static import table, not filesystem-driven (T119–125) | **Made, not settled.** `apps/worker/src/orchestrator/capability-loader.ts` hardcodes six `import()`s rather than reusing `apps/api`'s `discoverCapabilities` (would cross the api/worker production boundary). Clean fix: extract manifest-walking into `@webaudit/capability-sdk`; not done, six known capabilities don't yet force it |
 | 14 | Per-module control-level gating not wired into orchestrator execution (T108's remaining gap) | **Resolved.** A code-review remediation plan (`docs/superpowers/plans/2026-08-27-control-gate-enforcement.md`, R2) exposed `apps/api`'s control-gate service to `apps/worker` via a `@webaudit/api/control-gate` package subpath (the same shape R1 established for `@webaudit/api/credits`), wired a real `buildResolveRequiredControlLevel` at API boot (closing the intake-time 403 the seam had always supported but nothing built), and gave the orchestrator a real per-phase `requiredControlLevelsFor`/live-reconfirmation step — `resolveEffectiveControlLevel` skips the network-touching `reconfirmControl` call entirely when nothing in a phase requires more than `NONE` (true of every scan shape in production today), and calls it at most once per phase job when something does. A later fix pass on the same plan closed a real vulnerability the first cut introduced: `reconfirmControl` could not tell a rate-limit refusal from a genuinely removed token and would revoke a legitimate `TargetVerification` on the former — closed by a wait-and-retry in the probe (`verify.ts`'s `acquireOrWait`) plus a same-key check against `level1RateBound` in `reconfirmControl` itself before ever treating a negative as removal. `gated-check-partial.test.ts`'s second assertion (Open Decision #11's own note) and `apps/api/tests/adverse/control-gate.test.ts`'s "the enum is a cache, the verification row is the truth" block are now backed end to end, not just at the service layer — see `apps/worker/tests/integration/orchestrator-control-gate.test.ts` for the orchestrator-level proof, including a stale-cached-column case matching SC-021 bypass 3 |
 | 15 | `grantLot` has no idempotency key (2026-09-02 Phases 4–7 remediation, Task 5) | **Resolved (2026-09-03, Session 2 of the [full-project remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)).** Added a nullable, unique `billingEventId` column to `CreditTransaction` (migration `20260903050000_credit_transaction_billing_event_id`) — Postgres treats multiple `NULL`s as distinct, so registration's free grant and the direct dev/test billing routes (neither passes an id) are unaffected. `grantLot` now creates the `CreditTransaction` *before* the `CreditLot` specifically so a duplicate `billingEventId` is caught before any lot exists to roll back; a conflict throws `DuplicateBillingEventGrantError`, which `subscribe`/`renewSubscription`/`purchaseCredits` each catch around their own `$transaction` and answer with the already-committed state instead of re-throwing — letting Postgres roll back the whole retry attempt (including, in `subscribe`'s case, a harmless re-write of the subscription row to the same values an earlier attempt already committed) rather than trying to catch-and-continue mid-transaction, which would risk committing an orphaned lot if Postgres marks the transaction aborted after the failed insert. `webhooks.routes.ts` now passes `event.id` into all three effect calls. New test in `billing-webhook.test.ts` proves the exact residual scenario this closes: an effect that commits for real, followed by a rigged `appliedAt` write failure, followed by a genuine retry — balance stays at the single grant, not double. Full adverse suite (570/571) and full unit suite (805/805) both green, run in isolation to avoid the shared-test-DB contamination this roadmap's Environment gotchas section warns about (hit twice again during this session's own verification, each time confirmed as contamination — not a regression — by re-running alone) |
+| 16 | Root `pnpm run typecheck` fails on a pre-existing turbo cyclic-dependency warning, unrelated to any code change (surfaced 2026-09-04, Session 4 wrap-up) | **Needs a call, not urgent.** `apps/worker`'s `package.json` has depended on `@webaudit/api` as a real workspace dependency since T113 (Open Decision #10 above — the generated Prisma client, judged a shared ORM artifact rather than application logic). `turbo run typecheck` (the second half of the root script, after the plain `tsc --noEmit -p tsconfig.json` that runs first and passes) walks the `^build` graph and refuses outright: `apps/api` and `apps/worker` each list the other as a dependency somewhere (api's own `package.json` has no runtime dependency on worker — confirmed by reading it — so this is almost certainly turbo conflating a test-only/dev dependency with a build-graph edge), and turbo treats any A-depends-on-B-depends-on-A as fatal regardless of which edge is dev-only. Confirmed pre-existing and not introduced by Phase 9a: `git show d519cb2:apps/worker/package.json` (the commit immediately before this session's work began) already lists `@webaudit/api` as a dependency. Every verification in this session and the two before it ran `tsc --noEmit` per-package (`pnpm --filter @webaudit/api exec tsc --noEmit -p .`) rather than the root `pnpm run typecheck` script, which is why this had gone unnoticed. Not fixed here — out of scope for the admin-backend task list — but worth a real decision: either accept `apps/worker`'s dependency on `@webaudit/api` needs to be a devDependency turbo's graph can be told to ignore, or the root `typecheck` script needs to stop shelling out to `turbo run typecheck` and just walk packages directly the way this session (and, per its own account, prior sessions) already does by hand |
 
 ## Carried corrections — still open
 

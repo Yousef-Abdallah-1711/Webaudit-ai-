@@ -481,19 +481,40 @@ asserted the debit-wins outcome.
 
 ### Tests for User Story 7
 
-- [ ] T202 [P] [US7] Write failing test asserting non-operators are refused every admin route however constructed (FR-008) in `apps/api/tests/adverse/admin-authz.test.ts`
-- [ ] T203 [P] [US7] Write failing test asserting margin is attributable to the individual capability that caused the cost (**SC-009**) in `apps/api/tests/integration/margin-attribution.test.ts`
-- [ ] T204 [P] [US7] Write failing test asserting a capability enabled by an operator reaches customers with no deploy (**SC-010**) in `apps/api/tests/integration/capability-enable.test.ts`
+- [X] T202 [P] [US7] Write failing test asserting non-operators are refused every admin route however constructed (FR-008) in `apps/api/tests/adverse/admin-authz.test.ts`
+- [X] T203 [P] [US7] Write failing test asserting margin is attributable to the individual capability that caused the cost (**SC-009**) in `apps/api/tests/integration/margin-attribution.test.ts`
+- [X] T204 [P] [US7] Write failing test asserting a capability enabled by an operator reaches customers with no deploy (**SC-010**) in `apps/api/tests/integration/capability-enable.test.ts`
 
 ### Implementation for User Story 7
 
-- [ ] T205 [US7] Implement user and plan administration services in `apps/api/src/services/admin/users.service.ts`
-- [ ] T206 [US7] Implement margin aggregation per scan, area, and capability in `apps/api/src/services/admin/margin.service.ts`
-- [ ] T207 [US7] Implement capability enable/disable/tier-restriction in `apps/api/src/services/admin/capabilities.service.ts`
-- [ ] T208 [US7] Implement provider chain configuration with a two-vendor minimum guard in `apps/api/src/services/admin/providers.service.ts`
-- [ ] T209 [US7] Implement queue inspection, retry, and cancel in `apps/api/src/services/admin/queue.service.ts`
-- [ ] T210 [US7] Implement `AuditLogEntry` recording on every operator action (FR-089) in `apps/api/src/services/admin/audit-log.ts`
-- [ ] T211 [US7] Wire all admin routes behind `requireOperator` in `apps/api/src/routes/admin/`
+- [X] T205 [US7] Implement user and plan administration services in `apps/api/src/services/admin/users.service.ts`
+- [X] T206 [US7] Implement margin aggregation per scan, area, and capability in `apps/api/src/services/admin/margin.service.ts`
+- [X] T207 [US7] Implement capability enable/disable/tier-restriction in `apps/api/src/services/admin/capabilities.service.ts`
+- [X] T208 [US7] Implement provider chain configuration with a two-vendor minimum guard in `apps/api/src/services/admin/providers.service.ts`
+- [X] T209 [US7] Implement queue inspection, retry, and cancel in `apps/api/src/services/admin/queue.service.ts`
+- [X] T210 [US7] Implement `AuditLogEntry` recording on every operator action (FR-089) in `apps/api/src/services/admin/audit-log.ts`
+- [X] T211 [US7] Wire all admin routes behind `requireOperator` in `apps/api/src/routes/admin/`
+
+**Backend half of US7 (Session 4 of the 2026-09-03 remediation roadmap) is done: T202–T211.** Six admin route
+files (users, plans, margin, capabilities, providers, queue) each still declare their own `router.use
+(requireAuth)` and stay independently testable as a standalone `express()` app (every `admin.*.test.ts` file
+builds one directly); a new `routes/admin/index.ts` aggregates all six under one `requireAuth` +
+`requireOperator` gate, and `app.ts` mounts that aggregate at `/admin` — a future admin route added under
+`routes/admin/` inherits the gate for free. T208's `providers.service.ts` validates a replacement chain with
+the REAL `buildChain` from `@webaudit/ai-executor` before any write (the same function `createExecutorFromEnv`
+calls at boot) but does not live-reconfigure a running worker — no such mechanism exists yet, an honestly
+documented gap rather than an assumed-covered one. T209's `queue.service.ts` refuses to cancel a
+`workspace-teardown` or `questionnaire-deadline` job on the maintenance queue by job name: a dispatched
+adversarial review of this task found that a name-agnostic cancel would silently and permanently orphan a
+cancelled scan's on-disk source (R15/FR-090), since `sweepOrphanedWorkspaces` is not wired into any production
+entrypoint and workspace destruction on the `CANCELLED` path depends exclusively on that one queue job running.
+T202's `admin-authz.test.ts` drives the real `createApp()` (not a standalone router, unlike every other
+`admin.*.test.ts`) against all 16 admin endpoints, three ways each — no token, a genuine non-operator's valid
+token, and a token whose JWT claims `isOperator: true` against an account that is not one in the database — plus
+a positive case proving a real operator gets 200. Full `apps/api` unit (45 files / 316 tests) and adverse (16
+files / 191 tests) suites both re-run clean after mounting. See PROGRESS.md's Phase 9a section for the full
+account. **Not done in this session**: T212–T222 (US7 frontend + the dedicated admin-surface adversarial
+review — Sessions 5 and 6 of the roadmap).
 - [ ] T212 [P] [US7] Port the margin screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/billing/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
 - [ ] T213 [P] [US7] Port the capabilities screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/capabilities/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
 - [ ] T214 [P] [US7] Port the queue screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/queue/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390

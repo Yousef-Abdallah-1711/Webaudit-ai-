@@ -273,32 +273,63 @@ This is the backend half; Session 5 is the frontend half; Session 6 is the revie
 **Prerequisite**: none functionally, but see the Ordering note at the top of this file.
 
 ### Tests to write first
-- [ ] T202 — Write failing test asserting non-operators are refused every admin route however
+- [x] T202 — Write failing test asserting non-operators are refused every admin route however
       constructed (FR-008) in `apps/api/tests/adverse/admin-authz.test.ts`
-- [ ] T203 — Write failing test asserting margin is attributable to the individual capability that
+- [x] T203 — Write failing test asserting margin is attributable to the individual capability that
       caused the cost (**SC-009**) in `apps/api/tests/integration/margin-attribution.test.ts`
-- [ ] T204 — Write failing test asserting a capability enabled by an operator reaches customers with
+- [x] T204 — Write failing test asserting a capability enabled by an operator reaches customers with
       no deploy (**SC-010**) in `apps/api/tests/integration/capability-enable.test.ts`
 
 ### Implementation
-- [ ] T205 — Implement user and plan administration services in
+- [x] T205 — Implement user and plan administration services in
       `apps/api/src/services/admin/users.service.ts`
-- [ ] T206 — Implement margin aggregation per scan, area, and capability in
+- [x] T206 — Implement margin aggregation per scan, area, and capability in
       `apps/api/src/services/admin/margin.service.ts`
-- [ ] T207 — Implement capability enable/disable/tier-restriction in
+- [x] T207 — Implement capability enable/disable/tier-restriction in
       `apps/api/src/services/admin/capabilities.service.ts`
-- [ ] T208 — Implement provider chain configuration with a two-vendor minimum guard in
+- [x] T208 — Implement provider chain configuration with a two-vendor minimum guard in
       `apps/api/src/services/admin/providers.service.ts`
-- [ ] T209 — Implement queue inspection, retry, and cancel in
+- [x] T209 — Implement queue inspection, retry, and cancel in
       `apps/api/src/services/admin/queue.service.ts`
-- [ ] T210 — Implement `AuditLogEntry` recording on every operator action (FR-089) in
+- [x] T210 — Implement `AuditLogEntry` recording on every operator action (FR-089) in
       `apps/api/src/services/admin/audit-log.ts`
-- [ ] T211 — Wire all admin routes behind `requireOperator` in `apps/api/src/routes/admin/`
+- [x] T211 — Wire all admin routes behind `requireOperator` in `apps/api/src/routes/admin/`
 
 ### Definition of done
 T202–T204 all RED before implementation, all GREEN after; every route under `apps/api/src/routes/
 admin/` refuses a non-operator caller regardless of how the request is shaped (that's exactly what
 T202 must prove, adversarially — don't let it degrade into checking only the happy path).
+
+**Status: done.** Built across five commits (users/plans+audit-log, margin, capabilities, providers,
+queue), each implemented then independently reviewed, then closed with T211/T202's aggregation +
+adversarial mount-proof. Two real findings surfaced and closed before commit, neither assumed away:
+
+- A dispatched adversarial review of T209 (queue admin) found that a name-agnostic `cancel` on the
+  `maintenance` queue could remove a `workspace-teardown` or `questionnaire-deadline` job's queue
+  record with **no other mechanism** guaranteeing that work runs — `sweepOrphanedWorkspaces` (the
+  crash backstop) is not wired into any production entrypoint today, and workspace destruction on the
+  `CANCELLED` scan-cancel path depends exclusively on the `workspace-teardown` job the cancel route
+  enqueues. That is a direct, silent, permanent violation of R15/FR-090's "destroyed on every exit
+  path." Fixed by refusing `cancel` (not `retry` — retry is the correct recovery path) on both job
+  names by construction, proven by two new adversarial tests, before commit.
+- `margin-attribution.test.ts` (T203) hit a genuine intermittent flake across full-suite runs (never in
+  isolation) root-caused to the report's default time window sitting within milliseconds of the test's
+  own `Scan.createdAt` — fixed with an explicit wide window and a before/after delta assertion, not a
+  retry loop or a "known flaky" comment.
+
+T202's `admin-authz.test.ts` drives the real `createApp()` — not a standalone router around one file,
+unlike every other `admin.*.test.ts` in this tree — against all 16 admin endpoints this session built,
+three ways each (no token, a genuine non-operator's valid token, and a token whose JWT claims
+`isOperator: true` against an account that is not one in the database), plus a closing positive case
+proving a real operator gets 200. 54/54 green. `tasks.md`'s T202–T211 marked `[X]`. Full verification
+clean: `apps/api` lint + `tsc --noEmit` clean, full monorepo `pnpm run test` **890/890**, full monorepo
+`pnpm run test:adverse` **624/625 (1 pre-existing skip)**. Root `pnpm run typecheck` itself fails on a
+pre-existing, unrelated turbo cyclic-dependency warning between `apps/api`/`apps/worker` — confirmed
+pre-existing (present at the commit immediately before this session began) and recorded as PROGRESS.md
+Open Decision #16 rather than silently worked around. Full detail in PROGRESS.md's "Phase 9a (US7
+backend)" section. **Not built**: T212–T217 (US7 frontend, Session 5) and the dedicated admin-surface
+adversarial review (Session 6) — the first `requireOperator`-gated surface in this codebase, worth a
+review beyond T202's authz sweep.
 
 ---
 
