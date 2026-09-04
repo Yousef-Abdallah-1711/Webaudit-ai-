@@ -36,30 +36,34 @@ without checking the plan regardless — it remains historical, only these three
 current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
-are complete. **209 of 250 tasks done** — Phases 1, 2, 2L, 3 (US1), 4 (US2), 5 (US3), 6 (US4) and
-7 (US5) are complete. Next is **Phase 8** (T194–T201, US6 — tailor the design audit to brand
-intent), which opens with **T194**: a failing test asserting the mid-audit questionnaire pause holds
-no worker slot (R4). See PROGRESS.md "Resume here".
+are complete, and **so is the build: 250 of 250 tasks done** (+T236a, not in the original count) —
+every phase, from Phase 1 (setup) through Phase 11 (polish), closed as of 2026-09-04. `tasks.md` is
+authoritative for task state; PROGRESS.md carries the honest scoreboard, the full per-phase account,
+and every open decision worth knowing before touching a given area.
 
-**10 of 11 adversarial gates are green**: SC-022 credits, SC-018 SSRF, SC-021 control gate, SC-016
-redaction, SC-011 capability disable, SC-012 provider exhaustion, SC-006 attribution, SC-015
-workspace destruction, **SC-007 verified-fix loop** (T144, added at Phase 4 — schema + a total
-`outcomeToState` function + a single RESOLVED writer + an adversarial suite), **SC-008 never-billed-
-for-a-failure** (T180, added at Phase 7 — full and partial refunds before/after an area ran, visible
-on the `GET /billing/credits` ledger, returned to the originating lot). SC-017 lands with Phase 10
-(T218). `tasks.md` is authoritative for task state; PROGRESS.md carries the honest scoreboard and the
-reasoning behind each one.
+**All 11 adversarial gates are green**: SC-006 attribution, **SC-007 verified-fix loop** (T144, Phase
+4), **SC-008 never-billed-for-a-failure** (T180, Phase 7), SC-011 capability disable, SC-012 provider
+exhaustion, SC-015 workspace destruction, SC-016 redaction, **SC-017 sandbox escape** (T218, Phase
+10a — the last one to go green), SC-018 SSRF, SC-021 control gate, SC-022 credits.
 
-A real audit runs end to end (URL scans, SECURITY + SEO + the other three areas' `ctx.fetch`-based
-checks) and is drivable by a human through the UI; the red-to-green fix loop works; a
+A real audit runs end to end (URL scans, an uploaded `.zip`, or a connected GitHub repository, across
+all five areas) and is drivable by a human through the UI; the red-to-green fix loop works; a
 production-readiness pass (fresh full re-audit, fingerprint regression diff, go/no-go verdict with
-named blockers, shareable certificate) closes the journey; and **a `.zip` upload or a connected GitHub
-repository is a first-class input**, refused before extraction and before charging if hostile,
-audited by three source-only capabilities, and destroyed on every exit path. **The account is
-billable** — subscription lifecycle, entitlements refused before any debit (naming the permitting
-tier), non-expiring purchased credits, a signature-verified idempotent billing webhook, retention
-enforcement with a pre-removal warning, and a self-contained HTML export. The first sellable
-artifact was **T135**, end of Phase 3.
+named blockers, shareable certificate) closes the journey; the account is billable (subscriptions,
+entitlements, non-expiring purchased credits, a signature-verified idempotent billing webhook,
+retention with a pre-removal warning, a self-contained HTML export); the mid-audit design-intent
+questionnaire pauses and resumes without holding a worker slot; the operator admin console is live
+behind `requireOperator`; and an operator-uploaded capability runs inside `sandbox-runner`'s three
+nested isolation boundaries, deployed for real, with a genuine conformance verdict replacing the old
+unconditional refusal. The first sellable artifact was **T135**, end of Phase 3.
+
+**"250/250" is not "nothing left to decide."** PROGRESS.md's own "Reality check on 'production ready'"
+section states every real, load-bearing exception plainly — read it before treating this as shippable
+without qualification. Two worth naming here specifically: capability upload today returns a genuine
+conformance verdict but does not install the capability anywhere a real scan would run it (Open
+Decision #20), and `apps/worker`'s capability loader and reverify resolver hardcode capability identity
+in a static table rather than routing through the registry (Open Decision #13, "made, not settled") —
+a real, already-accepted tension with non-negotiable #1 below, not a hidden one.
 
 Two rounds of defects are recorded rather than forgotten. A full engineering review of Phases 1–2B
 produced 19 findings, all resolved in `f02ef48` — three Critical: a credit-ordering bug that drew

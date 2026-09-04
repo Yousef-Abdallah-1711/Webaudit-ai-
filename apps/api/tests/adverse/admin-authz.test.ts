@@ -91,6 +91,12 @@ const ROUTES: readonly RouteCase[] = [
   { method: 'get', path: '/admin/capabilities' },
   { method: 'patch', path: '/admin/capabilities/some-id' },
   { method: 'delete', path: '/admin/capabilities/some-id' },
+  // T226 (Session 8) added real sandbox dispatch here — found missing from
+  // this list by a final production-readiness review (2026-09-04): every
+  // other admin.*.test.ts file builds a standalone router around one file
+  // and never asserts a 403 on this specific route either, so nothing was
+  // actually proving requireOperator gates it in the real mounted app.
+  { method: 'post', path: '/admin/capabilities/upload' },
   { method: 'get', path: '/admin/providers' },
   { method: 'patch', path: '/admin/providers' },
   { method: 'get', path: '/admin/queue' },

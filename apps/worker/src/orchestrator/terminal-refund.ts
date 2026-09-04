@@ -12,8 +12,10 @@
  * `apps/api/src/routes/scans.routes.ts`.
  *
  * TIMED_OUT is deliberately not handled here either — it is left to
- * `sweepTimedOutScans` (`timeout.ts`), which is not yet scheduled in
- * production (its only caller today is a test); see PROGRESS.md.
+ * `sweepTimedOutScans` (`timeout.ts`), which `apps/worker/src/index.ts`
+ * schedules as a real repeatable BullMQ job (`scheduleTimeoutSweep`,
+ * confirmed 2026-09-04) — this comment previously said that job wasn't
+ * scheduled in production yet; it is, and has been since Phase 5.
  */
 import { MODULE_STATES_SCORED, type ModuleState } from '@webaudit/types';
 import { refundForUndelivered } from '@webaudit/config';
