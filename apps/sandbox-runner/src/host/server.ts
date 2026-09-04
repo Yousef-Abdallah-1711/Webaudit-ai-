@@ -40,6 +40,15 @@ export interface SandboxHost {
 export interface CreateSandboxHostOptions {
   /** 0 lets the OS pick a free port — what every test in this package uses. */
   readonly port?: number;
+  /**
+   * T225 — defaults to `'127.0.0.1'`, exactly what every existing caller
+   * already got before this option existed, so every test in this package
+   * that omits it keeps behaving identically. Only `serve.ts` (the real
+   * process entrypoint) ever passes something else, and only because a
+   * deployed instance needs to accept connections from `apps/api`'s
+   * deployment rather than only from itself.
+   */
+  readonly host?: string;
 }
 
 interface WireSandboxRequest extends Omit<SandboxRequest, 'capabilityBundle'> {
@@ -223,6 +232,16 @@ export async function createSandboxHost(options: CreateSandboxHostOptions = {}):
   const readAllowlist = [bundleDir, path.join(packageDir, 'node_modules'), path.join(repoRoot, 'node_modules')];
 
   const server: Server = createServer((req, res) => {
+    // T225 — a plain liveness probe, ahead of the `/execute` check so it is
+    // never shadowed by it. No auth, no body, nothing that could fail: an
+    // orchestrator's health check must not depend on anything this process
+    // could ever be missing.
+    if (req.method === 'GET' && req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
     if (req.method !== 'POST' || req.url !== '/execute') {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'not found' }));
@@ -259,7 +278,7 @@ export async function createSandboxHost(options: CreateSandboxHostOptions = {}):
   });
 
   await new Promise<void>((resolve) => {
-    server.listen(options.port ?? 0, '127.0.0.1', resolve);
+    server.listen(options.port ?? 0, options.host ?? '127.0.0.1', resolve);
   });
   const address = server.address();
   const port = typeof address === 'object' && address !== null ? address.port : (options.port ?? 0);

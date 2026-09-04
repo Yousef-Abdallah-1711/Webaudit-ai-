@@ -33,6 +33,7 @@
     "@webaudit/scoring": "workspace:*",
     "@webaudit/safe-net": "workspace:*",
     "@webaudit/safe-archive": "workspace:*",
+    "@webaudit/sandbox-runner": "workspace:*",
     "busboy": "1.6.0",
     "@webaudit/types": "workspace:*",
     "bullmq": "6.2.0",

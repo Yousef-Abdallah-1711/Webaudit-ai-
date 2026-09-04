@@ -9,22 +9,31 @@
  *                                     between this contract line and
  *                                     reconcile.ts's "never deleted"
  *
- * `POST /admin/capabilities/upload` (T216, Session 7 of the roadmap):
- * always answers `503 SANDBOX_UNAVAILABLE`, unconditionally, with no
- * fallback path — `apps/sandbox-runner` (R1) exists now (Session 7 built
- * its isolation mechanism) but nothing here dispatches to it yet, and this
- * route must not be the thing that quietly starts doing so before that is
- * a deliberate, reviewed decision. Session 8 (T226) replaces this literal
- * body with a real dispatch to the sandbox; until that lands, an operator
- * gets an honest "not yet available," never unsandboxed execution — R1's
- * own non-negotiable ("If the sandbox is unavailable, the upload path
- * returns 503 — it never falls back to unsandboxed execution").
+ * `POST /admin/capabilities/upload` (T216 built the always-503 placeholder;
+ * T226, Session 8, replaces it with real dispatch):
  *
- * The bundle body is deliberately not read or validated at all here.
- * Reading `req.body` before this route can decide it must refuse would
- * imply this endpoint does something with the upload; validating an
- * archive here that gets thrown away regardless of a sandbox that will
- * refuse it anyway would be the wrong sequencing to build a habit of.
+ * The bundle is read as a raw body (`express.raw`, scoped to this one route
+ * — see below for why that's safe regardless of global middleware order),
+ * handed to `services/admin/capability-upload.service.ts`'s
+ * `uploadCapability`, which forwards it to the real `apps/sandbox-runner`
+ * deployment and runs the real conformance suite inside the real sandbox
+ * (FR-029, "under the same restriction"). **There is still no unsandboxed
+ * fallback, ever** — R1's non-negotiable ("If the sandbox is unavailable,
+ * the upload path returns 503 — it never falls back to unsandboxed
+ * execution") is unconditional, not merely true today: a missing or
+ * unreachable sandbox (unset `SANDBOX_RUNNER_URL`, or a real network
+ * failure reaching a configured one) still always answers 503
+ * `SANDBOX_UNAVAILABLE`, same as T216's placeholder did — that response
+ * code is preserved for wire compatibility even though what can now produce
+ * it has grown from "always" to "only when the sandbox genuinely can't be
+ * reached."
+ *
+ * **This route stops at a conformance verdict — it is not capability
+ * installation.** A `200` here (whether `passed: true` or `passed: false`)
+ * means the sandbox produced a real answer, not that anything is now
+ * running against real scans. See `capability-upload.service.ts`'s own
+ * module note for the full reasoning; a future reader of this file must not
+ * assume more happened than a conformance check.
  *
  * Same not-yet-mounted, not-yet-`requireOperator` setup as every other file
  * in this directory — T211 mounts everything under `/admin` behind the
@@ -40,10 +49,11 @@
  * optional; at least one must be given.
  */
 
-import { Router, type Response } from 'express';
+import express, { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../../middleware/auth.middleware.js';
+import { SandboxRunnerNotConfiguredError } from '../../config/sandbox.js';
 import {
   CapabilityHasHistoryError,
   CapabilityNotFoundError,
@@ -54,6 +64,7 @@ import {
   setCapabilityPlanRestrictions,
   validatePlanIdsExist,
 } from '../../services/admin/capabilities.service.js';
+import { SandboxUnavailableError, uploadCapability } from '../../services/admin/capability-upload.service.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such capability.' } };
 
@@ -160,21 +171,76 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
     }
   });
 
-  // T216 — see the module note above. Always 503, unconditionally, no
-  // fallback. Not `router.use`'d before the routes above: a POST to
-  // `/capabilities/upload` must not shadow a real request to any of them,
-  // and Express matches declaration order for the same method/path shape
-  // regardless, so declaring it last costs nothing and stays explicit.
-  router.post('/capabilities/upload', (_req: AuthedRequest, res: Response) => {
-    res.status(503).json({
-      error: {
-        code: 'SANDBOX_UNAVAILABLE',
-        message:
-          'Capability upload is not available yet. The sandbox runner exists but nothing dispatches ' +
-          'to it from this endpoint — there is no unsandboxed fallback (Constitution Principle V).',
-      },
-    });
-  });
+  // T226 — see the module note above. Not `router.use`'d before the routes
+  // above: a POST to `/capabilities/upload` must not shadow a real request
+  // to any of them, and Express matches declaration order for the same
+  // method/path shape regardless, so declaring it last costs nothing and
+  // stays explicit.
+  //
+  // `express.raw` is scoped to this one route rather than moved ahead of
+  // `app.use(express.json({ limit: '1mb' }))` (mounted well before `/admin`
+  // in `app.ts`). That's safe regardless of mount order: `express.json()`
+  // only ever consumes a body whose `Content-Type` matches its own default
+  // (`application/json`) — for anything else, including the content types
+  // this route accepts, it is a no-op passthrough. So this route's own
+  // `express.raw` still sees and parses the untouched body when the
+  // content-type is one of the three below, and `req.body` is left as
+  // whatever `express.json()` produced (typically `{}`) whenever it isn't —
+  // which is exactly how the 415 branch below tells the two cases apart.
+  router.post(
+    '/capabilities/upload',
+    express.raw({ type: ['application/javascript', 'text/javascript', 'text/plain'], limit: '16mb' }),
+    async (req: AuthedRequest, res: Response) => {
+      if (!Buffer.isBuffer(req.body)) {
+        res.status(415).json({
+          error: {
+            code: 'UNSUPPORTED_MEDIA_TYPE',
+            message: 'Upload a capability bundle as application/javascript, text/javascript, or text/plain.',
+          },
+        });
+        return;
+      }
+
+      if (req.body.length === 0) {
+        badRequest(res, 'Empty capability bundle.');
+        return;
+      }
+
+      try {
+        const result = await uploadCapability(db, {
+          operatorId: req.auth!.userId,
+          bundle: req.body,
+        });
+        res.status(200).json(result);
+      } catch (error) {
+        if (error instanceof SandboxRunnerNotConfiguredError) {
+          res.status(503).json({
+            error: {
+              code: 'SANDBOX_UNAVAILABLE',
+              message:
+                'Capability upload is not available — the sandbox runner is not configured ' +
+                '(SANDBOX_RUNNER_URL is unset). There is no unsandboxed fallback (Constitution Principle V).',
+            },
+          });
+          return;
+        }
+        if (error instanceof SandboxUnavailableError) {
+          res.status(503).json({
+            error: {
+              code: 'SANDBOX_UNAVAILABLE',
+              message:
+                'Capability upload is not available — the sandbox runner could not produce a ' +
+                'conformance verdict. There is no unsandboxed fallback (Constitution Principle V).',
+              reason: error.reason,
+              ...(error.detail === undefined ? {} : { detail: error.detail }),
+            },
+          });
+          return;
+        }
+        throw error;
+      }
+    },
+  );
 
   return router;
 }
