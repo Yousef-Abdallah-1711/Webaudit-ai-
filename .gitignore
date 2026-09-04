@@ -9,6 +9,8 @@ out/
 .next/
 .turbo/
 *.tsbuildinfo
+# apps/sandbox-runner's own compiled child-harness bundle (host/build-harness.ts) — rebuilt on demand.
+.sandbox-build/
 
 # Environment — .env.example IS tracked
 .env

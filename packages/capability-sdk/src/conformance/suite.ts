@@ -49,7 +49,7 @@
 
 import type { CapabilityFinding } from '@webaudit/types';
 import { fingerprintOf } from '@webaudit/scoring';
-import type { AuditCapability, CapabilityInput, CodeLayerContext } from '../contract.js';
+import type { AuditCapability, CapabilityInput, CodeLayerContext, ReverifyRequest } from '../contract.js';
 import { parseManifest, type CapabilityManifest } from '../manifest.js';
 import { containCapabilityCall, describeThrown } from '../contain.js';
 
@@ -95,6 +95,27 @@ export interface ConformanceDeps {
   readonly timeoutMs?: number;
   /** Grace period after abort within which the capability must settle. */
   readonly abortGraceMs?: number;
+  /**
+   * Overrides `checkCanRunPure`'s side-effect trap. Exists for exactly one
+   * caller: `apps/sandbox-runner`, whose capability runs inside a
+   * `vm.Context` with no path back to the host realm — the default trap
+   * below is a plain `Proxy` built by *this* module's own host-realm code,
+   * and a capability's `canRun` handed that Proxy directly could walk
+   * `trap.constructor.constructor(...)` back to the host exactly the way
+   * `contracts/realtime-and-internal.md` §3 forbids (found by an
+   * adversarial review of that task, not assumed). Any caller running a
+   * capability in the *same* realm as this module — every trusted,
+   * vendored capability — has no such concern and never needs this; the
+   * default is unchanged from before this option existed.
+   */
+  readonly buildCanRunTrap?: () => { readonly trap: object; readonly touched: () => readonly string[] };
+  /**
+   * Overrides `checkReverify`'s synthetic probe request — same reason as
+   * `buildCanRunTrap` above, for the same one caller: the default object
+   * literal is host-realm data that a sandboxed capability's `reverify`
+   * could walk back to the host the identical way.
+   */
+  readonly buildReverifyProbe?: (location: string | undefined) => ReverifyRequest;
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
@@ -172,9 +193,8 @@ function checkManifest(capability: AuditCapability, raw: unknown): CheckResult {
  * that fetches is also a `canRun` that can fail, and a precondition check that
  * can fail is not one.
  */
-function checkCanRunPure(capability: AuditCapability, input: CapabilityInput): CheckResult {
+function defaultCanRunTrap(): { readonly trap: object; readonly touched: () => readonly string[] } {
   const touched: string[] = [];
-  const controller = new AbortController();
   const trap = new Proxy(
     {},
     {
@@ -186,6 +206,12 @@ function checkCanRunPure(capability: AuditCapability, input: CapabilityInput): C
       },
     },
   );
+  return { trap, touched: () => touched };
+}
+
+function checkCanRunPure(capability: AuditCapability, input: CapabilityInput, deps: ConformanceDeps): CheckResult {
+  const { trap, touched } = (deps.buildCanRunTrap ?? defaultCanRunTrap)();
+  const controller = new AbortController();
 
   let threw: unknown;
   let result: unknown;
@@ -211,8 +237,9 @@ function checkCanRunPure(capability: AuditCapability, input: CapabilityInput): C
   if (typeof result !== 'boolean') {
     return fail('can-run-has-no-side-effects', 'canRun must return a boolean');
   }
-  if (touched.length > 0) {
-    return fail('can-run-has-no-side-effects', `canRun reached for ${touched.join(', ')}`);
+  const touchedNames = touched();
+  if (touchedNames.length > 0) {
+    return fail('can-run-has-no-side-effects', `canRun reached for ${touchedNames.join(', ')}`);
   }
   return pass('can-run-has-no-side-effects', `returned ${String(result)}`);
 }
@@ -369,18 +396,16 @@ async function checkReverify(
   }
 
   const controller = new AbortController();
+  const buildProbe =
+    deps.buildReverifyProbe ??
+    ((location: string | undefined): ReverifyRequest => ({
+      checkId: 'conformance-probe',
+      // Conditional rather than `location`: under exactOptionalPropertyTypes
+      // an explicit `undefined` is not the same as an absent optional property.
+      ...(location === undefined ? {} : { location }),
+    }));
   const outcome = await containCapabilityCall(
-    () =>
-      capability.reverify!(
-        {
-          checkId: 'conformance-probe',
-          // Conditional rather than `location: deps.input.targetUrl`: under
-          // exactOptionalPropertyTypes an explicit `undefined` is not the same
-          // as an absent optional property.
-          ...(deps.input.targetUrl === undefined ? {} : { location: deps.input.targetUrl }),
-        },
-        deps.makeContext(controller.signal),
-      ),
+    () => capability.reverify!(buildProbe(deps.input.targetUrl), deps.makeContext(controller.signal)),
     { timeoutMs },
   );
 
@@ -462,7 +487,7 @@ export async function runConformanceSuite(
   results.push(checkManifest(capability, deps.rawManifest));
 
   if (shape.passed) {
-    results.push(checkCanRunPure(capability, deps.input));
+    results.push(checkCanRunPure(capability, deps.input, deps));
     results.push(await checkContained(capability, deps, timeoutMs));
     results.push(await checkNoLlm(capability, deps, timeoutMs));
     results.push(await checkFingerprintStable(capability, deps, timeoutMs));

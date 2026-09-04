@@ -84,9 +84,28 @@ export async function containCapabilityCall<T>(
  * `String(value)` on a plain object yields `[object Object]`, which turns a
  * useful failure detail into noise — and this text is what an operator reads to
  * decide whether a capability should stay enabled.
+ *
+ * `value instanceof Error` is deliberately not the only path checked. A
+ * follow-up review of `apps/sandbox-runner`'s `T220-T224` work found this
+ * function is also reached from `conformance/suite.ts`'s `checkCanRunPure`
+ * on a value a *sandboxed* capability threw — an error constructed inside a
+ * `vm.Context` is a real `Error`, but a separate realm's `Error`, so
+ * `instanceof` against *this* realm's `Error` is always false for it and
+ * the message fell through to `JSON.stringify`, which yields `{}` for a
+ * plain `Error` (its `name`/`message` are non-enumerable own properties).
+ * The result was a real capability bug reported as `"canRun threw: {}"` —
+ * not a leak (nothing crosses the boundary the wrong way), but genuinely
+ * undiagnosable. Checking `.name`/`.message` as plain strings first — the
+ * same fix `apps/sandbox-runner/src/child-harness/harness.ts`'s own
+ * `describeError` already applies — reads correctly regardless of which
+ * realm constructed the error.
  */
 export function describeThrown(value: unknown): string {
-  if (value instanceof Error) return `${value.name}: ${value.message}`;
+  if (typeof value === 'object' && value !== null) {
+    const name = (value as { name?: unknown }).name;
+    const message = (value as { message?: unknown }).message;
+    if (typeof name === 'string' && typeof message === 'string') return `${name}: ${message}`;
+  }
   if (typeof value === 'string') return value;
   try {
     return JSON.stringify(value) ?? Object.prototype.toString.call(value);

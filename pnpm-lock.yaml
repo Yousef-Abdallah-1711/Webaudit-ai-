@@ -59,6 +59,9 @@ importers:
       '@prisma/client':
         specifier: 6.1.0
         version: 6.1.0(prisma@6.1.0)
+      '@webaudit/ai-executor':
+        specifier: workspace:*
+        version: link:../../packages/ai-executor
       '@webaudit/capability-sdk':
         specifier: workspace:*
         version: link:../../packages/capability-sdk
@@ -156,12 +159,21 @@ importers:
 
   apps/sandbox-runner:
     dependencies:
+      '@webaudit/capability-sdk':
+        specifier: workspace:*
+        version: link:../../packages/capability-sdk
       '@webaudit/config':
         specifier: workspace:*
         version: link:../../packages/config
       '@webaudit/types':
         specifier: workspace:*
         version: link:../../packages/types
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
+      undici:
+        specifier: 7.29.0
+        version: 7.29.0
 
   apps/web:
     dependencies:
@@ -575,6 +587,79 @@ importers:
   packages/types: {}
 
   showcase-esaalnybot:
+    dependencies:
+      '@playwright/test':
+        specifier: 1.62.1
+        version: 1.62.1
+      '@webaudit/api':
+        specifier: workspace:*
+        version: link:../apps/api
+      '@webaudit/capability-content-checker':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/content-checker
+      '@webaudit/capability-contradiction-detector':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/contradiction-detector
+      '@webaudit/capability-cwv-analyzer':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/cwv-analyzer
+      '@webaudit/capability-data-leak-scanner':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/data-leak-scanner
+      '@webaudit/capability-headers-checker':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/headers-checker
+      '@webaudit/capability-impeccable':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/impeccable
+      '@webaudit/capability-lighthouse-analyzer':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/lighthouse-analyzer
+      '@webaudit/capability-meta-checker':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/meta-checker
+      '@webaudit/capability-network-inspector':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/network-inspector
+      '@webaudit/capability-owasp-checker':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/owasp-checker
+      '@webaudit/capability-playwright-runner':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/playwright-runner
+      '@webaudit/capability-screenshot-capture':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/screenshot-capture
+      '@webaudit/capability-sdk':
+        specifier: workspace:*
+        version: link:../packages/capability-sdk
+      '@webaudit/capability-ssl-analyzer':
+        specifier: workspace:*
+        version: link:../packages/capabilities-vendored/ssl-analyzer
+      '@webaudit/config':
+        specifier: workspace:*
+        version: link:../packages/config
+      '@webaudit/redaction':
+        specifier: workspace:*
+        version: link:../packages/redaction
+      '@webaudit/safe-net':
+        specifier: workspace:*
+        version: link:../packages/safe-net
+      '@webaudit/scoring':
+        specifier: workspace:*
+        version: link:../packages/scoring
+      '@webaudit/types':
+        specifier: workspace:*
+        version: link:../packages/types
+      '@webaudit/worker':
+        specifier: workspace:*
+        version: link:../apps/worker
+    devDependencies:
+      tsx:
+        specifier: 4.23.12
+        version: 4.23.12
+
+  showcase-trimora:
     dependencies:
       '@playwright/test':
         specifier: 1.62.1

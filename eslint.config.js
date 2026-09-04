@@ -30,6 +30,13 @@ export default tseslint.config(
       // cannot parse them and reports a parse error rather than a finding.
       // Same category as the parked worktrees above.
       'scripts/domain-*.mjs',
+      // T217 — SC-017's hostile fixture. Deliberately plain JS, not covered
+      // by apps/sandbox-runner/tsconfig.json's include (`src/**/*.ts`,
+      // `tests/**/*.ts` only), for the same reason: each export is a STRING
+      // of source the sandbox itself compiles at test time (see the
+      // fixture's own module note) — it is test *data*, not code this
+      // repo's own TypeScript build ever runs directly.
+      'apps/sandbox-runner/tests/fixtures/**/*.js',
     ],
   },
   js.configs.recommended,

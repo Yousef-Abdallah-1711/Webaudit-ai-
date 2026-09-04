@@ -10,6 +10,9 @@
   },
   "dependencies": {
     "@webaudit/types": "workspace:*",
-    "@webaudit/config": "workspace:*"
+    "@webaudit/config": "workspace:*",
+    "@webaudit/capability-sdk": "workspace:*",
+    "esbuild": "0.28.2",
+    "undici": "7.29.0"
   }
 }
