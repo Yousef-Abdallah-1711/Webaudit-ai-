@@ -34,7 +34,15 @@ const PAGE_SIZE = 50;
 
 export default function AdminUsersPage(): React.ReactElement {
   const [users, setUsers] = useState<readonly AdminUserSummary[]>([]);
-  const [total, setTotal] = useState(0);
+  // `null` until the first successful load — an adversarial review of this
+  // task found a real defect here: a plain `useState(0)` renders "0
+  // accounts" in the header during the loading window AND on a genuine
+  // 401/403 refusal, indistinguishable from a real empty system. Every
+  // sibling admin page built this same session already guards against
+  // showing a fabricated-looking figure before real data arrives
+  // (AdminCapabilitiesPage's meta text, AdminBillingPage's Stat fallbacks)
+  // — this page had skipped that guard.
+  const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -73,7 +81,11 @@ export default function AdminUsersPage(): React.ReactElement {
 
   return (
     <div>
-      <AHead eyebrow="Commerce" title="Users" meta={`${String(total)} accounts`} />
+      <AHead
+        eyebrow="Commerce"
+        title="Users"
+        {...(total === null ? {} : { meta: `${String(total)} accounts` })}
+      />
 
       {error !== null && <p className={styles.error}>{error}</p>}
 
@@ -115,7 +127,7 @@ export default function AdminUsersPage(): React.ReactElement {
         })}
       />
 
-      {total > users.length && (
+      {total !== null && total > users.length && (
         <Button
           variant="secondary"
           size="sm"

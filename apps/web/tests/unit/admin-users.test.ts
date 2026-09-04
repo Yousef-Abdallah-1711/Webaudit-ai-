@@ -32,4 +32,16 @@ describe('AdminUsersPage', () => {
     expect(html).not.toContain('Audits');
     expect(html).not.toContain('Renews');
   });
+
+  it('never shows a fabricated "0 accounts" before the real total is known (adversarial review finding)', () => {
+    // A dedicated review of this task found this page was the one admin
+    // screen that skipped the "don't show a real-looking figure before
+    // data arrives" guard every sibling page already has — a plain
+    // `useState(0)` rendered "0 accounts" during loading AND on a genuine
+    // 401/403 refusal, indistinguishable from a real empty system. The
+    // fix withholds the whole meta line until the count is real.
+    const html = render(createElement(AdminUsersPage));
+    expect(html).not.toContain('0 accounts');
+    expect(html).not.toContain('accounts');
+  });
 });
