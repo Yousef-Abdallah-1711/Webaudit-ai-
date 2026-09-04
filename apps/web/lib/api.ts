@@ -55,7 +55,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  readonly method?: 'GET' | 'POST' | 'DELETE';
+  readonly method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   readonly body?: unknown;
   /** Defaults to the stored access token. Pass `null` to omit it entirely. */
   readonly token?: string | null;
@@ -498,4 +498,178 @@ export function purchaseCredits(
   credits: number,
 ): Promise<{ purchase: { creditsAdded: number; kind: 'PURCHASED' } }> {
   return request('/billing/credits/purchase', { method: 'POST', body: { credits } });
+}
+
+// ─── Admin: users (US7, T205) ───────────────────────────────────────────────
+
+export interface AdminUserSummary {
+  readonly id: string;
+  readonly email: string;
+  readonly isOperator: boolean;
+  readonly createdAt: string;
+  readonly planId: string;
+  readonly subscriptionStatus: string | null;
+  readonly balance: { readonly plan: number; readonly purchased: number };
+}
+
+export function getAdminUsers(
+  opts: { readonly limit?: number; readonly offset?: number } = {},
+): Promise<{ users: readonly AdminUserSummary[]; total: number; limit: number; offset: number }> {
+  const params = new URLSearchParams();
+  if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+  if (opts.offset !== undefined) params.set('offset', String(opts.offset));
+  const query = params.toString();
+  return request(`/admin/users${query === '' ? '' : `?${query}`}`);
+}
+
+export function setUserOperator(
+  userId: string,
+  isOperator: boolean,
+): Promise<{ user: AdminUserSummary }> {
+  return request(`/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: { isOperator },
+  });
+}
+
+// ─── Admin: plans (US7, T205) ───────────────────────────────────────────────
+
+/**
+ * Deliberately not `Plan` above — that customer-facing type has no `isActive`
+ * (a customer never sees a retired tier) and this one has no price (no
+ * credit-to-dollar rate exists anywhere in this codebase, PROGRESS.md's Open
+ * Decision #3).
+ */
+export interface AdminPlanRecord {
+  readonly id: string;
+  readonly name: string;
+  readonly monthlyCredits: number;
+  readonly creditsRecur: boolean;
+  readonly allowedInputTypes: readonly string[];
+  readonly allowLoadGeneration: boolean;
+  readonly allowReadinessPass: boolean;
+  readonly allowCreditPurchase: boolean;
+  readonly allowCustomCapability: boolean;
+  readonly concurrentScanLimit: number;
+  readonly queuePriority: number;
+  readonly retentionDays: number;
+  readonly isActive: boolean;
+}
+
+export function getAdminPlans(
+  includeInactive = true,
+): Promise<{ plans: readonly AdminPlanRecord[] }> {
+  return request(`/admin/plans?includeInactive=${String(includeInactive)}`);
+}
+
+export function setPlanActive(
+  planId: string,
+  isActive: boolean,
+): Promise<{ plan: AdminPlanRecord }> {
+  return request(`/admin/plans/${encodeURIComponent(planId)}`, {
+    method: 'PATCH',
+    body: { isActive },
+  });
+}
+
+// ─── Admin: margin (US7, T206) ──────────────────────────────────────────────
+
+/**
+ * No `marginMicros`/`marginUsd` field exists anywhere in this shape, and none
+ * should ever be added to it: revenue (`chargedCredits`) is in credits, cost
+ * (`costMicros`) is real USD micros, and this codebase has no published
+ * conversion rate between them (Open Decision #3). `note` is the backend's
+ * own explanation of exactly this, always present, always worth showing.
+ */
+export interface MarginScanRow {
+  readonly scanId: string;
+  readonly chargedCredits: number;
+  readonly costMicros: number;
+}
+
+export interface MarginAreaRow {
+  readonly module: string;
+  readonly chargedCredits: number;
+  readonly costMicros: number;
+}
+
+export interface MarginCapabilityRow {
+  readonly capabilityId: string;
+  readonly capabilityName: string;
+  readonly module: string;
+  readonly costMicros: number;
+  readonly executionCount: number;
+  readonly succeededCount: number;
+  readonly failedCount: number;
+}
+
+export interface MarginReport {
+  readonly window: { readonly from: string; readonly to: string };
+  readonly perScan: readonly MarginScanRow[];
+  readonly perArea: readonly MarginAreaRow[];
+  readonly perCapability: readonly MarginCapabilityRow[];
+  readonly note: string;
+}
+
+export function getMarginReport(): Promise<{ report: MarginReport }> {
+  return request('/admin/margin');
+}
+
+// ─── Admin: capabilities (US7, T207) ────────────────────────────────────────
+
+export interface AdminCapabilitySummary {
+  readonly id: string;
+  readonly name: string;
+  readonly version: string;
+  readonly module: string;
+  readonly layer: string;
+  readonly trust: string;
+  readonly isEnabled: boolean;
+  readonly restrictedToPlans: readonly string[];
+  readonly estimatedTokens: number;
+  readonly executionCount: number;
+  readonly updatedAt: string;
+}
+
+export function getAdminCapabilities(): Promise<{
+  capabilities: readonly AdminCapabilitySummary[];
+}> {
+  return request('/admin/capabilities');
+}
+
+export function setCapabilityEnabled(
+  capabilityId: string,
+  isEnabled: boolean,
+): Promise<{ capability: AdminCapabilitySummary }> {
+  return request(`/admin/capabilities/${encodeURIComponent(capabilityId)}`, {
+    method: 'PATCH',
+    body: { isEnabled },
+  });
+}
+
+// ─── Admin: queue (US7, T209) ───────────────────────────────────────────────
+
+export type AdminQueueState = 'waiting' | 'active' | 'delayed' | 'failed' | 'completed';
+
+export interface AdminJobSummary {
+  readonly queue: string;
+  readonly id: string;
+  readonly name: string;
+  readonly state: AdminQueueState;
+  readonly data: unknown;
+  readonly attemptsMade: number;
+  readonly failedReason: string | null;
+  readonly timestamp: number;
+}
+
+export function getAdminQueueJobs(): Promise<{ jobs: readonly AdminJobSummary[] }> {
+  return request('/admin/queue');
+}
+
+export function retryAdminQueueJob(jobId: string): Promise<{ job: AdminJobSummary }> {
+  return request(`/admin/queue/${encodeURIComponent(jobId)}/retry`, { method: 'POST' });
+}
+
+export function cancelAdminQueueJob(jobId: string): Promise<{ cancelled: string }> {
+  return request(`/admin/queue/${encodeURIComponent(jobId)}/cancel`, { method: 'POST' });
 }

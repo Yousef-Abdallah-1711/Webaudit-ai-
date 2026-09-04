@@ -6,11 +6,14 @@
  * `AdminSidebar`, `AdminShell`, `AHead`, `Table`, `Stat` — one file, same
  * as the source. Same routing translation as `components/dashboard/
  * Sidebar.tsx` (T241): `view`/`setView` (in-memory state in the static
- * preview) became `usePathname()` against real routes. Nav routes are
- * `/admin/{overview,queue,scans,caps,providers,users,plans,margin,log,
- * settings}` — this port's own choice, since the source never named one —
- * except `overview`, which stays at `/admin` itself (this task's own
- * target, `app/(admin)/admin/page.tsx`).
+ * preview) became `usePathname()` against real routes. Nav routes follow
+ * `design/screen-map.md`'s routing table exactly: `/admin/{queue,scans,
+ * capabilities,providers,users,plans,billing,log,settings}` — except
+ * `overview`, which stays at `/admin` itself (this task's own target,
+ * `app/(admin)/admin/page.tsx`). Two of these (`capabilities`, `billing`)
+ * were corrected in Session 5 (T212/T213): this file originally used `caps`
+ * and `margin`, which never matched screen-map.md's table and would have
+ * 404'd once those two real pages were built at their documented routes.
  *
  * The "back to dashboard" link points at `/scan`, the customer sidebar's
  * own first nav item (T241) — a reasonable default, not a contract. The
@@ -54,7 +57,7 @@ const NAV_GROUPS: readonly (readonly [string, readonly NavEntry[]])[] = [
   [
     'Catalogue',
     [
-      { key: 'caps', href: '/admin/caps', label: 'Capabilities', icon: 'layoutGrid' },
+      { key: 'caps', href: '/admin/capabilities', label: 'Capabilities', icon: 'layoutGrid' },
       { key: 'providers', href: '/admin/providers', label: 'AI providers', icon: 'layers' },
     ],
   ],
@@ -63,7 +66,7 @@ const NAV_GROUPS: readonly (readonly [string, readonly NavEntry[]])[] = [
     [
       { key: 'users', href: '/admin/users', label: 'Users', icon: 'userCircle' },
       { key: 'plans', href: '/admin/plans', label: 'Plans', icon: 'creditCard' },
-      { key: 'margin', href: '/admin/margin', label: 'Margin', icon: 'trendingUp' },
+      { key: 'margin', href: '/admin/billing', label: 'Margin', icon: 'trendingUp' },
     ],
   ],
   [
