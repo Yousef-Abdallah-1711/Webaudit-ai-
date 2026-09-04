@@ -1,0 +1,31 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Plans (T215). */
+
+.error {
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.scheduleRow {
+  display: flex;
+  padding: 8px 0;
+  border-top: var(--border-width) solid var(--border-default);
+  font: var(--type-small);
+}
+.scheduleValue {
+  margin-left: auto;
+  font-family: var(--font-mono);
+}
+
+.cardText {
+  margin: 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}

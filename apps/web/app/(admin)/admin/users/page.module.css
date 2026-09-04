@@ -1,0 +1,11 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Users (T215). */
+
+.error {
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.loadMore {
+  margin-top: 12px;
+}
