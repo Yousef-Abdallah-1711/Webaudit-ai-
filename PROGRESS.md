@@ -1,13 +1,24 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-04 · **Tasks** 240 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **907/907**, `adverse` **639 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
+**Updated** 2026-09-04 · **Tasks** 242 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **910/910**, `adverse` **642 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
 typecheck clean per-package (root `pnpm run typecheck`/`pnpm run build` both still fail on a pre-existing
 turbo cyclic-dependency warning unrelated to any change in this or prior sessions — Open Decision #16;
 `apps/web`'s real production build is independently confirmed clean via `pnpm test:visual`'s own
-internal `next build`). 🎯 **Phase 10 (sandbox-runner core isolation) complete — T216–T224, closing
-SC-017, the last of the 11 adversarial gates. 11 of 11 green.** Session 7 of the [full-project
-remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md) built the
+internal `next build`). 🎯 **Phase 10 (sandbox-runner deploy + real dispatch) complete — T225–T226.
+This closes Phase 10 and US7 end to end.** Session 8 of the [full-project remediation
+roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md): a real process
+entrypoint and health route for `apps/sandbox-runner` plus a deployment runbook
+([infrastructure/sandbox-runner.md](infrastructure/sandbox-runner.md)), then replaced
+`POST /admin/capabilities/upload`'s unconditional 503 with genuine dispatch to the real, deployed
+sandbox — the last two tasks in the whole 250-task plan. An independent adversarial review found no
+unsandboxed-execution path, no auth bypass, and no SSRF in the new wiring, fixed one Minor gap in the
+new structural test itself, and confirmed one real, deliberately-not-fixed finding: running real
+dispatch end to end for the first time exposed a pre-existing Session 7 defect in `harness.ts`'s
+CONFORMANCE `rawManifest` construction — see "Phase 10 (sandbox-runner deploy + real dispatch)" below
+and Open Decision #20.
+🎯 **Phase 10a (sandbox-runner core isolation) complete — T216–T224, closing
+SC-017, the last of the 11 adversarial gates. 11 of 11 green.** Session 7 of the same roadmap built the
 child-process isolation mechanism the upload path had been returning `503 SANDBOX_UNAVAILABLE` for since
 T216: a bundle format, an esbuild-precompiled harness run inside a `--permission`-restricted child,
 parent-armed timeout/memory enforcement, and in-sandbox conformance verification. Two independent
@@ -18,7 +29,6 @@ and an unconditional child-process leak (every non-timeout outcome left the chil
 plus one Minor. Two Windows-specific gaps were found and left honestly open rather than silently
 patched over. Full write-up:
 [2026-09-04-sandbox-runner-adversarial-review.md](docs/superpowers/plans/2026-09-04-sandbox-runner-adversarial-review.md).
-Session 8 (T225–T226, real deployment + dispatch, replacing the 503) has not started.
 🎯 **US7 (the operator admin console) complete end to end — Sessions 4, 5, and
 6.** Backend (T202–T211), frontend (T212–T215), and a dedicated adversarial review all done. The review
 (Session 6, Phase 9c) found and fixed one Important defect on each side: a combined
@@ -349,7 +359,7 @@ this would meaningfully build (`apps/web`) is independently confirmed clean rega
 **This closes US7 (the operator admin console) end to end.** Sessions 4 (backend), 5 (frontend), and 6
 (this review) are all done.
 
-## Phase 10 (sandbox-runner core isolation) — T216–T224 — closes SC-017, done
+## Phase 10a (sandbox-runner core isolation) — T216–T224 — closes SC-017, done
 
 Session 7 of the roadmap. R1's three nested boundaries for untrusted capability execution, built from
 near-empty `apps/sandbox-runner` scaffolding. Until this shipped, `POST /admin/capabilities/upload`
@@ -429,6 +439,92 @@ request-body-size test; `limits.test.ts`: 4/4).
 **This closes SC-017 — the last of the 11 adversarial gates. 11 of 11 are now green.** Not built in
 this session: T225 (real deployment, no egress, no DB credentials) and T226 (replacing the 503 with real
 dispatch) — Session 8, which depends on this phase being genuinely complete first.
+
+## Phase 10b (sandbox-runner deploy + real dispatch) — T225–T226 — closes Phase 10 and US7, done
+
+Session 8 of the roadmap, the last two tasks in the whole 250-task plan. Phase 10a (above) built the
+isolation mechanism itself; this phase deploys it for real and wires the upload route to it.
+
+**T225.** `apps/sandbox-runner/src/serve.ts` (new) is the first real process entrypoint this package
+has ever had — `src/index.ts` was only a `SERVICE_NAME` export; nothing before this turned
+`createSandboxHost` into a running process. It reads `SANDBOX_RUNNER_PORT`/`PORT` and
+`SANDBOX_RUNNER_HOST` from the environment, boots the host, and shuts down cleanly on
+`SIGTERM`/`SIGINT`. `host/server.ts` gained a `host` option on `CreateSandboxHostOptions` (default
+`'127.0.0.1'`, fully backward compatible with every existing test) and a `GET /health` route ahead of
+the `/execute` check. [`infrastructure/sandbox-runner.md`](infrastructure/sandbox-runner.md) (new — the
+first per-app deployment doc in this repo) documents why this must be a separate deployment (quoting
+CLAUDE.md and R1's three boundaries directly), the exact two env vars this process reads and the five
+it must never be given (`DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`,
+`ENCRYPTION_KEY`), the network policy (deny-all outbound, inbound only from `apps/api` on
+`/execute`/`/health`), and carries forward Session 7's two Windows-specific open gaps as a "verify on
+first real deploy" checklist. A new structural adverse suite,
+`apps/sandbox-runner/tests/adverse/deployment-isolation.test.ts`, asserts the "no egress, no DB
+credentials" claim against the real `package.json` and source tree rather than leaving it as prose —
+initially checked only `dependencies` for a forbidden database/queue client; an independent review
+found the deploy runbook's own `pnpm install --frozen-lockfile` (no `--prod`) would also install a
+`devDependencies` entry, so the check now covers both.
+
+**T226.** `apps/api/src/routes/admin/capabilities.routes.ts`'s `POST /capabilities/upload` no longer
+answers an unconditional 503 — it reads the uploaded bundle as a raw body (`express.raw`, scoped to
+this one route; safe regardless of `app.ts`'s global `express.json()` mount order, since that
+middleware is a no-op passthrough for any content-type other than its own), and hands it to a new
+`apps/api/src/services/admin/capability-upload.service.ts`, which dispatches it to the real,
+deployed `sandbox-runner` and runs the real conformance suite inside it (FR-029, "under the same
+restriction"). A missing or unreachable sandbox still always answers 503 `SANDBOX_UNAVAILABLE` — same
+code T216's placeholder used, preserved for wire compatibility — never a fallback to unsandboxed
+execution (Constitution Principle V holds exactly as strictly as before). **Scope boundary, stated
+explicitly in the service's own module note**: this delivers a genuine conformance verdict only — it
+does not write a `Capability` database row and does not make an uploaded bundle executable by any real
+scan. `reconcile.ts`'s own rule ("Disk is the source of existence. The database is the source of
+enablement") still holds; there is no code path anywhere that writes an uploaded bundle to the
+discovery root, and `data-model.md`'s `Capability` entity has no field for one. Turning a passed
+verdict into an installed, runnable capability is a separate, larger, currently-unspecified change —
+see Open Decision #20.
+
+Getting T226 built required a fix to T224's own `host/conformance.ts`: `runConformanceCheck` took a
+live, in-process `SandboxHost` object, which can never be handed across the network/process boundary
+Session 8's whole point is to create. Its signature is now a plain `baseUrl: string` — a latent T224
+design gap, only exposed once building the one caller it was always meant for was actually attempted.
+
+**An independent adversarial review of the new wiring** (auth/authz, SSRF, body-size DoS, information
+leakage, the `express.raw`/`express.json()` interaction, the new `/health` route, and the scope-boundary
+claim in `capability-upload.service.ts`) found **no Constitution Principle V violation** — no
+`eval`/`Function()`/direct `require()` of uploaded bytes anywhere in `apps/api`, the only path is the
+real HTTP round trip to the real sandbox — confirmed `requireAuth`+`requireOperator` still gates the
+route unchanged, confirmed `SANDBOX_RUNNER_URL` is never influenced by request input, and empirically
+confirmed the 16 MiB body cap and the content-type passthrough both work as documented (not just as
+written). It found the `devDependencies` gap above (fixed) and one Informational, accepted as low-risk:
+a `SandboxUnavailableError`'s `detail` (e.g. a raw `ECONNREFUSED` message) is echoed into the 503
+response, which could reveal the configured sandbox host:port — low impact since the route is already
+operator-gated and the value is an internal address with no credentials attached.
+
+**Found, confirmed real by both the implementer and the independent review, and deliberately left
+unfixed**: running real dispatch end to end for the very first time (nothing in Phase 10a's own test
+suite ever exercised the `CONFORMANCE` operation) exposed a pre-existing defect in
+`child-harness/harness.ts`'s `runConformance` (T224, Session 7): its `rawManifest` is built as
+`{ id, module, layer }` only, but `@webaudit/capability-sdk`'s `manifestSchema` also requires `name`,
+`version`, and `entrypoint` — fields the uploaded-bundle format (T220) never defined a way to supply at
+all, since a real vendored capability's manifest lives in a sibling `capability.manifest.json` file
+that an in-memory uploaded bundle has no equivalent of. The result: `manifest-valid`, and therefore a
+`ConformanceReport`'s overall `passed`, cannot come back `true` for *any* capability dispatched through
+`CONFORMANCE` today. `child-harness/*` was explicitly out of scope for this session, so the new
+end-to-end test (`admin.capabilities.test.ts`'s "T226 — real dispatch" block) asserts this honestly —
+every other check (`contract-shape`, `can-run-has-no-side-effects`, `throwing-is-contained`,
+`no-llm-from-code-layer`, `fingerprint-stable`, `abort-honoured`) genuinely runs against the real,
+isolated capability and genuinely passes, proving the real dispatch mechanism itself works — rather
+than forcing a `passed: true` the current code cannot honestly produce. Recorded as Open Decision #20,
+not silently fixed or ignored.
+
+**Full whole-branch verification gate**, re-run independently (not just trusting the implementer's own
+report) after every fix: `pnpm test` **910/910** (109 files); `pnpm test:adverse` **642 passed / 1
+pre-existing skip** (36 files) — both run in isolation after an initial combined run surfaced 3
+failures traced directly to this session's own concurrent-background-command test-DB contamination
+(PROGRESS.md's own long-documented gotcha), confirmed spurious by re-running the affected file alone
+clean. Both packages' `tsc --noEmit` and every touched file's `eslint` clean.
+
+**This closes Phase 10 end to end and, with it, US7 (the operator admin console) completely — Sessions
+4 through 8 all done.** Only Phase 11 (polish, T227–T236 minus T230 done early) remains in the whole
+250-task plan.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -1025,22 +1121,28 @@ happen on its own commit rather than inside a feature phase. `pnpm lint` (code l
 design-adherence lint), `pnpm -r typecheck`, `pnpm test`, `pnpm test:adverse`, `pnpm test:visual`, the
 T109 e2e spec, and `next build` are all green.
 
-### Next task: T225 (Session 8, sandbox-runner deploy + real dispatch) — Phases 1–7, 8, 9, 10 complete
+### Next task: T227 (Phase 11, polish & cross-cutting concerns) — Phases 1–10 all complete
 
-**240 of 250 tasks done. All 11 adversarial gates are green** — Phase 10 (Session 7 of the [full-project
-remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md), T216–T224)
-closed SC-017, the last one, on 2026-09-04. See "Phase 10 (sandbox-runner core isolation)" above for the
-full account, including the two Criticals two independent adversarial reviews found and closed
-(a vm-context prototype-chain escape; an unconditional child-process leak) and the two Windows-specific
-gaps recorded honestly open (Open Decisions #18, #19 below).
+**242 of 250 tasks done. All 11 adversarial gates are green, and US7 (the operator admin console) is
+complete end to end.** Phase 10 (Sessions 7 and 8 of the [full-project remediation
+roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)) is fully done: Session
+7 (T216–T224, 2026-09-04) closed SC-017 by building the isolation mechanism itself; Session 8 (T225–T226,
+same day) deployed it for real and replaced the upload route's 503 with genuine dispatch. See "Phase 10a
+(sandbox-runner core isolation)" and "Phase 10b (sandbox-runner deploy + real dispatch)" above for the
+full account — including the two Criticals two independent adversarial reviews found and closed in
+Session 7 (a vm-context prototype-chain escape; an unconditional child-process leak), the Minor fixed in
+Session 8's own review (a `devDependencies` gap in the new structural test), and the pre-existing T224
+defect Session 8's real end-to-end test exposed but deliberately left unfixed (`harness.ts`'s
+CONFORMANCE `rawManifest` — see Open Decision #20). Two Windows-specific gaps from Session 7 remain
+honestly open (Open Decisions #18, #19) — flagged for confirmation whenever this deployment actually
+runs on its real (expected Linux) target, since this development environment cannot verify that itself.
 
-**Next is Session 8 of the roadmap (T225–T226)**: deploy `sandbox-runner` as a genuinely separate
-deployment with no egress and no database credentials (T225, `infrastructure/sandbox-runner.md`), then
-replace `apps/api/src/routes/admin/capabilities.routes.ts`'s current unconditional `503
-SANDBOX_UNAVAILABLE` with real dispatch to the now-built-and-verified sandbox (T226). This is the last
-item in Phase 10 and the last remaining piece of US7. T225's real deployment target is also the place to
-resolve the two Windows-specific gaps Session 7 left open (empty-env leakage, the fs-permission
-glob-matching quirk) — confirm on the actual Linux target rather than carry them forward unverified.
+**Next is Phase 11 (T227–T236, minus T230 already done early)**: axe-core accessibility in the e2e
+suite, dark-mode severity-contrast verification, structured logging, the FR-025 egress-scope correction
+and the `WebAuditAI_ARCHITECTURE.md` corrections (both already named in this file's own Known open
+items), deploy runbooks for the other four apps (mirroring what `infrastructure/sandbox-runner.md` just
+established as this repo's first per-app deployment doc), and a full quickstart validation pass. This is
+the only phase left in the entire 250-task plan.
 
 Phase 8 (US6, the mid-audit design-intent questionnaire, T194–T201) and Phase 9 (US7, T202–T215) are
 both already complete — see their own sections above. The paragraph below predates both and is kept for
@@ -1837,7 +1939,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 7 — US5 billing | T180–T193 | ✅ done | **SC-008 green** — subscriptions, entitlements before charging, credit purchase, signed idempotent webhook, retention + self-contained export. § Phase 7 near top |
 | 8 — US6 questionnaire | T194–T201 | ✅ done | Mid-audit design-intent pause, wired end to end; one Critical regression found and fixed by the whole-feature review — § below |
 | 9 — US7 admin | T202–T215 | ✅ done | SC-009, SC-010. First `requireOperator` route; Sessions 4–6 |
-| 10 — Sandbox runner | T216–T226 | 🟡 9/11 | **SC-017 green.** T216–T224 done (Session 7); T225–T226 (deploy + real dispatch) remain — Session 8 |
+| 10 — Sandbox runner | T216–T226 | ✅ done | **SC-017 green.** T216–T224 (Session 7) + T225–T226 (Session 8, deploy + real dispatch) all done |
 | 11 — Polish | T227–T236 | 🟡 1/10 | T230 done early (finding M7) |
 
 ## Adversarial gates — honest scoreboard
@@ -2130,6 +2232,7 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 17 | The admin console (`apps/web/app/(admin)/`) has no per-screen visual-regression baseline for any of its 6 real screens (surfaced 2026-09-04, Session 5 wrap-up) | **Needs a call.** `apps/web/tests/visual/harness.test.ts` has zero coverage for any `/admin/*` route — confirmed by reading the whole file. This predates Session 5: the first two admin pages (`AdminProvidersPage`, `AdminScansPage`, T244) shipped with none either, and Session 5's four new pages (T212–T215) inherited the same gap rather than introducing it, since `design-system/reference-pages/` only exports one combined "Admin Console" HTML page, not one per screen, so there is no per-screen reference image to diff against without first producing one. Every admin page instead gets the console's own already-established `renderToStaticMarkup`/no-jsdom structural test (`admin-shell.test.ts`, `admin-screens.test.ts`, and Session 5's five new `admin-*.test.ts` files), which proves the pre-data shell renders correctly but proves nothing about pixel-level token/spacing fidelity. Needs a real decision: extract one reference screenshot per admin screen from the combined console export and wire real `pnpm test:visual` coverage, or explicitly accept structural-test-only coverage for this console as a permanent, documented choice (distinct from a "no design exists" gap — a design exists for every admin screen; only the *test* baseline is missing). Session 6 (the dedicated admin-surface adversarial review) is the natural place to make this call, since it already reviews the whole admin surface as one unit. |
 | 18 | `apps/sandbox-runner`'s child `fork(..., {env: {}})` still measurably leaks ~11 real OS-required env vars (`HOMEDRIVE`, `PATH`, `SYSTEMROOT`, etc.) on this Windows dev machine despite an empty `env` object being passed (found live during Session 7, T220, 2026-09-04) | **Needs verification on the real deploy target, not a design call.** Confirmed via a live escape reproduction reading `process.env` from inside the sandbox child. Assessed as very likely a Windows-specific `fork()` behaviour (Windows requires several of these for the OS process loader itself to function) and not necessarily present on Linux, but this has not been checked on Linux and this development environment cannot check it. Action: confirm empty-env behaviour on the actual Linux target during Session 8/T225's real deployment before treating this as closed; if it reproduces on Linux too, the fix is an explicit env allowlist rather than relying on an empty object. |
 | 19 | `apps/sandbox-runner`'s `--allow-fs-read`/`--allow-fs-write` glob matching produces a garbled, mis-cased resource path (`\\?\c:\uSERS\...`) for certain glob forms on this Windows machine (found live during Session 7, T223, 2026-09-04) | **Worked around, not root-caused.** Certain glob forms (mixed-separator paths, a bare wildcard-everything pattern) triggered this; a bare `*` wildcard worked when a scoped glob form of the same intent didn't, suggesting a real Node permission-model glob-matching quirk on Windows rather than a logic error in the granted paths. Worked around by using `path.sep`-consistent, narrowly-scoped allow-paths (three specific directories, computed via `fileURLToPath`, not a broad glob) in the shipped `host/server.ts` `readAllowlist` — the workaround is what actually runs, so the shipped guarantee is not weakened, but the underlying Node behaviour itself remains unexplained. Not expected to matter on Linux (the deploy target), but not verified there either. |
+| 20 | `apps/sandbox-runner/src/child-harness/harness.ts`'s `runConformance` (T224, Session 7) builds `rawManifest: { id, module, layer }` only; `@webaudit/capability-sdk`'s `manifestSchema` also requires `name`, `version`, and `entrypoint`, so `manifest-valid` — and therefore a `ConformanceReport`'s overall `passed` — cannot come back `true` for any capability dispatched through `CONFORMANCE` today (found live during Session 8, T226, 2026-09-04, the first time anything ever exercised the `CONFORMANCE` operation end to end) | **Needs a design decision, not a quick fix — deliberately left unfixed.** The uploaded-bundle format T220 defined (UTF-8 JS source whose completion value is the `AuditCapability` object) never included a way to supply `name`/`version`/`entrypoint` at all, because a real vendored capability's manifest lives in a *separate* `capability.manifest.json` file next to its code, discovered from disk (`discover.ts`) — an in-memory uploaded bundle has no second file, and `entrypoint` specifically (a relative path to an entry module) has no meaning for a bundle that already *is* the entry module. Fixing this properly requires deciding whether an uploaded bundle should also carry a manifest (extending the wire protocol, `SandboxRequest`, to accept one alongside the bundle) or whether `CONFORMANCE`'s `manifest-valid` check should be skipped/adapted for the sandboxed-upload path specifically (a `capability-sdk` change, following the same `ConformanceDeps`-optional-hook precedent Session 7's own third escape-vector fix already established for `buildCanRunTrap`/`buildReverifyProbe`). Synthesizing placeholder `name`/`version`/`entrypoint` values inside `harness.ts` just to make the check pass was considered and rejected — it would make "conformance passed" mean less, which undermines the actual verification FR-029 asks for. `apps/api/tests/contract/admin.capabilities.test.ts`'s "T226 — real dispatch" test documents this precisely (asserting `manifest-valid: false`, `passed: false`, and every other check `true`) rather than silently working around it. Confirmed independently by a second review (Session 8's own adversarial pass), which rated it Important — real, but correctly out of scope for the session that found it. |
 
 ## Carried corrections — still open
 
@@ -2261,46 +2364,54 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 The core loop works and CI genuinely gates merges. Honest state as of Phase 10 (2026-09-04):
 
-- **240 of 250 tasks (96%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7, 8, 9, and 10 are all complete. A real
-  audit runs against a live URL, an uploaded archive, or a connected GitHub repository, through the
-  real orchestrator and 16 vendored capabilities; a human drives it through the UI; the fix loop turns
-  issues green only on a passing re-check; a readiness pass returns a go/no-go verdict with named
-  blockers and a shareable certificate; the account can be subscribed to a plan, buy non-expiring
-  credits, and is never billed for a platform failure (refunds are visible on the ledger); the
-  mid-audit design-intent questionnaire pauses and resumes without holding a worker slot; the
-  operator admin console (users, plans, margin, capabilities, providers, queue) is live behind
-  `requireOperator`; and untrusted uploaded capabilities can now genuinely run inside three nested
-  isolation boundaries (service, process, language) rather than being refused outright.
-- **Still not built (10 tasks, all in Phase 10/11):**
-  - **Phase 10, T225–T226** — deploy `sandbox-runner` as a real, separate, no-egress/no-DB-credentials
-    deployment, and replace the upload path's current `503 SANDBOX_UNAVAILABLE` with real dispatch to
-    it. The isolation mechanism itself (T216–T224) is done and adversarially reviewed; only wiring it
-    to a real deployment and to the live route remains. Session 8 of the remediation roadmap.
-  - **Phase 11** — axe-core a11y in e2e, dark-mode severity contrast, structured logging, the FR-025
-    / architecture-doc corrections, deploy runbooks, the full quickstart validation pass. (T230 done
-    early, at Phase 3.)
+- **242 of 250 tasks (97%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7, 8, 9, and 10 are all complete — only
+  Phase 11 (polish) remains in the entire plan. A real audit runs against a live URL, an uploaded
+  archive, or a connected GitHub repository, through the real orchestrator and 16 vendored
+  capabilities; a human drives it through the UI; the fix loop turns issues green only on a passing
+  re-check; a readiness pass returns a go/no-go verdict with named blockers and a shareable
+  certificate; the account can be subscribed to a plan, buy non-expiring credits, and is never billed
+  for a platform failure (refunds are visible on the ledger); the mid-audit design-intent questionnaire
+  pauses and resumes without holding a worker slot; the operator admin console (users, plans, margin,
+  capabilities, providers, queue) is live behind `requireOperator`; and an operator-uploaded capability
+  now genuinely runs inside three nested isolation boundaries (service, process, language), deployed
+  for real, with a genuine conformance verdict returned in place of the old unconditional refusal.
+- **Still not built: Phase 11 only (8 tasks)** — axe-core a11y in e2e, dark-mode severity contrast,
+  structured logging, the FR-025 / architecture-doc corrections, deploy runbooks for the other four
+  apps, the full quickstart validation pass. (T230 done early, at Phase 3.)
+- **Uploading a capability produces a verdict, not an installed capability.** `POST
+  /admin/capabilities/upload` now genuinely dispatches to the real sandbox and returns a real,
+  per-check `ConformanceReport` — but does not write a `Capability` row or make the bundle executable
+  by any real scan (a deliberate scope boundary, Open Decision #20's own subject) and, separately, no
+  capability can pass full conformance today regardless of how well-formed it is, because of a
+  pre-existing gap in how the `CONFORMANCE` operation builds its manifest (also Open Decision #20).
+  Both are honestly documented, not silently assumed away.
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
-- **11 of 11 adversarial gates green.** SC-017, the last one, closed 2026-09-04 with Phase 10 — see
-  "Phase 10 (sandbox-runner core isolation)" above.
+- **11 of 11 adversarial gates green.** SC-017, the last one, closed 2026-09-04 with Phase 10a — see
+  "Phase 10a (sandbox-runner core isolation)" and "Phase 10b (sandbox-runner deploy + real dispatch)"
+  above.
 - **`pnpm format:check` is red** on ~two dozen files from Phases 4–5, `apps/probe-pool`, and several
   vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–10 touched
   is formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
-- **Two honestly-open, unverified gaps from Phase 10** (Open Decisions #18, #19): empty-env leakage
-  and an fs-permission glob-matching quirk, both found on this Windows dev machine and both assessed
-  as likely Windows-specific but not yet confirmed on the real Linux deployment target — flagged for
-  Session 8/T225 to check.
+- **Three honestly-open, unverified/undecided gaps from Phase 10** (Open Decisions #18, #19, #20):
+  empty-env leakage and an fs-permission glob-matching quirk (both found on this Windows dev machine,
+  both assessed as likely Windows-specific but not yet confirmed on the real Linux deployment target —
+  flagged for whenever this deployment actually runs there), and the `CONFORMANCE` manifest gap (#20,
+  needs a real design decision about the uploaded-bundle format or the conformance suite's shared
+  code, not a quick fix).
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
   is deliverable as of Phase 5; source-level depth (repos and archives) as of Phase 6; the account
   is billable as of Phase 7; brand-intent tailoring as of Phase 8; the operator console as of Phase 9;
-  untrusted-capability isolation as of Phase 10 (deployment and live dispatch pending, T225–T226).
+  untrusted-capability isolation, deployed and dispatching for real, as of Phase 10.
 
 ## Commit log
 
 | | |
 | --- | --- |
-| `c90a21a` | feat(sandbox): child-process isolation with vm-escape hardening (T217–T224) |
+| `d19897e` | feat(sandbox): deploy sandbox-runner and replace the 503 with real dispatch (T225-T226) |
+| `bf7f711` | docs: close out Session 7 (sandbox-runner core isolation, spec-kit Phase 10a) |
+| `c90a21a` | feat(sandbox): child-process isolation with vm-escape hardening (T217-T224) |
 | `dd6bcc5` | feat(us7): capability upload refuses unconditionally, no fallback (T216) |
 | `99dcff4` | feat(us5): pay for capacity with plans and credits (T180–T193) |
 | `2a22d46` | feat(us4): audit source code, not just the served page (T169–T179) |

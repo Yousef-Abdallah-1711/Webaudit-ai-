@@ -598,10 +598,37 @@ dated Session 7 section and Open Decisions. Full whole-branch gate re-run clean:
 `pnpm test` 907/907, `pnpm test:adverse` 639/640 (1 pre-existing skip). Full findings recorded in
 `docs/superpowers/plans/2026-09-04-sandbox-runner-adversarial-review.md`.
 
-- [ ] T225 [US7] Deploy `sandbox-runner` with no egress and no database credentials, documented in `infrastructure/sandbox-runner.md`
-- [ ] T226 [US7] Replace the 503 with real dispatch to the sandbox in `apps/api/src/services/admin/capability-upload.service.ts`
+- [X] T225 [US7] Deploy `sandbox-runner` with no egress and no database credentials, documented in `infrastructure/sandbox-runner.md`
+- [X] T226 [US7] Replace the 503 with real dispatch to the sandbox in `apps/api/src/services/admin/capability-upload.service.ts`
 
-**Checkpoint**: All seven user stories complete. Every adverse suite green.
+**Session 8 (sandbox-runner deploy + real dispatch) is done: T225–T226. This closes Phase 10 and US7 end
+to end.** T225: a real process entrypoint (`serve.ts`, reading `SANDBOX_RUNNER_PORT`/`HOST`; nothing
+before this session ever turned `createSandboxHost` into a running process), a `GET /health` route, and
+`infrastructure/sandbox-runner.md` — a deployment runbook backed by a new structural adverse suite
+(`deployment-isolation.test.ts`) that asserts the "no egress, no DB credentials" claim against the real
+`package.json` (`dependencies` **and** `devDependencies`, the latter added after an independent review
+found the first version only checked the former) and source tree, not just prose. T226: replaced the
+unconditional 503 with real dispatch — `apps/api/src/services/admin/capability-upload.service.ts` POSTs
+an uploaded bundle to the real `sandbox-runner` deployment and runs the real conformance suite inside it,
+deliberately scoped to a conformance verdict only (no `Capability` row write, no execution against real
+scans — discovery from disk remains the only source of capability existence; see that file's own module
+note). Fixing `runConformanceCheck`'s signature (`SandboxHost` → a plain `baseUrl: string`) was required
+before T226 was even possible — the original could never be satisfied by a caller in a separate deployment,
+a latent T224 gap only exposed by building the caller. An independent adversarial review found no
+unsandboxed-execution path, no auth bypass, and no SSRF in the new wiring, and confirmed one real, honestly
+non-fixed finding: running real dispatch end to end for the first time exposed a pre-existing T224 defect —
+`harness.ts`'s CONFORMANCE `rawManifest` omits `name`/`version`/`entrypoint`, so `manifest-valid` (and
+therefore overall `passed`) cannot come back `true` for any capability today. Left unfixed per this
+session's own scope (`child-harness/*` untouched); the new end-to-end test asserts this honestly rather than
+forcing a result the code cannot produce. Recorded as PROGRESS.md Open Decision #20. Full verification
+(run independently, not just by the implementer): `apps/api` unit 45/45 files, 322/322 tests; `apps/api`
+adverse 16/16 files, 191/191 tests; `apps/sandbox-runner` adverse 3/3 files, 18/18 tests; both packages'
+`tsc --noEmit` and every touched file's `eslint` clean. Full write-up in `docs/superpowers/plans/
+2026-09-03-full-project-remediation-roadmap.md`'s own Session 8 section.
+
+**Checkpoint**: All seven user stories complete. Every adverse suite green. 242 of 250 tasks done
+(T001–T226, plus T236a and T230 done early) — only Phase 11's remaining polish items (T227–T229,
+T231–T236) are left in the whole plan.
 
 ---
 

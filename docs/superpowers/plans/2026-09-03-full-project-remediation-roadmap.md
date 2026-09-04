@@ -553,10 +553,35 @@ host surviving unharmed does not satisfy SC-017).
 
 **Prerequisite**: Session 7 done.
 
+**Status: done.** `serve.ts` (new) is the first real process entrypoint this package has ever had, plus
+a `GET /health` route and `infrastructure/sandbox-runner.md` — the first per-app deployment doc in this
+repo, backed by a new structural adverse suite (`deployment-isolation.test.ts`) that asserts "no egress,
+no DB credentials" against the real `package.json` and source tree rather than leaving it as prose.
+`POST /admin/capabilities/upload` now dispatches for real: `capability-upload.service.ts` (new) POSTs
+the uploaded bundle to the real, deployed sandbox and runs the real conformance suite inside it,
+deliberately scoped to a conformance verdict only — no `Capability` row write, no execution against
+real scans (see that file's own module note; `reconcile.ts`'s "disk is the source of existence" still
+holds). Fixing `runConformanceCheck`'s signature (an in-process `SandboxHost` → a plain `baseUrl:
+string`) was required first — the original could never be satisfied by a caller in a genuinely separate
+deployment, a latent T224 gap only exposed by building the one caller this session exists to enable. An
+independent adversarial review of the new wiring found **no Constitution Principle V violation** (no
+unsandboxed-execution path, no auth bypass, no SSRF), fixed one Minor gap in the new structural test
+itself (it initially checked only `dependencies`, not `devDependencies`, which the runbook's own
+`pnpm install --frozen-lockfile` also installs), and confirmed one real, deliberately-unfixed finding:
+running real dispatch end to end for the first time ever exposed a pre-existing T224 defect —
+`harness.ts`'s CONFORMANCE `rawManifest` omits `name`/`version`/`entrypoint`, fields the uploaded-bundle
+format never defined a way to supply, so no capability can pass full conformance today regardless of how
+well-formed it is. Left unfixed per this session's own scope (`child-harness/*` untouched); the new
+end-to-end test asserts this honestly (every other check genuinely passes) rather than forcing a result
+the code cannot produce. Recorded as PROGRESS.md Open Decision #20. Full write-up in PROGRESS.md's
+"Phase 10b (sandbox-runner deploy + real dispatch)" section. Whole-branch gate re-run independently,
+clean: `pnpm test` 910/910 (109 files), `pnpm test:adverse` 642/643 (1 pre-existing skip, 36 files).
+Committed as `d19897e`. **This closes Phase 10 and, with it, US7 end to end.**
+
 ### Tasks
-- [ ] T225 — Deploy `sandbox-runner` with no egress and no database credentials, documented in
+- [X] T225 — Deploy `sandbox-runner` with no egress and no database credentials, documented in
       `infrastructure/sandbox-runner.md`
-- [ ] T226 — Replace the `503` with real dispatch to the sandbox in
+- [X] T226 — Replace the `503` with real dispatch to the sandbox in
       `apps/api/src/services/admin/capability-upload.service.ts`
 
 ### Definition of done
@@ -566,7 +591,7 @@ egress and no DB credential, and `POST /admin/capabilities/upload` now dispatche
 Session 7's full adverse suite still green against the real deployment, not just in-process.
 
 **Checkpoint** (per spec-kit): all seven user stories complete; every adverse suite green. This also
-closes SC-017, the last of the 11 adversarial gates still red as of this writing.
+closes SC-017, the last of the 11 adversarial gates — **now green, 11 of 11**, as of this session.
 
 ---
 
