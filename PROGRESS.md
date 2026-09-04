@@ -1,11 +1,25 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-04 · **Tasks** 231 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **905/905**, `adverse` **624 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
+**Updated** 2026-09-04 · **Tasks** 240 / 250 (+T236a, not in the original 250) ·
+**Tests** `unit` **907/907**, `adverse` **639 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
 typecheck clean per-package (root `pnpm run typecheck`/`pnpm run build` both still fail on a pre-existing
 turbo cyclic-dependency warning unrelated to any change in this or prior sessions — Open Decision #16;
 `apps/web`'s real production build is independently confirmed clean via `pnpm test:visual`'s own
-internal `next build`). 🎯 **US7 (the operator admin console) complete end to end — Sessions 4, 5, and
+internal `next build`). 🎯 **Phase 10 (sandbox-runner core isolation) complete — T216–T224, closing
+SC-017, the last of the 11 adversarial gates. 11 of 11 green.** Session 7 of the [full-project
+remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md) built the
+child-process isolation mechanism the upload path had been returning `503 SANDBOX_UNAVAILABLE` for since
+T216: a bundle format, an esbuild-precompiled harness run inside a `--permission`-restricted child,
+parent-armed timeout/memory enforcement, and in-sandbox conformance verification. Two independent
+adversarial reviews found and closed two Criticals before this shipped — a vm-context prototype-chain
+escape (any host-realm value handed to the sandboxed capability reopened the classic
+`this.constructor.constructor(...)` vm escape even after the context's own global object was hardened)
+and an unconditional child-process leak (every non-timeout outcome left the child running forever) —
+plus one Minor. Two Windows-specific gaps were found and left honestly open rather than silently
+patched over. Full write-up:
+[2026-09-04-sandbox-runner-adversarial-review.md](docs/superpowers/plans/2026-09-04-sandbox-runner-adversarial-review.md).
+Session 8 (T225–T226, real deployment + dispatch, replacing the 503) has not started.
+🎯 **US7 (the operator admin console) complete end to end — Sessions 4, 5, and
 6.** Backend (T202–T211), frontend (T212–T215), and a dedicated adversarial review all done. The review
 (Session 6, Phase 9c) found and fixed one Important defect on each side: a combined
 `PATCH /admin/capabilities/:id` body that could commit an `isEnabled` change and audit it before a bad
@@ -334,6 +348,87 @@ this would meaningfully build (`apps/web`) is independently confirmed clean rega
 
 **This closes US7 (the operator admin console) end to end.** Sessions 4 (backend), 5 (frontend), and 6
 (this review) are all done.
+
+## Phase 10 (sandbox-runner core isolation) — T216–T224 — closes SC-017, done
+
+Session 7 of the roadmap. R1's three nested boundaries for untrusted capability execution, built from
+near-empty `apps/sandbox-runner` scaffolding. Until this shipped, `POST /admin/capabilities/upload`
+(T216, committed separately) returned an unconditional `503 SANDBOX_UNAVAILABLE` — correct behaviour
+per the roadmap's own "must never be partially shipped" rule for this phase, not a gap.
+
+**What was built.** A bundle format (no format existed before): a capability bundle is UTF-8 JS source
+whose *completion value* — the value of the last-evaluated expression, exactly what `vm.Script.runInContext`
+naturally returns — is the `AuditCapability`-shaped object, so no module system is needed inside the
+sandboxed realm. A trusted child-harness (`child-harness/{load,context,harness}.ts`) is precompiled
+**once** by the unrestricted host process via esbuild's Node API into a flat, dependency-free `.js` file
+(cached under `.sandbox-build/`, gitignored), because running `tsx`/`esbuild` itself *inside* a
+`--permission`-restricted child fatally conflicts — `esbuild`'s own transform spawns a worker thread,
+and `--allow-worker` denial blocks even this trusted code (`ERR_ACCESS_DENIED: WorkerThreads`,
+confirmed live). Each forked child then runs the flat file directly with plain `node` — no loader, no
+compiler, no worker thread, at request time. Parent-armed, `.unref()`'d `setTimeout` → `SIGKILL`
+(`limits/timeout.ts`) is genuinely unstarvable by the child, since parent and child are separate OS
+processes with independent event loops. `--max-old-space-size` (`limits/memory.ts`) is the code-level
+memory bound, explicitly documented as one of two defense-in-depth layers — a real OS `cgroup` at
+deploy time is Session 8/T225's job, not this one's, and this session's own module note says so rather
+than implying the guarantee is complete. `host/server.ts` forks with computed `--permission`
+`execArgv`, per-path `--allow-fs-read`, `env: {}`, no `--allow-fs-write`/`--allow-child-process`/
+`--allow-worker` ever. `host/conformance.ts` runs FR-029's in-sandbox verification before first use.
+
+**Two independent adversarial reviews, two Criticals found and closed before this shipped** — full
+write-up: [2026-09-04-sandbox-runner-adversarial-review.md](docs/superpowers/plans/2026-09-04-sandbox-runner-adversarial-review.md).
+
+1. **A vm-context prototype-chain escape.** `Object.create(null)` as the sandbox's global object blocks
+   the classic `this.constructor.constructor('return process')()` escape at the top level, but any
+   host-realm value handed to the sandboxed capability afterwards — `console`, a data argument, a
+   `CodeLayerContext` method like `ctx.fetch` — carries its *own* prototype chain independently of the
+   context's global object, and reopens the identical escape via
+   `arg.constructor.constructor('return process')()`. Confirmed capable of reaching (and could have
+   killed) the host's own parent process. Fixed by never letting a host-realm value reach the sandboxed
+   realm at all: data crosses via a new `cloneIntoContext(context, value)` (a JSON round-trip through
+   the *target context's own* `JSON.parse`, confirmed a genuinely separate, context-scoped intrinsic),
+   and the entire `CodeLayerContext` is built by one `vm.Script` executed *inside* the target context so
+   every method's own constructor chain is rooted there too. A third, narrower instance of the same bug
+   lived in `packages/capability-sdk`'s shared `runConformanceSuite` (reused for the sandbox's
+   `CONFORMANCE` operation per FR-029's "under the same restriction"), which builds its own `canRun`
+   trap `Proxy` and `reverify` probe as host-realm objects, outside `harness.ts`'s own reach — closed
+   with two new **optional** fields on `ConformanceDeps` (`buildCanRunTrap?`, `buildReverifyProbe?`)
+   defaulting to the original construction, so every other, non-sandboxed caller is unaffected —
+   confirmed via zero regression in `capabilities-vendored/tests/conformance.test.ts` (16/16) and
+   `apps/worker/tests/adverse/capability-disable.test.ts` (44/44).
+2. **An unconditional child-process leak.** `finish()` only killed the child on the `TIMEOUT` path;
+   every other outcome (success, `FORBIDDEN_ACCESS`, `CONTRACT_VIOLATION`, `BUNDLE_INVALID`) left the
+   child's IPC listener holding its event loop open forever. Confirmed live: 7 sequential completed
+   requests left 7 orphaned `node.exe` processes running minutes later. Fixed by making `finish()`
+   unconditionally `SIGKILL` the child before resolving, on every path (a documented no-op for an
+   already-exited child).
+
+A second, independent review reproduced both PoCs against the fixed code, tried 11 further novel escape
+variants (all blocked), verified the leak fix at the OS process level across all six possible response
+outcomes, and found one Minor: `describeThrown`'s (`packages/capability-sdk/src/contain.ts`)
+`instanceof Error` check has the identical cross-realm blind spot, turning a sandboxed capability's real
+`canRun` bug into an undiagnosable `"canRun threw: {}"` — fixed the same way (`.name`/`.message` checked
+as plain strings first), and used to delete `harness.ts`'s now-redundant local copy of the same logic.
+Also fixed along the way: an unbounded `POST /execute` request body (16 MiB cap; the first fix attempt's
+`req.destroy()` truncated the 413 response into a raw `ECONNRESET`, corrected by removing that call).
+
+**Two Windows-specific gaps found and left honestly open, not silently patched over** — both from live
+debugging on this dev machine (Node v24.15.0), not from either formal review: `fork(..., {env: {}})`
+still measurably leaks ~11 real OS-required env vars (`HOMEDRIVE`, `PATH`, `SYSTEMROOT`, etc.) despite
+an empty `env` object; and `--allow-fs-read`/`-write` glob matching produced a garbled, mis-cased
+resource path for certain glob forms, worked around with narrow explicit allow-paths rather than
+root-caused. Both assessed as likely Windows-specific and not necessarily present on the real Linux
+deployment target, but unverified — flagged for confirmation during Session 8/T225's real deployment.
+See Open Decisions below.
+
+**Full whole-branch verification gate**, re-run clean after every fix:
+`pnpm test` **907/907**; `pnpm test:adverse` **639 passed / 1 pre-existing skip**
+(`apps/sandbox-runner/tests/adverse/sandbox-escape.test.ts` alone: 11/11 across 4 `describe` blocks —
+the original 6-vector SC-017 suite, the 2 new vm-context escape tests, 1 process-cleanup test, 1
+request-body-size test; `limits.test.ts`: 4/4).
+
+**This closes SC-017 — the last of the 11 adversarial gates. 11 of 11 are now green.** Not built in
+this session: T225 (real deployment, no egress, no DB credentials) and T226 (replacing the 503 with real
+dispatch) — Session 8, which depends on this phase being genuinely complete first.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -930,16 +1025,26 @@ happen on its own commit rather than inside a feature phase. `pnpm lint` (code l
 design-adherence lint), `pnpm -r typecheck`, `pnpm test`, `pnpm test:adverse`, `pnpm test:visual`, the
 T109 e2e spec, and `next build` are all green.
 
-### Next task: T194 (Phase 8, US6 — tailor the design audit to brand intent) — Phases 3–7 complete
+### Next task: T225 (Session 8, sandbox-runner deploy + real dispatch) — Phases 1–7, 8, 9, 10 complete
 
-Phase 7 (billing, T180–T193) is done — see § Phase 7 near the top; **SC-008 is now green, 10 of 11
-adversarial gates**. **Next is Phase 8, User Story 6 ("Tailor the design audit to brand intent")**,
-T194–T201, starting at **T194**: a failing test asserting the mid-audit intent questionnaire pause
-holds no worker slot (R4). The pause/resume plumbing already exists from Phase 2J
-(`awaitQuestionnaire` writes state, emits the prompt, schedules a delayed job, and returns — no timer,
-no polling); Phase 8 wires the questionnaire content into the design area and makes findings reference
-the stated intent. (The sandbox and capability marketplace are Phase 10, T218's SC-017 — not this
-one.)
+**240 of 250 tasks done. All 11 adversarial gates are green** — Phase 10 (Session 7 of the [full-project
+remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md), T216–T224)
+closed SC-017, the last one, on 2026-09-04. See "Phase 10 (sandbox-runner core isolation)" above for the
+full account, including the two Criticals two independent adversarial reviews found and closed
+(a vm-context prototype-chain escape; an unconditional child-process leak) and the two Windows-specific
+gaps recorded honestly open (Open Decisions #18, #19 below).
+
+**Next is Session 8 of the roadmap (T225–T226)**: deploy `sandbox-runner` as a genuinely separate
+deployment with no egress and no database credentials (T225, `infrastructure/sandbox-runner.md`), then
+replace `apps/api/src/routes/admin/capabilities.routes.ts`'s current unconditional `503
+SANDBOX_UNAVAILABLE` with real dispatch to the now-built-and-verified sandbox (T226). This is the last
+item in Phase 10 and the last remaining piece of US7. T225's real deployment target is also the place to
+resolve the two Windows-specific gaps Session 7 left open (empty-env leakage, the fs-permission
+glob-matching quirk) — confirm on the actual Linux target rather than carry them forward unverified.
+
+Phase 8 (US6, the mid-audit design-intent questionnaire, T194–T201) and Phase 9 (US7, T202–T215) are
+both already complete — see their own sections above. The paragraph below predates both and is kept for
+the historical T136–T143 context it carries.
 
 Two pre-existing gate failures were fixed during Phase 6 rather than worked around, and both are worth
 knowing about before the next session runs the gates:
@@ -1731,8 +1836,8 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 6 — US4 source audit | T169–T179 | ✅ done | Archive + repo input, streaming extraction guard, refused before extraction and before charging. § Phase 6 near top |
 | 7 — US5 billing | T180–T193 | ✅ done | **SC-008 green** — subscriptions, entitlements before charging, credit purchase, signed idempotent webhook, retention + self-contained export. § Phase 7 near top |
 | 8 — US6 questionnaire | T194–T201 | ✅ done | Mid-audit design-intent pause, wired end to end; one Critical regression found and fixed by the whole-feature review — § below |
-| 9 — US7 admin | T202–T215 | ⬜ | SC-009, SC-010. **First `requireOperator` route lands here** |
-| 10 — Sandbox runner | T216–T226 | ⬜ | SC-017. Complete or not at all |
+| 9 — US7 admin | T202–T215 | ✅ done | SC-009, SC-010. First `requireOperator` route; Sessions 4–6 |
+| 10 — Sandbox runner | T216–T226 | 🟡 9/11 | **SC-017 green.** T216–T224 done (Session 7); T225–T226 (deploy + real dispatch) remain — Session 8 |
 | 11 — Polish | T227–T236 | 🟡 1/10 | T230 done early (finding M7) |
 
 ## Adversarial gates — honest scoreboard
@@ -1748,10 +1853,11 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | SC-012 | Total provider failure still delivers measured findings | T077 | ✅ **GREEN** — 4 outage shapes, plus total exhaustion |
 | SC-015 | Source destroyed on all four exit paths | T102 | ✅ **GREEN** — four exit paths, confinement mutation-tested |
 | SC-016 | Planted credentials never reach a provider | T058 | ✅ **GREEN** — 15 planted credentials, 76 assertions |
-| SC-017 | Six escape attempts refused, host survives | T218 | ⬜ |
+| SC-017 | Six escape attempts refused, host survives | T218 | ✅ **GREEN** — 6-vector SC-017 suite plus 2 vm-context prototype-chain escape tests (found by adversarial review, not in the original suite) and a process-cleanup test; two independent reviews, two Criticals found and closed |
 | SC-021 | Load generation refused without verified control | T052 | ✅ **GREEN** — 3 named bypasses + 2 forged-state cases |
 
-**10 of 11 green.** SC-017 (T218) lands with Phase 10.
+**11 of 11 green.** SC-017 (T218) landed with Phase 10, Session 7 (2026-09-04) — see "Phase 10
+(sandbox-runner core isolation)" above.
 
 ---
 
@@ -2022,6 +2128,8 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 15 | `grantLot` has no idempotency key (2026-09-02 Phases 4–7 remediation, Task 5) | **Resolved (2026-09-03, Session 2 of the [full-project remediation roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)).** Added a nullable, unique `billingEventId` column to `CreditTransaction` (migration `20260903050000_credit_transaction_billing_event_id`) — Postgres treats multiple `NULL`s as distinct, so registration's free grant and the direct dev/test billing routes (neither passes an id) are unaffected. `grantLot` now creates the `CreditTransaction` *before* the `CreditLot` specifically so a duplicate `billingEventId` is caught before any lot exists to roll back; a conflict throws `DuplicateBillingEventGrantError`, which `subscribe`/`renewSubscription`/`purchaseCredits` each catch around their own `$transaction` and answer with the already-committed state instead of re-throwing — letting Postgres roll back the whole retry attempt (including, in `subscribe`'s case, a harmless re-write of the subscription row to the same values an earlier attempt already committed) rather than trying to catch-and-continue mid-transaction, which would risk committing an orphaned lot if Postgres marks the transaction aborted after the failed insert. `webhooks.routes.ts` now passes `event.id` into all three effect calls. New test in `billing-webhook.test.ts` proves the exact residual scenario this closes: an effect that commits for real, followed by a rigged `appliedAt` write failure, followed by a genuine retry — balance stays at the single grant, not double. Full adverse suite (570/571) and full unit suite (805/805) both green, run in isolation to avoid the shared-test-DB contamination this roadmap's Environment gotchas section warns about (hit twice again during this session's own verification, each time confirmed as contamination — not a regression — by re-running alone) |
 | 16 | Root `pnpm run typecheck` **and `pnpm run build`** both fail on a pre-existing turbo cyclic-dependency warning, unrelated to any code change (surfaced 2026-09-04, Session 4 wrap-up; confirmed to also break `build` during Session 6's whole-branch gate) | **Needs a call, not urgent.** `apps/worker`'s `package.json` has depended on `@webaudit/api` as a real workspace dependency since T113 (Open Decision #10 above — the generated Prisma client, judged a shared ORM artifact rather than application logic). `turbo run typecheck` (the second half of the root `typecheck` script, after the plain `tsc --noEmit -p tsconfig.json` that runs first and passes) and, identically, `turbo run build` (the entire root `build` script) both walk the same `^build` dependency graph and refuse outright: `apps/api` and `apps/worker` each list the other as a dependency somewhere (api's own `package.json` has no runtime dependency on worker — confirmed by reading it — so this is almost certainly turbo conflating a test-only/dev dependency with a build-graph edge), and turbo treats any A-depends-on-B-depends-on-A as fatal regardless of which edge is dev-only. Confirmed pre-existing and not introduced by Phase 9a: `git show d519cb2:apps/worker/package.json` (the commit immediately before Session 4's work began) already lists `@webaudit/api` as a dependency. Neither `apps/api` nor `apps/worker` has its own `build` script at all (only `apps/web` does, `next build`) — Session 6's whole-branch gate confirmed that one directly (`apps/web/tests/visual/harness.test.ts` runs a real `next build` internally as part of its own mechanism, and it passed clean), so the only package this root script would meaningfully build is unaffected by the graph error in practice; the failure is purely turbo's own dependency-graph bookkeeping refusing to proceed before it would even reach that step. Every verification in this session and the three before it ran `tsc --noEmit`/`eslint` per-package rather than the root scripts, which is why this had gone unnoticed until Session 4's wrap-up (for `typecheck`) and Session 6's (for `build`). Not fixed here — out of scope for an admin-surface task list — but worth a real decision: either accept `apps/worker`'s dependency on `@webaudit/api` needs to be a devDependency turbo's graph can be told to ignore, or both root scripts need to stop shelling out to `turbo run {typecheck,build}` and just walk packages directly the way every session so far has already done by hand |
 | 17 | The admin console (`apps/web/app/(admin)/`) has no per-screen visual-regression baseline for any of its 6 real screens (surfaced 2026-09-04, Session 5 wrap-up) | **Needs a call.** `apps/web/tests/visual/harness.test.ts` has zero coverage for any `/admin/*` route — confirmed by reading the whole file. This predates Session 5: the first two admin pages (`AdminProvidersPage`, `AdminScansPage`, T244) shipped with none either, and Session 5's four new pages (T212–T215) inherited the same gap rather than introducing it, since `design-system/reference-pages/` only exports one combined "Admin Console" HTML page, not one per screen, so there is no per-screen reference image to diff against without first producing one. Every admin page instead gets the console's own already-established `renderToStaticMarkup`/no-jsdom structural test (`admin-shell.test.ts`, `admin-screens.test.ts`, and Session 5's five new `admin-*.test.ts` files), which proves the pre-data shell renders correctly but proves nothing about pixel-level token/spacing fidelity. Needs a real decision: extract one reference screenshot per admin screen from the combined console export and wire real `pnpm test:visual` coverage, or explicitly accept structural-test-only coverage for this console as a permanent, documented choice (distinct from a "no design exists" gap — a design exists for every admin screen; only the *test* baseline is missing). Session 6 (the dedicated admin-surface adversarial review) is the natural place to make this call, since it already reviews the whole admin surface as one unit. |
+| 18 | `apps/sandbox-runner`'s child `fork(..., {env: {}})` still measurably leaks ~11 real OS-required env vars (`HOMEDRIVE`, `PATH`, `SYSTEMROOT`, etc.) on this Windows dev machine despite an empty `env` object being passed (found live during Session 7, T220, 2026-09-04) | **Needs verification on the real deploy target, not a design call.** Confirmed via a live escape reproduction reading `process.env` from inside the sandbox child. Assessed as very likely a Windows-specific `fork()` behaviour (Windows requires several of these for the OS process loader itself to function) and not necessarily present on Linux, but this has not been checked on Linux and this development environment cannot check it. Action: confirm empty-env behaviour on the actual Linux target during Session 8/T225's real deployment before treating this as closed; if it reproduces on Linux too, the fix is an explicit env allowlist rather than relying on an empty object. |
+| 19 | `apps/sandbox-runner`'s `--allow-fs-read`/`--allow-fs-write` glob matching produces a garbled, mis-cased resource path (`\\?\c:\uSERS\...`) for certain glob forms on this Windows machine (found live during Session 7, T223, 2026-09-04) | **Worked around, not root-caused.** Certain glob forms (mixed-separator paths, a bare wildcard-everything pattern) triggered this; a bare `*` wildcard worked when a scoped glob form of the same intent didn't, suggesting a real Node permission-model glob-matching quirk on Windows rather than a logic error in the granted paths. Worked around by using `path.sep`-consistent, narrowly-scoped allow-paths (three specific directories, computed via `fileURLToPath`, not a broad glob) in the shipped `host/server.ts` `readAllowlist` — the workaround is what actually runs, so the shipped guarantee is not weakened, but the underlying Node behaviour itself remains unexplained. Not expected to matter on Linux (the deploy target), but not verified there either. |
 
 ## Carried corrections — still open
 
@@ -2151,39 +2259,49 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 ## Reality check on "production ready"
 
-The core loop works and CI genuinely gates merges. Honest state as of Phase 7:
+The core loop works and CI genuinely gates merges. Honest state as of Phase 10 (2026-09-04):
 
-- **209 of 250 tasks (84%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7 are complete. A real audit runs against a
-  live URL, an uploaded archive, or a connected GitHub repository, through the real orchestrator and
-  16 vendored capabilities; a human drives it through the UI; the fix loop turns issues green only on
-  a passing re-check; a readiness pass returns a go/no-go verdict with named blockers and a
-  shareable certificate; and the account can be subscribed to a plan, buy non-expiring credits, and
-  is never billed for a platform failure (refunds are visible on the ledger).
-- **Still not built (Phases 8–11, 41 tasks):**
-  - **Phase 8 (US6)** — the design-intent questionnaire pause. The orchestrator currently always
-    proceeds straight past the UI phase on defaults.
-  - **Phase 9 (US7)** — the entire operator surface. **The first `requireOperator` route lands
-    here**; there is no admin API yet. **SC-009, SC-010**.
-  - **Phase 10** — `sandbox-runner`. Untrusted uploaded capabilities cannot run; the upload path
-    correctly returns `503`. **SC-017**. Complete or not at all.
+- **240 of 250 tasks (96%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7, 8, 9, and 10 are all complete. A real
+  audit runs against a live URL, an uploaded archive, or a connected GitHub repository, through the
+  real orchestrator and 16 vendored capabilities; a human drives it through the UI; the fix loop turns
+  issues green only on a passing re-check; a readiness pass returns a go/no-go verdict with named
+  blockers and a shareable certificate; the account can be subscribed to a plan, buy non-expiring
+  credits, and is never billed for a platform failure (refunds are visible on the ledger); the
+  mid-audit design-intent questionnaire pauses and resumes without holding a worker slot; the
+  operator admin console (users, plans, margin, capabilities, providers, queue) is live behind
+  `requireOperator`; and untrusted uploaded capabilities can now genuinely run inside three nested
+  isolation boundaries (service, process, language) rather than being refused outright.
+- **Still not built (10 tasks, all in Phase 10/11):**
+  - **Phase 10, T225–T226** — deploy `sandbox-runner` as a real, separate, no-egress/no-DB-credentials
+    deployment, and replace the upload path's current `503 SANDBOX_UNAVAILABLE` with real dispatch to
+    it. The isolation mechanism itself (T216–T224) is done and adversarially reviewed; only wiring it
+    to a real deployment and to the live route remains. Session 8 of the remediation roadmap.
   - **Phase 11** — axe-core a11y in e2e, dark-mode severity contrast, structured logging, the FR-025
     / architecture-doc corrections, deploy runbooks, the full quickstart validation pass. (T230 done
     early, at Phase 3.)
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
-- **10 of 11 adversarial gates green** (SC-007 added at Phase 4, SC-008 at Phase 7). SC-017 → Phase 10.
+- **11 of 11 adversarial gates green.** SC-017, the last one, closed 2026-09-04 with Phase 10 — see
+  "Phase 10 (sandbox-runner core isolation)" above.
 - **`pnpm format:check` is red** on ~two dozen files from Phases 4–5, `apps/probe-pool`, and several
-  vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–7 touched
+  vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–10 touched
   is formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
+- **Two honestly-open, unverified gaps from Phase 10** (Open Decisions #18, #19): empty-env leakage
+  and an fs-permission glob-matching quirk, both found on this Windows dev machine and both assessed
+  as likely Windows-specific but not yet confirmed on the real Linux deployment target — flagged for
+  Session 8/T225 to check.
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
   is deliverable as of Phase 5; source-level depth (repos and archives) as of Phase 6; the account
-  is billable as of Phase 7.
+  is billable as of Phase 7; brand-intent tailoring as of Phase 8; the operator console as of Phase 9;
+  untrusted-capability isolation as of Phase 10 (deployment and live dispatch pending, T225–T226).
 
 ## Commit log
 
 | | |
 | --- | --- |
+| `c90a21a` | feat(sandbox): child-process isolation with vm-escape hardening (T217–T224) |
+| `dd6bcc5` | feat(us7): capability upload refuses unconditionally, no fallback (T216) |
 | `99dcff4` | feat(us5): pay for capacity with plans and credits (T180–T193) |
 | `2a22d46` | feat(us4): audit source code, not just the served page (T169–T179) |
 | `8e64e88` | docs: task board + progress through phase 5; ignore parked worktree dirs |

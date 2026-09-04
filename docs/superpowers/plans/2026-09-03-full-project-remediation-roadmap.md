@@ -494,25 +494,45 @@ builds the isolation mechanism itself; Session 8 wires it into the real upload p
 
 **Prerequisite**: none functionally, but see the Ordering note at the top of this file.
 
+**Status: done.** Built the full mechanism, then ran **two independent adversarial review passes**
+before accepting it — the first found and this session fixed two Criticals: a vm-context
+prototype-chain escape (`Object.create(null)` alone hardens the context's own global object, but any
+host-realm value handed to the sandboxed capability afterwards — `console`, a data argument, a context
+function — carries its own prototype chain and reopens `this.constructor.constructor(...)`; fixed by
+never letting a host-realm value reach the sandboxed realm at all, via a JSON round-trip through the
+target context's own `JSON.parse` for data and a context-internal `vm.Script` build for every
+`CodeLayerContext` function, plus the same fix for a third instance in `capability-sdk`'s shared
+conformance suite), and an unconditional child-process leak (`finish()` only killed the child on
+`TIMEOUT`; every other outcome left it running forever — fixed by killing on every path). A second,
+independent review reproduced both PoCs against the fix, tried 11 further escape variants (all
+blocked), verified the leak fix at the OS process level, and found one Minor (a cross-realm blind spot
+in `describeThrown`, fixed the same way). Full write-up:
+[2026-09-04-sandbox-runner-adversarial-review.md](2026-09-04-sandbox-runner-adversarial-review.md).
+Two Windows-specific gaps (empty-env leakage, an fs-permission glob-matching quirk) were found and left
+honestly open rather than silently patched over — see PROGRESS.md Open Decisions #18/#19, both flagged
+for confirmation during Session 8's real deployment. Whole-branch gate re-run clean:
+`pnpm test` 907/907, `pnpm test:adverse` 639/640 (1 pre-existing skip). Committed as `dd6bcc5` (T216)
+and `c90a21a` (T217–T224). **This closes SC-017 — all 11 adversarial gates are now green.**
+
 ### Tasks
-- [ ] T216 — Implement `POST /admin/capabilities/upload` returning `503 SANDBOX_UNAVAILABLE` with no
+- [X] T216 — Implement `POST /admin/capabilities/upload` returning `503 SANDBOX_UNAVAILABLE` with no
       fallback path in `apps/api/src/routes/admin/capabilities.routes.ts` (if Session 4 didn't
       already stub this — check first).
-- [ ] T217 — Write the hostile fixture capability attempting filesystem read, filesystem write,
+- [X] T217 — Write the hostile fixture capability attempting filesystem read, filesystem write,
       outbound connection, environment read, process spawn, and an allocation bomb in
       `apps/sandbox-runner/tests/fixtures/hostile-capability/index.js`
-- [ ] T218 — Write the failing suite asserting all six attempts are refused and the host survives
+- [X] T218 — Write the failing suite asserting all six attempts are refused and the host survives
       (**SC-017**) in `apps/sandbox-runner/tests/adverse/sandbox-escape.test.ts`
-- [ ] T219 — Write failing tests asserting wall-clock and memory bounds are enforced from outside in
+- [X] T219 — Write failing tests asserting wall-clock and memory bounds are enforced from outside in
       `apps/sandbox-runner/tests/adverse/limits.test.ts`
-- [ ] T220 — Implement the child-process harness under the Node permission model with an empty
+- [X] T220 — Implement the child-process harness under the Node permission model with an empty
       environment in `apps/sandbox-runner/src/child-harness/harness.ts`
-- [ ] T221 — Implement parent-armed timeout and SIGKILL, unstarvable by the child, in
+- [X] T221 — Implement parent-armed timeout and SIGKILL, unstarvable by the child, in
       `apps/sandbox-runner/src/limits/timeout.ts`
-- [ ] T222 — Implement OS memory limits per execution in `apps/sandbox-runner/src/limits/memory.ts`
-- [ ] T223 — Implement the sandbox protocol host accepting plain serialised data only, per
+- [X] T222 — Implement OS memory limits per execution in `apps/sandbox-runner/src/limits/memory.ts`
+- [X] T223 — Implement the sandbox protocol host accepting plain serialised data only, per
       `contracts/realtime-and-internal.md`, in `apps/sandbox-runner/src/host/server.ts`
-- [ ] T224 — Implement in-sandbox conformance verification before first use (FR-029) in
+- [X] T224 — Implement in-sandbox conformance verification before first use (FR-029) in
       `apps/sandbox-runner/src/host/conformance.ts`
 
 ### Definition of done

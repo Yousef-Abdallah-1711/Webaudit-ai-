@@ -563,15 +563,41 @@ This closes US7 (admin console) end to end — Sessions 4, 5, and 6 all done.
 
 **⚠️ This phase must never be partially shipped.** A fallback to unsandboxed execution is the one failure mode this project treats as unshippable.
 
-- [ ] T216 [US7] Implement `POST /admin/capabilities/upload` returning `503 SANDBOX_UNAVAILABLE` with no fallback path in `apps/api/src/routes/admin/capabilities.routes.ts`
-- [ ] T217 [P] [US7] Write the hostile fixture capability attempting filesystem read, filesystem write, outbound connection, environment read, process spawn, and an allocation bomb in `apps/sandbox-runner/tests/fixtures/hostile-capability/index.js`
-- [ ] T218 [US7] Write the failing suite asserting all six attempts are refused and the host survives (**SC-017**) in `apps/sandbox-runner/tests/adverse/sandbox-escape.test.ts`
-- [ ] T219 [P] [US7] Write failing tests asserting wall-clock and memory bounds are enforced from outside in `apps/sandbox-runner/tests/adverse/limits.test.ts`
-- [ ] T220 [US7] Implement the child-process harness under the Node permission model with an empty environment in `apps/sandbox-runner/src/child-harness/harness.ts`
-- [ ] T221 [US7] Implement parent-armed timeout and SIGKILL, unstarvable by the child, in `apps/sandbox-runner/src/limits/timeout.ts`
-- [ ] T222 [US7] Implement OS memory limits per execution in `apps/sandbox-runner/src/limits/memory.ts`
-- [ ] T223 [US7] Implement the sandbox protocol host accepting plain serialised data only, per [contracts/realtime-and-internal.md](./contracts/realtime-and-internal.md), in `apps/sandbox-runner/src/host/server.ts`
-- [ ] T224 [US7] Implement in-sandbox conformance verification before first use (FR-029) in `apps/sandbox-runner/src/host/conformance.ts`
+- [X] T216 [US7] Implement `POST /admin/capabilities/upload` returning `503 SANDBOX_UNAVAILABLE` with no fallback path in `apps/api/src/routes/admin/capabilities.routes.ts`
+- [X] T217 [P] [US7] Write the hostile fixture capability attempting filesystem read, filesystem write, outbound connection, environment read, process spawn, and an allocation bomb in `apps/sandbox-runner/tests/fixtures/hostile-capability/index.js`
+- [X] T218 [US7] Write the failing suite asserting all six attempts are refused and the host survives (**SC-017**) in `apps/sandbox-runner/tests/adverse/sandbox-escape.test.ts`
+- [X] T219 [P] [US7] Write failing tests asserting wall-clock and memory bounds are enforced from outside in `apps/sandbox-runner/tests/adverse/limits.test.ts`
+- [X] T220 [US7] Implement the child-process harness under the Node permission model with an empty environment in `apps/sandbox-runner/src/child-harness/harness.ts`
+- [X] T221 [US7] Implement parent-armed timeout and SIGKILL, unstarvable by the child, in `apps/sandbox-runner/src/limits/timeout.ts`
+- [X] T222 [US7] Implement OS memory limits per execution in `apps/sandbox-runner/src/limits/memory.ts`
+- [X] T223 [US7] Implement the sandbox protocol host accepting plain serialised data only, per [contracts/realtime-and-internal.md](./contracts/realtime-and-internal.md), in `apps/sandbox-runner/src/host/server.ts`
+- [X] T224 [US7] Implement in-sandbox conformance verification before first use (FR-029) in `apps/sandbox-runner/src/host/conformance.ts`
+
+**Session 7 (sandbox-runner core isolation) is done: T216–T224.** Built the three nested boundaries from
+near-empty scaffolding: a bundle format (JS source whose completion value is the `AuditCapability` object),
+an esbuild-precompiled harness run by plain `node` inside a `--permission`-restricted child (`tsx`/`esbuild`'s
+own worker-thread usage conflicts with `--allow-worker` denial, so the harness is flattened once by the
+unrestricted host and the child compiles nothing at runtime), parent-armed `SIGKILL` timeout
+(`limits/timeout.ts`), `--max-old-space-size` memory enforcement (`limits/memory.ts`), and a conformance HTTP
+wrapper (`host/conformance.ts`). Two independent adversarial reviews were run. The first found two Criticals:
+a vm-context prototype-chain escape (`Object.create(null)` as the context global blocks the top-level
+`this.constructor.constructor(...)` escape, but any host-realm value handed in afterwards — `console`, a data
+argument, a context function — carries its own prototype chain and reopens it; fixed by never letting a
+host-realm value reach the sandboxed realm at all: data crosses via `cloneIntoContext`'s JSON round-trip
+through the target context's own `JSON.parse`, and the entire `CodeLayerContext` is built by one `vm.Script`
+executed inside the target context so every function's own constructor chain is rooted there too — plus a
+third, narrower instance of the same bug in `capability-sdk`'s shared conformance suite, closed with optional
+`buildCanRunTrap`/`buildReverifyProbe` hooks on `ConformanceDeps` that default to the original construction),
+and an unconditional child-process leak (`finish()` only killed the child on the `TIMEOUT` path; fixed by
+killing on every resolution path). A second, independent review reproduced both PoCs against the fix, tried
+11 further escape variants (all blocked), verified the leak fix across all six response outcomes at the OS
+process level, and found one Minor (`describeThrown`'s cross-realm blind spot, fixed the same way and used to
+delete a redundant local copy in `harness.ts`). Also fixed: an unbounded `POST /execute` request body (16 MiB
+cap). Two Windows-specific gaps found and honestly left open rather than silently ignored — see PROGRESS.md's
+dated Session 7 section and Open Decisions. Full whole-branch gate re-run clean:
+`pnpm test` 907/907, `pnpm test:adverse` 639/640 (1 pre-existing skip). Full findings recorded in
+`docs/superpowers/plans/2026-09-04-sandbox-runner-adversarial-review.md`.
+
 - [ ] T225 [US7] Deploy `sandbox-runner` with no egress and no database credentials, documented in `infrastructure/sandbox-runner.md`
 - [ ] T226 [US7] Replace the 503 with real dispatch to the sandbox in `apps/api/src/services/admin/capability-upload.service.ts`
 
