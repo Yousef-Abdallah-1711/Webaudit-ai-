@@ -344,13 +344,13 @@ never author; tokens only via `var()`; both viewports (1440 and 390) measured; t
 against a mock).
 
 ### Tasks
-- [ ] T212 — Port the margin screen from `design-system/ui_kits/admin/AdminScreens.jsx` into
+- [x] T212 — Port the margin screen from `design-system/ui_kits/admin/AdminScreens.jsx` into
       `apps/web/app/(admin)/admin/billing/page.tsx` — adherence lint clean, visual diff ≤0.5% at
       1440/390
-- [ ] T213 — Port the capabilities screen into `apps/web/app/(admin)/admin/capabilities/page.tsx` —
+- [x] T213 — Port the capabilities screen into `apps/web/app/(admin)/admin/capabilities/page.tsx` —
       same gates
-- [ ] T214 — Port the queue screen into `apps/web/app/(admin)/admin/queue/page.tsx` — same gates
-- [ ] T215 — Port users and plans screens into `apps/web/app/(admin)/admin/users/page.tsx` and
+- [x] T214 — Port the queue screen into `apps/web/app/(admin)/admin/queue/page.tsx` — same gates
+- [x] T215 — Port users and plans screens into `apps/web/app/(admin)/admin/users/page.tsx` and
       `apps/web/app/(admin)/admin/plans/page.tsx` — same gates
 
 ### Definition of done
@@ -358,6 +358,35 @@ All four screens pass `pnpm lint` and `pnpm test:visual` at both viewports, or c
 three-place-documented exception per CLAUDE.md's UI-work rules (component's own module note,
 `design/screen-map.md`'s "Documented exceptions" table, and a `research.md` decision entry) — not a
 silent gap.
+
+**Status: done, with one gate honestly unmet rather than silently claimed.** All four screens are wired to
+Session 4's real backend (`GET`/`PATCH`/`POST` calls, not the mock's static rows), `pnpm run lint:adherence`
+is clean (0 warnings/errors across 97 files), and `pnpm test:visual` itself passes (6/6, 7 pre-existing
+`it.todo`, unchanged from before this session) — but that pass is **not** evidence for these four pages
+specifically: `apps/web/tests/visual/harness.test.ts` has zero coverage for any `/admin/*` route at all,
+confirmed by reading the whole file, and neither did the two admin pages that shipped before this session
+(`AdminProvidersPage`, `AdminScansPage`, T244). This is not the "documented exception" mechanism this
+Definition of done points at — that mechanism is for UI invented without a design source (T143, T201's
+precedent); every pixel on these four pages is a straight port of `AdminScreens.jsx`, nothing invented. The
+actual gap is narrower and pre-existing: no per-screen reference image exists to diff against
+(`design-system/reference-pages/` exports one combined console HTML, not one per screen), so there is
+nothing for `pnpm test:visual` to compare these pages to. Recorded as PROGRESS.md's new Open Decision #17
+rather than silently passed over, with the decision (build reference images vs. formally accept
+structural-test-only coverage) explicitly deferred to Session 6, which already reviews the whole admin
+surface as one unit. In its place, each page carries the console's own already-established
+`renderToStaticMarkup`/no-jsdom pre-data-shell test.
+
+Real design-fidelity decisions worth recording: the margin screen (T212) drops the mock's fabricated
+"Gross margin 78%" stat and per-capability margin-percentage column — the real backend (T206) refuses to
+compute either, since credits and USD micros have no published conversion rate anywhere in this codebase
+(PROGRESS.md's Open Decision #3) — and the plans screen (T215) drops the mock's fabricated "Price" column
+for the identical reason. Two independent reviews (T212 alone given its constitutional weight; T214+T215
+together) found no blocking or should-fix issues, including several empirically traced races (retry/cancel
+timing, a double-click-on-"Load more" pagination race) all found sound. `tasks.md`'s T212–T215 marked
+`[X]`. Full verification clean: `apps/web` unit (23 files / 147 tests), `pnpm test:visual` (unchanged
+baseline), full monorepo `pnpm run test` after this session's changes — see PROGRESS.md's Phase 9b section
+for the full account. **Not built**: Session 6 (the dedicated admin-surface adversarial review), which
+should also resolve Open Decision #17.
 
 ---
 

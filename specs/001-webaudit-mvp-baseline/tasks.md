@@ -515,10 +515,32 @@ a positive case proving a real operator gets 200. Full `apps/api` unit (45 files
 files / 191 tests) suites both re-run clean after mounting. See PROGRESS.md's Phase 9a section for the full
 account. **Not done in this session**: T212–T222 (US7 frontend + the dedicated admin-surface adversarial
 review — Sessions 5 and 6 of the roadmap).
-- [ ] T212 [P] [US7] Port the margin screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/billing/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
-- [ ] T213 [P] [US7] Port the capabilities screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/capabilities/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
-- [ ] T214 [P] [US7] Port the queue screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/queue/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
-- [ ] T215 [P] [US7] Port users and plans screens from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/users/page.tsx` and `apps/web/app/(admin)/admin/plans/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T212 [P] [US7] Port the margin screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/billing/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T213 [P] [US7] Port the capabilities screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/capabilities/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T214 [P] [US7] Port the queue screen from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/queue/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+- [X] T215 [P] [US7] Port users and plans screens from `design-system/ui_kits/admin/AdminScreens.jsx` into `apps/web/app/(admin)/admin/users/page.tsx` and `apps/web/app/(admin)/admin/plans/page.tsx` - adherence lint clean, visual diff <=0.5% at 1440/390
+
+**Session 5 (US7 admin frontend) is done: T212–T215**, all four wired to the real Session 4 backend rather
+than the mock's static placeholder rows. `pnpm run lint:adherence` is clean (0 warnings/errors, 97 files) for
+all four. **The "visual diff <=0.5% at 1440/390" half of each task's own completion line could not be
+literally satisfied**: no per-screen visual-regression baseline exists for this admin console at all —
+confirmed by reading `apps/web/tests/visual/harness.test.ts` in full, which has zero `describe` blocks for
+`/admin/*` anywhere, and confirmed further that the two already-shipped admin pages from an earlier phase
+(`AdminProvidersPage`, `AdminScansPage`, T244) never got one either. This is a pre-existing gap in the admin
+console's test coverage, not something this session introduced or could unilaterally fix by inventing a
+reference image with no design-system source to diff against; T212–T215 instead follow this console's
+existing, already-established test convention (`admin-shell.test.ts`/`admin-screens.test.ts`,
+`renderToStaticMarkup`, no jsdom, asserting the pre-data shell). Recorded here rather than silently claimed
+satisfied. Real design-fidelity decisions worth noting: the margin screen (T212) deliberately drops the
+mock's fabricated "Gross margin 78%" stat and per-capability margin-percentage column — the real backend
+(T206) refuses to compute either, since credits and USD micros have no published conversion rate anywhere
+in this codebase (Open Decision #3) — and the plans screen (T215) drops the mock's fabricated "Price"
+column for the identical reason. Two independent reviews (one per group of pages) found no blocking or
+should-fix issues. Full `apps/web` unit suite (23 files / 147 tests) and `pnpm test:visual` (6/6 passing, 7
+pre-existing `it.todo`, unchanged from before this session) both re-run clean. See PROGRESS.md's Phase 9b
+section for the full account. **Not done in this session**: Session 6 (the dedicated admin-surface
+adversarial review, which should also decide whether to close the visual-baseline gap named above as its
+own finding).
 
 ---
 
