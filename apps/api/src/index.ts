@@ -41,6 +41,7 @@
 import { createServer, type Server } from 'node:http';
 import { pathToFileURL } from 'node:url';
 import { Redis } from 'ioredis';
+import { createLogger } from '@webaudit/config';
 import type { PrismaClient } from '../prisma/generated/client/index.js';
 import { createApp } from './app.js';
 import { prisma, disconnect } from './db/client.js';
@@ -69,6 +70,11 @@ const DEFAULT_PORT = 3001;
  * the deploy.
  */
 const DEFAULT_DRAIN_MS = 15_000;
+
+// T231 — structured, redacted (FR-091) process-lifecycle logging. Replaces
+// this file's own `console.warn`/`console.error` calls; nothing else about
+// startup or shutdown changes.
+const logger = createLogger('api');
 
 /**
  * `PORT` first, then `API_PORT`.
@@ -111,7 +117,7 @@ function createSubscriber(url: string): RedisSubscriber & { disconnect(): void }
   // EventEmitter with no `error` listener rethrows as an uncaught exception. A
   // Redis blip must not take down an API that can still serve every route.
   client.on('error', (error: Error) => {
-    console.warn(`[realtime] subscriber error: ${error.message}`);
+    logger.warn('realtime subscriber error', { error: error.message });
   });
 
   // Adapted explicitly rather than passed as-is. ioredis's `on` is heavily
@@ -242,7 +248,7 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
     if (shuttingDown !== undefined) return shuttingDown;
 
     shuttingDown = (async (): Promise<void> => {
-      console.warn(`[api] ${reason} — draining, up to ${String(drainMs)}ms.`);
+      logger.warn('draining', { reason, drainMs });
 
       // 1. Stop accepting. Synchronous effect; the callback is the drain.
       const drained = new Promise<void>((resolve) => {
@@ -261,7 +267,7 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
       } catch (error) {
         // Never let a transport failure block the shutdown. Redis is not the
         // system of record; there is nothing here to lose.
-        console.warn(`[api] fan-out stop failed: ${describe(error)}`);
+        logger.warn('fan-out stop failed', { error: describe(error) });
       }
       ownedSubscriber?.disconnect();
 
@@ -270,7 +276,7 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
       try {
         await realtime.close();
       } catch (error) {
-        console.warn(`[api] websocket close failed: ${describe(error)}`);
+        logger.warn('websocket close failed', { error: describe(error) });
       }
 
       // 4. Now wait for in-flight HTTP. Bounded, then closed by hand — a request
@@ -278,7 +284,7 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
       //    deploy until the platform's SIGKILL, which is the same interruption
       //    with less in the log.
       const timer = setTimeout(() => {
-        console.error(`[api] connections still open after ${String(drainMs)}ms — closing them.`);
+        logger.error('connections still open after drain deadline — closing them', { drainMs });
         server.closeAllConnections();
       }, drainMs);
       timer.unref();
@@ -293,14 +299,14 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
         try {
           await limiters.shutdown();
         } catch (error) {
-          console.warn(`[api] rate limiter shutdown failed: ${describe(error)}`);
+          logger.warn('rate limiter shutdown failed', { error: describe(error) });
         }
       }
 
       // 6. The connection pool last: anything above might still have been
       //    finishing a query. Only ours — see `options.db`.
       if (ownsDb) await disconnect();
-      console.warn('[api] stopped.');
+      logger.warn('stopped');
     })();
 
     return shuttingDown;
@@ -335,12 +341,12 @@ function isEntrypoint(): boolean {
 if (isEntrypoint()) {
   startApi()
     .then((service) => {
-      console.warn(`[api] ${SERVICE_NAME} listening on ${String(service.port)}.`);
+      logger.info(`${SERVICE_NAME} listening`, { port: service.port });
     })
     .catch((error: unknown) => {
       // Exit non-zero so an orchestrator restarts or reports, rather than
       // treating a dead process as a deliberate stop.
-      console.error(`[api] refusing to start: ${describe(error)}`);
+      logger.error('refusing to start', { error: describe(error) });
       process.exitCode = 1;
     });
 }

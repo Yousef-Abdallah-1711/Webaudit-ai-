@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@webaudit/redaction": "workspace:*",
     "@webaudit/types": "workspace:*",
     "bullmq": "6.2.0"
   }

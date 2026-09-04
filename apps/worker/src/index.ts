@@ -39,6 +39,7 @@
 import { pathToFileURL } from 'node:url';
 import { type ConnectionOptions } from 'bullmq';
 import { Redis } from 'ioredis';
+import { createLogger } from '@webaudit/config';
 import { createExecutorFromEnv, type AiExecutor } from '@webaudit/ai-executor';
 import { createQueues, redisConnection, type QueueSet } from './queue/queues.js';
 import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers.js';
@@ -73,6 +74,11 @@ export const SERVICE_NAME = '@webaudit/worker' as const;
  * never gets to run.
  */
 const DEFAULT_SHUTDOWN_GRACE_MS = 120_000;
+
+// T231 — structured, redacted (FR-091) process-lifecycle logging. Replaces
+// this file's own `console.warn`/`console.error` calls; nothing else about
+// startup or shutdown changes.
+const logger = createLogger('worker');
 
 /**
  * Environment reads are validated rather than coerced.
@@ -239,17 +245,17 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // (a test, the placeholder path) opts out.
   if (options.handlers === undefined) {
     void scheduleTimeoutSweep(queues.maintenance).catch((error: unknown) => {
-      console.error(
-        `[worker] could not schedule the timeout sweep; stuck scans will not be ` +
-          `recovered until this is resolved: ` +
-          `${error instanceof Error ? error.message : String(error)}`,
+      logger.error(
+        'could not schedule the timeout sweep; stuck scans will not be recovered until ' +
+          'this is resolved',
+        { error: error instanceof Error ? error.message : String(error) },
       );
     });
     void scheduleBillingSweeps(queues.maintenance).catch((error: unknown) => {
-      console.error(
-        `[worker] could not schedule the billing sweep; renewals, renewal warnings and ` +
-          `report retention will not run until this is resolved: ` +
-          `${error instanceof Error ? error.message : String(error)}`,
+      logger.error(
+        'could not schedule the billing sweep; renewals, renewal warnings and report ' +
+          'retention will not run until this is resolved',
+        { error: error instanceof Error ? error.message : String(error) },
       );
     });
   }
@@ -263,7 +269,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
     if (shuttingDown !== undefined) return shuttingDown;
 
     shuttingDown = (async (): Promise<void> => {
-      console.warn(`[worker] ${reason} — draining, up to ${String(graceMs)}ms for running jobs.`);
+      logger.warn('draining for running jobs', { reason, graceMs });
 
       let timer: NodeJS.Timeout | undefined;
       const deadline = new Promise<'timeout'>((resolve) => {
@@ -285,10 +291,11 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       if (timer !== undefined) clearTimeout(timer);
 
       if (outcome === 'timeout') {
-        console.error(
-          `[worker] jobs still running after ${String(graceMs)}ms. Abandoning the wait; ` +
-            'they will be reclaimed as stalled. If this recurs, the grace period is ' +
-            'shorter than a phase job takes.',
+        logger.error(
+          'jobs still running after grace period — abandoning the wait; they will be ' +
+            'reclaimed as stalled. If this recurs, the grace period is shorter than a ' +
+            'phase job takes.',
+          { graceMs },
         );
       }
 
@@ -299,7 +306,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       uninstallTerminalRefund?.();
       uninstallTerminalTeardown?.();
       uninstallProcessGuards();
-      console.warn('[worker] stopped.');
+      logger.warn('stopped');
     })();
 
     return shuttingDown;
@@ -340,16 +347,16 @@ function isEntrypoint(): boolean {
 if (isEntrypoint()) {
   try {
     startWorker();
-    console.warn(
-      `[worker] ${SERVICE_NAME} consuming — phase orchestrator, re-verification, and the ` +
+    logger.info(
+      `${SERVICE_NAME} consuming — phase orchestrator, re-verification, and the ` +
         `repeatable timeout sweep.`,
     );
   } catch (error) {
     // Exit non-zero so an orchestrator restarts or reports rather than treating a
     // dead process as a deliberate stop.
-    console.error(
-      `[worker] refusing to start: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    logger.error('refusing to start', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     process.exitCode = 1;
   }
 }

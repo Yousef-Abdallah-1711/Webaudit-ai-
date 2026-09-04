@@ -1,7 +1,13 @@
 /* Ported verbatim from design-system/tokens/dark.css (T236a). Do not edit here; edit the source and re-port. */
 /* [EXTENDED] Dark mode. DESIGN.md §9: severity hues lighten and desaturate rather than invert,
    so the scale keeps its order. Accent holds. Surfaces invert through the cloned neutrals,
-   never to pure black. NOT YET CONTRAST-VERIFIED — see readme.md Open items. */
+   never to pure black. Contrast-verified (T228, Session 9, 2026-09-04): every --sev-* foreground
+   against its own --sev-*-bg (the pairing SeverityBadge.module.css actually uses), and against
+   --surface-page/--surface-raised, all clear WCAG AA (4.5:1) for normal text — worst case is
+   sev-critical at 5.99:1 against its own background. See
+   apps/web/tests/unit/dark-severity-contrast.test.ts for the real, permanent assertion; the
+   design-system source file's own "NOT YET CONTRAST-VERIFIED" note describes its state before this
+   verification and is not edited here since design-system/ is read-only reference. */
 :root[data-theme='dark'] {
   --accent: #fe5a01;
   --accent-hover: #ff6b1a;
