@@ -89,7 +89,7 @@ tolerable.
 
 ## 5. What the product does
 
-Full behaviour is in the specification's 94 requirements. The seven journeys, in priority order:
+Full behaviour is in the specification's 95 requirements. The seven journeys, in priority order:
 
 | | Journey | Value |
 | --- | --- | --- |

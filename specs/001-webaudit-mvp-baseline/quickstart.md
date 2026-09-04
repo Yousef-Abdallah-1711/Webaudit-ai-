@@ -5,6 +5,15 @@
 How to bring the system up locally and prove it satisfies the specification. Scenarios map to
 success criteria; each states what to run and what must be observed.
 
+> **Corrected T235 (Session 9, 2026-09-04): the commands below were never literally runnable.**
+> `pnpm test:adverse -- --suite <name>` looked like a suite-selection flag but isn't one —
+> `test:adverse` (`vitest run --project adverse --passWithNoTests --no-file-parallelism`) has no
+> `--suite` option; confirmed live, the flag is silently ignored or misinterpreted as a name filter,
+> never a suite selector. `pnpm demo:scan`/`demo:trace`/`demo:readiness` (Scenarios 1 and 3) were never
+> built — no such scripts exist in `package.json` or `scripts/`. Every scenario below now names the
+> real file path(s) that actually exercise its claim, run for real during T235's validation pass — see
+> PROGRESS.md's "Phase 11 (polish)" section for the recorded results.
+
 ---
 
 ## Prerequisites
@@ -22,7 +31,9 @@ cp .env.example .env                  # fill DATABASE_URL, REDIS_URL, provider k
 docker compose -f infrastructure/docker-compose.yml up -d    # postgres + redis
 pnpm db:migrate
 pnpm db:seed                          # plans from the spec tier table + vendored capabilities
-pnpm dev                              # web, api, worker, probe-pool
+pnpm dev                              # web, api, worker, sandbox-runner — 5 units total; probe-pool
+                                       # has no real dev process yet (infrastructure/deploy.md), so
+                                       # `turbo run dev` runs its placeholder script harmlessly
 ```
 
 Two vendors must be configured or the AI executor **refuses to start** — Principle IV's two-vendor
@@ -36,7 +47,10 @@ needing live spend is a broken suite.
 
 ```bash
 pnpm test          # unit + contract
-pnpm test:adverse  # the eight hostile suites below — these are the gates
+pnpm test:adverse  # every hostile suite — 11 named adversarial gates total (PROGRESS.md's scoreboard,
+                   # 11/11 green as of Phase 10); Scenarios 2, 4-10 below walk 9 of them by name —
+                   # SC-006 (attribution) and SC-008 (never billed for a platform failure) don't have
+                   # their own numbered scenario here, but are exercised by the same full run
 pnpm lint && pnpm typecheck
 ```
 
@@ -44,8 +58,14 @@ pnpm lint && pnpm typecheck
 
 ## Scenario 1 — First audit end to end (US1, SC-001, SC-002)
 
+No `demo:scan` CLI ever existed to run this against a live provider by hand. The real, running proof is
+`apps/web/tests/e2e/first-audit.spec.ts`, which drives the actual API (register → verify → target →
+quote → accept → create scan → poll to `COMPLETED` → fetch report) against a real, in-process
+`startApi`/`startWorker` boot and a local fixture site — the same claims this scenario states, proven
+end to end rather than by hand:
+
 ```bash
-pnpm demo:scan -- --url https://example.com --modules security,seo
+pnpm --filter @webaudit/web exec playwright test tests/e2e/first-audit.spec.ts
 ```
 
 Must observe, in order: a quote before any charge; a refusal to start until the quote is accepted;
@@ -53,10 +73,11 @@ per-area events arriving independently rather than all at once; a report carryin
 an executive summary, and issues ordered by severity; and every issue carrying a self-contained
 remediation prompt.
 
-Then confirm the two-layer ordering held (Principle III, FR-030):
+Then confirm the two-layer ordering held (Principle III, FR-030) — the real, permanent assertion for
+this is `apps/worker/tests/integration/layer-ordering.test.ts`:
 
 ```bash
-pnpm demo:trace -- --scan <scanId>
+pnpm test apps/worker/tests/integration/layer-ordering.test.ts
 ```
 
 Every `CapabilityExecution` of a `CODE` layer capability must show `costMicros = 0`, and every code
@@ -66,7 +87,7 @@ capability is a Principle III violation.
 ## Scenario 2 — Nothing turns green unearned (US2, SC-007)
 
 ```bash
-pnpm test:adverse -- --suite verification
+pnpm test:adverse apps/api/tests/adverse/verification.test.ts
 ```
 
 Three assertions, each of which must leave the issue unresolved: assert fixed with the target
@@ -78,8 +99,10 @@ Confirm cost discipline (SC-005): the re-check charges 3 credits against the aud
 
 ## Scenario 3 — Readiness verdict and regressions (US3, FR-067, FR-069)
 
+No `demo:readiness` CLI ever existed. The real, permanent proof:
+
 ```bash
-pnpm demo:readiness -- --scan <scanId>
+pnpm test apps/worker/tests/integration/readiness.fresh.test.ts apps/worker/tests/integration/readiness.regression.test.ts apps/worker/tests/unit/readiness-diff.test.ts apps/worker/tests/unit/readiness-verdict.test.ts
 ```
 
 Every area must be audited fresh — no `ModuleResult` may be copied from the baseline. Degrade one
@@ -89,7 +112,7 @@ regression, not merely a lower score, and that the verdict is no-go with that bl
 ## Scenario 4 — Source is never retained (US4, SC-015)
 
 ```bash
-pnpm test:adverse -- --suite workspace
+pnpm test:adverse apps/worker/tests/adverse/workspace.test.ts
 ```
 
 Four exit paths, four assertions: normal completion, mid-audit failure, timeout, and user
@@ -99,7 +122,7 @@ leaves a directory behind.
 ## Scenario 5 — Secrets never reach a provider (SC-016)
 
 ```bash
-pnpm test:adverse -- --suite redaction
+pnpm test:adverse packages/redaction/tests/adverse/redaction.test.ts
 ```
 
 Fixture source and markup carry planted credentials. The provider client is intercepted, and no
@@ -109,21 +132,22 @@ finding to the user. Both halves are required: silence is not a pass.
 ## Scenario 6 — The sandbox holds (SC-017)
 
 ```bash
-pnpm test:adverse -- --suite sandbox
+pnpm test:adverse apps/sandbox-runner/tests/adverse/sandbox-escape.test.ts
 ```
 
 A hostile fixture capability attempts filesystem read, filesystem write, outbound connection,
 environment read, process spawn, and an allocation bomb. Each must return `FORBIDDEN_ACCESS` or
 `MEMORY_EXCEEDED`; the host must survive all six.
 
-Before `sandbox-runner` exists, `POST /admin/capabilities/upload` must return
-`503 SANDBOX_UNAVAILABLE`. A fallback to unsandboxed execution is the one failure mode this project
-treats as unshippable.
+**As of Phase 10 (Session 7/8), `sandbox-runner` exists, is deployed, and real dispatch replaces the
+`503`** — see `infrastructure/sandbox-runner.md` and `infrastructure/deploy.md`. Before it existed,
+`POST /admin/capabilities/upload` correctly returned `503 SANDBOX_UNAVAILABLE`; a fallback to
+unsandboxed execution was, and remains, the one failure mode this project treats as unshippable.
 
 ## Scenario 7 — SSRF is refused (SC-018)
 
 ```bash
-pnpm test:adverse -- --suite ssrf
+pnpm test:adverse packages/safe-net/tests/adverse/ssrf.forms.test.ts packages/safe-net/tests/adverse/ssrf.rebinding.test.ts packages/safe-net/tests/adverse/ipv6-classifier-gaps.test.ts
 ```
 
 Table-driven across private, loopback, link-local, and metadata addresses in decimal, octal, hex,
@@ -134,7 +158,8 @@ check fails.
 ## Scenario 8 — Control gate holds (SC-021)
 
 ```bash
-pnpm test:adverse -- --suite control-gate
+pnpm test:adverse apps/api/tests/adverse/control-gate.test.ts apps/api/tests/adverse/verification-proof.test.ts
+pnpm test apps/worker/tests/integration/orchestrator-control-gate.test.ts
 ```
 
 A load-generating check must be refused against an attested-only target, a target whose token was
@@ -145,7 +170,7 @@ does not charge for the gated one.
 ## Scenario 9 — Credit integrity (SC-022)
 
 ```bash
-pnpm test:adverse -- --suite credits
+pnpm test:adverse apps/api/tests/adverse/credits.property.test.ts apps/api/tests/adverse/credits.expiry-race.test.ts apps/api/tests/adverse/credits.refund-to-lot.test.ts
 ```
 
 Property test over random grant / debit / refund / renewal sequences. Two invariants must never
@@ -156,7 +181,7 @@ get right (see [data-model.md](./data-model.md)).
 ## Scenario 10 — Degradation, not failure (SC-011, SC-012)
 
 ```bash
-pnpm test:adverse -- --suite degradation
+pnpm test:adverse apps/worker/tests/adverse/capability-disable.test.ts apps/worker/tests/adverse/capability-failure.test.ts apps/worker/tests/adverse/provider-exhaustion.test.ts
 ```
 
 Disable each capability in turn: every audit must still complete. Then make all providers fail:

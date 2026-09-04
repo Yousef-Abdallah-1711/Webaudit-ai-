@@ -609,8 +609,10 @@ Four items are recorded rather than resolved. The first two are amendments to do
 command must not silently rewrite; the third is a product decision engineering has defaulted rather
 than made; the fourth is a lint-coverage gap patched by hand pending a proper rule:
 
-1. **FR-025 needs amending** to distinguish platform egress from auditing-browser egress (R6). As
-   written it is unsatisfiable without breaking realistic page measurement.
+1. ~~**FR-025 needs amending**~~ — **Resolved, T232 (Session 9, 2026-09-04).** FR-025 now scopes
+   explicitly to platform code (allowlisted); a new FR-025a states the auditing browser's separate
+   policy — may load whatever the target page loads, isolated from platform credentials (`probe-pool`),
+   still SSRF-refused per FR-014.
 2. **`WebAuditAI_ARCHITECTURE.md` conflicts with this plan** in three places: it names `vm2`
    (superseded by R1), it awaits the questionnaire in-job (superseded by R4), and it lists three
    deployable units (superseded by R16). Constitution Governance says the architecture document

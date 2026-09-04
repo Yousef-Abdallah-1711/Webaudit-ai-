@@ -9,6 +9,13 @@ actually done.
 **Do not start any session without being asked.** This file is a plan, not a standing instruction to
 execute.
 
+**Status (2026-09-04): all nine sessions are done.** This roadmap is complete — the whole 250-task
+plan (`specs/001-webaudit-mvp-baseline/tasks.md`) is closed. See PROGRESS.md's own header and "Reality
+check on 'production ready'" section for the current, authoritative state, including every honestly-
+recorded exception (Open Decisions #18–#20, the `PublicHeader` visual-coverage gap, the new 0a-2
+accessibility finding, `apps/probe-pool` not yet deployable). Kept in full below as the historical
+record of how each session was scoped and closed.
+
 ---
 
 ## Session index
@@ -602,27 +609,41 @@ egress verification, structured logging, two documentation corrections, and fina
 the project's own definition of done. Best done last since T235/T236 validate the *whole* product,
 but nothing here is strictly blocked on Sessions 3–8 — it can start any time after Session 1.
 
+**Status: done.** Every task below is closed; full write-up in PROGRESS.md's "Phase 11 (polish &
+cross-cutting concerns)" section. Highlights: T228's real work turned out to be the contrast
+*verification* (the port was already done at T236a) — all six dark severity values pass WCAG AA
+against `SeverityBadge`'s real pairing. T227/T229 are the first tests in this repo to drive a real
+browser against a real, built `apps/web` — T229 confirms a genuine clean zero on third-party requests;
+T227 surfaced a new, real, pre-existing finding (the vendored `--accent`/`--promo-bg` tokens fail WCAG
+AA contrast on every page), narrowly excluded with full evidence, not silently suppressed. T231 wired a
+new structured, redacted logger into all three real service entrypoints, explicitly scoped (not a
+monorepo-wide `console.*` sweep). T235/T236 found `quickstart.md`'s own example commands were never
+literally runnable (`--suite` isn't a real flag; the `demo:*` scripts were never built) and fixed the
+document before using it — every scenario then ran for real and passed, with one honestly-recorded
+exception already tracked since Phase 3 (`pnpm test:visual` not green for every surface). **This closes
+the entire 250-task plan.**
+
 ### Tasks
-- [ ] T227 — Add axe-core accessibility assertions to all web e2e suites in
+- [X] T227 — Add axe-core accessibility assertions to all web e2e suites in
       `apps/web/tests/e2e/accessibility.spec.ts`
-- [ ] T228 — Port `design-system/tokens/dark.css` and contrast-verify every dark severity value (the
+- [X] T228 — Port `design-system/tokens/dark.css` and contrast-verify every dark severity value (the
       reference flags these as unverified) in `apps/web/app/globals.css`
-- [ ] T229 — Verify zero third-party runtime requests from the web app in
+- [X] T229 — Verify zero third-party runtime requests from the web app in
       `apps/web/tests/e2e/no-external-requests.spec.ts`
 - [x] T230 — Rate limiting on all public routes — **already done**, pulled forward out of order by an
       earlier review finding (M7). Nothing to do here.
-- [ ] T231 — Add structured logging with redacted sinks across all services in
+- [X] T231 — Add structured logging with redacted sinks across all services in
       `packages/config/src/logger.ts`
-- [ ] T232 — Amend `spec.md` FR-025 to separate platform egress from auditing-browser egress
+- [X] T232 — Amend `spec.md` FR-025 to separate platform egress from auditing-browser egress
       (research.md open item 1)
-- [ ] T233 — Correct `WebAuditAI_ARCHITECTURE.md` on `vm2`, in-job questionnaire, and deployable-unit
+- [X] T233 — Correct `WebAuditAI_ARCHITECTURE.md` on `vm2`, in-job questionnaire, and deployable-unit
       count (research.md open item 2)
-- [ ] T234 — Write deployment runbooks for all five units in `infrastructure/deploy.md`
-- [ ] T235 — Run the full 10-scenario validation from `quickstart.md` and record results
-- [ ] T236 — Verify every definition-of-done item in `quickstart.md` passes
+- [X] T234 — Write deployment runbooks for all five units in `infrastructure/deploy.md`
+- [X] T235 — Run the full 10-scenario validation from `quickstart.md` and record results
+- [X] T236 — Verify every definition-of-done item in `quickstart.md` passes
 
 ### A doc-hygiene task not in tasks.md, found while writing this roadmap
-- [ ] Fix CLAUDE.md's "Three known deviations in the vendored export" paragraph. It currently claims
+- [X] Fix CLAUDE.md's "Three known deviations in the vendored export" paragraph. It currently claims
       fonts-from-Google-Fonts (T127), icons-from-CDN (T247), and unwired mobile type tokens (T126)
       are all still outstanding. **They are not** — `specs/001-webaudit-mvp-baseline/tasks.md` marks
       all three `[X]` done, together at "T236a," well before this roadmap was written. Correct or

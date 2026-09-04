@@ -145,7 +145,7 @@ not across it — each row is subordinate to the one above.
 | Document | Governs |
 | --- | --- |
 | [.specify/memory/constitution.md](.specify/memory/constitution.md) | **Highest authority.** Seven principles, security constraints, design adherence, quality gates. Supersedes everything else here. |
-| [specs/001-webaudit-mvp-baseline/spec.md](specs/001-webaudit-mvp-baseline/spec.md) | 94 requirements, 22 success criteria — what the product must do |
+| [specs/001-webaudit-mvp-baseline/spec.md](specs/001-webaudit-mvp-baseline/spec.md) | 95 requirements, 22 success criteria — what the product must do |
 | [specs/001-webaudit-mvp-baseline/plan.md](specs/001-webaudit-mvp-baseline/plan.md) | Architecture, structure, build sequence |
 | [specs/001-webaudit-mvp-baseline/research.md](specs/001-webaudit-mvp-baseline/research.md) | 18 decisions with rationale and rejected alternatives |
 | [specs/001-webaudit-mvp-baseline/data-model.md](specs/001-webaudit-mvp-baseline/data-model.md) | Physical schema |

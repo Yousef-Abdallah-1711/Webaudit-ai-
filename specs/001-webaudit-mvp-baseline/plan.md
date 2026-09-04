@@ -235,12 +235,13 @@ enforced structurally rather than procedurally:
 - Principle VII and SC-007: `RESOLVED` has one inbound edge whose only trigger is a passing check, so
   no user action can turn an issue green.
 
-Two items are carried forward as documentation corrections rather than design changes, per
+One item is carried forward as a documentation correction rather than a design change, per
 Constitution Governance:
 
-1. **FR-025 needs amending** to distinguish platform egress (allowlisted) from auditing-browser
-   egress (must follow the page). As written it is unsatisfiable without measuring a page no visitor
-   sees (R6).
-2. **`WebAuditAI_ARCHITECTURE.md` conflicts** on three points — it names `vm2` (R1), awaits the
+1. **`WebAuditAI_ARCHITECTURE.md` conflicts** on three points — it names `vm2` (R1), awaits the
    questionnaire in-job (R4), and lists three deployable units (R16). Governance requires the
    architecture document be corrected to match.
+
+~~FR-025 needs amending~~ — **Resolved, T232.** FR-025 now scopes explicitly to platform code
+(allowlisted); a new FR-025a states the auditing browser's separate policy (must follow the page,
+isolated from platform credentials, still SSRF-refused).

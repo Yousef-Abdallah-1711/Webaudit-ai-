@@ -14,7 +14,7 @@ agent.
 | Document | What it governs | Authority |
 | --- | --- | --- |
 | [.specify/memory/constitution.md](.specify/memory/constitution.md) | 7 principles, security and workflow constraints | **Highest.** Supersedes everything, including the architecture doc. |
-| [specs/001-webaudit-mvp-baseline/spec.md](specs/001-webaudit-mvp-baseline/spec.md) | 94 requirements, 22 success criteria | What the product must do |
+| [specs/001-webaudit-mvp-baseline/spec.md](specs/001-webaudit-mvp-baseline/spec.md) | 95 requirements (+FR-025a, T232), 22 success criteria | What the product must do |
 | [specs/001-webaudit-mvp-baseline/plan.md](specs/001-webaudit-mvp-baseline/plan.md) | Architecture, structure, 15-stage sequence | How we build it |
 | [specs/001-webaudit-mvp-baseline/research.md](specs/001-webaudit-mvp-baseline/research.md) | 18 decisions with rationale and rejected alternatives | Why it is built that way |
 | [specs/001-webaudit-mvp-baseline/data-model.md](specs/001-webaudit-mvp-baseline/data-model.md) | Physical schema | Persistence |
@@ -23,9 +23,12 @@ agent.
 | [PRODUCT.md](PRODUCT.md) | Positioning, competitive standing, commercial model | Product judgment calls |
 | `WebAuditAI_ARCHITECTURE.md` | Original design sketch | **Historical. Partly superseded — see below.** |
 
-**`WebAuditAI_ARCHITECTURE.md` is out of date in three known places.** It names `vm2` (forbidden;
-see research R1), it awaits the questionnaire inside a job (a queue-starvation bug; R4), and it lists
-three deployable units where we have five (R16). Do not implement from it without checking the plan.
+**`WebAuditAI_ARCHITECTURE.md` was out of date in three known places** (named `vm2`, forbidden by
+research R1; awaited the questionnaire inside a job, a queue-starvation bug per R4; listed three
+deployable units where there are five, per R16) — **corrected in the document itself, T233, Session 9,
+2026-09-04**: a banner at the top and an inline note at each of the three points now say what's real
+and point at the research.md decision that supersedes the original sketch. Do not implement from it
+without checking the plan regardless — it remains historical, only these three points were wrong.
 
 ## Project state
 
@@ -176,9 +179,11 @@ export: 15 components, 26 screens, 97 tokens, and its own lint config. Constitut
 6. **Never edit `design-system/`** and never import from it at runtime. It is read-only reference,
    like `packages/capabilities-vendored/`.
 
-Three known deviations in the vendored export, each with a task to fix rather than a reason to
-copy: fonts load from Google Fonts (T127 self-hosts them), icons from a CDN (T247 vendors them), and
-the mobile type tokens are defined but never applied by a media query (T126 wires them).
+Three known deviations in the vendored export were tracked with a task each rather than copied as-is —
+**all three are now done** (fonts self-hosted, T127; icons vendored, T247; mobile type tokens wired by
+a media query, T126 — all three landed together at T236a, confirmed via `tasks.md`, well before this
+paragraph was last checked). Nothing outstanding here; kept as a record of what "port, never author"
+already closed, not a live punch list.
 
 ## Conventions
 
@@ -202,12 +207,17 @@ payloads.
 Tests come first: write the failing test, confirm it fails for the intended reason, then implement.
 
 - `pnpm test` — unit and contract
-- `pnpm test:adverse` — **the eight hostile suites. These are the gates, not extras.**
+- `pnpm test:adverse` — **all eleven hostile suites. These are the gates, not extras.**
 - `pnpm lint && pnpm typecheck`
 
-Eight success criteria are stated adversarially and each has a dedicated hostile suite: attribution,
-verification-cannot-be-faked, workspace destruction, secret redaction, sandbox escape, SSRF,
-the control gate, and credit integrity. See
+Eleven success criteria are stated adversarially and each has a dedicated hostile suite: attribution
+(SC-006), verification-cannot-be-faked (SC-007, added at Phase 4), never billed for a platform failure
+(SC-008, added at Phase 7), capability-disable degradation (SC-011, Phase 2G), total provider
+exhaustion (SC-012, Phase 2H), workspace destruction (SC-015), secret redaction (SC-016), sandbox
+escape (SC-017, added at Phase 10), SSRF (SC-018), the control gate (SC-021), and credit integrity
+(SC-022) — 11 of 11 green as of Phase 10 (2026-09-04). `quickstart.md` names nine of these as numbered
+scenarios (all but SC-008 and the resolution half of SC-011/SC-012's own scenario 10, which does cover
+both); all eleven run in the same `pnpm test:adverse` pass regardless. See
 [quickstart.md](specs/001-webaudit-mvp-baseline/quickstart.md).
 
 **Provider calls are always stubbed.** A suite that requires live LLM spend is a broken suite. Use
@@ -230,9 +240,12 @@ Every capability needs a contract test *and* a test proving its module survives 
 
 Carried forward and not yet resolved:
 
-1. **FR-025 needs amending** — it restricts audit egress to the target and providers, which would
-   break realistic page measurement. Platform egress and auditing-browser egress need separating.
-2. **`WebAuditAI_ARCHITECTURE.md` needs correcting** on the three points above.
+1. ~~**FR-025 needs amending**~~ — **Resolved, T232 (Session 9, 2026-09-04).** FR-025 now scopes
+   explicitly to platform code; a new FR-025a states the auditing browser's separate policy (may load
+   whatever the target page loads, isolated from platform credentials, still subject to SSRF refusal).
+2. ~~**`WebAuditAI_ARCHITECTURE.md` needs correcting**~~ — **Resolved, T233 (Session 9, 2026-09-04).**
+   A banner at the top plus an inline note at each of the three points now correct the document in
+   place rather than leaving readers to discover the mismatch themselves.
 3. **Monetary price points** are unset; credits and entitlements are fixed.
 4. **CSS Modules are not covered by the design-adherence lint's raw-value rule.**
    `_adherence.oxlintrc.json`'s `no-restricted-syntax` matches JS/JSX `Literal` AST nodes only, so a

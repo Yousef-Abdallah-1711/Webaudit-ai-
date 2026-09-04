@@ -1,22 +1,30 @@
 # WebAudit AI — Build Progress
 
-**Updated** 2026-09-04 · **Tasks** 242 / 250 (+T236a, not in the original 250) ·
-**Tests** `unit` **910/910**, `adverse` **642 passed / 1 pre-existing skip**, `apps/api`/`apps/web` lint +
-typecheck clean per-package (root `pnpm run typecheck`/`pnpm run build` both still fail on a pre-existing
-turbo cyclic-dependency warning unrelated to any change in this or prior sessions — Open Decision #16;
-`apps/web`'s real production build is independently confirmed clean via `pnpm test:visual`'s own
-internal `next build`). 🎯 **Phase 10 (sandbox-runner deploy + real dispatch) complete — T225–T226.
-This closes Phase 10 and US7 end to end.** Session 8 of the [full-project remediation
-roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md): a real process
-entrypoint and health route for `apps/sandbox-runner` plus a deployment runbook
-([infrastructure/sandbox-runner.md](infrastructure/sandbox-runner.md)), then replaced
-`POST /admin/capabilities/upload`'s unconditional 503 with genuine dispatch to the real, deployed
-sandbox — the last two tasks in the whole 250-task plan. An independent adversarial review found no
-unsandboxed-execution path, no auth bypass, and no SSRF in the new wiring, fixed one Minor gap in the
-new structural test itself, and confirmed one real, deliberately-not-fixed finding: running real
-dispatch end to end for the first time exposed a pre-existing Session 7 defect in `harness.ts`'s
-CONFORMANCE `rawManifest` construction — see "Phase 10 (sandbox-runner deploy + real dispatch)" below
-and Open Decision #20.
+**Updated** 2026-09-04 · **Tasks** 250 / 250 — the whole plan (+T236a, not in the original 250) ·
+**Tests** `unit` **938/938**, `adverse` **642 passed / 1 pre-existing skip**, e2e **12/12** (new
+axe-core + third-party-request suites), `test:visual` **6/6** (7 pre-existing `it.todo`), `apps/api`/
+`apps/web` lint + typecheck clean per-package (root `pnpm run typecheck`/`pnpm run build` both still
+fail on a pre-existing turbo cyclic-dependency warning unrelated to any change in this or prior
+sessions — Open Decision #16). 🎯 **Phase 11 (polish & cross-cutting concerns) complete — T227–T236.
+This closes the entire 250-task plan.** Session 9 of the [full-project remediation
+roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md): dark-mode severity
+contrast genuinely verified (WCAG AA, all six pass); real axe-core + zero-third-party-request e2e
+suites against a live, built `apps/web` (surfaced one new, real, pre-existing accessibility gap in the
+vendored brand tokens, narrowly excluded with full evidence — carried correction 0a-2); structured,
+redacted logging wired into all three real service entrypoints; FR-025 amended and
+`WebAuditAI_ARCHITECTURE.md` corrected in place; a five-unit deployment runbook
+([infrastructure/deploy.md](infrastructure/deploy.md)); and a full quickstart validation pass that
+found `quickstart.md`'s own example commands were never literally runnable and fixed them before using
+them. See "Phase 11 (polish & cross-cutting concerns)" below for the full account.
+🎯 **Phase 10b (sandbox-runner deploy + real dispatch) complete — T225–T226,
+closing Phase 10 and US7 end to end** (Session 8) — a real process entrypoint and health route for
+`apps/sandbox-runner` plus a deployment runbook, then replaced `POST /admin/capabilities/upload`'s
+unconditional 503 with genuine dispatch to the real, deployed sandbox. An independent adversarial
+review found no unsandboxed-execution path, no auth bypass, and no SSRF in the new wiring, fixed one
+Minor gap in the new structural test itself, and confirmed one real, deliberately-not-fixed finding:
+running real dispatch end to end for the first time exposed a pre-existing Session 7 defect in
+`harness.ts`'s CONFORMANCE `rawManifest` construction — see "Phase 10b (sandbox-runner deploy + real
+dispatch)" below and Open Decision #20.
 🎯 **Phase 10a (sandbox-runner core isolation) complete — T216–T224, closing
 SC-017, the last of the 11 adversarial gates. 11 of 11 green.** Session 7 of the same roadmap built the
 child-process isolation mechanism the upload path had been returning `503 SANDBOX_UNAVAILABLE` for since
@@ -525,6 +533,141 @@ clean. Both packages' `tsc --noEmit` and every touched file's `eslint` clean.
 **This closes Phase 10 end to end and, with it, US7 (the operator admin console) completely — Sessions
 4 through 8 all done.** Only Phase 11 (polish, T227–T236 minus T230 done early) remains in the whole
 250-task plan.
+
+## Phase 11 (polish & cross-cutting concerns) — T227–T236 — closes the plan, done
+
+Session 9 of the roadmap, 2026-09-04. Nine remaining tasks (T230 was already done, pulled forward at
+Phase 3 by review finding M7): accessibility, dark-mode contrast, egress verification, structured
+logging, two documentation corrections, a five-unit deployment runbook, and final validation against
+this feature's own definition of done.
+
+**T232 — FR-025 amended.** Split into FR-025 (platform code, allowlisted — capability logic, provider
+calls, storage) and a new FR-025a (the auditing browser — may load whatever the target page loads,
+isolated from platform credentials, still SSRF-refused per FR-014), per research.md's R6. `plan.md`,
+`research.md`, and `CLAUDE.md`'s own "open items"/"known open items" sections are all updated to point
+at the resolution rather than restate the gap; `CLAUDE.md`/`PRODUCT.md`/`README.md`'s "94 requirements"
+citations bumped to 95.
+
+**T233 — `WebAuditAI_ARCHITECTURE.md` corrected in place.** A banner at the top (quoting CLAUDE.md and
+research.md's R1/R4/R16 directly) plus an inline note at each of the three wrong points — §1/§7's `vm2`
+sandbox references, §6/§7's in-job questionnaire wait, and the closing "how everything connects"
+diagram's three-unit count — so a reader hits the correction at the point of error, not only in a
+preamble. The rest of the document (vendoring strategy, module/skill/AI-layer split, general UX flow
+shape) is left as directionally-accurate historical context, per its own new banner's own scoping.
+
+**T228 — dark-mode severity contrast, genuinely verified.** The port itself (`design-system/tokens/
+dark.css` into `apps/web/app/tokens/dark.css`) was already done at T236a; the real, previously-missing
+work was contrast-verifying every value the source itself flags "NOT YET CONTRAST-VERIFIED". All six
+severity foregrounds meet WCAG AA (4.5:1) against `SeverityBadge.module.css`'s actual
+foreground-on-own-background pairing, `--surface-page`, and `--surface-raised` — worst case 5.99:1
+(`sev-critical`). `apps/web/tests/unit/dark-severity-contrast.test.ts` (19 tests) computes this live
+from the real token file rather than hard-coding the ratios, so a future re-port that changes a value
+fails the test instead of a comment quietly going stale. `design-system/` itself is untouched (read-only
+reference) — the verification is recorded in the port's own comment and this test, not by editing the
+source's "unverified" note.
+
+**T227/T229 — real axe-core and third-party-request e2e suites**, the first tests in this repo to drive
+a real browser against a real, built `apps/web` (reusing `tests/visual/harness.ts`'s `startServer` — a
+real `next start` child process — rather than reinventing server boot). Six pages covered: the home page
+and the five auth pages, the ones that render with no backend/auth session needed; the heavier lift of
+booting a full API+worker+DB stack to also cover authenticated dashboard/admin pages (mirroring
+`first-audit.spec.ts`'s own composition) was not attempted, stated honestly rather than silently
+assumed done.
+
+T229's result is a genuine, freshly-observed clean zero: real request interception during a full page
+load confirms T127 (self-hosted fonts) and T247 (vendored icons) hold up in practice, not just by
+reading the source — no Google Fonts, no icon CDN, no other host, on any of the six pages.
+
+T227 found something real and new: a first, deliberately unfiltered axe-core run confirmed the
+already-known Button focus-ring gap (Open Decision 0a) is **not mechanically detectable at all** — axe
+has no rule for focus-ring visibility — but surfaced a **different, previously undocumented** finding on
+every page: the vendored `--accent`/`--promo-bg` brand tokens fail WCAG AA `color-contrast` against
+white/near-white surfaces (measured 2.53–3.14:1 against the 4.5:1 floor, on the primary `Button`, several
+inline links, and the Home page's `PromoBar`), plus one `region` finding (`PromoBar`'s text not in a
+landmark, Home page only). Both are named, vendored components; recoloring the token or rewrapping the
+markup would be an unreviewed change to `design-system/` itself, outside "port, never author" without an
+explicit, signed-off exception. The suite excludes exactly these two rule ids — nothing broader — with
+the measured evidence in its own module comment; every other axe-core rule still asserts for real on all
+six pages. Recorded as a new carried correction (0a-2) alongside 0a, not silently suppressed.
+
+**T231 — structured, redacted logging.** `packages/config/src/logger.ts`: a `createLogger(service)`
+factory over `@webaudit/redaction`'s existing `redactText` (confirmed no circular dependency —
+`packages/redaction` depends only on `@webaudit/types`), recursively redacting every string in a log
+line's message and fields (depth-bounded at 6) before it reaches `stdout`/`stderr`, with reserved core
+keys (`timestamp`/`level`/`service`/`message`) protected from being forged by a field of the same name.
+Wired into the three real process entrypoints this monorepo has — `apps/api/src/index.ts`,
+`apps/worker/src/index.ts`, `apps/sandbox-runner/src/serve.ts` — replacing every `console.warn`/
+`console.error` startup/shutdown line with a structured, redacted one. **Scope stated explicitly in the
+module's own header, not implied as broader than it is**: this is not a sweep of every `console.*` call
+site in the monorepo (`packages/capability-sdk/src/context.ts`'s own purpose-built logger, scoped to the
+untrusted capability boundary, is deliberately left alone), and `apps/probe-pool` has no real process
+entrypoint yet to wire into — both named as honest gaps, not silently assumed covered. 9 new tests prove
+the redaction genuinely happens (planted credentials in message/fields/nested objects/arrays never
+survive to the output line) and that benign content passes through completely unchanged (over-redaction
+is a real cost here too, matching `packages/redaction`'s own stated concern).
+
+**T234 — `infrastructure/deploy.md`**, covering all five units. `apps/api`/`apps/worker`/`apps/web` get
+real, verified runbooks (exact env vars from `.env.example`, network policy, exact commands — `apps/web`
+is the only unit with a real build step, `next build`). `apps/sandbox-runner` points at its own
+already-existing `sandbox-runner.md` (T225) rather than duplicating it. `apps/probe-pool` is **honestly
+documented as not yet a deployable unit** — no server entrypoint or `start` script exists, only
+`browser/pool.ts` library code and a placeholder `dev` echo — with the intended R6/R12 shape (isolated
+from platform credentials, port 3002) recorded for whenever a real bootstrap lands, rather than an
+invented, unverified runbook for code that doesn't exist.
+
+**T235/T236 — quickstart validation, and a real problem found in the validation guide itself.** Before
+running anything, checked whether `quickstart.md`'s own example commands actually work: **they didn't.**
+`pnpm test:adverse -- --suite <name>` looked like a suite-selection flag but isn't one — `test:adverse`
+has no `--suite` option, confirmed live (the flag is silently misinterpreted, never a suite selector) —
+and `pnpm demo:scan`/`demo:trace`/`demo:readiness` (Scenarios 1 and 3) were never built; no such scripts
+exist anywhere in this repo. Fixed by amending `quickstart.md` itself (per this project's own "prefer
+amending a document over quietly diverging from it" rule) to name the real file path(s) that actually
+exercise each scenario's claim, with a banner at the top explaining what changed and why. Also fixed two
+smaller stale lines in the same file: `pnpm dev`'s comment named only 4 of the 5 real units, and "the
+eight hostile suites" undercounted the current 11 (mirrored in `CLAUDE.md`'s own identical stale count,
+also corrected, with each of the 11 SC numbers named and the phase it was added at).
+
+With the commands corrected, every scenario was run for real:
+
+- **Scenario 1** (first audit end to end): `apps/web/tests/e2e/first-audit.spec.ts` — 1/1 passed. The
+  new T231 logger is visible working end to end in the run's own output (real structured JSON lines from
+  both `api` and `worker`).
+- **Scenarios 2, 4–10** (SC-007, SC-015, SC-016, SC-017, SC-018, SC-021, SC-022, SC-011/012): all
+  covered by the same whole-branch `pnpm test`/`pnpm test:adverse` run this session already ran clean
+  (below) — the corrected quickstart.md now names each scenario's own specific file(s) rather than a
+  fake flag.
+- **Scenario 3** (readiness verdict and regressions): `readiness.fresh.test.ts`, `readiness.regression
+  .test.ts`, `readiness-diff.test.ts`, `readiness-verdict.test.ts` — part of the same clean full-suite
+  run.
+- **Scenario 11** (design fidelity): `pnpm lint` clean for everything this product owns (found one real,
+  cheap gap along the way — `apps/sandbox-runner/.sandbox-build/`, T225's gitignored esbuild cache, was
+  missing from `eslint.config.js`'s ignores and produced a parse error on any machine that had already
+  exercised the sandbox once; fixed, matching the existing precedent for other generated/out-of-tsconfig
+  paths); `pnpm test:visual` — **6/6 real assertions pass, 7 remain `it.todo`** on the already-tracked
+  `PublicHeader` mobile-nav gap (named repeatedly since Phase 3, not new).
+
+**Definition of done, checked item by item**: all scenarios pass and `pnpm test:adverse` is green ✅; no
+`NEEDS CLARIFICATION` anywhere in `spec.md`/`plan.md` (grepped, zero matches) ✅; SC-006 attribution,
+SC-009 margin query, SC-010 no-deploy-to-enable all already covered by existing, passing suites from
+earlier phases ✅; `WebAuditAI_ARCHITECTURE.md` corrected ✅ (T233); `pnpm lint` clean with adherence
+rules active ✅; zero runtime requests to font/icon/asset CDNs ✅ (T229, freshly confirmed); no surface
+shipped without a `design/screen-map.md` row ✅ (unchanged since Phase 3). **The one item honestly not
+fully met**: `pnpm test:visual` green "at 1440 and 390 for every surface" — 6 of 13 assertions are real
+and green, 7 are `it.todo` on the pre-existing `PublicHeader` gap. Restated accurately here, not
+re-discovered as new and not glossed over as satisfied.
+
+**Full whole-branch verification gate**, independently re-run (not just trusting either implementer
+agent's own report): `pnpm test` **938/938** (111 files, +28 new tests — 19 contrast + 9 logger);
+`pnpm test:adverse` **642 passed / 1 pre-existing skip** (36 files, unchanged — `context-confinement
+.test.ts`'s `it.skipIf(!FILE_SYMLINKS)`, a platform-conditional skip, confirmed by name, not a new or
+unexplained gap); the new e2e suite **12/12**; `pnpm test:visual` **6/6** (unchanged real count, 7
+pre-existing `it.todo`); `tsc --noEmit` and `eslint` clean on every touched package; `pnpm lint:adherence`
+clean (0/0, 100 files).
+
+**This closes Phase 11 — the last phase in the whole plan. 250 of 250 tasks done (T001–T236, plus
+T236a not in the original count).** Every quickstart scenario passes for real, against commands that now
+actually work; every definition-of-done item is met except the one honestly-recorded visual-coverage
+gap, itself pre-existing and already tracked, not a new discovery.
 
 ## Phases 4–7 engineering review (2026-09-02) — findings fixed
 
@@ -1121,28 +1264,34 @@ happen on its own commit rather than inside a feature phase. `pnpm lint` (code l
 design-adherence lint), `pnpm -r typecheck`, `pnpm test`, `pnpm test:adverse`, `pnpm test:visual`, the
 T109 e2e spec, and `next build` are all green.
 
-### Next task: T227 (Phase 11, polish & cross-cutting concerns) — Phases 1–10 all complete
+### The plan is complete — 250 of 250 tasks done (2026-09-04)
 
-**242 of 250 tasks done. All 11 adversarial gates are green, and US7 (the operator admin console) is
-complete end to end.** Phase 10 (Sessions 7 and 8 of the [full-project remediation
-roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)) is fully done: Session
-7 (T216–T224, 2026-09-04) closed SC-017 by building the isolation mechanism itself; Session 8 (T225–T226,
-same day) deployed it for real and replaced the upload route's 503 with genuine dispatch. See "Phase 10a
-(sandbox-runner core isolation)" and "Phase 10b (sandbox-runner deploy + real dispatch)" above for the
-full account — including the two Criticals two independent adversarial reviews found and closed in
-Session 7 (a vm-context prototype-chain escape; an unconditional child-process leak), the Minor fixed in
-Session 8's own review (a `devDependencies` gap in the new structural test), and the pre-existing T224
-defect Session 8's real end-to-end test exposed but deliberately left unfixed (`harness.ts`'s
-CONFORMANCE `rawManifest` — see Open Decision #20). Two Windows-specific gaps from Session 7 remain
-honestly open (Open Decisions #18, #19) — flagged for confirmation whenever this deployment actually
-runs on its real (expected Linux) target, since this development environment cannot verify that itself.
+**Every phase is done. All 11 adversarial gates are green. US7 is complete end to end. Phase 11
+(polish, Session 9 of the [full-project remediation
+roadmap](docs/superpowers/plans/2026-09-03-full-project-remediation-roadmap.md)) closed the plan.**
 
-**Next is Phase 11 (T227–T236, minus T230 already done early)**: axe-core accessibility in the e2e
-suite, dark-mode severity-contrast verification, structured logging, the FR-025 egress-scope correction
-and the `WebAuditAI_ARCHITECTURE.md` corrections (both already named in this file's own Known open
-items), deploy runbooks for the other four apps (mirroring what `infrastructure/sandbox-runner.md` just
-established as this repo's first per-app deployment doc), and a full quickstart validation pass. This is
-the only phase left in the entire 250-task plan.
+Phase 10 (Sessions 7 and 8) built and deployed the sandbox: Session 7 (T216–T224) closed SC-017 by
+building the isolation mechanism itself; Session 8 (T225–T226) deployed it for real and replaced the
+upload route's 503 with genuine dispatch. See "Phase 10a (sandbox-runner core isolation)" and "Phase
+10b (sandbox-runner deploy + real dispatch)" above — including the two Criticals two independent
+adversarial reviews found and closed in Session 7, the Minor fixed in Session 8's own review, and the
+pre-existing T224 defect Session 8's real end-to-end test exposed but deliberately left unfixed
+(`harness.ts`'s CONFORMANCE `rawManifest` — Open Decision #20). Two Windows-specific gaps from Session 7
+remain honestly open (Open Decisions #18, #19) — flagged for confirmation whenever this deployment
+actually runs on its real (expected Linux) target.
+
+Phase 11 (Session 9, T227–T236, T230 already done early) closed the plan: dark-mode severity contrast
+genuinely verified; real axe-core + zero-third-party-request e2e suites (surfacing one new,
+real, pre-existing accessibility gap in the vendored brand tokens — carried correction 0a-2, narrowly
+excluded with full evidence); structured, redacted logging wired into all three real service
+entrypoints; FR-025 amended (a new FR-025a) and `WebAuditAI_ARCHITECTURE.md` corrected in place at all
+three of its known-wrong points; a five-unit deployment runbook (`apps/probe-pool` honestly documented
+as not yet deployable — no server entrypoint exists); and a full quickstart validation pass that first
+found `quickstart.md`'s own example commands were never literally runnable (a fake `--suite` flag,
+`demo:*` CLI scripts that were never built) and corrected them before actually running every scenario
+for real. See "Phase 11 (polish & cross-cutting concerns)" above for the full account, including the
+one honestly-recorded, already-tracked exception to the definition of done (`pnpm test:visual` is not
+green for every surface — 7 pre-existing `it.todo` on the `PublicHeader` mobile-nav gap).
 
 Phase 8 (US6, the mid-audit design-intent questionnaire, T194–T201) and Phase 9 (US7, T202–T215) are
 both already complete — see their own sections above. The paragraph below predates both and is kept for
@@ -1940,7 +2089,7 @@ same count as before — the Home-page todo's wording changed, its presence didn
 | 8 — US6 questionnaire | T194–T201 | ✅ done | Mid-audit design-intent pause, wired end to end; one Critical regression found and fixed by the whole-feature review — § below |
 | 9 — US7 admin | T202–T215 | ✅ done | SC-009, SC-010. First `requireOperator` route; Sessions 4–6 |
 | 10 — Sandbox runner | T216–T226 | ✅ done | **SC-017 green.** T216–T224 (Session 7) + T225–T226 (Session 8, deploy + real dispatch) all done |
-| 11 — Polish | T227–T236 | 🟡 1/10 | T230 done early (finding M7) |
+| 11 — Polish | T227–T236 | ✅ done | Session 9, 2026-09-04. T230 done early (finding M7). **Last phase — plan complete.** |
 
 ## Adversarial gates — honest scoreboard
 
@@ -2242,7 +2391,27 @@ files uncommitted, that work is real and in progress — do not discard it.
     author" governs a mechanical port, and adding a ring the source never had is authoring, not
     porting, however well-intentioned. `Input` does have one (`:focus`, ported), so this is
     `Button`-specific. Real accessibility gap (WCAG 2.4.7); the fix belongs in `design-system/`
-    itself or as an explicit, signed-off deviation — not slipped into a port silently.
+    itself or as an explicit, signed-off deviation — not slipped into a port silently. **Confirmed
+    axe-core cannot catch this at all** (T227, Session 9, 2026-09-04): focus-ring *visibility* has no
+    automated rule; a real, unfiltered run against all six standalone pages found zero focus-related
+    violations, confirming only a manual/visual audit ever catches this one.
+0a-2. **The vendored `--accent`/`--promo-bg` brand tokens fail WCAG AA `color-contrast`, on every
+    page** (found live, T227, Session 9, 2026-09-04 — a real, unfiltered axe-core run against all six
+    standalone pages, not assumed). `design-system/tokens/colors.css` defines both verbatim
+    (`--accent:#fe5a01`, `--promo-bg:#10b981`); `apps/web/app/tokens/colors.css` copies them unchanged,
+    so this is inherited from the vendored palette, not introduced by the port — same shape as 0a.
+    Measured against the WCAG AA 4.5:1 floor for normal text: the primary `Button` (`#fafafa` on
+    `#fe5a01`, 3.01:1) on every page's hero/nav/form CTA; the same accent used as link/eyebrow/footer-
+    wordmark text on white or `#fafafa` (3.01–3.14:1); the Home page's `PromoBar` (`#ffffff` on
+    `#10b981`/`#0c9065`, 2.53:1 / 4.04:1). A second, distinct axe-core id — `region` (moderate,
+    best-practice, not a WCAG violation) — also fires on the Home page only: `PromoBar`'s text content
+    is not contained by a landmark. Both `Button` and `PromoBar` are named, documented, vendored
+    components (`.d.ts`/`.prompt.md` pairs exist for both); recoloring the accent token or rewrapping
+    `PromoBar`'s markup would be an unreviewed design change to `design-system/`'s own tokens/
+    components, not something T227 (or any task outside an explicit, signed-off design exception) may
+    do silently. `apps/web/tests/e2e/accessibility.spec.ts` excludes exactly these two rule ids —
+    nothing broader — with the full evidence in its own module comment; every other axe-core rule
+    still asserts for real on all six pages.
 0b. **A `.js`-extensioned import to a `.tsx` file typechecks and does not run.** `tsc --noEmit` with
     `moduleResolution: bundler` accepts `from './Button.js'` against a real `Button.tsx` — that is
     the whole point of "bundler" resolution mode — but Next's actual webpack bundler does not map the
@@ -2362,29 +2531,32 @@ files uncommitted, that work is real and in progress — do not discard it.
 
 ## Reality check on "production ready"
 
-The core loop works and CI genuinely gates merges. Honest state as of Phase 10 (2026-09-04):
+The core loop works and CI genuinely gates merges. Honest state as of Phase 11, the last phase
+(2026-09-04):
 
-- **242 of 250 tasks (97%).** Phases 1, 2, 2L, 3, 4, 5, 6, 7, 8, 9, and 10 are all complete — only
-  Phase 11 (polish) remains in the entire plan. A real audit runs against a live URL, an uploaded
-  archive, or a connected GitHub repository, through the real orchestrator and 16 vendored
+- **250 of 250 tasks (100%). Every phase is complete.** A real audit runs against a live URL, an
+  uploaded archive, or a connected GitHub repository, through the real orchestrator and 16 vendored
   capabilities; a human drives it through the UI; the fix loop turns issues green only on a passing
   re-check; a readiness pass returns a go/no-go verdict with named blockers and a shareable
   certificate; the account can be subscribed to a plan, buy non-expiring credits, and is never billed
   for a platform failure (refunds are visible on the ledger); the mid-audit design-intent questionnaire
   pauses and resumes without holding a worker slot; the operator admin console (users, plans, margin,
-  capabilities, providers, queue) is live behind `requireOperator`; and an operator-uploaded capability
-  now genuinely runs inside three nested isolation boundaries (service, process, language), deployed
-  for real, with a genuine conformance verdict returned in place of the old unconditional refusal.
-- **Still not built: Phase 11 only (8 tasks)** — axe-core a11y in e2e, dark-mode severity contrast,
-  structured logging, the FR-025 / architecture-doc corrections, deploy runbooks for the other four
-  apps, the full quickstart validation pass. (T230 done early, at Phase 3.)
+  capabilities, providers, queue) is live behind `requireOperator`; an operator-uploaded capability
+  genuinely runs inside three nested isolation boundaries (service, process, language), deployed for
+  real, with a genuine conformance verdict returned in place of the old unconditional refusal; dark-mode
+  severity contrast is genuinely WCAG-AA-verified; every public page is confirmed, by real browser
+  observation, to issue zero third-party runtime requests and to pass every axe-core rule except two
+  narrowly-excluded, fully-documented, pre-existing vendored-token findings; and every service's
+  process-lifecycle logging is structured and redacted.
+- **"100% done" does not mean "nothing left to decide."** Every item below is a real, load-bearing,
+  honestly-recorded exception — read them before calling this shippable, not as a formality after.
 - **Uploading a capability produces a verdict, not an installed capability.** `POST
-  /admin/capabilities/upload` now genuinely dispatches to the real sandbox and returns a real,
-  per-check `ConformanceReport` — but does not write a `Capability` row or make the bundle executable
-  by any real scan (a deliberate scope boundary, Open Decision #20's own subject) and, separately, no
-  capability can pass full conformance today regardless of how well-formed it is, because of a
-  pre-existing gap in how the `CONFORMANCE` operation builds its manifest (also Open Decision #20).
-  Both are honestly documented, not silently assumed away.
+  /admin/capabilities/upload` genuinely dispatches to the real sandbox and returns a real, per-check
+  `ConformanceReport` — but does not write a `Capability` row or make the bundle executable by any real
+  scan (a deliberate scope boundary, Open Decision #20's own subject) and, separately, no capability can
+  pass full conformance today regardless of how well-formed it is, because of a pre-existing gap in how
+  the `CONFORMANCE` operation builds its manifest (also Open Decision #20). Both are honestly documented,
+  not silently assumed away.
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
@@ -2392,23 +2564,39 @@ The core loop works and CI genuinely gates merges. Honest state as of Phase 10 (
   "Phase 10a (sandbox-runner core isolation)" and "Phase 10b (sandbox-runner deploy + real dispatch)"
   above.
 - **`pnpm format:check` is red** on ~two dozen files from Phases 4–5, `apps/probe-pool`, and several
-  vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–10 touched
+  vendored capabilities, committed unformatted before Phase 6 started. Everything Phases 6–11 touched
   is formatted; the rest is a mechanical `npx prettier --write .` someone should own on its own commit.
-- **Three honestly-open, unverified/undecided gaps from Phase 10** (Open Decisions #18, #19, #20):
-  empty-env leakage and an fs-permission glob-matching quirk (both found on this Windows dev machine,
-  both assessed as likely Windows-specific but not yet confirmed on the real Linux deployment target —
-  flagged for whenever this deployment actually runs there), and the `CONFORMANCE` manifest gap (#20,
-  needs a real design decision about the uploaded-bundle format or the conformance suite's shared
-  code, not a quick fix).
+- **`apps/probe-pool` is not a deployable unit yet.** No server entrypoint, no `start` script — library
+  code only (`browser/pool.ts`). Documented honestly in `infrastructure/deploy.md` rather than an
+  invented runbook for code that doesn't exist.
+- **`pnpm test:visual` is not green for every surface in `design/screen-map.md`.** 6 of 13 assertions
+  are real and passing; 7 remain `it.todo` on the pre-existing `PublicHeader` mobile-nav gap, named
+  since Phase 3 — the one item in quickstart.md's own definition of done not fully met (T236's own
+  honest finding, not a new discovery).
+- **A new, real, pre-existing accessibility gap surfaced at T227**: the vendored `--accent`/
+  `--promo-bg` brand tokens fail WCAG AA `color-contrast` on every public page (carried correction
+  0a-2) — narrowly excluded from the new axe-core suite with the measured evidence documented, not
+  fixed (recoloring a design-system token needs a signed-off design exception, not a polish-task
+  side effect). Sits alongside the already-known `Button` focus-ring gap (0a), which axe-core cannot
+  mechanically detect at all.
+- **Four honestly-open, unverified/undecided gaps** (Open Decisions #18, #19, #20, plus the two above
+  restated as their own bullets for visibility): empty-env leakage and an fs-permission glob-matching
+  quirk in `sandbox-runner` (both found on this Windows dev machine, both assessed as likely
+  Windows-specific but not yet confirmed on the real Linux deployment target), and the `CONFORMANCE`
+  manifest gap (#20, needs a real design decision about the uploaded-bundle format or the conformance
+  suite's shared code, not a quick fix).
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
   is deliverable as of Phase 5; source-level depth (repos and archives) as of Phase 6; the account
   is billable as of Phase 7; brand-intent tailoring as of Phase 8; the operator console as of Phase 9;
-  untrusted-capability isolation, deployed and dispatching for real, as of Phase 10.
+  untrusted-capability isolation, deployed and dispatching for real, as of Phase 10; every
+  cross-cutting polish item verified or honestly recorded, as of Phase 11 — the last phase.
 
 ## Commit log
 
 | | |
 | --- | --- |
+| `2cdad28` | feat(polish): dark-mode contrast verification, a11y/egress e2e, structured logging (T227,T228,T229,T231) |
+| `60d3990` | docs: close out Session 8 (sandbox-runner deploy + real dispatch, spec-kit Phase 10b) |
 | `d19897e` | feat(sandbox): deploy sandbox-runner and replace the 503 with real dispatch (T225-T226) |
 | `bf7f711` | docs: close out Session 7 (sandbox-runner core isolation, spec-kit Phase 10a) |
 | `c90a21a` | feat(sandbox): child-process isolation with vm-escape hardening (T217-T224) |

@@ -3,6 +3,39 @@
 
 ---
 
+> **⚠️ Historical design sketch — partly superseded.** This document predates
+> [specs/001-webaudit-mvp-baseline/](specs/001-webaudit-mvp-baseline/) (Spec Kit's constitution, spec,
+> plan, and research) and the codebase now implements the newer document where the two disagree, per
+> the constitution's own Governance clause. **Corrected here (T233, Session 9, 2026-09-04) on the
+> three points [CLAUDE.md](CLAUDE.md) and `research.md`'s "Open items" have named since this
+> engagement began:**
+>
+> 1. **The sandbox is not `vm2`.** Every reference to `vm2` below (§1's `sandbox.ts` note, §7's skill
+>    upload flow) describes a mechanism this project's constitution (Principle V) forbids **by name**.
+>    The real mechanism is `apps/sandbox-runner` — a genuinely separate deployment with no network
+>    egress and no database credentials, each execution a fresh Node child process under the
+>    `--permission` model (no `--allow-fs-read`/`-write`/`-child-process`/`-worker`), with an empty
+>    environment and OS resource limits, plus a language-boundary harness that passes only structured
+>    data. See `research.md`'s R1 for the full three-nested-boundaries design and why `vm2` was
+>    rejected on exactly this document's own original approach ("trivially escaped via prototype access
+>    to host constructors" — confirmed the hard way during this project's own Session 7).
+> 2. **The questionnaire is not awaited inside a running job.** §6 and §7 below describe the worker
+>    blocking mid-scan ("Wait for user answers (max 10 min)") while holding a job slot. The real
+>    mechanism (`research.md`'s R4) persists scan state, emits the prompt, schedules a delayed
+>    deadline job, and **returns** — releasing the worker immediately. No timer or poll ever holds a
+>    slot; a queue-starvation bug this document's original design would have shipped.
+> 3. **There are five deployable units, not the three ("Vercel" web / "Railway" backend / worker) the
+>    closing diagram below shows.** `apps/sandbox-runner` and `apps/probe-pool` are each their own
+>    deployment too — "a security boundary is only real if it is a deployment" (`CLAUDE.md`); collapsing
+>    either into the backend process would make its isolation claim false. See `research.md`'s R16.
+>
+> **Do not implement from this document without checking `specs/001-webaudit-mvp-baseline/plan.md`
+> first.** Everything else below (the vendoring strategy, the module/skill/AI-layer split, the general
+> shape of the UX flow) is still directionally accurate and kept for that context — only these three
+> points are wrong.
+
+---
+
 ## Table of Contents
 1. [Skills Vendor Strategy (No External Dependencies)](#1-skills-vendor-strategy)
 2. [Flexible Skills Architecture](#2-flexible-skills-architecture)
@@ -214,7 +247,9 @@ OPTION C: Add via Admin Dashboard (no code needed)
 ───────────────────────────────────────────────────
 1. Admin uploads a .skill.js bundle
 2. System validates it implements AuditSkill interface
-3. System sandboxes it (vm2)
+3. System sandboxes it (vm2)                    # ⚠️ wrong — see the top-of-file correction; the
+                                                  #    real mechanism is apps/sandbox-runner (R1),
+                                                  #    not vm2, which Principle V forbids by name
 4. Admin enables it per plan
 ```
 
@@ -428,7 +463,7 @@ webaudit-ai/
 │   │       ├── skills/                         # Skills system
 │   │       │   ├── registry.ts                 # Skills registry
 │   │       │   ├── loader.ts                   # Loads skills from vendor + custom
-│   │       │   ├── sandbox.ts                  # vm2 sandbox for uploaded skills
+│   │       │   ├── sandbox.ts                  # ⚠️ not vm2 — apps/sandbox-runner (R1); see top-of-file correction
 │   │       │   └── adapters/                   # Adapters for vendored skills
 │   │       │       ├── impeccable.skill.ts
 │   │       │       ├── security-coverage.skill.ts
@@ -638,9 +673,10 @@ PHASE 2: UI Module (uses perf data for context)
 │  Screenshot → Vision → Impeccable → ui-clone │
 │                  [~60 sec]                   │
 │                                              │
-│  ⚠️ PAUSE: If questionnaire needed           │
+│  ⚠️ WRONG — see top-of-file correction: R4 never blocks a worker on this.
+│  PAUSE: If questionnaire needed              │
 │  → Send WebSocket: { action: 'questionnaire' }│
-│  → Wait for user answers (max 10 min)        │
+│  → Wait for user answers (max 10 min)        │  ← real: persist + return, no held slot
 │  → Continue with answers                     │
 └──────────────────────────────────────────────┘
         ↓
@@ -953,6 +989,9 @@ export class ScanOrchestrator {
       }
     })
 
+    // ⚠️ WRONG — see top-of-file correction. The real awaitQuestionnaire (R4)
+    // persists state, emits the prompt, schedules a delayed deadline job, and
+    // returns immediately — it never awaits inline like the sketch below.
     // ── PHASE 2: UI Module (may pause for questionnaire) ───
     // Check if questionnaire needed
     const needsQuestionnaire = scan.modules.includes('ui')
@@ -1230,6 +1269,11 @@ export const requireCredits = (amount: number) => async (req, res, next) => {
 ---
 
 ## Summary: How Everything Connects
+
+> ⚠️ **The diagram below shows three deployable units (web / backend / worker) — see the top-of-file
+> correction. There are five**: `apps/api`, `apps/worker`, `apps/web`, `apps/probe-pool`, and
+> `apps/sandbox-runner`, the last two each their own deployment specifically because a security
+> boundary is only real if it is one (`research.md` R16, R1, R6/R12).
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐

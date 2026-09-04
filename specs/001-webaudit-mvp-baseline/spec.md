@@ -378,8 +378,16 @@ completed audit is visible.
 - **FR-023**: System MUST retain a complete local copy of every externally sourced capability, such
   that removal of the original source has no effect on any audit.
 - **FR-024**: System MUST NOT retrieve capability code from a third party while an audit is running.
-- **FR-025**: System MUST restrict network access during an audit to the audit target and the
-  platform's configured providers.
+- **FR-025**: System MUST restrict **platform code's** network access during an audit — capability
+  logic, provider calls, and storage — to the audit target and the platform's configured providers.
+  Taken as a restriction on *all* audit network access this is unsatisfiable without breaking
+  realistic page measurement (a real page loads fonts, scripts, and images from many third-party
+  hosts); FR-025a states the separate policy that makes the distinction explicit.
+- **FR-025a**: The **auditing browser** MAY load whatever the audited page itself loads, because that
+  *is* the measurement — it is not bound by FR-025's allowlist. It MUST run isolated from platform
+  credentials (a separate service — `probe-pool`, R6/R12) and remains subject to the same SSRF
+  refusal FR-014 requires for platform code, so a hostile page cannot use the auditing browser as a
+  gateway into the platform's own network.
 - **FR-026**: Operators MUST be able to restrict a capability to specific plan tiers.
 - **FR-027**: System MUST execute any capability that has not passed review under restriction such
   that it cannot reach stored data, credentials, the network, the filesystem, or other running work.
