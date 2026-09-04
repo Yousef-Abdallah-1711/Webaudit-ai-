@@ -296,3 +296,20 @@ describe('DELETE /capabilities/:id', () => {
     await request(app).delete('/capabilities/does-not-exist').set(auth(token)).expect(404);
   });
 });
+
+describe('POST /capabilities/upload (T216)', () => {
+  it('always 503s SANDBOX_UNAVAILABLE, unconditionally, with no fallback', async () => {
+    const { token } = await makeOperatorToken();
+    const res = await request(app).post('/capabilities/upload').set(auth(token)).expect(503);
+    expect((res.body as { error: { code: string } }).error.code).toBe('SANDBOX_UNAVAILABLE');
+  });
+
+  it('503s regardless of what the request body carries', async () => {
+    const { token } = await makeOperatorToken();
+    await request(app)
+      .post('/capabilities/upload')
+      .set(auth(token))
+      .send({ anything: 'at all', evenA: ['malformed', 'body'] })
+      .expect(503);
+  });
+});

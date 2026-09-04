@@ -9,9 +9,22 @@
  *                                     between this contract line and
  *                                     reconcile.ts's "never deleted"
  *
- * Deliberately NOT built here: `POST /admin/capabilities/upload` — that
- * route returns `503 SANDBOX_UNAVAILABLE` while the sandbox service is not
- * deployed (R1), and depends on a different phase of this project entirely.
+ * `POST /admin/capabilities/upload` (T216, Session 7 of the roadmap):
+ * always answers `503 SANDBOX_UNAVAILABLE`, unconditionally, with no
+ * fallback path — `apps/sandbox-runner` (R1) exists now (Session 7 built
+ * its isolation mechanism) but nothing here dispatches to it yet, and this
+ * route must not be the thing that quietly starts doing so before that is
+ * a deliberate, reviewed decision. Session 8 (T226) replaces this literal
+ * body with a real dispatch to the sandbox; until that lands, an operator
+ * gets an honest "not yet available," never unsandboxed execution — R1's
+ * own non-negotiable ("If the sandbox is unavailable, the upload path
+ * returns 503 — it never falls back to unsandboxed execution").
+ *
+ * The bundle body is deliberately not read or validated at all here.
+ * Reading `req.body` before this route can decide it must refuse would
+ * imply this endpoint does something with the upload; validating an
+ * archive here that gets thrown away regardless of a sandbox that will
+ * refuse it anyway would be the wrong sequencing to build a habit of.
  *
  * Same not-yet-mounted, not-yet-`requireOperator` setup as every other file
  * in this directory — T211 mounts everything under `/admin` behind the
@@ -145,6 +158,22 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
       }
       throw error;
     }
+  });
+
+  // T216 — see the module note above. Always 503, unconditionally, no
+  // fallback. Not `router.use`'d before the routes above: a POST to
+  // `/capabilities/upload` must not shadow a real request to any of them,
+  // and Express matches declaration order for the same method/path shape
+  // regardless, so declaring it last costs nothing and stays explicit.
+  router.post('/capabilities/upload', (_req: AuthedRequest, res: Response) => {
+    res.status(503).json({
+      error: {
+        code: 'SANDBOX_UNAVAILABLE',
+        message:
+          'Capability upload is not available yet. The sandbox runner exists but nothing dispatches ' +
+          'to it from this endpoint — there is no unsandboxed fallback (Constitution Principle V).',
+      },
+    });
   });
 
   return router;
