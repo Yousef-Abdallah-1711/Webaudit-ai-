@@ -39,6 +39,7 @@ import {
   removeCapability,
   setCapabilityEnabled,
   setCapabilityPlanRestrictions,
+  validatePlanIdsExist,
 } from '../../services/admin/capabilities.service.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such capability.' } };
@@ -84,6 +85,15 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
     const operatorId = req.auth!.userId;
 
     try {
+      // Validate everything about the combined request BEFORE committing any
+      // part of it — a review of this task found that validating planIds
+      // only inside setCapabilityPlanRestrictions meant an isEnabled change
+      // given in the same body could already be committed (and audited) by
+      // the time a bad planId surfaced a 400, leaving the response's "this
+      // request failed" at odds with a mutation that actually landed.
+      if (parsed.data.planIds !== undefined) {
+        await validatePlanIdsExist(db, parsed.data.planIds);
+      }
       if (parsed.data.isEnabled !== undefined) {
         await setCapabilityEnabled(db, { operatorId, capabilityId, isEnabled: parsed.data.isEnabled });
       }

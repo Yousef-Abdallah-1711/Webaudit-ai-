@@ -169,6 +169,34 @@ describe('PATCH /capabilities/:id', () => {
       .expect(400);
   });
 
+  it('a combined isEnabled + bad planIds body commits neither half (atomicity)', async () => {
+    // A review of this task found the opposite once shipped: isEnabled
+    // committed and was audited before the planIds half's validation threw,
+    // leaving a "this request failed" response next to a real mutation.
+    // Sending the two most dangerous orderings — enable-with-bad-plan and
+    // disable-with-bad-plan — proves neither half ever lands regardless of
+    // which value isEnabled carries.
+    await seedCapability({ isEnabled: true });
+    const { token } = await makeOperatorToken();
+
+    await request(app)
+      .patch(`/capabilities/${CAP_ID}`)
+      .set(auth(token))
+      .send({ isEnabled: false, planIds: ['does-not-exist'] })
+      .expect(400);
+
+    const persisted = await testDb.capability.findUnique({ where: { id: CAP_ID } });
+    expect(persisted?.isEnabled).toBe(true);
+
+    const restrictions = await testDb.capabilityPlan.findMany({ where: { capabilityId: CAP_ID } });
+    expect(restrictions.length).toBe(0);
+
+    const entries = await testDb.auditLogEntry.findMany({
+      where: { subjectType: 'Capability', subjectId: CAP_ID },
+    });
+    expect(entries.length).toBe(0);
+  });
+
   it('rejects an empty body with 400', async () => {
     await seedCapability();
     const { token } = await makeOperatorToken();

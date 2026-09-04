@@ -204,6 +204,29 @@ export interface SetCapabilityPlanRestrictionsInput {
 }
 
 /**
+ * Refuses a nonexistent plan id — a pure read, no side effects. Exported so
+ * a caller combining this mutation with another one in the same request
+ * (`capabilities.routes.ts`'s combined PATCH) can validate every part of the
+ * request BEFORE committing any part of it. `setCapabilityPlanRestrictions`
+ * below still runs this same check itself, so it stays safe to call
+ * directly too — this is belt-and-braces, not a relocation.
+ */
+export async function validatePlanIdsExist(
+  db: PrismaClient,
+  planIds: readonly string[],
+): Promise<void> {
+  const uniquePlanIds = [...new Set(planIds)];
+  if (uniquePlanIds.length === 0) return;
+  const found = await db.plan.findMany({
+    where: { id: { in: uniquePlanIds } },
+    select: { id: true },
+  });
+  const foundIds = new Set(found.map((p) => p.id));
+  const missing = uniquePlanIds.find((id) => !foundIds.has(id));
+  if (missing !== undefined) throw new PlanNotFoundError(missing);
+}
+
+/**
  * Declares which plans a capability is restricted to (FR-026). This is
  * admin CRUD only — see the module note on what already enforces it and
  * what does not.
@@ -213,17 +236,8 @@ export async function setCapabilityPlanRestrictions(
   input: SetCapabilityPlanRestrictionsInput,
 ): Promise<AdminCapabilitySummary> {
   await requireCapability(db, input.capabilityId);
-
+  await validatePlanIdsExist(db, input.planIds);
   const uniquePlanIds = [...new Set(input.planIds)];
-  if (uniquePlanIds.length > 0) {
-    const found = await db.plan.findMany({
-      where: { id: { in: uniquePlanIds } },
-      select: { id: true },
-    });
-    const foundIds = new Set(found.map((p) => p.id));
-    const missing = uniquePlanIds.find((id) => !foundIds.has(id));
-    if (missing !== undefined) throw new PlanNotFoundError(missing);
-  }
 
   const before = await db.capabilityPlan.findMany({
     where: { capabilityId: input.capabilityId },
