@@ -1,0 +1,18 @@
+/* Ported from design-system/ui_kits/admin/AdminScreens.jsx's Queue (T214). */
+
+.error {
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+}
+
+.note {
+  margin-top: 12px;
+  font: var(--type-small);
+  color: var(--text-muted);
+}
