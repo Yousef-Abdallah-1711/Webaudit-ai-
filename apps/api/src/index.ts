@@ -50,6 +50,7 @@ import { startFanout, type Fanout, type RedisSubscriber } from './services/realt
 import { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 import { buildResolveRequiredControlLevel } from './services/registry/resolve-required-control-level.js';
 import type { RateLimiters } from './middleware/ratelimit.middleware.js';
+import type { Mailer } from './services/email/mailer.js';
 
 export { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 export {
@@ -154,6 +155,27 @@ export interface ApiServiceOptions {
    * subscription is authorised against.
    */
   readonly db?: PrismaClient;
+  /**
+   * Omit for the real console mailer. This module's own header promises
+   * `createApp` exists "so tests can inject a database and a mailer" — true
+   * of `createApp` directly, but `startApi` never actually forwarded one
+   * until this option existed, so a suite that boots the real process (not
+   * `createApp` directly) had no way to read a verification/reset token
+   * without either console-scraping or a raw database lookup against a
+   * column that only ever stores a hash.
+   */
+  readonly mailer?: Mailer;
+  /**
+   * Omit for the real Redis-backed limiters (or none at all outside
+   * `NODE_ENV=production`-adjacent envs — see `app.ts`'s `shouldRateLimit`).
+   * Pass `null` for a suite that boots the real process rather than
+   * `createApp` directly: `config/env.ts` reads `NODE_ENV` at module import
+   * time, which for this package has already happened by the time a caller's
+   * own `startApi()` call runs, so mutating `process.env['NODE_ENV']`
+   * afterward cannot reach `shouldRateLimit`. `createApp`'s own `rateLimiters`
+   * escape hatch is the documented way around that; this just forwards it.
+   */
+  readonly rateLimiters?: RateLimiters | null;
   /** Defaults to true. A suite that does not need real capability rows may skip it. */
   readonly reconcileCapabilities?: boolean;
   readonly drainMs?: number;
@@ -214,6 +236,8 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
   const app = createApp({
     db,
     scans: { resolveRequiredControlLevel: buildResolveRequiredControlLevel(db) },
+    ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
+    ...(options.rateLimiters === undefined ? {} : { rateLimiters: options.rateLimiters }),
   });
   const server = createServer(app);
 

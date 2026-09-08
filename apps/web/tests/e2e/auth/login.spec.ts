@@ -32,11 +32,14 @@ test('wrong password shows the real, specific error — not a generic network fa
 
 test('an unverified account is refused with a specific reason, not silently logged in', async ({ page }) => {
   const unverified = { email: 'unverified@example.com', password: 'correct-horse-battery-staple' };
-  await fetch(`${stack.apiBaseUrl}/auth/register`, {
+  const res = await fetch(`${stack.apiBaseUrl}/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(unverified),
   });
+  if (res.status !== 201) {
+    throw new Error(`register failed: ${String(res.status)} ${await res.text()}`);
+  }
   await page.goto(`${stack.webBaseUrl}/login`);
   await page.getByLabel('Email').fill(unverified.email);
   await page.getByLabel('Password').fill(unverified.password);

@@ -16,7 +16,8 @@
     "./billing": "./src/services/billing/index.ts",
     "./storage-retention": "./src/services/storage/retention.ts",
     "./email": "./src/services/email/mailer.ts",
-    "./test-db": "./tests/helpers/db.ts"
+    "./test-db": "./tests/helpers/db.ts",
+    "./test-mailer": "./tests/helpers/mailer.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

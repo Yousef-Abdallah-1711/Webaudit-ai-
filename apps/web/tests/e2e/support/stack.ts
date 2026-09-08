@@ -20,6 +20,7 @@ import path from 'node:path';
 import { PrismaClient } from '@webaudit/api/prisma-client';
 import { startApi, type ApiService } from '@webaudit/api';
 import { startWorker, type WorkerService } from '@webaudit/worker';
+import { createCapturingMailer, type CapturingMailer } from '@webaudit/api/test-mailer';
 import { startServer, type ServerHandle } from '../../visual/harness.js';
 
 const TEST_DB_URL =
@@ -34,6 +35,7 @@ export interface Stack {
   readonly apiBaseUrl: string;
   readonly webBaseUrl: string;
   readonly db: PrismaClient;
+  readonly mailer: CapturingMailer;
   stop(): Promise<void>;
 }
 
@@ -89,6 +91,7 @@ export async function startStack(): Promise<Stack> {
   process.env['AI_MODE'] = 'fixtures';
   process.env['WORKSPACE_BASE_DIR'] = mkdtempSync(path.join(tmpdir(), 'webaudit-e2e-'));
 
+
   // WEB_URL must be set before `startApi` — `app.ts`'s `corsAllowlist()`
   // reads it while building the Express app inside `startApi`, once,
   // synchronously. Setting it after `startApi` has already returned is the
@@ -102,7 +105,22 @@ export async function startStack(): Promise<Stack> {
   const db = new PrismaClient({ datasources: { db: { url: TEST_DB_URL } }, log: ['error'] });
   await resetDb(db);
 
-  const api: ApiService = await startApi({ db, port: API_PORT, installSignalHandlers: false });
+  const mailer = createCapturingMailer();
+  // `app.ts`'s real Redis-backed limiter (10 credential requests per 15
+  // minutes, keyed on client IP) is real infrastructure this fixture is not
+  // testing — every spec here shares one client IP (127.0.0.1) and one real
+  // Redis instance, so without this a handful of spec files run back to back
+  // exhausts the bucket and every later register/login call gets a 429. The
+  // limiter's own behaviour has its own dedicated suite; this fixture proves
+  // the auth *flow*, so it opts out via `createApp`'s documented escape
+  // hatch rather than fighting the limiter's real state.
+  const api: ApiService = await startApi({
+    db,
+    port: API_PORT,
+    installSignalHandlers: false,
+    mailer,
+    rateLimiters: null,
+  });
   const apiBaseUrl = `http://127.0.0.1:${String(api.port)}`;
 
   const worker: WorkerService = startWorker({
@@ -125,6 +143,7 @@ export async function startStack(): Promise<Stack> {
     apiBaseUrl,
     webBaseUrl: web.url,
     db,
+    mailer,
     async stop() {
       web.close();
       await worker.shutdown('e2e stack teardown');
