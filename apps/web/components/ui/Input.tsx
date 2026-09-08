@@ -21,6 +21,8 @@ export interface InputProps {
   invalid?: boolean;
   /** Mono face for machine-truth values (headers, selectors, paths) */
   mono?: boolean;
+  /** For an input with no visible, associated `<label>` — e.g. login's password field. */
+  'aria-label'?: string;
 }
 
 export function Input({

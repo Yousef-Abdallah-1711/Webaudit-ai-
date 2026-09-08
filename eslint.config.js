@@ -273,9 +273,9 @@ export default tseslint.config(
         },
         {
           selector:
-            "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|key|ref|className|style|children)$/]",
+            "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|aria-label|key|ref|className|style|children)$/]",
           message:
-            "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono.",
+            "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono, aria-label.",
         },
         {
           selector:

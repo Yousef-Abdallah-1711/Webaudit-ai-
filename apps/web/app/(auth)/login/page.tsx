@@ -74,6 +74,7 @@ export default function LoginPage(): React.ReactElement {
             type="password"
             placeholder="••••••••"
             value={password}
+            aria-label={t('auth_password')}
             onChange={(e) => {
               setPassword(e.target.value);
             }}
