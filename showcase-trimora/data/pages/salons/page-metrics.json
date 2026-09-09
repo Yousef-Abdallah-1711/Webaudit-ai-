@@ -1,0 +1,28 @@
+{
+  "target": "https://trimora.sy/salons",
+  "capturedAt": "2026-09-06T00:02:32.882Z",
+  "timings": {
+    "ttfbMs": 78,
+    "domContentLoadedMs": 405,
+    "loadMs": 438,
+    "firstContentfulPaintMs": 428,
+    "domInteractiveMs": 382
+  },
+  "transferKb": 3538.4,
+  "resourceCount": 40,
+  "domNodes": 302,
+  "scripts": 17,
+  "stylesheets": 2,
+  "images": 10,
+  "title": "تريمورا — منصة إدارة الصالونات الأولى في سوريا",
+  "textLength": 854,
+  "headings": {
+    "h1": 1,
+    "h2": 0,
+    "h3": 9
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

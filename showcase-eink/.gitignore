@@ -1,0 +1,4 @@
+node_modules/
+dashboard/vendor/react.js
+dashboard/vendor/react-dom.js
+dashboard/vendor/babel.min.js

@@ -1,0 +1,773 @@
+{
+  "meta": {
+    "target": "https://trimora.sy/contact",
+    "startedAt": "2026-09-06T00:02:45.590Z",
+    "completedAt": "2026-09-06T00:02:50.502Z",
+    "durationMs": 4912,
+    "engine": "showcase-trimora standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 74,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 3,
+    "MEDIUM": 18,
+    "LOW": 3,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 8,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 232,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 179,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 17,
+          "durationMs": 218,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 220,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "e875aa407d676987f38daa7b34ddc5e4c25a80c42a2418763d577b647fdf3033",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 8882 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 8882,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:8]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 8882 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":8882,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:8]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "2e9a2af7a68d51fc60850f8a2d6241edd4f286209af29cb7d7b12dc5e5e8ed30",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9118 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 9118,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:7]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9118 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":9118,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:7]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "fc3b9897268fed5690768d31a0735d1b1c30e87d9f65fbb08b270f72cfb4cf3b",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9387 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 9387,
+            "length": 27,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:6]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9387 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":9387,\"length\":27,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:6]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "edfb980b85712a61b408cedce84efedc0eecdedecd4b4f7c5a14d7c047c5d5bf",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9659 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 9659,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:8]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 9659 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":9659,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:8]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "28f9b7ecacb300f2d91d17f8908682ea89fac92e9c6775935b66f36ebe9ba80d",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10080 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 10080,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:7]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10080 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":10080,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:7]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "35ac4fd02f6c05c020d77c439d90140e089e080b32646c69b0e41fd86102a60c",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10264 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 10264,
+            "length": 27,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:6]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10264 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":10264,\"length\":27,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:6]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "2009ea4383206fe4e033ebf1faae2fc2a52deada7e43f6bf4a5c629b1fbd9f64",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10513 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 10513,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:8]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10513 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:8]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":10513,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:8]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "63fd05ce556930e95f07b05dabf19f54f932a827097a9ac5c9b99d30f30cb5bd",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10765 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 10765,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:7]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10765 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:7]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":10765,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:7]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "e362e572b833508d50e1dd79d240bde4d58d1ec919afd1efd13a5c512cd2d9ae",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10922 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 10922,
+            "length": 27,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:6]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 10922 (27 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:6]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":10922,\"length\":27,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:6]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "c1acc1a61f4e85f37f70a4dbe50013fab9b9485477cc94182a7943b51a8c4a7b",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 11142 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:5]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 11142,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:5]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 11142 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:5]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":11142,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:5]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "aa842736cc55ab64b533d5eda21a042f834338ee21a75144c6fd8bb3280a4737",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 11362 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 11362,
+            "length": 26,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:4]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 11362 (26 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":11362,\"length\":26,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:4]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "2a39e7d404b019d9cd03384cc153c35eb94c524ed78d8972a4b75b03253af721",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 12504 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 12504,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 12504 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":12504,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "0cc56f9175e761bc4cfc7b8549e8503952d6bc6e6c25bdec3ad7dc0ade272133",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 13184 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 13184,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 13184 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":13184,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "92c8cce2f57617766c5df3767ad1f0ef8c1491702c11ec35817ffc65581c3888",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 13937 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 13937,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 13937 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":13937,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "d2a4f4a1a28d8616b407868caa3b44b11254975e076e13ddb030c3af277bc943",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 14613 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 14613,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 14613 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":14613,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "52c6aa3170e67d6459085737f5bc4a7b7240eb4625a8b28a6d6023c0911c6be9",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 17160 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 17160,
+            "length": 25,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:2]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://trimora.sy/contact at line 1, column 17160 (25 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":17160,\"length\":25,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:2]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "73fb8c6a9e6ca245f31a77c25d76f6857e923c2a2d4ebd6e1eecbb5dc11e59da",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "explanation": "A value assigned to a credential-shaped name appears in https://trimora.sy/contact at line 1, column 25025 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.",
+          "consequence": "If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "kind": "GENERIC_SECRET_ASSIGNMENT",
+            "path": "https://trimora.sy/contact",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 25025,
+            "length": 32,
+            "placeholder": "[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a value assigned to a credential-shaped name\nWhat was measured: A value assigned to a credential-shaped name appears in https://trimora.sy/contact at line 1, column 25025 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/contact\nWhy it matters: If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.\nEvidence: {\"kind\":\"GENERIC_SECRET_ASSIGNMENT\",\"path\":\"https://trimora.sy/contact\",\"segment\":\"fetched-page\",\"line\":1,\"column\":25025,\"length\":32,\"placeholder\":\"[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 96,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "LOW",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 203,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 201,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "meta.canonical-missing",
+          "fingerprint": "72d4b4dbb0b5ef1a344f1901ca0327592fa4af3e158c17fe9b69f76cba8c1d2f",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Missing canonical link",
+          "explanation": "No <link rel=\"canonical\"> tag was found in the page.",
+          "consequence": "Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.",
+          "location": "https://trimora.sy/contact",
+          "evidence": null,
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing canonical link\nWhat was measured: No <link rel=\"canonical\"> tag was found in the page.\nWhere: https://trimora.sy/contact\nWhy it matters: Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.thin-content",
+          "fingerprint": "a1439b2cbff71eaa901dda5bfb07797c3c30d4f45a1e70d56ff6afb08d993b98",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Thin content",
+          "explanation": "The page’s visible text is approximately 147 words, below the commonly cited 200-word threshold for substantive content.",
+          "consequence": "Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "wordCount": 147
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 147 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://trimora.sy/contact\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":147}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 81,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 986,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 789,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 1027,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "61fa39f0f536fbb7efba27033dd8ea998d4226902b42621f22e0f9c5143c5f9e",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://trimora.sy/contact",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://trimora.sy/contact\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.broken-subresource",
+          "fingerprint": "f7e4bb4581a2afe5b0d6c6c21b203f616371e2b39a15fe10d8dd33b629cd140f",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Broken referenced resource",
+          "explanation": "1 of 15 sampled resource(s) referenced by the page did not load successfully.",
+          "consequence": "A script, stylesheet, or image that fails to load can break page functionality or leave visible gaps in the rendered page.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Broken referenced resource\nWhat was measured: 1 of 15 sampled resource(s) referenced by the page did not load successfully.\nWhere: https://trimora.sy/contact\nWhy it matters: A script, stylesheet, or image that fails to load can break page functionality or leave visible gaps in the rendered page.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "0cb29aa84f8e31d4e32c0a36e58c5513bc58fe205c8d26a79a937f1795b524ed",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "14 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "count": 14,
+            "sample": [
+              "https://trimora.sy/_next/static/chunks/fd9d1056-3f1cf061ceaf1304.js",
+              "https://trimora.sy/_next/static/chunks/7023-c9296403c74ef6ad.js",
+              "https://trimora.sy/_next/static/chunks/main-app-bca890e9d62c0429.js",
+              "https://trimora.sy/_next/static/chunks/231-379f643486f6d30a.js",
+              "https://trimora.sy/_next/static/chunks/app/contact/page-4dbf4a9fd33e6c49.js"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 14 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://trimora.sy/contact\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":14,\"sample\":[\"https://trimora.sy/_next/static/chunks/fd9d1056-3f1cf061ceaf1304.js\",\"https://trimora.sy/_next/static/chunks/7023-c9296403c74ef6ad.js\",\"https://trimora.sy/_next/static/chunks/main-app-bca890e9d62c0429.js\",\"https://trimora.sy/_next/static/chunks/231-379f643486f6d30a.js\",\"https://trimora.sy/_next/static/chunks/app/contact/page-4dbf4a9fd33e6c49.js\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 88,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 789,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "TESTING",
+          "area": "Testing",
+          "checkId": "testing.broken-link",
+          "fingerprint": "3469dacc404d667ec603398b3695d45290ef2b8a03ccfd943ac3d939528a7863",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Broken internal link",
+          "explanation": "1 of 8 sampled same-origin link(s) did not resolve successfully.",
+          "consequence": "A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/cdn-cgi/l/email-protection"
+            ]
+          },
+          "fixPrompt": "Fix the following testing issue.\n\nProblem: Broken internal link\nWhat was measured: 1 of 8 sampled same-origin link(s) did not resolve successfully.\nWhere: https://trimora.sy/contact\nWhy it matters: A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/cdn-cgi/l/email-protection\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 95,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 2362,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: Automated measurements found for this page:\n- [MEDIUM] Image reference does not resolve to a real image: 1 of 1 sampled <img> reference(s) either failed to load or did not return image content.",
+      "findings": [
+        {
+          "module": "UI",
+          "area": "Design",
+          "checkId": "ui.broken-image",
+          "fingerprint": "21c193c70519611402929edac509c2899a8a716ab7dda7b93733e7b1991c4f8e",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Image reference does not resolve to a real image",
+          "explanation": "1 of 1 sampled <img> reference(s) either failed to load or did not return image content.",
+          "consequence": "A broken image leaves a visible gap (or a browser’s default broken-image icon) where a visitor expected to see the picture.",
+          "location": "https://trimora.sy/contact",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75"
+            ]
+          },
+          "fixPrompt": "Fix the following ui issue.\n\nProblem: Image reference does not resolve to a real image\nWhat was measured: 1 of 1 sampled <img> reference(s) either failed to load or did not return image content.\nWhere: https://trimora.sy/contact\nWhy it matters: A broken image leaves a visible gap (or a browser’s default broken-image icon) where a visitor expected to see the picture.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    }
+  ],
+  "aiNarrative": null
+}

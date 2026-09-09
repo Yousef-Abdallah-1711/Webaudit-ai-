@@ -1,0 +1,12 @@
+:root{
+--duration:150ms; /* @kind other */
+--easing:cubic-bezier(.4,0,.2,1); /* @kind other */
+--duration-reveal:600ms; /* @kind other */
+--duration-land:300ms; /* @kind other */
+--easing-reveal:cubic-bezier(.2,.8,.2,1); /* @kind other */
+--transition-color:color var(--duration) var(--easing),background-color var(--duration) var(--easing),border-color var(--duration) var(--easing),fill var(--duration) var(--easing),stroke var(--duration) var(--easing)}
+@media (prefers-reduced-motion:reduce){:root{--duration-reveal:1ms; /* @kind other */
+--duration-land:1ms; /* @kind other */
+}}
+@keyframes wa-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){[style*="wa-spin"]{animation:none!important}}

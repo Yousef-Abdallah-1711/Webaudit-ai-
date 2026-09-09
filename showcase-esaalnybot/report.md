@@ -1,8 +1,8 @@
 # WebAudit AI — audit report
 
-**Target** `https://app.esaalnybot.tech/`
-**Completed** 2026-08-29 15:04:13 UTC · 2.6s
-**Overall score** 87 / 100 — mean of 5 scored areas (SECURITY, SEO, PERFORMANCE, TESTING, UI)
+**Target** `https://app.esaalnybot.tech/`  
+**Completed** 2026-08-29 15:04:13 UTC · 2.6s  
+**Overall score** 87 / 100 — mean of 5 scored areas (SECURITY, SEO, PERFORMANCE, TESTING, UI)  
 **Findings** 17 — 0 critical, 2 high, 5 medium, 7 low, plus 3 AI design observations
 
 | Area | State | Score |

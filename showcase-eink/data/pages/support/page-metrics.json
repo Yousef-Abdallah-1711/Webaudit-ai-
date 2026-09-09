@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/support",
+  "capturedAt": "2026-09-08T18:05:03.264Z",
+  "timings": {
+    "ttfbMs": 335,
+    "domContentLoadedMs": 748,
+    "loadMs": 926,
+    "firstContentfulPaintMs": 656,
+    "domInteractiveMs": 556
+  },
+  "transferKb": 1431.2,
+  "resourceCount": 32,
+  "domNodes": 194,
+  "scripts": 18,
+  "stylesheets": 2,
+  "images": 0,
+  "title": "Support — E Ink",
+  "textLength": 883,
+  "headings": {
+    "h1": 1,
+    "h2": 1,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

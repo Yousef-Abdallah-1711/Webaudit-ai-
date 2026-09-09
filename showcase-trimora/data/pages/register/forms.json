@@ -1,0 +1,61 @@
+{
+  "url": "https://trimora.sy/register",
+  "forms": [
+    {
+      "action": null,
+      "method": "get",
+      "inputs": [
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "email",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "password",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        },
+        {
+          "type": "text",
+          "name": null,
+          "autocomplete": null,
+          "required": true
+        }
+      ],
+      "hasPasswordField": true,
+      "hasHiddenCsrfLikeField": false
+    }
+  ]
+}

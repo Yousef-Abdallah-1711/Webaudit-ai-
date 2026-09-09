@@ -1,0 +1,28 @@
+{
+  "target": "https://trimora.sy/salons/shadi-hair-styles-2a0b12b7",
+  "capturedAt": "2026-09-06T00:03:44.501Z",
+  "timings": {
+    "ttfbMs": 102,
+    "domContentLoadedMs": 574,
+    "loadMs": 574,
+    "firstContentfulPaintMs": 544,
+    "domInteractiveMs": 569
+  },
+  "transferKb": 780.4,
+  "resourceCount": 33,
+  "domNodes": 117,
+  "scripts": 19,
+  "stylesheets": 3,
+  "images": 1,
+  "title": "تريمورا — منصة إدارة الصالونات الأولى في سوريا",
+  "textLength": 199,
+  "headings": {
+    "h1": 1,
+    "h2": 0,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

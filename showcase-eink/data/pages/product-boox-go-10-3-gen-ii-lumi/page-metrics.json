@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/product/boox-go-10-3-gen-ii-lumi",
+  "capturedAt": "2026-09-08T18:07:42.636Z",
+  "timings": {
+    "ttfbMs": 308,
+    "domContentLoadedMs": 789,
+    "loadMs": 920,
+    "firstContentfulPaintMs": 740,
+    "domInteractiveMs": 497
+  },
+  "transferKb": 2189.7,
+  "resourceCount": 48,
+  "domNodes": 416,
+  "scripts": 22,
+  "stylesheets": 3,
+  "images": 13,
+  "title": "BOOX Go 10.3 (Gen II) Lumi | Buy Online - Eink.ma",
+  "textLength": 2374,
+  "headings": {
+    "h1": 1,
+    "h2": 5,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

@@ -1,0 +1,901 @@
+{
+  "crawledAt": "2026-09-08T18:08:24.404Z",
+  "pages": [
+    {
+      "path": "/",
+      "url": "https://eink.ma/",
+      "score": 83,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 9,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 24
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/shop",
+      "url": "https://eink.ma/shop",
+      "score": 86,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 6,
+        "LOW": 1,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 39
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/compare",
+      "url": "https://eink.ma/compare",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 1,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/blog",
+      "url": "https://eink.ma/blog",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/support",
+      "url": "https://eink.ma/support",
+      "score": 85,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 4,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 88
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/wishlist",
+      "url": "https://eink.ma/wishlist",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 93
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/supernote-a6-x2-nomad",
+      "url": "https://eink.ma/product/supernote-a6-x2-nomad",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/kindle-scribe",
+      "url": "https://eink.ma/product/kindle-scribe",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/remarkable-paper-pro",
+      "url": "https://eink.ma/product/remarkable-paper-pro",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/kobo-elipsa-2e",
+      "url": "https://eink.ma/product/kobo-elipsa-2e",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/bigme-galy-2",
+      "url": "https://eink.ma/product/bigme-galy-2",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/boox-note-air5-c",
+      "url": "https://eink.ma/product/boox-note-air5-c",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/boox-go-10-3-gen-ii-lumi",
+      "url": "https://eink.ma/product/boox-go-10-3-gen-ii-lumi",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/boox-go-7",
+      "url": "https://eink.ma/product/boox-go-7",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/product/boox-go-6-gen-ii",
+      "url": "https://eink.ma/product/boox-go-6-gen-ii",
+      "score": 87,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 5,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "A cookie is set without the Secure flag",
+          "severity": "HIGH",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 44
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 100
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    }
+  ],
+  "readiness": {
+    "verdict": "no-go",
+    "areas": [
+      {
+        "name": "Security",
+        "score": 24,
+        "threshold": 80,
+        "pass": false
+      },
+      {
+        "name": "Search visibility",
+        "score": 96,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Performance",
+        "score": 91,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Testing",
+        "score": 88,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Design",
+        "score": 100,
+        "threshold": 80,
+        "pass": true
+      }
+    ],
+    "blockers": [
+      "Security scores 24/100 on the homepage — below the 80 bar.",
+      "HIGH — \"Missing Content-Security-Policy header\" found on all 15 crawled pages (Security) — points at shared code, not one page.",
+      "HIGH — \"Credential in source: a value assigned to a credential-shaped name\" found on all 15 crawled pages (Security) — points at shared code, not one page.",
+      "HIGH — \"A cookie is set without the Secure flag\" found on all 15 crawled pages (Security) — points at shared code, not one page."
+    ]
+  }
+}

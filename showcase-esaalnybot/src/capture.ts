@@ -14,15 +14,15 @@
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 import { chromium } from '@playwright/test';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const DATA = join(HERE, '..', 'data');
-const TARGET = process.argv[2] ?? 'https://app.esaalnybot.tech/';
+const DEFAULT_DATA_DIR = join(HERE, '..', 'data');
+const DEFAULT_TARGET = 'https://app.esaalnybot.tech/';
 
-interface Metrics {
+export interface Metrics {
   target: string;
   capturedAt: string;
   timings: Record<string, number>;
@@ -38,8 +38,8 @@ interface Metrics {
   viewportOverflowPx: { desktop: number; mobile: number };
 }
 
-async function main(): Promise<void> {
-  await mkdir(DATA, { recursive: true });
+export async function captureMetrics(target: string, dataDir: string = DEFAULT_DATA_DIR): Promise<Metrics> {
+  await mkdir(dataDir, { recursive: true });
   const browser = await chromium.launch({ headless: true });
 
   let transferBytes = 0;
@@ -57,10 +57,10 @@ async function main(): Promise<void> {
       .catch(() => undefined);
   });
 
-  await page.goto(TARGET, { waitUntil: 'networkidle' });
+  await page.goto(target, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1200); // let the SPA settle
 
-  await page.screenshot({ path: join(DATA, 'screenshot-desktop.png'), fullPage: true });
+  await page.screenshot({ path: join(dataDir, 'screenshot-desktop.png'), fullPage: true });
 
   // Passed as a STRING: tsx/esbuild rewrites arrow functions with a `__name`
   // helper that is undefined inside the page. A string body sidesteps that.
@@ -110,9 +110,9 @@ async function main(): Promise<void> {
     hasTouch: true,
   });
   const mpage = await mobile.newPage();
-  await mpage.goto(TARGET, { waitUntil: 'networkidle' });
+  await mpage.goto(target, { waitUntil: 'networkidle' });
   await mpage.waitForTimeout(1200);
-  await mpage.screenshot({ path: join(DATA, 'screenshot-mobile.png'), fullPage: true });
+  await mpage.screenshot({ path: join(dataDir, 'screenshot-mobile.png'), fullPage: true });
   const mobileOverflow = (await mpage.evaluate(
     `Math.max(0, document.documentElement.scrollWidth - document.documentElement.clientWidth)`,
   )) as number;
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   await browser.close();
 
   const metrics: Metrics = {
-    target: TARGET,
+    target,
     capturedAt: new Date().toISOString(),
     timings: raw.timings,
     transferKb: Math.round((transferBytes / 1024) * 10) / 10,
@@ -135,15 +135,22 @@ async function main(): Promise<void> {
     viewportOverflowPx: { desktop: raw.overflow, mobile: mobileOverflow },
   };
 
-  await writeFile(join(DATA, 'page-metrics.json'), `${JSON.stringify(metrics, null, 2)}\n`, 'utf8');
+  await writeFile(join(dataDir, 'page-metrics.json'), `${JSON.stringify(metrics, null, 2)}\n`, 'utf8');
   process.stdout.write(
-    `  captured: screenshot-desktop.png, screenshot-mobile.png, page-metrics.json\n` +
+    `  captured: screenshot-desktop.png, screenshot-mobile.png, page-metrics.json (${dataDir})\n` +
       `  FCP ${metrics.timings.firstContentfulPaintMs}ms · load ${metrics.timings.loadMs}ms · ` +
       `${metrics.transferKb}KB over ${metrics.resourceCount} requests · ${metrics.domNodes} DOM nodes\n`,
   );
+  return metrics;
 }
 
-main().catch((e: unknown) => {
-  console.error(e);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  await captureMetrics(process.argv[2] ?? DEFAULT_TARGET, DEFAULT_DATA_DIR);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((e: unknown) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

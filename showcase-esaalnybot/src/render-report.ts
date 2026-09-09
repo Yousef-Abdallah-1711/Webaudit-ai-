@@ -78,6 +78,19 @@ interface Audit {
     pipelineIssueCount: number;
     notes: string[];
   };
+  crawledPages?: {
+    path: string;
+    url: string;
+    score: number | null;
+    counts: Record<string, number>;
+    worstSeverity: string | null;
+    topFindings: { title: string; severity: string; area: string }[];
+  }[];
+  readiness?: {
+    verdict: 'go' | 'no-go';
+    areas: { name: string; score: number; threshold: number; pass: boolean }[];
+    blockers: string[];
+  };
   aiNarrative: {
     authoredBy: string;
     scopeNote: string;
@@ -138,6 +151,31 @@ async function main(): Promise<void> {
   const md: string[] = [];
   md.push(`# WebAudit AI — audit report`);
   md.push('');
+
+  if (a.readiness) {
+    const r = a.readiness;
+    const go = r.verdict === 'go';
+    md.push(`## Production readiness: ${go ? '✅ GO' : '🛑 NOT READY TO SHIP'}`);
+    md.push('');
+    md.push(
+      'Computed from the worst score any single crawled page recorded per area, plus any HIGH/CRITICAL finding ' +
+        'repeating across every page — an average score hides exactly the outlier this decision needs to see.',
+    );
+    md.push('');
+    md.push('| Area | Worst observed | Threshold | |');
+    md.push('|---|---|---|---|');
+    for (const ar of r.areas) md.push(`| ${ar.name} | ${ar.score} | ${ar.threshold} | ${ar.pass ? '✅' : '🛑'} |`);
+    md.push('');
+    if (r.blockers.length > 0) {
+      md.push('**Blockers — fix these before this ships:**');
+      md.push('');
+      for (const b of r.blockers) md.push(`- ${b}`);
+      md.push('');
+    }
+    md.push('---');
+    md.push('');
+  }
+
   md.push(`**Target** \`${a.meta['target']}\`  `);
   md.push(`**Completed** ${new Date(String(a.meta['completedAt'])).toISOString().replace('T', ' ').slice(0, 19)} UTC · ${(Number(a.meta['durationMs']) / 1000).toFixed(1)}s  `);
   md.push(`**Overall score** ${a.overall.score ?? 'n/a'} / 100 — mean of ${a.overall.scoredModules.length} scored areas (${a.overall.scoredModules.join(', ')})  `);
@@ -151,6 +189,30 @@ async function main(): Promise<void> {
   md.push('');
   md.push('---');
   md.push('');
+
+  if (a.crawledPages && a.crawledPages.length > 0) {
+    md.push('## Pages audited');
+    md.push('');
+    md.push(
+      `This is a **multi-page** audit — every page below was fetched and measured the same way as the ` +
+        `primary page above (real capabilities, real browser render). Only same-origin GET requests were made; ` +
+        `no form was submitted and no authenticated area was crossed.`,
+    );
+    md.push('');
+    md.push('| Page | Score | Critical | High | Medium | Low | Top finding |');
+    md.push('|---|---|---|---|---|---|---|');
+    for (const p of a.crawledPages) {
+      const top = p.topFindings[0] ? `${p.topFindings[0].severity} — ${p.topFindings[0].title}` : '—';
+      md.push(
+        `| \`${p.path}\` | ${p.score ?? 'n/a'} | ${p.counts['CRITICAL'] ?? 0} | ${p.counts['HIGH'] ?? 0} | ${p.counts['MEDIUM'] ?? 0} | ${p.counts['LOW'] ?? 0} | ${top} |`,
+      );
+    }
+    md.push('');
+    md.push('Full per-page findings: `data/pages/<page>/audit.json`. Per-page screenshots (desktop + mobile): `data/pages/<page>/screenshot-*.png`.');
+    md.push('');
+    md.push('---');
+    md.push('');
+  }
 
   md.push('## How this audit was produced');
   md.push('');

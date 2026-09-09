@@ -1,0 +1,672 @@
+{
+  "crawledAt": "2026-09-06T00:04:15.126Z",
+  "pages": [
+    {
+      "path": "/",
+      "url": "https://trimora.sy/",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/pricing",
+      "url": "https://trimora.sy/pricing",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/salons",
+      "url": "https://trimora.sy/salons",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/about",
+      "url": "https://trimora.sy/about",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/contact",
+      "url": "https://trimora.sy/contact",
+      "score": 74,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 18,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Broken internal link",
+          "severity": "HIGH",
+          "area": "Testing"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 8
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 88
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/login",
+      "url": "https://trimora.sy/login",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 2,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Missing H1 heading",
+          "severity": "HIGH",
+          "area": "Search visibility"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 84
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/salons/venera",
+      "url": "https://trimora.sy/salons/venera",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/salons/shadi-hair-styles-2a0b12b7",
+      "url": "https://trimora.sy/salons/shadi-hair-styles-2a0b12b7",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/register",
+      "url": "https://trimora.sy/register",
+      "score": 92,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 2,
+        "LOW": 3,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Response is not compressed",
+          "severity": "MEDIUM",
+          "area": "Performance"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/privacy",
+      "url": "https://trimora.sy/privacy",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 2,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Broken internal link",
+          "severity": "HIGH",
+          "area": "Testing"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 88
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    },
+    {
+      "path": "/terms",
+      "url": "https://trimora.sy/terms",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 3,
+        "MEDIUM": 2,
+        "LOW": 2,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Broken referenced resource",
+          "severity": "HIGH",
+          "area": "Performance"
+        },
+        {
+          "title": "Broken internal link",
+          "severity": "HIGH",
+          "area": "Testing"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 88
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 98
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 81
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 88
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 95
+        }
+      ]
+    }
+  ],
+  "readiness": {
+    "verdict": "no-go",
+    "areas": [
+      {
+        "name": "Security",
+        "score": 8,
+        "threshold": 80,
+        "pass": false
+      },
+      {
+        "name": "Search visibility",
+        "score": 84,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Performance",
+        "score": 81,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Testing",
+        "score": 88,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Design",
+        "score": 95,
+        "threshold": 80,
+        "pass": true
+      }
+    ],
+    "blockers": [
+      "Security scores 8/100 on /contact — below the 80 bar.",
+      "HIGH — \"Credential in source: a value assigned to a credential-shaped name\" found on all 11 crawled pages (Security) — points at shared code, not one page.",
+      "HIGH — \"Broken referenced resource\" found on all 11 crawled pages (Performance) — points at shared code, not one page."
+    ]
+  }
+}

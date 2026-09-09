@@ -1,0 +1,467 @@
+{
+  "meta": {
+    "target": "https://eink.ma/support",
+    "startedAt": "2026-09-08T18:04:47.074Z",
+    "completedAt": "2026-09-08T18:04:55.527Z",
+    "durationMs": 8453,
+    "engine": "showcase-eink standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 85,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 4,
+    "MEDIUM": 5,
+    "LOW": 2,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 44,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 830,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 743,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 4,
+          "durationMs": 889,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 890,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.csp-missing",
+          "fingerprint": "092ebdccbfc73e6954484f4631c4e6daa3d069456756f36a2faf7efb409fbbf9",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Missing Content-Security-Policy header",
+          "explanation": "The response carried no Content-Security-Policy header.",
+          "consequence": "Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.",
+          "location": "https://eink.ma/support",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Content-Security-Policy header\nWhat was measured: The response carried no Content-Security-Policy header.\nWhere: https://eink.ma/support\nWhy it matters: Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "c02f3b2ad48bed654194d66dab1f962a1d8d5029f554f96059f2a08a0bc25086",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 49 (39 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://eink.ma/support",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 49,
+            "length": 39,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 49 (39 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://eink.ma/support\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://eink.ma/support\",\"segment\":\"fetched-page\",\"line\":1,\"column\":49,\"length\":39,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "0f2bd58b1a87c867a059450ae10ffeb14aac8e09ff1ddbb394cfb07dd5eee313",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 25355 (39 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://eink.ma/support",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 25355,
+            "length": 39,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 25355 (39 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://eink.ma/support\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://eink.ma/support\",\"segment\":\"fetched-page\",\"line\":1,\"column\":25355,\"length\":39,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "b6b5888268621de3f34a0e348a8877a0d54c55d3b08d2a28afad78145a06c2dc",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 228139 (83 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://eink.ma/support",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 228139,
+            "length": 83,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:2]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://eink.ma/support at line 1, column 228139 (83 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.\nWhere: https://eink.ma/support\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://eink.ma/support\",\"segment\":\"fetched-page\",\"line\":1,\"column\":228139,\"length\":83,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:2]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "dab454a6159d17566bde0657866b7e5218d0f2e2bb1df349de2104b35558d623",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "explanation": "A value assigned to a credential-shaped name appears in https://eink.ma/support at line 1, column 230327 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.",
+          "consequence": "If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "kind": "GENERIC_SECRET_ASSIGNMENT",
+            "path": "https://eink.ma/support",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 230327,
+            "length": 32,
+            "placeholder": "[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a value assigned to a credential-shaped name\nWhat was measured: A value assigned to a credential-shaped name appears in https://eink.ma/support at line 1, column 230327 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.\nWhere: https://eink.ma/support\nWhy it matters: If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.\nEvidence: {\"kind\":\"GENERIC_SECRET_ASSIGNMENT\",\"path\":\"https://eink.ma/support\",\"segment\":\"fetched-page\",\"line\":1,\"column\":230327,\"length\":32,\"placeholder\":\"[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "owasp.cookie-missing-secure",
+          "fingerprint": "b50559ace4e18c94642d485998331c0b5fba80722412212c3af11cde895d6065",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "A cookie is set without the Secure flag",
+          "explanation": "At least one Set-Cookie entry does not carry a Secure attribute.",
+          "consequence": "A cookie without Secure can be sent over an unencrypted connection if one is ever attempted, exposing it to interception.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "setCookie": "NEXT_LOCALE=en; Path=/; Expires=Wed, 08 Sep 2027 18:03:55 GMT; Max-Age=31536000; SameSite=lax"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: A cookie is set without the Secure flag\nWhat was measured: At least one Set-Cookie entry does not carry a Secure attribute.\nWhere: https://eink.ma/support\nWhy it matters: A cookie without Secure can be sent over an unencrypted connection if one is ever attempted, exposing it to interception.\nEvidence: {\"setCookie\":\"NEXT_LOCALE=en; Path=/; Expires=Wed, 08 Sep 2027 18:03:55 GMT; Max-Age=31536000; SameSite=lax\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "owasp.cookie-missing-httponly",
+          "fingerprint": "fe8288b4f05715dd13fd0613d94493bcf6ac3487c40c3f1e9a18f9f9f5d7db90",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "A cookie is set without the HttpOnly flag",
+          "explanation": "At least one Set-Cookie entry does not carry an HttpOnly attribute.",
+          "consequence": "A cookie without HttpOnly is readable from JavaScript, so a cross-site scripting vulnerability elsewhere on the page can steal it.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "setCookie": "NEXT_LOCALE=en; Path=/; Expires=Wed, 08 Sep 2027 18:03:55 GMT; Max-Age=31536000; SameSite=lax"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: A cookie is set without the HttpOnly flag\nWhat was measured: At least one Set-Cookie entry does not carry an HttpOnly attribute.\nWhere: https://eink.ma/support\nWhy it matters: A cookie without HttpOnly is readable from JavaScript, so a cross-site scripting vulnerability elsewhere on the page can steal it.\nEvidence: {\"setCookie\":\"NEXT_LOCALE=en; Path=/; Expires=Wed, 08 Sep 2027 18:03:55 GMT; Max-Age=31536000; SameSite=lax\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 98,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "LOW",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 620,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 625,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.thin-content",
+          "fingerprint": "67941562dca95f451dca4fcf675fe5c624808126818e22fe3ea4e3c0886cad34",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Thin content",
+          "explanation": "The page’s visible text is approximately 148 words, below the commonly cited 200-word threshold for substantive content.",
+          "consequence": "Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "wordCount": 148
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 148 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://eink.ma/support\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":148}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 93,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 1986,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 1399,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 1993,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "98bf93f69dfbde69dd9c858bd48e22c9d29e6c71088a02d90e50f6ec1ca3fa7a",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://eink.ma/support",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://eink.ma/support\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "3aacb7abcaf7a9cdd26937d5059310d979f0aa7278fcac7ded77b068dfe2c8aa",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "15 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "count": 15,
+            "sample": [
+              "https://eink.ma/_next/static/chunks/2i51e627rllld.js",
+              "https://eink.ma/_next/static/chunks/064zbffocu64f.js",
+              "https://eink.ma/_next/static/chunks/33wmmxu2kkyqh.js",
+              "https://eink.ma/_next/static/chunks/0fy4h0ngk1igg.js",
+              "https://eink.ma/_next/static/chunks/turbopack-3gkqdqz0d0s-c.js"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 15 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://eink.ma/support\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":15,\"sample\":[\"https://eink.ma/_next/static/chunks/2i51e627rllld.js\",\"https://eink.ma/_next/static/chunks/064zbffocu64f.js\",\"https://eink.ma/_next/static/chunks/33wmmxu2kkyqh.js\",\"https://eink.ma/_next/static/chunks/0fy4h0ngk1igg.js\",\"https://eink.ma/_next/static/chunks/turbopack-3gkqdqz0d0s-c.js\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 88,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 3091,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "TESTING",
+          "area": "Testing",
+          "checkId": "testing.broken-link",
+          "fingerprint": "f1cafd7cf66ad4eed8b0e7b0e662d4d78aa33e07dd41cd9d51a505cdfc3f3fa7",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Broken internal link",
+          "explanation": "1 of 13 sampled same-origin link(s) did not resolve successfully.",
+          "consequence": "A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.",
+          "location": "https://eink.ma/support",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://eink.ma/cdn-cgi/l/email-protection"
+            ]
+          },
+          "fixPrompt": "Fix the following testing issue.\n\nProblem: Broken internal link\nWhat was measured: 1 of 13 sampled same-origin link(s) did not resolve successfully.\nWhere: https://eink.ma/support\nWhy it matters: A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.\nEvidence: {\"count\":1,\"sample\":[\"https://eink.ma/cdn-cgi/l/email-protection\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 1133,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: No automated rendering issues were measured for this page.",
+      "findings": []
+    }
+  ],
+  "aiNarrative": null
+}

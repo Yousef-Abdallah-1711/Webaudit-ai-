@@ -1,0 +1,388 @@
+{
+  "meta": {
+    "target": "https://trimora.sy/terms",
+    "startedAt": "2026-09-06T00:04:05.972Z",
+    "completedAt": "2026-09-06T00:04:08.936Z",
+    "durationMs": 2964,
+    "engine": "showcase-trimora standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 90,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 3,
+    "MEDIUM": 2,
+    "LOW": 2,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 88,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 221,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 208,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 252,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 232,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "ff4a100e226251f1a5ce79b14d54f8572a5d3eb58e36d5a677db00089d2e8681",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "explanation": "A value assigned to a credential-shaped name appears in https://trimora.sy/terms at line 1, column 33012 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.",
+          "consequence": "If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.",
+          "location": "https://trimora.sy/terms",
+          "evidence": {
+            "kind": "GENERIC_SECRET_ASSIGNMENT",
+            "path": "https://trimora.sy/terms",
+            "segment": "fetched-page",
+            "line": 1,
+            "column": 33012,
+            "length": 32,
+            "placeholder": "[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a value assigned to a credential-shaped name\nWhat was measured: A value assigned to a credential-shaped name appears in https://trimora.sy/terms at line 1, column 33012 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.\nWhere: https://trimora.sy/terms\nWhy it matters: If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.\nEvidence: {\"kind\":\"GENERIC_SECRET_ASSIGNMENT\",\"path\":\"https://trimora.sy/terms\",\"segment\":\"fetched-page\",\"line\":1,\"column\":33012,\"length\":32,\"placeholder\":\"[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 98,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "LOW",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 187,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 204,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "meta.canonical-missing",
+          "fingerprint": "7bc19c53d07ece7985e4b3b4dd91c3e2b60a230d9ef0c9f948807ccd729fb259",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Missing canonical link",
+          "explanation": "No <link rel=\"canonical\"> tag was found in the page.",
+          "consequence": "Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.",
+          "location": "https://trimora.sy/terms",
+          "evidence": null,
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Missing canonical link\nWhat was measured: No <link rel=\"canonical\"> tag was found in the page.\nWhere: https://trimora.sy/terms\nWhy it matters: Without a canonical link, search engines must guess which URL variant (with or without query parameters, trailing slash, etc.) is the authoritative one to index.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 81,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 936,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 828,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 975,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "06d905ecd47d61e4bd089d37befccf9a0a2d53a424df644288569f76ccc988c3",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://trimora.sy/terms",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://trimora.sy/terms\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.broken-subresource",
+          "fingerprint": "c8e1195769700bb9bf917327d4440cb4e43b89519271ad0eb8d2e0b0f56ead84",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Broken referenced resource",
+          "explanation": "1 of 14 sampled resource(s) referenced by the page did not load successfully.",
+          "consequence": "A script, stylesheet, or image that fails to load can break page functionality or leave visible gaps in the rendered page.",
+          "location": "https://trimora.sy/terms",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Broken referenced resource\nWhat was measured: 1 of 14 sampled resource(s) referenced by the page did not load successfully.\nWhere: https://trimora.sy/terms\nWhy it matters: A script, stylesheet, or image that fails to load can break page functionality or leave visible gaps in the rendered page.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "8e93b964bf0520563c75b1f7957f4ee9db08105c028f851d692b584689c9bd23",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "13 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://trimora.sy/terms",
+          "evidence": {
+            "count": 13,
+            "sample": [
+              "https://trimora.sy/_next/static/chunks/fd9d1056-3f1cf061ceaf1304.js",
+              "https://trimora.sy/_next/static/chunks/7023-c9296403c74ef6ad.js",
+              "https://trimora.sy/_next/static/chunks/main-app-bca890e9d62c0429.js",
+              "https://trimora.sy/_next/static/chunks/231-379f643486f6d30a.js",
+              "https://trimora.sy/_next/static/chunks/app/terms/page-8a379b647cd4e297.js"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 13 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://trimora.sy/terms\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":13,\"sample\":[\"https://trimora.sy/_next/static/chunks/fd9d1056-3f1cf061ceaf1304.js\",\"https://trimora.sy/_next/static/chunks/7023-c9296403c74ef6ad.js\",\"https://trimora.sy/_next/static/chunks/main-app-bca890e9d62c0429.js\",\"https://trimora.sy/_next/static/chunks/231-379f643486f6d30a.js\",\"https://trimora.sy/_next/static/chunks/app/terms/page-8a379b647cd4e297.js\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 88,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 472,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "TESTING",
+          "area": "Testing",
+          "checkId": "testing.broken-link",
+          "fingerprint": "170824af271974d7167be5176f13e84a3296412f6aaf518833f27ff4e23d8f24",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Broken internal link",
+          "explanation": "1 of 8 sampled same-origin link(s) did not resolve successfully.",
+          "consequence": "A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.",
+          "location": "https://trimora.sy/terms",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/cdn-cgi/l/email-protection"
+            ]
+          },
+          "fixPrompt": "Fix the following testing issue.\n\nProblem: Broken internal link\nWhat was measured: 1 of 8 sampled same-origin link(s) did not resolve successfully.\nWhere: https://trimora.sy/terms\nWhy it matters: A visitor who follows a broken link reaches an error page instead of the content or action they expected, and search engines treat broken internal links as a quality signal.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/cdn-cgi/l/email-protection\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 95,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 811,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: Automated measurements found for this page:\n- [MEDIUM] Image reference does not resolve to a real image: 1 of 1 sampled <img> reference(s) either failed to load or did not return image content.",
+      "findings": [
+        {
+          "module": "UI",
+          "area": "Design",
+          "checkId": "ui.broken-image",
+          "fingerprint": "1355575e95f5fe59d687acfbe5b65c2b6bbfa025d73850e9fc58c35ecc3306b8",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Image reference does not resolve to a real image",
+          "explanation": "1 of 1 sampled <img> reference(s) either failed to load or did not return image content.",
+          "consequence": "A broken image leaves a visible gap (or a browser’s default broken-image icon) where a visitor expected to see the picture.",
+          "location": "https://trimora.sy/terms",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75"
+            ]
+          },
+          "fixPrompt": "Fix the following ui issue.\n\nProblem: Image reference does not resolve to a real image\nWhat was measured: 1 of 1 sampled <img> reference(s) either failed to load or did not return image content.\nWhere: https://trimora.sy/terms\nWhy it matters: A broken image leaves a visible gap (or a browser’s default broken-image icon) where a visitor expected to see the picture.\nEvidence: {\"count\":1,\"sample\":[\"https://trimora.sy/_next/image?url=%2Flogo.png&amp;w=3840&amp;q=75\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    }
+  ],
+  "aiNarrative": null
+}

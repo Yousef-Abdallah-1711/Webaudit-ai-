@@ -9,7 +9,7 @@
  * data anywhere in this view.
  */
 const DS = window.WebAuditAIDesignSystem_fa5933;
-const { Button, Badge, Card, Eyebrow, SeverityBadge, StatRow, ScoreArc, ModuleStatus, IssueCard, AttributionMark } = DS;
+const { Button, Badge, Card, Eyebrow, SeverityBadge, StatRow, ScoreArc, ModuleStatus, IssueCard, AttributionMark, VerdictPanel } = DS;
 const { useT } = window;
 
 const A = window.__AUDIT__;
@@ -729,9 +729,154 @@ function RunbookView() {
   );
 }
 
+/* ─────────────────────────  Readiness (go/no-go verdict)  ───────────────────────── */
+function ReadinessView() {
+  const r = A.readiness;
+  const viewport = useViewportWidth();
+  const compact = viewport < 920;
+
+  if (!r) {
+    return (
+      <div>
+        <PageHead eyebrow="Production readiness" title="Readiness" meta={null} actions={null} />
+        <Card padding={24}>
+          <p style={{ font: 'var(--type-body)', color: 'var(--text-secondary)', margin: 0 }}>
+            No readiness verdict yet — it's computed from a multi-page crawl. Run <code>src/crawl.ts</code> against
+            this target, which folds a <code>readiness</code> block (verdict, per-area worst score, named blockers)
+            into <code>data/audit.json</code>.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  const go = r.verdict === 'go';
+
+  return (
+    <div>
+      <PageHead
+        eyebrow="Production readiness — go / no-go"
+        title={go ? 'Ready to ship' : 'Not ready to ship'}
+        meta={
+          'Computed from the worst score any single crawled page recorded per area, plus any HIGH/CRITICAL ' +
+          'finding repeating across every page — an average score hides exactly the outlier this decision needs to see.'
+        }
+        actions={null}
+      />
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '300px 1fr', gap: '24px', alignItems: 'start' }}>
+        <Card padding={28} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+          <ScoreArc score={A.overall.score ?? 0} delta={null} size={240} label="Site health score" />
+          <SeverityBadge level={go ? 'resolved' : 'critical'} label={go ? 'GO' : 'NO-GO'} />
+          <div style={{ font: 'var(--type-small)', color: 'var(--text-muted)', textAlign: 'center' }}>
+            A decent average score does not by itself mean ready — see the blockers.
+          </div>
+        </Card>
+        <VerdictPanel verdict={r.verdict} score={A.overall.score ?? undefined} areas={r.areas} blockers={r.blockers} />
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────  Pages (multi-page crawl)  ───────────────────────── */
+function PagesView() {
+  const pages = A.crawledPages || [];
+  const [open, setOpen] = React.useState(null);
+
+  if (pages.length === 0) {
+    return (
+      <div>
+        <PageHead eyebrow="Multi-page crawl" title="Pages" meta={null} actions={null} />
+        <Card padding={24}>
+          <p style={{ font: 'var(--type-body)', color: 'var(--text-secondary)', margin: 0 }}>
+            This audit only covers the single page above. Run <code>src/crawl.ts</code> against this target to audit every
+            same-origin page (pricing, listings, login/register forms, etc.) the same way.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHead
+        eyebrow="Multi-page crawl"
+        title={`${pages.length} pages audited`}
+        meta={
+          'Same-origin GET requests only — the same measurement every visitor\'s browser or a search crawler already ' +
+          'triggers. No form was submitted, no authenticated area was crossed.'
+        }
+        actions={null}
+      />
+      <Card padding={0}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', font: 'var(--type-body)', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ borderBottom: 'var(--border-width) solid var(--border-default)' }}>
+                {['Page', 'Score', 'Critical', 'High', 'Medium', 'Low', 'Top finding'].map((h) => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: 'var(--text-muted)', font: 'var(--type-eyebrow)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: 'var(--track-eyebrow)' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pages.map((p) => {
+                const isOpen = open === p.path;
+                const scoreColor = p.score === null ? 'var(--text-muted)' : p.score >= 80 ? 'var(--sev-resolved)' : p.score >= 60 ? 'var(--sev-medium)' : 'var(--sev-high)';
+                return (
+                  <React.Fragment key={p.path}>
+                    <tr
+                      onClick={() => setOpen(isOpen ? null : p.path)}
+                      style={{ borderBottom: 'var(--border-width) solid var(--border-default)', cursor: 'pointer', background: isOpen ? 'var(--surface-sunken)' : 'transparent' }}
+                    >
+                      <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', color: 'var(--text-strong)' }}>{p.path}</td>
+                      <td style={{ padding: '10px 14px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: scoreColor }}>{p.score ?? 'n/a'}</td>
+                      <td style={{ padding: '10px 14px' }}>{p.counts.CRITICAL || 0}</td>
+                      <td style={{ padding: '10px 14px' }}>{p.counts.HIGH || 0}</td>
+                      <td style={{ padding: '10px 14px' }}>{p.counts.MEDIUM || 0}</td>
+                      <td style={{ padding: '10px 14px' }}>{p.counts.LOW || 0}</td>
+                      <td style={{ padding: '10px 14px', color: 'var(--text-secondary)', maxWidth: '360px' }}>
+                        {p.topFindings[0] ? p.topFindings[0].title : '—'}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '0 14px 16px', background: 'var(--surface-sunken)' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '6px' }}>
+                            {p.topFindings.length === 0 ? (
+                              <span style={{ color: 'var(--text-muted)', font: 'var(--type-small)' }}>No defects measured on this page.</span>
+                            ) : (
+                              p.topFindings.map((f, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <SeverityBadge level={sevLower(f.severity)} />
+                                  <span style={{ font: 'var(--type-small)' }}>{f.title}</span>
+                                  <span style={{ font: 'var(--type-small)', color: 'var(--text-muted)' }}>· {f.area}</span>
+                                </div>
+                              ))
+                            )}
+                            <div style={{ font: 'var(--type-small)', color: 'var(--text-muted)', marginTop: '4px' }}>
+                              Full detail: <code>data/pages{p.path === '/' ? '/home' : p.path}/audit.json</code>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 /* ─────────────────────────  Shell  ───────────────────────── */
 const NAV = [
+  ['readiness', 'Readiness', 'M12 2 2 7l10 5 10-5Zm0 20-8-4V9l8 4 8-4v9Z'],
   ['report', 'Report', 'M7 3h7l5 5v13H7Zm7 0v5h5M10 13h7M10 17h5'],
+  ['pages', 'Pages', 'M4 4h16v4H4Zm0 6h7v10H4Zm9 0h7v10h-7Z'],
   ['priorities', 'Priorities', 'm4 12 5 5L20 6'],
   ['fixes', 'Fixes', 'M12 5v14M5 12h14'],
   ['evidence', 'Evidence', 'M12 3a9 9 0 1 0 9 9M12 7v5l3 2'],
@@ -759,7 +904,7 @@ function App() {
   const compact = viewport < 920;
   const phone = viewport < 700;
   const { ThemeToggle } = window;
-  const S = { report: <ReportView />, priorities: <PrioritiesView />, fixes: <FixesView />, evidence: <EvidenceView />, runbook: <RunbookView /> };
+  const S = { readiness: <ReadinessView />, report: <ReportView />, pages: <PagesView />, priorities: <PrioritiesView />, fixes: <FixesView />, evidence: <EvidenceView />, runbook: <RunbookView /> };
   return (
     <div style={{ display: 'flex', flexDirection: compact ? 'column' : 'row', minHeight: '100vh', background: 'var(--surface-sunken)', overflowX: 'hidden' }}>
       <aside style={{ width: compact ? '100%' : 248, flexShrink: 0, background: 'var(--surface-raised)', borderInlineEnd: compact ? 0 : 'var(--border-width) solid var(--border-default)', borderBottom: compact ? 'var(--border-width) solid var(--border-default)' : 0, height: compact ? 'auto' : '100vh', position: 'sticky', top: 0, zIndex: 10, display: 'flex', flexDirection: phone ? 'column' : compact ? 'row' : 'column', alignItems: phone ? 'stretch' : compact ? 'center' : 'stretch', gap: compact ? '6px' : 0, overflowX: 'visible' }}>

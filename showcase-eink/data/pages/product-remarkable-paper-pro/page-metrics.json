@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/product/remarkable-paper-pro",
+  "capturedAt": "2026-09-08T18:06:21.452Z",
+  "timings": {
+    "ttfbMs": 320,
+    "domContentLoadedMs": 866,
+    "loadMs": 928,
+    "firstContentfulPaintMs": 784,
+    "domInteractiveMs": 528
+  },
+  "transferKb": 2131.6,
+  "resourceCount": 45,
+  "domNodes": 391,
+  "scripts": 22,
+  "stylesheets": 3,
+  "images": 10,
+  "title": "reMarkable Paper Pro | Buy Online - Eink.ma",
+  "textLength": 2237,
+  "headings": {
+    "h1": 1,
+    "h2": 5,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

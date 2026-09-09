@@ -1,0 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap");
+/* SUBSTITUTION FLAG: DESIGN.md §3 requires Lexend Deca to be SELF-HOSTED (zero remote font
+   requests). No font binaries were present in the attached sources, so this design system loads
+   the OFL family from Google Fonts. Drop the woff2 files into assets/fonts/ and replace this
+   @import with @font-face rules before production use.
+
+   'JetBrains Mono' in --font-mono is likewise verbatim from DESIGN.md §3 and has no binary here, so
+   mono text renders on the ui-monospace fallback. Upload the woff2 and add its @font-face; do not
+   substitute another family. */
+:root{--font-sans:"Lexend Deca","Lexend Deca Fallback",system-ui,sans-serif;--font-mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Menlo,monospace}

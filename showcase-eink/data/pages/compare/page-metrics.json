@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/compare",
+  "capturedAt": "2026-09-08T18:04:27.451Z",
+  "timings": {
+    "ttfbMs": 296,
+    "domContentLoadedMs": 710,
+    "loadMs": 787,
+    "firstContentfulPaintMs": 664,
+    "domInteractiveMs": 501
+  },
+  "transferKb": 1562.3,
+  "resourceCount": 34,
+  "domNodes": 490,
+  "scripts": 20,
+  "stylesheets": 2,
+  "images": 3,
+  "title": "Compare E-Ink Devices Side by Side — E Ink",
+  "textLength": 4459,
+  "headings": {
+    "h1": 1,
+    "h2": 1,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

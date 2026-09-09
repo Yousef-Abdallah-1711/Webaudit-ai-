@@ -1,0 +1,28 @@
+{
+  "target": "https://trimora.sy/salons/venera",
+  "capturedAt": "2026-09-06T00:03:34.730Z",
+  "timings": {
+    "ttfbMs": 103,
+    "domContentLoadedMs": 603,
+    "loadMs": 1932,
+    "firstContentfulPaintMs": 620,
+    "domInteractiveMs": 582
+  },
+  "transferKb": 5292.1,
+  "resourceCount": 72,
+  "domNodes": 280,
+  "scripts": 19,
+  "stylesheets": 3,
+  "images": 6,
+  "title": "تريمورا — منصة إدارة الصالونات الأولى في سوريا",
+  "textLength": 1144,
+  "headings": {
+    "h1": 1,
+    "h2": 5,
+    "h3": 2
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

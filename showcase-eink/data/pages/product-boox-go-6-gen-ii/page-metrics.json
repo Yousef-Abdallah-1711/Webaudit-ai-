@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/product/boox-go-6-gen-ii",
+  "capturedAt": "2026-09-08T18:08:24.402Z",
+  "timings": {
+    "ttfbMs": 296,
+    "domContentLoadedMs": 739,
+    "loadMs": 1014,
+    "firstContentfulPaintMs": 672,
+    "domInteractiveMs": 509
+  },
+  "transferKb": 2133.7,
+  "resourceCount": 48,
+  "domNodes": 422,
+  "scripts": 22,
+  "stylesheets": 3,
+  "images": 13,
+  "title": "BOOX Go 6 (Gen II) | Buy Online - Eink.ma",
+  "textLength": 2377,
+  "headings": {
+    "h1": 1,
+    "h2": 5,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "target": "https://eink.ma/wishlist",
+  "capturedAt": "2026-09-08T18:05:20.862Z",
+  "timings": {
+    "ttfbMs": 295,
+    "domContentLoadedMs": 692,
+    "loadMs": 737,
+    "firstContentfulPaintMs": 620,
+    "domInteractiveMs": 489
+  },
+  "transferKb": 1431.8,
+  "resourceCount": 39,
+  "domNodes": 144,
+  "scripts": 18,
+  "stylesheets": 2,
+  "images": 0,
+  "title": "Wishlist — E Ink",
+  "textLength": 427,
+  "headings": {
+    "h1": 1,
+    "h2": 0,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

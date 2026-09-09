@@ -19,10 +19,13 @@
  * configured. The executive summary / per-area narrative / prioritisation are
  * authored separately (see `src/ai-narrative.ts`) strictly from these measured
  * findings and are labelled as such in the report and dashboard.
+ *
+ * `runAudit()` is exported so `src/crawl.ts` can call it once per page for a
+ * multi-page audit — this file's own `main()` is a thin single-URL CLI wrapper.
  */
 
 import { mkdir, writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import type { AuditCapability, CapabilityInput } from '@webaudit/capability-sdk';
@@ -45,22 +48,22 @@ import { createBrowserPool, type BrowserPool } from '../../apps/probe-pool/src/b
 import { MODULE_LABEL, MODULE_ORDER, loadCapabilities } from './capabilities.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const OUT = join(HERE, '..', 'data', 'audit.json');
-
-const TARGET = process.argv[2] ?? 'https://app.esaalnybot.tech/';
+const DEFAULT_OUT = join(HERE, '..', 'data', 'audit.json');
+const DEFAULT_TARGET = 'https://app.esaalnybot.tech/';
 const MODULE_TIMEOUT_MS = 90_000;
 
 // The SSRF guard refuses a target that is not on the public internet unless it
-// is explicitly allow-listed. app.esaalnybot.tech is a normal public host, so
-// this is only a safety net for local testing against a fixture.
-if (process.env['SAFE_NET_ALLOW_TARGETS'] === undefined) {
+// is explicitly allow-listed. This is only a safety net for local testing
+// against a fixture — a normal public host needs no allow-listing.
+function allowLocalTargetIfNeeded(target: string): void {
+  if (process.env['SAFE_NET_ALLOW_TARGETS'] !== undefined) return;
   try {
-    const host = new URL(TARGET).origin;
+    const host = new URL(target).origin;
     if (/(^https?:\/\/(localhost|127\.|0\.0\.0\.0|\[::1\]))/.test(host)) {
       process.env['SAFE_NET_ALLOW_TARGETS'] = host;
     }
   } catch {
-    /* handled below */
+    /* handled by the `new URL` call in runAudit, which throws on a bad target */
   }
 }
 
@@ -141,7 +144,11 @@ async function runArea(
       ...(pageProvider === undefined ? {} : { pageProvider }),
     });
 
-  const { applicable, skipped } = await resolveApplicable({ capabilities, input });
+  const { applicable, skipped } = await resolveApplicable({
+    capabilities,
+    input,
+    targetControlLevel: 'NONE',
+  });
 
   const outcomes = await runCodeLayer({
     applicable,
@@ -151,7 +158,7 @@ async function runArea(
   });
 
   const measured = outcomes.flatMap((o) => [...o.findings]);
-  const attributed = attributeMeasured(measured, { module, targetId: input.targetUrl ?? TARGET });
+  const attributed = attributeMeasured(measured, { module, targetId: input.targetUrl ?? 'unknown-target' });
 
   const state = resolveModuleState({
     applicableCount: applicable.length,
@@ -227,15 +234,19 @@ async function runArea(
   };
 }
 
-async function main(): Promise<void> {
+export async function runAudit(target: string, outPath?: string, quiet = false): Promise<Awaited<ReturnType<typeof buildDoc>>> {
+  const write = (msg: string) => {
+    if (!quiet) log(msg);
+  };
   const startedAt = new Date();
-  log(`\n  WebAudit AI — showcase run`);
-  log(`  target: ${TARGET}`);
+  write(`\n  WebAudit AI — showcase run`);
+  write(`  target: ${target}`);
 
-  new URL(TARGET); // throws early on a bad target
+  new URL(target); // throws early on a bad target
+  allowLocalTargetIfNeeded(target);
 
   const { pool, note } = await makeBrowserPool();
-  log(`  browser: ${note}\n`);
+  write(`  browser: ${note}\n`);
   const pageProvider = pool === undefined || pool === null ? undefined : pool.withPage.bind(pool);
 
   const areas: AreaResult[] = [];
@@ -244,13 +255,12 @@ async function main(): Promise<void> {
   try {
     for (const module of MODULE_ORDER) {
       const label = MODULE_LABEL[module];
-      process.stdout.write(`  ▸ ${label.padEnd(18)} `);
+      if (!quiet) process.stdout.write(`  ▸ ${label.padEnd(18)} `);
       const capabilities = await loadCapabilities(module);
 
       const input: CapabilityInput = {
-        targetUrl: TARGET,
+        targetUrl: target,
         priorModuleResults: { ...priorModuleResults },
-        controlLevel: 'NONE',
       };
 
       const area = await runArea(module, capabilities, input, pageProvider);
@@ -264,7 +274,7 @@ async function main(): Promise<void> {
       };
 
       const scoreText = area.score === null ? ' n/a ' : String(area.score).padStart(3);
-      log(
+      write(
         `${area.state.padEnd(13)} score ${scoreText}   ${String(area.findings.length).padStart(2)} findings`,
       );
     }
@@ -272,6 +282,26 @@ async function main(): Promise<void> {
     if (pool) await pool.close().catch(() => undefined);
   }
 
+  const doc = await buildDoc(target, startedAt, areas, note);
+
+  const resolvedOut = outPath ?? DEFAULT_OUT;
+  await mkdir(dirname(resolvedOut), { recursive: true });
+  await writeFile(resolvedOut, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+
+  write(`\n  overall score: ${doc.overall.score ?? 'n/a'} / 100`);
+  write(
+    `  findings: ${areas.flatMap((a) => a.findings).length}  (` +
+      SEVERITIES.filter((s) => doc.counts[s] > 0)
+        .map((s) => `${doc.counts[s]} ${s.toLowerCase()}`)
+        .join(', ') +
+      `)`,
+  );
+  write(`  written: ${resolvedOut}\n`);
+
+  return doc;
+}
+
+async function buildDoc(target: string, startedAt: Date, areas: AreaResult[], browserNote: string) {
   const completedAt = new Date();
 
   const overall = overallScore(
@@ -287,15 +317,15 @@ async function main(): Promise<void> {
     SEVERITIES.map((s) => [s, allFindings.filter((f) => f.severity === s).length]),
   ) as Record<Severity, number>;
 
-  const doc = {
+  return {
     meta: {
-      target: TARGET,
+      target,
       startedAt: startedAt.toISOString(),
       completedAt: completedAt.toISOString(),
       durationMs: completedAt.getTime() - startedAt.getTime(),
       engine:
         'showcase-esaalnybot standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool',
-      browser: note,
+      browser: browserNote,
       aiLayer:
         'NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.',
       capabilityCount: areas.reduce((n, a) => n + a.capabilities.length, 0),
@@ -307,25 +337,18 @@ async function main(): Promise<void> {
     },
     counts,
     areas,
-    // Filled in by src/ai-narrative.ts after this runs.
+    // Filled in by src/ai-narrative.ts after this runs (home page only).
     aiNarrative: null as unknown,
   };
-
-  await mkdir(dirname(OUT), { recursive: true });
-  await writeFile(OUT, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
-
-  log(`\n  overall score: ${overall.score ?? 'n/a'} / 100`);
-  log(
-    `  findings: ${allFindings.length}  (` +
-      SEVERITIES.filter((s) => counts[s] > 0)
-        .map((s) => `${counts[s]} ${s.toLowerCase()}`)
-        .join(', ') +
-      `)`,
-  );
-  log(`  written: ${OUT}\n`);
 }
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
-});
+async function main(): Promise<void> {
+  await runAudit(process.argv[2] ?? DEFAULT_TARGET, DEFAULT_OUT);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error: unknown) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

@@ -1,0 +1,28 @@
+{
+  "target": "https://trimora.sy/about",
+  "capturedAt": "2026-09-06T00:02:44.973Z",
+  "timings": {
+    "ttfbMs": 75,
+    "domContentLoadedMs": 595,
+    "loadMs": 595,
+    "firstContentfulPaintMs": 588,
+    "domInteractiveMs": 543
+  },
+  "transferKb": 731.5,
+  "resourceCount": 32,
+  "domNodes": 382,
+  "scripts": 17,
+  "stylesheets": 2,
+  "images": 1,
+  "title": "تريمورا — منصة إدارة الصالونات الأولى في سوريا",
+  "textLength": 3221,
+  "headings": {
+    "h1": 1,
+    "h2": 6,
+    "h3": 18
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}
