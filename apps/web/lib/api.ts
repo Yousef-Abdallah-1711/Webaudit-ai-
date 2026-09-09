@@ -653,6 +653,56 @@ export function setCapabilityEnabled(
   });
 }
 
+// ─── Admin: scans ────────────────────────────────────────────────────────────
+
+export interface AdminScanSummary {
+  readonly id: string;
+  readonly userEmail: string;
+  readonly targetDisplayName: string;
+  readonly state: string;
+  readonly requestedModules: readonly string[];
+  readonly chargedCredits: number;
+  readonly overallScore: number | null;
+  readonly createdAt: string;
+}
+
+export function getAdminScans(
+  opts: { readonly limit?: number; readonly offset?: number } = {},
+): Promise<{ scans: readonly AdminScanSummary[]; total: number; limit: number; offset: number }> {
+  const params = new URLSearchParams();
+  if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+  if (opts.offset !== undefined) params.set('offset', String(opts.offset));
+  const query = params.toString();
+  return request(`/admin/scans${query === '' ? '' : `?${query}`}`);
+}
+
+// ─── Admin: audit log ────────────────────────────────────────────────────────
+
+export interface AdminAuditLogEntry {
+  readonly id: string;
+  readonly actorId: string;
+  readonly actorEmail: string | null;
+  readonly action: string;
+  readonly subjectType: string;
+  readonly subjectId: string | null;
+  readonly createdAt: string;
+}
+
+export function getAdminAuditLog(
+  opts: { readonly limit?: number; readonly offset?: number } = {},
+): Promise<{
+  entries: readonly AdminAuditLogEntry[];
+  total: number;
+  limit: number;
+  offset: number;
+}> {
+  const params = new URLSearchParams();
+  if (opts.limit !== undefined) params.set('limit', String(opts.limit));
+  if (opts.offset !== undefined) params.set('offset', String(opts.offset));
+  const query = params.toString();
+  return request(`/admin/audit-log${query === '' ? '' : `?${query}`}`);
+}
+
 // ─── Admin: queue (US7, T209) ───────────────────────────────────────────────
 
 export type AdminQueueState = 'waiting' | 'active' | 'delayed' | 'failed' | 'completed';

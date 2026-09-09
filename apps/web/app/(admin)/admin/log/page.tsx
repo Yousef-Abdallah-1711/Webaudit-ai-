@@ -1,52 +1,90 @@
+'use client';
+
 /**
- * Ported from design-system/ui_kits/admin/AdminScreens.jsx's `Log` (T244).
+ * The Audit log admin screen, wired to the real `GET /admin/audit-log` —
+ * this page shipped as a Server Component rendering five hardcoded
+ * placeholder rows ("capability.disable", "credits.grant", ...) with no
+ * backend call at all. Found and closed alongside the scans page, the same
+ * gap in kind.
  *
- * No hooks in the source, so this stays a Server Component. All rows are
- * the exact placeholder audit-log entries the vendored source shows.
+ * `actorEmail` is `null` when the acting operator no longer exists
+ * (`AuditLogEntry.actorId` carries no foreign key by design, per the
+ * model's own schema comment) — rendered as the raw actor id rather than
+ * silently blanked, since "who did this" is the one thing an append-only
+ * log must never hide.
  */
-import { Badge, Input } from '../../../../components/ui';
+import { useCallback, useEffect, useState } from 'react';
+import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, Table } from '../../../../components/admin';
+import { ApiError, getAdminAuditLog, type AdminAuditLogEntry } from '../../../../lib/api';
 import styles from './page.module.css';
 
-const ROWS: readonly (readonly [string, string, string, string, string])[] = [
-  ['23 Aug 14:41', 'khalid@webaudit.ai', 'capability.disable', 'playwright-runner', '203.0.113.4'],
-  ['23 Aug 14:22', 'khalid@webaudit.ai', 'credits.grant', 'user 4f21 · +200', '203.0.113.4'],
-  ['23 Aug 11:07', 'ops@webaudit.ai', 'provider.reorder', 'gemini → position 3', '198.51.100.9'],
-  ['22 Aug 19:50', 'ops@webaudit.ai', 'plan.update', 'Pro concurrent 2 → 3', '198.51.100.9'],
-  ['22 Aug 09:14', 'khalid@webaudit.ai', 'scan.cancel', 'b1994f02', '203.0.113.4'],
-];
+const PAGE_SIZE = 50;
 
 export default function AdminLogPage(): React.ReactElement {
+  const [entries, setEntries] = useState<readonly AdminAuditLogEntry[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async (offset: number, append: boolean) => {
+    setBusy(true);
+    try {
+      const page = await getAdminAuditLog({ limit: PAGE_SIZE, offset });
+      setEntries((prev) => (append ? [...prev, ...page.entries] : page.entries));
+      setTotal(page.total);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The audit log could not be loaded.');
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load(0, false);
+  }, [load]);
+
   return (
     <div>
       <AHead
         eyebrow="Governance"
         title="Audit log"
-        meta="every operator action is recorded · append only"
-        actions={
-          <div className={styles.searchBox}>
-            <Input placeholder="Filter by actor or action" />
-          </div>
-        }
+        {...(total === null ? {} : { meta: `${String(total)} entries · append only` })}
       />
+
+      {error !== null && <p className={styles.error}>{error}</p>}
+
       <Table
         cols={[
-          { label: 'When', width: 150 },
+          { label: 'When', width: 170 },
           { label: 'Actor', width: 230 },
           { label: 'Action', width: 180 },
           { label: 'Subject', width: '1fr' },
-          { label: 'Source', width: 130 },
         ]}
-        rows={ROWS.map(([when, actor, action, subject, source]) => [
-          mono(when),
-          mono(actor),
+        rows={entries.map((entry) => [
+          mono(new Date(entry.createdAt).toLocaleString()),
+          mono(entry.actorEmail ?? entry.actorId),
           <Badge key="action" mono pill={false}>
-            {action}
+            {entry.action}
           </Badge>,
-          subject,
-          mono(source),
+          entry.subjectId === null ? entry.subjectType : `${entry.subjectType} ${entry.subjectId.slice(0, 8)}`,
         ])}
       />
+
+      {total !== null && total > entries.length && (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={busy}
+          onClick={() => {
+            void load(entries.length, true);
+          }}
+          className={`${styles.loadMore}`}
+        >
+          Load more
+        </Button>
+      )}
     </div>
   );
 }

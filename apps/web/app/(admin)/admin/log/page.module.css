@@ -3,3 +3,13 @@
 .searchBox {
   width: 240px;
 }
+
+.error {
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
+.loadMore {
+  margin-top: 12px;
+}

@@ -4,6 +4,16 @@
  * Same discipline as admin-overview.test.ts: `renderToStaticMarkup`, no
  * jsdom, no `next/navigation` mock — none of these four pages call
  * `usePathname()`.
+ *
+ * AdminScansPage and AdminLogPage were originally Server Components
+ * rendering 5 hardcoded placeholder rows each (this file's own git history
+ * has the versions that asserted "acme.com"/"capability.disable" render
+ * unconditionally). Both were wired to real GET /admin/scans and GET
+ * /admin/audit-log — real data now only arrives after a `useEffect` fetch,
+ * which `renderToStaticMarkup` never runs, so — same discipline as
+ * admin-users.test.ts — these two now assert only the pre-data shell and
+ * the "don't show a real-looking figure before data arrives" guard.
+ * `admin-error-paths.test.ts` covers the real refusal path for both.
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -18,22 +28,19 @@ function render(element: React.ReactElement): string {
 }
 
 describe('AdminScansPage', () => {
-  it('renders all 5 scan rows', () => {
+  it('renders the header and table columns before any data arrives', () => {
     const html = render(createElement(AdminScansPage));
-    expect(html).toContain('acme.com');
-    expect(html).toContain('store.example');
+    expect(html).toContain('Scans');
+    expect(html).toContain('Target');
+    expect(html).toContain('Customer');
+    expect(html).toContain('Charged');
+    expect(html).toContain('Score');
   });
 
-  it('running and complete each get their own tone; degraded and failed share "neutral" — matching the source exactly', () => {
+  it('shows no "Load more" control and no fabricated total before any data arrives', () => {
     const html = render(createElement(AdminScansPage));
-    const badgeClasses = new Map(
-      [...html.matchAll(/<span class="([^"]*)">(running|complete|degraded|failed)</g)].map((m) => [
-        m[2],
-        m[1],
-      ]),
-    );
-    expect(badgeClasses.get('running')).not.toBe(badgeClasses.get('complete'));
-    expect(badgeClasses.get('degraded')).toBe(badgeClasses.get('failed'));
+    expect(html).not.toContain('Load more');
+    expect(html).not.toContain('total');
   });
 });
 
@@ -54,12 +61,18 @@ describe('AdminProvidersPage', () => {
 });
 
 describe('AdminLogPage', () => {
-  it('renders every audit entry and the filter box', () => {
+  it('renders the header and table columns before any data arrives', () => {
     const html = render(createElement(AdminLogPage));
-    expect(html).toContain('capability.disable');
-    expect(html).toContain('credits.grant');
-    expect(html).toContain('provider.reorder');
-    expect(html).toContain('Filter by actor or action');
+    expect(html).toContain('Audit log');
+    expect(html).toContain('Actor');
+    expect(html).toContain('Action');
+    expect(html).toContain('Subject');
+  });
+
+  it('shows no "Load more" control and no fabricated total before any data arrives', () => {
+    const html = render(createElement(AdminLogPage));
+    expect(html).not.toContain('Load more');
+    expect(html).not.toContain('entries');
   });
 });
 

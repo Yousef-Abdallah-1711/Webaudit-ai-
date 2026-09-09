@@ -69,3 +69,64 @@ export async function recordAuditLog(
     },
   });
 }
+
+export type AuditLogReader = Pick<PrismaClient, 'auditLogEntry' | 'user'>;
+
+export interface AdminAuditLogEntry extends AuditLogRecord {
+  /** Looked up separately — `actorId` carries no relation to `User` by
+   * design (see the model's own comment). `null` when the actor no longer
+   * exists (a demoted-or-deleted operator's earlier action). */
+  readonly actorEmail: string | null;
+}
+
+export interface ListAuditLogResult {
+  readonly entries: readonly AdminAuditLogEntry[];
+  readonly total: number;
+  readonly limit: number;
+  readonly offset: number;
+}
+
+const DEFAULT_LIST_LIMIT = 50;
+const MAX_LIST_LIMIT = 200;
+
+/** Operator visibility into the append-only log itself (FR-089's own log,
+ * read back). List-only — nothing here writes or mutates a row. */
+export async function listAuditLog(
+  db: AuditLogReader,
+  opts: { readonly limit?: number | undefined; readonly offset?: number | undefined } = {},
+): Promise<ListAuditLogResult> {
+  const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
+  const offset = Math.max(opts.offset ?? 0, 0);
+
+  const [rows, total] = await Promise.all([
+    db.auditLogEntry.findMany({
+      orderBy: { createdAt: 'desc' },
+      skip: offset,
+      take: limit,
+    }),
+    db.auditLogEntry.count(),
+  ]);
+
+  const actorIds = [...new Set(rows.map((row) => row.actorId))];
+  const actors = await db.user.findMany({
+    where: { id: { in: actorIds } },
+    select: { id: true, email: true },
+  });
+  const emailById = new Map(actors.map((actor) => [actor.id, actor.email]));
+
+  const entries = rows.map(
+    (row): AdminAuditLogEntry => ({
+      id: row.id,
+      actorId: row.actorId,
+      actorEmail: emailById.get(row.actorId) ?? null,
+      action: row.action,
+      subjectType: row.subjectType,
+      subjectId: row.subjectId,
+      before: row.before,
+      after: row.after,
+      createdAt: row.createdAt,
+    }),
+  );
+
+  return { entries, total, limit, offset };
+}

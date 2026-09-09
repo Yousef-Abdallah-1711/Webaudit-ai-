@@ -26,11 +26,13 @@
 import { Router } from 'express';
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { requireAuth, requireOperator } from '../../middleware/auth.middleware.js';
+import { adminAuditLogRoutes } from './audit-log.routes.js';
 import { adminCapabilitiesRoutes } from './capabilities.routes.js';
 import { adminMarginRoutes } from './margin.routes.js';
 import { adminPlansRoutes } from './plans.routes.js';
 import { adminProvidersRoutes } from './providers.routes.js';
 import { adminQueueRoutes, type AdminQueueRoutesDeps } from './queue.routes.js';
+import { adminScansRoutes } from './scans.routes.js';
 import { adminUsersRoutes } from './users.routes.js';
 
 export interface AdminRoutesDeps {
@@ -48,6 +50,8 @@ export function adminRoutes(db: PrismaClient, deps: AdminRoutesDeps = {}): Route
   router.use(adminCapabilitiesRoutes(db));
   router.use(adminProvidersRoutes(db));
   router.use(adminQueueRoutes(db, deps.queue ?? {}));
+  router.use(adminScansRoutes(db));
+  router.use(adminAuditLogRoutes(db));
 
   return router;
 }
