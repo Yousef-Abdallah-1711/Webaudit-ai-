@@ -253,7 +253,13 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
 
   router.get('/:id', async (req: AuthedRequest, res: Response) => {
     const userId = req.auth!.userId;
-    const scan = await db.scan.findFirst({ where: { id: pathId(req), userId } });
+    // `target` is included for the live-progress screen, which has nothing
+    // else to name what it is auditing — additive only, every existing field
+    // on `scan` is untouched.
+    const scan = await db.scan.findFirst({
+      where: { id: pathId(req), userId },
+      include: { target: { select: { displayName: true } } },
+    });
     if (scan === null) {
       res.status(404).json(NOT_FOUND);
       return;

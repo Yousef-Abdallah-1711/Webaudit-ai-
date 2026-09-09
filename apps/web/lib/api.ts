@@ -212,6 +212,8 @@ export interface ScanSummary {
   readonly requestedModules: readonly string[];
   /** ISO 8601, or null before the first phase starts. */
   readonly startedAt: string | null;
+  /** Only present on `GET /scans/:id` — what the scan is auditing. */
+  readonly target?: { readonly displayName: string };
 }
 
 export function createScan(
@@ -224,6 +226,10 @@ export function createScan(
 
 export function getScan(scanId: string): Promise<{ scan: ScanSummary }> {
   return request(`/scans/${scanId}`);
+}
+
+export function cancelScan(scanId: string): Promise<{ scan: ScanSummary }> {
+  return request(`/scans/${scanId}/cancel`, { method: 'POST' });
 }
 
 export interface ReportArea {

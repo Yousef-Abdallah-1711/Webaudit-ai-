@@ -4,6 +4,13 @@
  * remediation prompt (this file's own "Independent Test" line in
  * tasks.md).
  *
+ * **Superseded for UI coverage by `e2e/onboarding/first-audit.spec.ts`**,
+ * which drives the same journey through the real browser now that the
+ * screens this file's note below says "do not exist yet" actually do. Kept
+ * here as-is: a fast, no-browser check that the whole pipeline produces a
+ * scored report is a legitimate test in its own right, at a different
+ * layer, not a duplicate of the browser-driven one.
+ *
  * **Drives the real HTTP API directly, not the browser UI.** T109 is
  * listed under "Tests for User Story 1" — written before "Frontend for
  * User Story 1" (T126–135). The registration form, the new-scan panel, the
