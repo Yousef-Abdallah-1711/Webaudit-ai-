@@ -207,10 +207,15 @@ export interface AuditCapability {
 
   /**
    * Preconditions. False means skipped and reported NOT_APPLICABLE, never
-   * failed (FR-021). Synchronous and side-effect free — the conformance suite
-   * asserts the second part.
+   * failed (FR-021). Side-effect free always; synchronous for a normal
+   * in-process capability, but MAY return a Promise — an installed
+   * capability dispatched through sandbox-runner (T253) has no way to
+   * answer this without a network round trip, and `resolve.ts`'s own call
+   * site has always tolerated either shape via `Promise.resolve(...)`. The
+   * conformance suite's side-effect-free assertion applies to both forms
+   * identically.
    */
-  canRun(input: CapabilityInput): boolean;
+  canRun(input: CapabilityInput): boolean | Promise<boolean>;
 
   /**
    * The code layer. MUST NOT call an LLM, and costs zero tokens

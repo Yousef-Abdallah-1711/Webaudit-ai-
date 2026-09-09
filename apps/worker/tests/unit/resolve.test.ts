@@ -161,5 +161,25 @@ describe('resolveApplicable', () => {
 
       expect(sawControlLevel).toBe(false);
     });
+
+    it('T253: awaits an async canRun exactly the same way it awaits a sync one', async () => {
+      const capability: AuditCapability = {
+        id: 'async-canrun-capability',
+        module: 'SECURITY',
+        layer: 'CODE',
+        canRun: () => new Promise((resolve) => setTimeout(() => resolve(true), 5)),
+        runCodeLayer: async () => [],
+      };
+
+      const resolution = await resolveApplicable({
+        capabilities: [capability],
+        input: { priorModuleResults: {} },
+        targetControlLevel: 'NONE',
+      });
+
+      expect(resolution.skipped).toEqual([]);
+      expect(resolution.applicable).toHaveLength(1);
+      expect(resolution.applicable[0]?.capability.id).toBe('async-canrun-capability');
+    });
   });
 });
