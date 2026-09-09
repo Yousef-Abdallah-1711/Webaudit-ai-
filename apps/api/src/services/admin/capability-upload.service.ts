@@ -17,18 +17,45 @@
  * manifest's own `id`, populated by discovery. This function delivers
  * exactly what T226's Definition of Done asks for: a genuine, sandboxed
  * conformance verdict from the real isolation mechanism, in place of the
- * previous unconditional 503. Turning a passed verdict into an installed,
- * runnable capability is a separate, larger change — writing to the
- * discovery root, or adding storage for uploaded bundle content to the data
- * model — and needs its own reviewed task, not a side effect of this one.
+ * previous unconditional 503.
+ *
+ * **T253 closes that gap.** A `passed: true` verdict now writes the bundle
+ * bytes and a real, synthesized `capability.manifest.json` to
+ * `installedRoot/<capabilityId>/` (the same directory `apps/worker`'s
+ * `capability-loader.ts` and this app's own `discover.ts` already walk),
+ * then calls `reconcileNow` — the same reconciliation `boot.ts` runs at
+ * process start, now callable on demand — so the `Capability` row exists
+ * with `trust: 'INSTALLED'` before this HTTP response returns, not at the
+ * next restart. A `passed: false` verdict writes nothing: an operator who
+ * uploaded something that failed conformance gets a report to act on, not
+ * a half-installed capability sitting on disk.
+ *
+ * The manifest this synthesizes is deliberately narrow: `requiresCode:
+ * false`, `requiresScreenshot: false`, `requiredControlLevel: 'NONE'`,
+ * `estimatedTokens: 0`. Nothing in the upload flow collects richer values
+ * from the operator, and `estimatedTokens: 0` is the only value
+ * `manifestSchema` accepts for a CODE-layer capability (Principle III) —
+ * the only shape `apps/worker`'s sandbox dispatch (T253, `RUN_CODE_LAYER`)
+ * actually runs today. An AI-layer or BOTH-layer upload would fail
+ * `manifestSchema`'s own non-zero-token requirement and simply not
+ * reconcile into a row; there is no sandboxed AI-layer dispatch built yet
+ * for an installed capability to run under, so this is a real, current
+ * scope boundary rather than a bug to route around here.
  */
 import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { runConformanceCheck } from '@webaudit/sandbox-runner/conformance';
 import { SANDBOX_LIMITS } from '@webaudit/config';
 import type { CapabilityInput, ConformanceReport } from '@webaudit/capability-sdk';
+import { MANIFEST_FILENAME } from '@webaudit/capability-sdk';
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { getSandboxRunnerUrl } from '../../config/sandbox.js';
+import { defaultInstalledRoot, reconcileNow } from '../registry/boot.js';
 import { recordAuditLog } from './audit-log.js';
+
+/** The fixed name `harness.ts`'s own `runConformance` gives an uploaded bundle's synthesized manifest entrypoint. */
+const INSTALLED_BUNDLE_FILENAME = 'bundle.js';
 
 /**
  * `runConformanceCheck`'s own outcome type, not re-imported from
@@ -96,6 +123,42 @@ function sampleCapabilityInput(): CapabilityInput {
 }
 
 /**
+ * T253. Writes the bundle and a real manifest to `installedRoot/<id>/`,
+ * then reconciles immediately — the write happens first so a reconcile
+ * that runs concurrently with a slow disk never sees a manifest with no
+ * bundle behind it.
+ */
+async function installCapability(
+  db: PrismaClient,
+  report: ConformanceReport,
+  input: UploadCapabilityInput,
+): Promise<void> {
+  const dir = path.join(defaultInstalledRoot(), report.capabilityId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, INSTALLED_BUNDLE_FILENAME), input.bundle);
+  await writeFile(
+    path.join(dir, MANIFEST_FILENAME),
+    JSON.stringify(
+      {
+        id: report.capabilityId,
+        name: input.manifest.name,
+        version: input.manifest.version,
+        module: report.module,
+        layer: report.layer,
+        entrypoint: INSTALLED_BUNDLE_FILENAME,
+        requiresCode: false,
+        requiresScreenshot: false,
+        requiredControlLevel: 'NONE',
+        estimatedTokens: 0,
+      },
+      null,
+      2,
+    ),
+  );
+  await reconcileNow(db);
+}
+
+/**
  * Runs the real conformance suite, inside the real sandbox, against an
  * operator-uploaded bundle — FR-029, "under the same restriction" a
  * capability's own `runCodeLayer` executes under.
@@ -140,6 +203,10 @@ export async function uploadCapability(
     before: null,
     after: { passed: outcome.report.passed, resultsCount: outcome.report.results.length },
   });
+
+  if (outcome.report.passed) {
+    await installCapability(db, outcome.report, input);
+  }
 
   return {
     capabilityId: outcome.report.capabilityId,

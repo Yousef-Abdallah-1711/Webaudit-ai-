@@ -77,6 +77,18 @@ export interface CheckResult {
 
 export interface ConformanceReport {
   readonly capabilityId: string;
+  /**
+   * The capability's own declared module/layer (T253 — the upload path
+   * needs these to write a real `capability.manifest.json` for a passing
+   * installed capability, and this report is the only thing it sees after
+   * conformance runs). Trustworthy exactly when `passed` is true:
+   * `checkManifest` below independently cross-validates
+   * `capability.module`/`capability.layer` against a Zod-parsed manifest,
+   * so a passing report already proves these are valid enum values, not
+   * just whatever the capability object happened to contain.
+   */
+  readonly module: string;
+  readonly layer: string;
   readonly passed: boolean;
   readonly results: readonly CheckResult[];
 }
@@ -503,6 +515,8 @@ export async function runConformanceSuite(
 
   return {
     capabilityId: typeof capability.id === 'string' ? capability.id : '(unknown)',
+    module: typeof capability.module === 'string' ? capability.module : '(unknown)',
+    layer: typeof capability.layer === 'string' ? capability.layer : '(unknown)',
     passed: results.every((r) => r.passed),
     results,
   };

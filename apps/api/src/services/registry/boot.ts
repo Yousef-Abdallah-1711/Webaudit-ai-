@@ -45,7 +45,7 @@ function defaultVendoredRoot(): string {
  * `discoverCapabilities` already treats a missing root as "found nothing"
  * rather than an error.
  */
-function defaultInstalledRoot(): string {
+export function defaultInstalledRoot(): string {
   return (
     process.env['INSTALLED_CAPABILITIES_ROOT'] ??
     fileURLToPath(new URL('../../../../../var/capabilities-installed', import.meta.url))
@@ -59,7 +59,17 @@ export interface ReconcileAtBootOptions {
   readonly assertLocal?: boolean;
 }
 
-export async function reconcileCapabilitiesAtBoot(
+/**
+ * T253 — the actual work, callable any time a capability set on disk needs
+ * to be reflected into the `Capability` table, not just once at process
+ * start. `reconcileCapabilitiesAtBoot` below is this same function under
+ * its original name, kept for every existing boot-time and test call site;
+ * the upload path (`capability-upload.service.ts`) calls `reconcileNow`
+ * directly right after writing a newly-passed bundle to `installedRoot`, so
+ * the new `Capability` row exists before that HTTP response returns rather
+ * than waiting for the next process restart.
+ */
+export async function reconcileNow(
   db: Pick<PrismaClient, 'capability'>,
   options: ReconcileAtBootOptions = {},
 ): Promise<void> {
@@ -125,3 +135,6 @@ export async function reconcileCapabilitiesAtBoot(
     );
   }
 }
+
+/** Original name, every existing boot-time and test call site. Identical behaviour to `reconcileNow`. */
+export const reconcileCapabilitiesAtBoot = reconcileNow;

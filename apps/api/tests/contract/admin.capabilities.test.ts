@@ -18,10 +18,13 @@
  * through Session 7's isolation mechanism, not a mock.
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import { SignJWT } from 'jose';
+import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { createSandboxHost, type SandboxHost } from '@webaudit/sandbox-runner';
 import { env } from '../../src/config/env.js';
 import { adminCapabilitiesRoutes } from '../../src/routes/admin/capabilities.routes.js';
@@ -373,6 +376,7 @@ describe('POST /capabilities/upload (T216/T226)', () => {
 
 describe('POST /capabilities/upload (T226 — real dispatch)', () => {
   let sandboxHost: SandboxHost;
+  let installedRoot: string;
 
   beforeAll(async () => {
     sandboxHost = await createSandboxHost({ port: 0 });
@@ -382,6 +386,20 @@ describe('POST /capabilities/upload (T226 — real dispatch)', () => {
   afterAll(async () => {
     delete process.env['SANDBOX_RUNNER_URL'];
     await sandboxHost.close();
+  });
+
+  // T253 — this block's own bundle genuinely passes conformance, so it now
+  // genuinely installs (writes to disk + reconciles) on every run. Scoped to
+  // a throwaway root so a real test run never leaks a real directory into
+  // this repo's own `var/capabilities-installed` (the unscoped default).
+  beforeEach(() => {
+    installedRoot = mkdtempSync(path.join(tmpdir(), 'installed-t226-'));
+    process.env['INSTALLED_CAPABILITIES_ROOT'] = installedRoot;
+  });
+
+  afterEach(() => {
+    delete process.env['INSTALLED_CAPABILITIES_ROOT'];
+    rmSync(installedRoot, { recursive: true, force: true });
   });
 
   // A real, minimal, syntactically valid capability bundle — the same shape
@@ -464,5 +482,88 @@ describe('POST /capabilities/upload (T226 — real dispatch)', () => {
       .set('Content-Type', 'text/plain')
       .send(BENIGN_BUNDLE)
       .expect(400);
+  });
+});
+
+describe('POST /capabilities/upload (T253 — a passing verdict installs the capability)', () => {
+  let sandboxHost: SandboxHost;
+  let installedRoot: string;
+
+  beforeAll(async () => {
+    sandboxHost = await createSandboxHost({ port: 0 });
+    process.env['SANDBOX_RUNNER_URL'] = `http://127.0.0.1:${String(sandboxHost.port)}`;
+  });
+
+  afterAll(async () => {
+    delete process.env['SANDBOX_RUNNER_URL'];
+    await sandboxHost.close();
+  });
+
+  beforeEach(() => {
+    installedRoot = mkdtempSync(path.join(tmpdir(), 'installed-upload-'));
+    process.env['INSTALLED_CAPABILITIES_ROOT'] = installedRoot;
+  });
+
+  afterEach(() => {
+    delete process.env['INSTALLED_CAPABILITIES_ROOT'];
+    rmSync(installedRoot, { recursive: true, force: true });
+  });
+
+  const PASSING_BUNDLE = `({
+    id: 't253-real-scan-ready',
+    module: 'SECURITY',
+    layer: 'CODE',
+    canRun: () => true,
+    runCodeLayer: async () => ([]),
+  })`;
+
+  it('writes the bundle + a real manifest to disk and reconciles it into a Capability row immediately', async () => {
+    const { token } = await makeOperatorToken();
+    const res = await request(app)
+      .post('/capabilities/upload')
+      .query({ name: 'T253 real scan ready', version: '1.0.0' })
+      .set(auth(token))
+      .set('Content-Type', 'text/plain')
+      .send(PASSING_BUNDLE)
+      .expect(200);
+
+    expect((res.body as { passed: boolean }).passed).toBe(true);
+
+    const persisted = await testDb.capability.findUnique({ where: { id: 't253-real-scan-ready' } });
+    expect(persisted).not.toBeNull();
+    expect(persisted?.trust).toBe('INSTALLED');
+    expect(persisted?.module).toBe('SECURITY');
+    expect(persisted?.layer).toBe('CODE');
+
+    const dir = path.join(installedRoot, 't253-real-scan-ready');
+    expect(existsSync(path.join(dir, 'bundle.js'))).toBe(true);
+    expect(readFileSync(path.join(dir, 'bundle.js'), 'utf8')).toBe(PASSING_BUNDLE);
+    const manifest = JSON.parse(readFileSync(path.join(dir, 'capability.manifest.json'), 'utf8')) as {
+      id: string;
+      module: string;
+      layer: string;
+      entrypoint: string;
+    };
+    expect(manifest.id).toBe('t253-real-scan-ready');
+    expect(manifest.module).toBe('SECURITY');
+    expect(manifest.entrypoint).toBe('bundle.js');
+  });
+
+  it('does not write anything to disk or the database when conformance fails', async () => {
+    const { token } = await makeOperatorToken();
+    // No runCodeLayer at all — contract-shape fails, so passed is false.
+    const FAILING_BUNDLE = `({ id: 't253-should-not-install', module: 'SECURITY', layer: 'CODE', canRun: () => true })`;
+    const res = await request(app)
+      .post('/capabilities/upload')
+      .query({ name: 'Should not install', version: '1.0.0' })
+      .set(auth(token))
+      .set('Content-Type', 'text/plain')
+      .send(FAILING_BUNDLE)
+      .expect(200);
+
+    expect((res.body as { passed: boolean }).passed).toBe(false);
+    const persisted = await testDb.capability.findUnique({ where: { id: 't253-should-not-install' } });
+    expect(persisted).toBeNull();
+    expect(existsSync(path.join(installedRoot, 't253-should-not-install'))).toBe(false);
   });
 });
