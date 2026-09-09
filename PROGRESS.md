@@ -1277,6 +1277,31 @@ pnpm db:seed
    scripts.
 6. **`design-system/` is read-only.** Port out of it; never edit it, never import it at runtime
    (constitution v1.1.0, Design Adherence).
+7. **`apps/sandbox-runner`'s harness bundle is cached by `harness.ts`'s own file mtime, not its
+   transitive dependencies.** `host/build-harness.ts` esbuild-bundles the child harness once and
+   reuses it while `apps/sandbox-runner/.sandbox-build/harness.bundle.mjs` is newer than
+   `child-harness/harness.ts` itself — a change to a bundled package it imports (e.g.
+   `@webaudit/capability-sdk`) does not bump that comparison, so the running host silently keeps
+   dispatching the stale bundle. Harmless in a real deploy (the image is built fresh, no stale cache
+   directory persists), but costs real time in local dev: `rm -rf apps/sandbox-runner/.sandbox-build`
+   after touching anything the harness bundles, before trusting a test result (found live, T253,
+   2026-09-09).
+
+### T253 done (2026-09-09) — Phase 13/Convergence closed, nothing left in the tracked plan
+
+Open Decision #20's installation half (an upload verdict now writes a real `Capability` row and
+dispatches through `sandbox-runner` during a real scan — see Open Decision #22 and tasks.md's T253
+entry for the full account) was the last item Phase 13's own `/speckit-converge` pass had appended.
+With it done, every task in `tasks.md` across all 13 phases is `[X]`, and Open Decisions #18-#21 are
+all resolved (#1, #3, #4, #7-#9, #16 remain genuine "needs a call" items, none blocking correctness).
+**Next natural step: run `/speckit-converge` again** to check for anything a fresh pass would find now
+that T253 exists (a prior pass found four real gaps after the original 250-task plan looked done, so a
+second pass after a genuinely new architectural surface is worth doing rather than assuming there is
+nothing left) — or, if the honest exceptions listed in this file's own "Reality check on 'production
+ready'" section are
+acceptable as-is, this is a reasonable point to treat the baseline as feature-complete and shift to the
+unresolved "needs a call" decisions (monetary price points #3, OpenAI/Google provider pricing #9) that
+block an actual production boot rather than correctness.
 
 ### Is the tree healthy?
 
@@ -2413,6 +2438,7 @@ files uncommitted, that work is real and in progress — do not discard it.
 | 19 | `apps/sandbox-runner`'s `--allow-fs-read`/`--allow-fs-write` glob matching produces a garbled, mis-cased resource path (`\\?\c:\uSERS\...`) for certain glob forms on this Windows machine (found live during Session 7, T223, 2026-09-04) | **Resolved (2026-09-08).** Verified on real Linux: the same `node:22-slim` container ran the exact invocation `host/server.ts` uses — `fork(child, [child], { execArgv: ['--permission', '--allow-fs-read=<dir>/*'], env: {} })` — and the child cleanly read a file inside the allowed directory with exit code 0 and no stderr output; no mis-casing, no garbled path. This is expected rather than surprising: the reported artifact was a Windows extended-length path prefix (`\\?\c:\...`), a Windows-only path convention with no Linux equivalent, so the quirk cannot occur there by construction. No code change needed — the existing narrow, `path.sep`-consistent `readAllowlist` in `host/server.ts` already works correctly on the deployment target. |
 | 20 | `apps/sandbox-runner/src/child-harness/harness.ts`'s `runConformance` (T224, Session 7) builds `rawManifest: { id, module, layer }` only; `@webaudit/capability-sdk`'s `manifestSchema` also requires `name`, `version`, and `entrypoint`, so `manifest-valid` — and therefore a `ConformanceReport`'s overall `passed` — cannot come back `true` for any capability dispatched through `CONFORMANCE` today (found live during Session 8, T226, 2026-09-04, the first time anything ever exercised the `CONFORMANCE` operation end to end) | **Manifest-completeness half resolved (2026-09-08, T251, spec-kit Phase 12/Convergence); installation half split out as T253.** Chose the wire-protocol extension over adapting `manifest-valid` for uploads: `SandboxRequest` gained an optional `manifest: { name, version }` field, populated from a new `?name=&version=` query pair on the upload route (validated against `manifestSchema`'s own constraints), and `runConformance` now builds a complete `rawManifest` — `id`/`module`/`layer` from the loaded capability's own code (trustworthy the same way any self-declaration is), `name`/`version` from the operator's query params, `entrypoint` a fixed documented sentinel (`'bundle.js'`) since an uploaded bundle IS its own entry module and there is no second file for a relative path to point at. `manifest-valid` and the report's overall `passed` now genuinely come back `true` — `admin.capabilities.test.ts`'s real-dispatch test asserts this against the real sandbox, not a mock. What T251 explicitly did NOT do, by design: write a `Capability` row, decide where an accepted bundle's code lives on disk, or wire it into a real scan's dispatch path — that is T253, a genuinely separate architectural question this session's own scoping (and the original module note) correctly kept out of T251's reach. |
 | 21 | `capability-upload.service.ts`'s conformance run hardcodes `controlLevel: 'NONE'` for every uploaded capability, and nothing in `runConformanceSuite` varies this or gates on the capability's own declared `requiredControlLevel` — found by the final production-readiness review's integration-seam pass (2026-09-04) | **Resolved (2026-09-08, T252, spec-kit Phase 12/Convergence) — chose the enforced-rule option over per-level re-runs.** `CapabilityInput` (`@webaudit/capability-sdk`) no longer has a `controlLevel` field at all: `canRun`/`runCodeLayer` structurally cannot read what was never on the object handed to them, closing the risk category itself rather than verifying around it. The one real FR-017 gate, `apps/worker/src/module-runner/resolve.ts`'s `resolveApplicable`, now takes the target's real level as its own `targetControlLevel` parameter kept separate from `input`; `RunModuleOptions` and `orchestrator.ts` thread it the same way, and `capability-upload.service.ts`'s conformance sample input simply has nothing to set anymore. A new test in `resolve.test.ts` asserts the object `canRun` receives has no `controlLevel` own-property at any target level, confirmed to genuinely depend on the fix (removed the fix, watched the test fail, restored it). Touched the contract type plus ~20 call sites project-wide; the full adverse suite (392/392, +1 pre-existing unrelated skip) and unit suite (612/612 across the affected packages) stayed green throughout, including every SC-021/SC-011/SC-017 adversarial test — none of which needed to change. |
+| 22 | Installation half of Open Decision #20 — a passing upload verdict produced no `Capability` row and no dispatch path for a real scan (T253's own subject, split out from T251) | **Resolved (2026-09-09, T253, spec-kit Phase 13/Convergence).** `capability-upload.service.ts` now writes the bundle + a synthesized `capability.manifest.json` to `installedRoot/<id>/` on a passing verdict and reconciles immediately (`boot.ts`'s reconciliation extracted into an on-demand `reconcileNow`, aliased by the original `reconcileCapabilitiesAtBoot`); `apps/worker/src/orchestrator/capability-loader.ts` walks that same root and, for anything found there, never `import()`s it — the bytes are read once and wrapped in a transparent `AuditCapability` whose `canRun`/`runCodeLayer` are real HTTP dispatches to `sandbox-runner` (`makeSandboxedCapability`), satisfying Non-Negotiable #5 by construction. `canRun` folds into the same `RUN_CODE_LAYER` round trip as `runCodeLayer` (one fork per call, not two) and a capability whose sandbox dispatch cannot complete fails that one capability closed while the module DEGRADEs rather than fails, using the pre-existing `containCapabilityCall` mechanism unchanged. Proven at three levels — a contract test that a pass installs and a failure does not, a real end-to-end integration test through a real `sandbox-runner` proving a genuine `Issue` (`MEASURED`) is persisted from code never `import()`'d into the worker process, and an adverse test proving a real unreachable sandbox degrades rather than fails the module. One real, honest scope limit remains: only a CODE-layer installed capability can pass today (the synthesized manifest always sets `estimatedTokens: 0`; no sandboxed AI-layer dispatch exists yet for an installed capability). Zero regressions: apps/api 335/335 (47 files, `--no-file-parallelism`); apps/worker/capability-sdk/sandbox-runner typechecked clean. |
 
 ## Carried corrections — still open
 
@@ -2581,13 +2607,14 @@ The core loop works and CI genuinely gates merges. Honest state as of Phase 11, 
   process-lifecycle logging is structured and redacted.
 - **"100% done" does not mean "nothing left to decide."** Every item below is a real, load-bearing,
   honestly-recorded exception — read them before calling this shippable, not as a formality after.
-- **Uploading a capability produces a verdict, not an installed capability.** `POST
-  /admin/capabilities/upload` genuinely dispatches to the real sandbox and returns a real, per-check
-  `ConformanceReport` — but does not write a `Capability` row or make the bundle executable by any real
-  scan (a deliberate scope boundary, Open Decision #20's own subject) and, separately, no capability can
-  pass full conformance today regardless of how well-formed it is, because of a pre-existing gap in how
-  the `CONFORMANCE` operation builds its manifest (also Open Decision #20). Both are honestly documented,
-  not silently assumed away.
+- **Open Decision #20 is resolved, T253 (Phase 13, 2026-09-09).** `POST /admin/capabilities/upload`
+  now writes a real `Capability` row (`trust: INSTALLED`) and the bundle + a synthesized manifest to
+  `installedRoot/<id>/` the moment a verdict passes, and `apps/worker`'s capability loader dispatches
+  it through `sandbox-runner` during a real scan — proven end to end with a real, persisted `Issue`
+  from code never `import()`'d into the worker process. One real, honest scope limit remains, not
+  silently routed around: only a CODE-layer installed capability can pass today (the synthesized
+  manifest always sets `estimatedTokens: 0`, and there is no sandboxed AI-layer dispatch built for an
+  installed capability yet) — see "T253" below for the full account.
 - **No provider has ever been called with real spend.** Every suite runs `AI_MODE=fixtures` by
   design; the three vendor adapters are typechecked and stubbed. A production boot also needs the
   OpenAI/Google model + per-MTok price config (open decision #9).
@@ -2610,12 +2637,10 @@ The core loop works and CI genuinely gates merges. Honest state as of Phase 11, 
   fixed (recoloring a design-system token needs a signed-off design exception, not a polish-task
   side effect). Sits alongside the already-known `Button` focus-ring gap (0a), which axe-core cannot
   mechanically detect at all.
-- **Four honestly-open, unverified/undecided gaps** (Open Decisions #18, #19, #20, plus the two above
-  restated as their own bullets for visibility): empty-env leakage and an fs-permission glob-matching
-  quirk in `sandbox-runner` (both found on this Windows dev machine, both assessed as likely
-  Windows-specific but not yet confirmed on the real Linux deployment target), and the `CONFORMANCE`
-  manifest gap (#20, needs a real design decision about the uploaded-bundle format or the conformance
-  suite's shared code, not a quick fix).
+- **Two honestly-open, unverified/undecided gaps remain** (Open Decisions #18, #19 — #20 resolved by
+  T253 above): empty-env leakage and an fs-permission glob-matching quirk in `sandbox-runner` (both
+  found on this Windows dev machine, both assessed as likely Windows-specific but not yet confirmed on
+  the real Linux deployment target).
 - The first sellable artifact was **T135**, end of Phase 3; the full audit→fix→verify→ship journey
   is deliverable as of Phase 5; source-level depth (repos and archives) as of Phase 6; the account
   is billable as of Phase 7; brand-intent tailoring as of Phase 8; the operator console as of Phase 9;

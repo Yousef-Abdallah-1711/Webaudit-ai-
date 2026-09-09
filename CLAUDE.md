@@ -33,7 +33,7 @@ without checking the plan regardless — it remains historical, only these three
 ## Project state
 
 **Read [PROGRESS.md](PROGRESS.md) first — its "Resume here" section is the handoff.** It carries the
-current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
+current task, the environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
 are complete, and **the original 250-task plan is done** (+T236a, not in the original count) — every
@@ -41,8 +41,10 @@ phase, from Phase 1 (setup) through Phase 11 (polish), closed as of 2026-09-04. 
 pass on 2026-09-08 (Phase 12) found and closed four more real gaps against the constitution and
 FR-029 — T249 (capability identity no longer hardcoded in core), T250 (admin console visual-regression
 baseline), T251 (upload conformance's manifest-completeness half), T252 (capability code can no longer
-read `controlLevel` at all) — and split out one genuinely new architectural question, T253 (Phase 13,
-open): wiring a passing upload verdict into the registry so a real scan can dispatch the capability.
+read `controlLevel` at all) — and split out one genuinely new architectural question, T253 (Phase 13):
+wiring a passing upload verdict into the registry so a real scan can dispatch the capability. **T253 is
+now done too (2026-09-09)** — every task across all 13 phases is closed; see PROGRESS.md's "Resume
+here" section for what a next `/speckit-converge` pass might still find.
 `tasks.md` is authoritative for task state; PROGRESS.md carries the honest scoreboard, the full
 per-phase account, and every open decision worth knowing before touching a given area.
 
@@ -64,11 +66,11 @@ unconditional refusal. The first sellable artifact was **T135**, end of Phase 3.
 
 **"250/250" is not "nothing left to decide."** PROGRESS.md's own "Reality check on 'production ready'"
 section states every real, load-bearing exception plainly — read it before treating this as shippable
-without qualification. Two worth naming here specifically: capability upload today returns a genuine
-conformance verdict but does not install the capability anywhere a real scan would run it (Open
-Decision #20), and `apps/worker`'s capability loader and reverify resolver hardcode capability identity
-in a static table rather than routing through the registry (Open Decision #13, "made, not settled") —
-a real, already-accepted tension with non-negotiable #1 below, not a hidden one.
+without qualification. Worth naming here specifically: a passing capability upload now writes a real
+`Capability` row and dispatches through `sandbox-runner` during a real scan (T253, Phase 13, resolving
+Open Decision #20), but only for a CODE-layer installed capability — the synthesized manifest always
+sets `estimatedTokens: 0`, and there is no sandboxed AI-layer dispatch built yet for an installed
+capability to run under.
 
 Two rounds of defects are recorded rather than forgotten. A full engineering review of Phases 1–2B
 produced 19 findings, all resolved in `f02ef48` — three Critical: a credit-ordering bug that drew
