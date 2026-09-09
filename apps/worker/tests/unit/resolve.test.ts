@@ -14,13 +14,13 @@ describe('resolveApplicable', () => {
       };
 
       const input: CapabilityInput = {
-        controlLevel: 'ATTESTED', // Target has ATTESTED, not VERIFIED
         priorModuleResults: {},
       };
 
       const resolution = await resolveApplicable({
         capabilities: [capability],
         input,
+        targetControlLevel: 'ATTESTED', // Target has ATTESTED, not VERIFIED
         requiredControlLevels: {
           'test-capability': 'VERIFIED', // This capability requires VERIFIED
         },
@@ -45,13 +45,13 @@ describe('resolveApplicable', () => {
       };
 
       const input: CapabilityInput = {
-        controlLevel: 'VERIFIED',
         priorModuleResults: {},
       };
 
       const resolution = await resolveApplicable({
         capabilities: [capability],
         input,
+        targetControlLevel: 'VERIFIED',
         requiredControlLevels: {
           'test-capability': 'VERIFIED', // Exactly matches
         },
@@ -72,13 +72,13 @@ describe('resolveApplicable', () => {
       };
 
       const input: CapabilityInput = {
-        controlLevel: 'VERIFIED', // Target has VERIFIED
         priorModuleResults: {},
       };
 
       const resolution = await resolveApplicable({
         capabilities: [capability],
         input,
+        targetControlLevel: 'VERIFIED', // Target has VERIFIED
         requiredControlLevels: {
           'test-capability': 'ATTESTED', // Only requires ATTESTED
         },
@@ -98,13 +98,13 @@ describe('resolveApplicable', () => {
       };
 
       const input: CapabilityInput = {
-        controlLevel: 'NONE', // Unverified target
         priorModuleResults: {},
       };
 
       const resolution = await resolveApplicable({
         capabilities: [capability],
         input,
+        targetControlLevel: 'NONE', // Unverified target
         // No requiredControlLevels provided → defaults to NONE
       });
 
@@ -121,13 +121,13 @@ describe('resolveApplicable', () => {
       ];
 
       const input: CapabilityInput = {
-        controlLevel: 'ATTESTED',
         priorModuleResults: {},
       };
 
       const resolution = await resolveApplicable({
         capabilities,
         input,
+        targetControlLevel: 'ATTESTED',
         requiredControlLevels: {
           'cap1': 'NONE', // ATTESTED >= NONE → allowed
           'cap2': 'ATTESTED', // ATTESTED >= ATTESTED → allowed
@@ -139,6 +139,27 @@ describe('resolveApplicable', () => {
       expect(resolution.applicable.map((c) => c.capability.id)).toEqual(['cap1', 'cap2']);
       expect(resolution.skipped).toHaveLength(1);
       expect(resolution.skipped[0]?.capabilityId).toBe('cap3');
+    });
+
+    it('T252: canRun never receives a controlLevel field on its input, at any target level', async () => {
+      let sawControlLevel = false;
+      const capability: AuditCapability = {
+        id: 'test-capability',
+        module: 'SECURITY',
+        layer: 'CODE',
+        canRun: (input) => {
+          sawControlLevel = Object.prototype.hasOwnProperty.call(input, 'controlLevel');
+          return true;
+        },
+      };
+
+      await resolveApplicable({
+        capabilities: [capability],
+        input: { priorModuleResults: {} },
+        targetControlLevel: 'VERIFIED',
+      });
+
+      expect(sawControlLevel).toBe(false);
     });
   });
 });

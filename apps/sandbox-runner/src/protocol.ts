@@ -25,6 +25,21 @@ export interface SandboxLimits {
   readonly memoryMb: number;
 }
 
+/**
+ * T251 — the operator-supplied half of an uploaded capability's manifest.
+ * `id`/`module`/`layer` come from the loaded capability's own code object
+ * (read after it runs, inside the sandbox — trustworthy the same way any
+ * self-declaration is), but a bundle is UTF-8 JS source with no second file
+ * to carry `name`/`version`; those have no other source than the operator
+ * who uploaded it. `entrypoint` is not here: the bundle IS its own entry
+ * module, so `@webaudit/capability-sdk`'s `manifestSchema` requirement for
+ * one is satisfied with a fixed sentinel inside the sandbox, not a real path.
+ */
+export interface UploadedCapabilityManifest {
+  readonly name: string;
+  readonly version: string;
+}
+
 export interface SandboxRequest {
   readonly requestId: string;
   /** The uploaded capability, content-addressed. See child-harness/load.ts for the bundle format this session defines. */
@@ -33,6 +48,8 @@ export interface SandboxRequest {
   /** A `CapabilityInput` for CONFORMANCE/RUN_CODE_LAYER, a `ReverifyRequest` for REVERIFY. */
   readonly input: CapabilityInput | ReverifyRequest;
   readonly limits: SandboxLimits;
+  /** CONFORMANCE only — see `UploadedCapabilityManifest`. Absent for RUN_CODE_LAYER/REVERIFY. */
+  readonly manifest?: UploadedCapabilityManifest;
 }
 
 export type SandboxFailure =

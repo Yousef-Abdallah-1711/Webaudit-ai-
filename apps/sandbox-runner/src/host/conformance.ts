@@ -42,6 +42,8 @@ export interface RunConformanceInput {
   readonly capabilityBundle: Uint8Array;
   readonly sampleInput: CapabilityInput;
   readonly limits: { readonly wallClockMs: number; readonly memoryMb: number };
+  /** T251 — `name`/`version` for `manifest-valid`; see `UploadedCapabilityManifest`. */
+  readonly manifest: { readonly name: string; readonly version: string };
 }
 
 export async function runConformanceCheck(
@@ -57,6 +59,7 @@ export async function runConformanceCheck(
       operation: 'CONFORMANCE',
       input: input.sampleInput,
       limits: input.limits,
+      manifest: input.manifest,
     }),
   });
 

@@ -113,7 +113,7 @@ export interface AdminCapabilitySummary {
 
 /** Enough detail for an operator console to act on (FR-086), not the full row. */
 export async function listCapabilities(
-  db: PrismaClient,
+  db: Pick<PrismaClient, 'capability'>,
 ): Promise<readonly AdminCapabilitySummary[]> {
   const rows = await db.capability.findMany({
     orderBy: { id: 'asc' },
@@ -139,7 +139,7 @@ export async function listCapabilities(
 }
 
 async function requireCapability(
-  db: PrismaClient,
+  db: Pick<PrismaClient, 'capability'>,
   capabilityId: string,
 ): Promise<{ readonly isEnabled: boolean }> {
   const row = await db.capability.findUnique({
@@ -148,6 +148,24 @@ async function requireCapability(
   });
   if (row === null) throw new CapabilityNotFoundError(capabilityId);
   return row;
+}
+
+/**
+ * Locks the `Capability` row `FOR UPDATE` inside `tx` — the transaction the
+ * caller is already in — and throws if it does not exist. Both mutations
+ * below take this lock before their own `before` read, closing the same
+ * class of audit-log race `users.service.ts`'s `updateUser` closed: without
+ * it, two concurrent PATCHes on the same capability both read the row's
+ * state before either commits.
+ */
+async function lockCapability(
+  tx: Pick<PrismaClient, '$queryRaw'>,
+  capabilityId: string,
+): Promise<void> {
+  const locked = await tx.$queryRaw<{ id: string }[]>`
+    SELECT id FROM "Capability" WHERE id = ${capabilityId} FOR UPDATE
+  `;
+  if (locked.length === 0) throw new CapabilityNotFoundError(capabilityId);
 }
 
 export interface SetCapabilityEnabledInput {
@@ -165,28 +183,31 @@ export async function setCapabilityEnabled(
   db: PrismaClient,
   input: SetCapabilityEnabledInput,
 ): Promise<AdminCapabilitySummary> {
-  const before = await requireCapability(db, input.capabilityId);
+  return db.$transaction(async (tx) => {
+    await lockCapability(tx, input.capabilityId);
+    const before = await requireCapability(tx, input.capabilityId);
 
-  await db.capability.update({
-    where: { id: input.capabilityId },
-    data: { isEnabled: input.isEnabled },
+    await tx.capability.update({
+      where: { id: input.capabilityId },
+      data: { isEnabled: input.isEnabled },
+    });
+
+    await recordAuditLog(tx, {
+      actorId: input.operatorId,
+      action: 'capability.update',
+      subjectType: 'Capability',
+      subjectId: input.capabilityId,
+      before: { isEnabled: before.isEnabled },
+      after: { isEnabled: input.isEnabled },
+    });
+
+    const [summary] = await listCapabilities(tx).then((rows) =>
+      rows.filter((r) => r.id === input.capabilityId),
+    );
+    // lockCapability above already proved the row exists, and nothing here
+    // can have removed it in between.
+    return summary!;
   });
-
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'capability.update',
-    subjectType: 'Capability',
-    subjectId: input.capabilityId,
-    before: { isEnabled: before.isEnabled },
-    after: { isEnabled: input.isEnabled },
-  });
-
-  const [summary] = await listCapabilities(db).then((rows) =>
-    rows.filter((r) => r.id === input.capabilityId),
-  );
-  // requireCapability above already proved the row exists, and nothing here
-  // can have removed it in between.
-  return summary!;
 }
 
 export interface SetCapabilityPlanRestrictionsInput {
@@ -212,7 +233,7 @@ export interface SetCapabilityPlanRestrictionsInput {
  * directly too — this is belt-and-braces, not a relocation.
  */
 export async function validatePlanIdsExist(
-  db: PrismaClient,
+  db: Pick<PrismaClient, 'plan'>,
   planIds: readonly string[],
 ): Promise<void> {
   const uniquePlanIds = [...new Set(planIds)];
@@ -231,47 +252,55 @@ export async function validatePlanIdsExist(
  * admin CRUD only — see the module note on what already enforces it and
  * what does not.
  */
+/**
+ * Everything below — the capability lock, the `before` read, the
+ * replace-the-set write, and the audit log — runs inside one transaction.
+ * Without the lock, two concurrent PATCHes on the same capability's
+ * restrictions don't just produce a misleading audit entry (the class of
+ * race `users.service.ts`'s `updateUser` fixed) — their `deleteMany`s and
+ * `createMany`s can genuinely interleave and delete rows out from under
+ * each other, leaving the actual `CapabilityPlan` state matching neither
+ * caller's request.
+ */
 export async function setCapabilityPlanRestrictions(
   db: PrismaClient,
   input: SetCapabilityPlanRestrictionsInput,
 ): Promise<AdminCapabilitySummary> {
-  await requireCapability(db, input.capabilityId);
-  await validatePlanIdsExist(db, input.planIds);
-  const uniquePlanIds = [...new Set(input.planIds)];
+  return db.$transaction(async (tx) => {
+    await lockCapability(tx, input.capabilityId);
+    await validatePlanIdsExist(tx, input.planIds);
+    const uniquePlanIds = [...new Set(input.planIds)];
 
-  const before = await db.capabilityPlan.findMany({
-    where: { capabilityId: input.capabilityId },
-    select: { planId: true },
+    const before = await tx.capabilityPlan.findMany({
+      where: { capabilityId: input.capabilityId },
+      select: { planId: true },
+    });
+
+    // Replace-the-set: delete what's there, then (re)create the declared
+    // set. Both statements run inside the same transaction and under the
+    // capability's own row lock, so no concurrent caller can observe an
+    // empty intermediate state or interleave with this replace.
+    await tx.capabilityPlan.deleteMany({ where: { capabilityId: input.capabilityId } });
+    if (uniquePlanIds.length > 0) {
+      await tx.capabilityPlan.createMany({
+        data: uniquePlanIds.map((planId) => ({ capabilityId: input.capabilityId, planId })),
+      });
+    }
+
+    await recordAuditLog(tx, {
+      actorId: input.operatorId,
+      action: 'capability.restrict',
+      subjectType: 'Capability',
+      subjectId: input.capabilityId,
+      before: { restrictedToPlans: before.map((p) => p.planId).sort() },
+      after: { restrictedToPlans: [...uniquePlanIds].sort() },
+    });
+
+    const [summary] = await listCapabilities(tx).then((rows) =>
+      rows.filter((r) => r.id === input.capabilityId),
+    );
+    return summary!;
   });
-
-  // Replace-the-set: delete what's there, then (re)create the declared set,
-  // in one transaction so a reader never observes an empty intermediate
-  // state (briefly "restricted to nobody" is not the same statement as
-  // "restricted to no plans / everyone").
-  await db.$transaction([
-    db.capabilityPlan.deleteMany({ where: { capabilityId: input.capabilityId } }),
-    ...(uniquePlanIds.length > 0
-      ? [
-          db.capabilityPlan.createMany({
-            data: uniquePlanIds.map((planId) => ({ capabilityId: input.capabilityId, planId })),
-          }),
-        ]
-      : []),
-  ]);
-
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'capability.restrict',
-    subjectType: 'Capability',
-    subjectId: input.capabilityId,
-    before: { restrictedToPlans: before.map((p) => p.planId).sort() },
-    after: { restrictedToPlans: [...uniquePlanIds].sort() },
-  });
-
-  const [summary] = await listCapabilities(db).then((rows) =>
-    rows.filter((r) => r.id === input.capabilityId),
-  );
-  return summary!;
 }
 
 export interface RemoveCapabilityResult {

@@ -151,41 +151,55 @@ export interface UpdatePlanInput {
   readonly patch: UpdatePlanPatch;
 }
 
+/**
+ * The `before` read, the write, and the audit log all happen inside one
+ * transaction with the row locked `FOR UPDATE` — the same pattern
+ * `users.service.ts`'s `updateUser` uses. Without the lock, two concurrent
+ * PATCHes on the same plan both read the row's state before either writes,
+ * so the second write's audit entry would claim a `before` that was never
+ * actually true immediately before it ran (Prisma has no way to express
+ * `FOR UPDATE`, hence the raw query).
+ */
 export async function updatePlan(db: PrismaClient, input: UpdatePlanInput): Promise<PlanRecord> {
-  const before = await db.plan.findUnique({ where: { id: input.planId } });
-  if (before === null) throw new PlanNotFoundError(input.planId);
+  return db.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "Plan" WHERE id = ${input.planId} FOR UPDATE
+    `;
+    if (locked.length === 0) throw new PlanNotFoundError(input.planId);
+    const before = await tx.plan.findUniqueOrThrow({ where: { id: input.planId } });
 
-  // Built field-by-field rather than via a conditional double spread: two
-  // spreads that may each define the same key (`...patch` and a conditional
-  // `...{allowedInputTypes: ...}`) merge their *types* as a union under
-  // `exactOptionalPropertyTypes`, which is what produced the original
-  // `readonly InputType[]` vs `InputType[]` mismatch here.
-  const { patch } = input;
-  const data: Prisma.PlanUpdateInput = {};
-  if (patch.name !== undefined) data.name = patch.name;
-  if (patch.monthlyCredits !== undefined) data.monthlyCredits = patch.monthlyCredits;
-  if (patch.creditsRecur !== undefined) data.creditsRecur = patch.creditsRecur;
-  if (patch.allowedInputTypes !== undefined) data.allowedInputTypes = [...patch.allowedInputTypes];
-  if (patch.allowLoadGeneration !== undefined) data.allowLoadGeneration = patch.allowLoadGeneration;
-  if (patch.allowReadinessPass !== undefined) data.allowReadinessPass = patch.allowReadinessPass;
-  if (patch.allowCreditPurchase !== undefined) data.allowCreditPurchase = patch.allowCreditPurchase;
-  if (patch.allowCustomCapability !== undefined)
-    data.allowCustomCapability = patch.allowCustomCapability;
-  if (patch.concurrentScanLimit !== undefined) data.concurrentScanLimit = patch.concurrentScanLimit;
-  if (patch.queuePriority !== undefined) data.queuePriority = patch.queuePriority;
-  if (patch.retentionDays !== undefined) data.retentionDays = patch.retentionDays;
-  if (patch.isActive !== undefined) data.isActive = patch.isActive;
+    // Built field-by-field rather than via a conditional double spread: two
+    // spreads that may each define the same key (`...patch` and a conditional
+    // `...{allowedInputTypes: ...}`) merge their *types* as a union under
+    // `exactOptionalPropertyTypes`, which is what produced the original
+    // `readonly InputType[]` vs `InputType[]` mismatch here.
+    const { patch } = input;
+    const data: Prisma.PlanUpdateInput = {};
+    if (patch.name !== undefined) data.name = patch.name;
+    if (patch.monthlyCredits !== undefined) data.monthlyCredits = patch.monthlyCredits;
+    if (patch.creditsRecur !== undefined) data.creditsRecur = patch.creditsRecur;
+    if (patch.allowedInputTypes !== undefined) data.allowedInputTypes = [...patch.allowedInputTypes];
+    if (patch.allowLoadGeneration !== undefined) data.allowLoadGeneration = patch.allowLoadGeneration;
+    if (patch.allowReadinessPass !== undefined) data.allowReadinessPass = patch.allowReadinessPass;
+    if (patch.allowCreditPurchase !== undefined) data.allowCreditPurchase = patch.allowCreditPurchase;
+    if (patch.allowCustomCapability !== undefined)
+      data.allowCustomCapability = patch.allowCustomCapability;
+    if (patch.concurrentScanLimit !== undefined) data.concurrentScanLimit = patch.concurrentScanLimit;
+    if (patch.queuePriority !== undefined) data.queuePriority = patch.queuePriority;
+    if (patch.retentionDays !== undefined) data.retentionDays = patch.retentionDays;
+    if (patch.isActive !== undefined) data.isActive = patch.isActive;
 
-  const after = await db.plan.update({ where: { id: input.planId }, data });
+    const after = await tx.plan.update({ where: { id: input.planId }, data });
 
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'plan.update',
-    subjectType: 'Plan',
-    subjectId: input.planId,
-    before,
-    after,
+    await recordAuditLog(tx, {
+      actorId: input.operatorId,
+      action: 'plan.update',
+      subjectType: 'Plan',
+      subjectId: input.planId,
+      before,
+      after,
+    });
+
+    return after;
   });
-
-  return after;
 }

@@ -139,6 +139,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const headersChecker: AuditCapability = {
   id: 'headers-checker',
+  checkNamespaces: ['headers'],
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',

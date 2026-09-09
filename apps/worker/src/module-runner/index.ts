@@ -41,6 +41,12 @@ export interface RunModuleOptions {
   /** Scopes fingerprints to a target (R3). Defaults to the scan id. */
   readonly targetId?: string;
   readonly workspaceRoot?: string;
+  /**
+   * The target's real, verified control level — kept separate from `input`
+   * (T252) so `canRun`/`runCodeLayer` never receive it as a field on the
+   * object they're handed. Only `resolveApplicable`'s gate reads this.
+   */
+  readonly targetControlLevel: ControlLevel;
   /** From the registry snapshot, which is the authority — not the capability. */
   readonly requiredControlLevels?: Readonly<Record<string, ControlLevel>>;
 }
@@ -129,6 +135,7 @@ export async function runModule(options: RunModuleOptions): Promise<ModuleRunRes
   const { applicable, skipped } = await resolveApplicable({
     capabilities: options.capabilities,
     input: options.input,
+    targetControlLevel: options.targetControlLevel,
     ...(options.requiredControlLevels === undefined
       ? {}
       : { requiredControlLevels: options.requiredControlLevels }),

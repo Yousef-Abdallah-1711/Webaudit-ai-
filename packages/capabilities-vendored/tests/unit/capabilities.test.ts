@@ -61,7 +61,7 @@ function fakeContext(response: SafeResponse): CodeLayerContext {
 }
 
 function input(targetUrl = 'https://example.com/'): CapabilityInput {
-  return { targetUrl, priorModuleResults: {}, controlLevel: 'NONE' };
+  return { targetUrl, priorModuleResults: {} };
 }
 
 function checkIds(findings: { readonly checkId: string }[]): string[] {
@@ -451,7 +451,7 @@ describe('impeccable', () => {
           fixable: true,
         },
       ],
-      { targetUrl: 'https://example.com/', priorModuleResults: {}, controlLevel: 'NONE', designIntent: { audience: 'small business owners', tone: 'friendly' } },
+      { targetUrl: 'https://example.com/', priorModuleResults: {}, designIntent: { audience: 'small business owners', tone: 'friendly' } },
     );
     expect(context).toContain('Page content overflows the viewport horizontally');
     expect(context).toContain('audience: small business owners');

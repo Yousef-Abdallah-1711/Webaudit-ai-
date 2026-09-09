@@ -196,6 +196,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const contentChecker: AuditCapability = {
   id: 'content-checker',
+  checkNamespaces: ['content'],
   module: 'SEO',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',

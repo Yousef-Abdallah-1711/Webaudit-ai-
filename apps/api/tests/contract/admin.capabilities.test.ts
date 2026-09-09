@@ -342,6 +342,7 @@ describe('POST /capabilities/upload (T216/T226)', () => {
     const { token } = await makeOperatorToken();
     const res = await request(app)
       .post('/capabilities/upload')
+      .query({ name: 'x', version: '1.0.0' })
       .set(auth(token))
       .set('Content-Type', 'text/plain')
       .send('({ id: "x", module: "SECURITY", layer: "CODE", canRun: () => true })')
@@ -355,6 +356,7 @@ describe('POST /capabilities/upload (T216/T226)', () => {
       const { token } = await makeOperatorToken();
       const res = await request(app)
         .post('/capabilities/upload')
+        .query({ name: 'x', version: '1.0.0' })
         .set(auth(token))
         .set('Content-Type', 'text/plain')
         .send('({ id: "x", module: "SECURITY", layer: "CODE", canRun: () => true })')
@@ -404,27 +406,18 @@ describe('POST /capabilities/upload (T226 — real dispatch)', () => {
   })`;
 
   /**
-   * **Flagged for the session's own summary, not silently worked around**:
-   * running this genuinely end to end (rather than assumed) surfaced a
-   * pre-existing gap in `apps/sandbox-runner/src/child-harness/harness.ts`'s
-   * `runConformance` (T224, Session 7) — its `rawManifest` is built as
-   * `{ id, module, layer }` only, but `@webaudit/capability-sdk`'s
-   * `manifestSchema` (`checkManifest`) also requires `name`, `version`, and
-   * `entrypoint`. Every one of those is always absent from what the harness
-   * constructs, for any capability whatsoever, so `manifest-valid` — and
-   * therefore the report's overall `passed` — cannot come back `true` through
-   * `CONFORMANCE` today. That is a defect in T224's own code, not in T226's:
-   * `harness.ts` is explicitly out of scope for this session (`apps/
-   * sandbox-runner/src/child-harness/*` must not be touched here), so this
-   * test asserts what is actually, honestly true of the real dispatch path
-   * instead of forcing a `passed: true` the current code cannot produce —
-   * every OTHER check genuinely executes and genuinely passes, which is the
-   * real proof real dispatch happened against Session 7's real mechanism.
+   * T251 (spec-kit Phase 12/Convergence) closed the gap this test used to
+   * document: `harness.ts`'s `runConformance` now takes `name`/`version`
+   * from the upload's own `?name=&version=` query parameters (the bundle is
+   * raw JS source with no second file to carry a manifest) and builds a
+   * complete `rawManifest`, so `manifest-valid` — and the report's overall
+   * `passed` — now comes back `true` for a genuinely well-formed capability.
    */
   it('dispatches to the real sandbox and produces a genuine, real per-check conformance report', async () => {
     const { token } = await makeOperatorToken();
     const res = await request(app)
       .post('/capabilities/upload')
+      .query({ name: 'End-to-end benign probe', version: '1.0.0' })
       .set(auth(token))
       .set('Content-Type', 'text/plain')
       .send(BENIGN_BUNDLE)
@@ -448,10 +441,28 @@ describe('POST /capabilities/upload (T226 — real dispatch)', () => {
     expect(byCheck.get('no-llm-from-code-layer')).toMatchObject({ passed: true });
     expect(byCheck.get('fingerprint-stable')).toMatchObject({ passed: true });
     expect(byCheck.get('abort-honoured')).toMatchObject({ passed: true });
-    // See this test's own comment above: fails today for every capability,
-    // by construction of `harness.ts`'s `rawManifest` — a pre-existing T224
-    // gap this session found but, per its own scope, must not fix.
-    expect(byCheck.get('manifest-valid')).toMatchObject({ passed: false });
-    expect(body.passed).toBe(false);
+    expect(byCheck.get('manifest-valid')).toMatchObject({ passed: true });
+    expect(body.passed).toBe(true);
+  });
+
+  it('400s when the required ?name=&version= query parameters are missing', async () => {
+    const { token } = await makeOperatorToken();
+    await request(app)
+      .post('/capabilities/upload')
+      .set(auth(token))
+      .set('Content-Type', 'text/plain')
+      .send(BENIGN_BUNDLE)
+      .expect(400);
+  });
+
+  it('400s an invalid version (not three-part semver)', async () => {
+    const { token } = await makeOperatorToken();
+    await request(app)
+      .post('/capabilities/upload')
+      .query({ name: 'x', version: 'not-a-version' })
+      .set(auth(token))
+      .set('Content-Type', 'text/plain')
+      .send(BENIGN_BUNDLE)
+      .expect(400);
   });
 });

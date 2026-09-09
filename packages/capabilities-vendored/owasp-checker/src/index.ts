@@ -183,6 +183,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const owaspChecker: AuditCapability = {
   id: 'owasp-checker',
+  checkNamespaces: ['owasp'],
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',

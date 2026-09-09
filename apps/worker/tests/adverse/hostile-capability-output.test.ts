@@ -111,7 +111,8 @@ async function run(
   return runModule({
     module: 'SECURITY',
     capabilities,
-    input: { priorModuleResults: {}, controlLevel: 'NONE', targetUrl: 'https://example.com' },
+    input: { priorModuleResults: {}, targetUrl: 'https://example.com' },
+    targetControlLevel: 'NONE',
     executor,
     makeContext: refusingContext,
     timeoutMs: 400,

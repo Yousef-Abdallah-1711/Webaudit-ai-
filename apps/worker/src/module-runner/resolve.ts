@@ -59,6 +59,13 @@ export interface ResolveOptions {
   readonly capabilities: readonly AuditCapability[];
   readonly input: CapabilityInput;
   /**
+   * The target's real, verified control level — a fact about the target,
+   * kept separate from `input` (T252) so it is never a field on the object
+   * `canRun`/`runCodeLayer` receive. `CapabilityInput` has no `controlLevel`
+   * of its own precisely so this is the only place gating on it can happen.
+   */
+  readonly targetControlLevel: ControlLevel;
+  /**
    * Per-capability required level, from the registry snapshot. Absent means
    * NONE — but note that the *registry* is the authority here, not the
    * capability object: a capability cannot lower its own requirement.
@@ -70,7 +77,7 @@ export interface ResolveOptions {
 export async function resolveApplicable(options: ResolveOptions): Promise<Resolution> {
   const applicable: ResolvedCapability[] = [];
   const skipped: SkippedCapability[] = [];
-  const targetLevel = options.input.controlLevel;
+  const targetLevel = options.targetControlLevel;
   const timeoutMs = options.canRunTimeoutMs ?? 5_000;
 
   for (const capability of options.capabilities) {

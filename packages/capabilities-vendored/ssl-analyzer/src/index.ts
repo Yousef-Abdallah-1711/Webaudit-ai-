@@ -179,6 +179,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const sslAnalyzer: AuditCapability = {
   id: 'ssl-analyzer',
+  checkNamespaces: ['ssl'],
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => typeof input.targetUrl === 'string',

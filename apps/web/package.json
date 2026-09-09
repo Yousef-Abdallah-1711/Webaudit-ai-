@@ -26,6 +26,7 @@
     "@types/react-dom": "19.2.5",
     "@webaudit/api": "workspace:*",
     "@webaudit/worker": "workspace:*",
+    "jsdom": "25.0.1",
     "pixelmatch": "7.2.0",
     "pngjs": "7.0.0"
   }

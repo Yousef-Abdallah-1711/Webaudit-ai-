@@ -129,7 +129,6 @@ describe.each(CAPABILITIES)('conformance: $dir', ({ dir, load, sourceBacked }) =
       priorModuleResults: {
         SECURITY: { state: 'COMPLETE', score: 95, findingCount: 1, worstSeverity: 'CRITICAL' },
       },
-      controlLevel: 'NONE',
     };
 
     const report = await runConformanceSuite(capability, {

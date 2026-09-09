@@ -124,6 +124,7 @@
   font-size: 14px;
   font-weight: 400;
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   background: transparent;
   color: #9ca3af;
@@ -182,10 +183,12 @@
   border: var(--border-width) solid #374151;
   border-radius: var(--radius-control);
   color: #9ca3af;
+  text-decoration: none;
 }
 .publicSiteLink {
   font: var(--type-small);
   color: #9ca3af;
+  text-decoration: none;
 }
 
 .shellRoot {

@@ -79,7 +79,7 @@ export interface ProviderChainEntrySummary {
 
 /** Reads the persisted chain in fallback order. Empty until ever configured. */
 export async function listProviderChain(
-  db: PrismaClient,
+  db: Pick<PrismaClient, 'providerChainEntry'>,
 ): Promise<readonly ProviderChainEntrySummary[]> {
   const rows = await db.providerChainEntry.findMany({ orderBy: { position: 'asc' } });
   return rows.map((row) => ({
@@ -117,11 +117,29 @@ export interface ReplaceProviderChainInput {
 }
 
 /**
+ * A fixed key, not derived from any row — there is no single `ProviderChain`
+ * row to lock `FOR UPDATE`; this operation replaces the whole table. Postgres
+ * advisory locks exist for exactly this: serializing a whole-table operation
+ * that has no natural row of its own. `hashtext` turns the literal into a
+ * stable bigint key; `pg_advisory_xact_lock` holds it for the transaction's
+ * lifetime and releases automatically on commit or rollback.
+ */
+const PROVIDER_CHAIN_LOCK_KEY = 'admin:provider-chain';
+
+/**
  * Replaces the entire persisted chain, validated first with the real
  * `buildChain` guard. Throws `ProviderChainInvalidError` (never persisting
  * anything) if the submitted chain would fail the same check
  * `createExecutorFromEnv` runs at boot. Always writes exactly one
  * `AuditLogEntry` on a successful replace.
+ *
+ * The lock, the `before` read, the replace, the `after` read, and the audit
+ * log all run inside one transaction — the same class of race
+ * `users.service.ts`'s `updateUser` closed, but sharper here: without
+ * serializing, two concurrent replaces don't just produce a misleading audit
+ * entry, their `deleteMany`+`createMany` pairs can interleave and throw a
+ * unique-constraint violation on `position` outright (confirmed live while
+ * building this fix).
  */
 export async function replaceProviderChain(
   db: PrismaClient,
@@ -136,36 +154,37 @@ export async function replaceProviderChain(
     throw error;
   }
 
-  const before = await listProviderChain(db);
+  return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${PROVIDER_CHAIN_LOCK_KEY}))`;
 
-  // Replace-the-set, in one transaction, so a reader never observes an
-  // empty intermediate state between the delete and the recreate (same
-  // reasoning as setCapabilityPlanRestrictions).
-  await db.$transaction([
-    db.providerChainEntry.deleteMany({}),
-    ...(input.entries.length > 0
-      ? [
-          db.providerChainEntry.createMany({
-            data: input.entries.map((entry, position) => ({
-              vendor: entry.vendor,
-              model: entry.model,
-              position,
-              isEnabled: entry.isEnabled ?? true,
-            })),
-          }),
-        ]
-      : []),
-  ]);
+    const before = await listProviderChain(tx);
 
-  const after = await listProviderChain(db);
+    // Replace-the-set: delete what's there, then (re)create the declared
+    // set. Both statements run inside the same transaction and under the
+    // advisory lock above, so no concurrent caller can observe an empty
+    // intermediate state or interleave with this replace.
+    await tx.providerChainEntry.deleteMany({});
+    if (input.entries.length > 0) {
+      await tx.providerChainEntry.createMany({
+        data: input.entries.map((entry, position) => ({
+          vendor: entry.vendor,
+          model: entry.model,
+          position,
+          isEnabled: entry.isEnabled ?? true,
+        })),
+      });
+    }
 
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'providers.chain_replace',
-    subjectType: 'ProviderChain',
-    before: { chain: before },
-    after: { chain: after },
+    const after = await listProviderChain(tx);
+
+    await recordAuditLog(tx, {
+      actorId: input.operatorId,
+      action: 'providers.chain_replace',
+      subjectType: 'ProviderChain',
+      before: { chain: before },
+      after: { chain: after },
+    });
+
+    return after;
   });
-
-  return after;
 }

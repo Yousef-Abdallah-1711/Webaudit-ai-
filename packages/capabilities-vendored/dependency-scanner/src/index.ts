@@ -364,6 +364,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const dependencyScanner: AuditCapability = {
   id: 'dependency-scanner',
+  checkNamespaces: ['dependency'],
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => manifestPaths(input).length > 0,

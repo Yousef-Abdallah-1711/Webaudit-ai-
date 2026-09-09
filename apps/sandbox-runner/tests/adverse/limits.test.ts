@@ -41,7 +41,7 @@ async function execute(
       requestId,
       capabilityBundle: encodeBundle(source),
       operation: 'RUN_CODE_LAYER',
-      input: { priorModuleResults: {}, controlLevel: 'NONE' },
+      input: { priorModuleResults: {} },
       limits,
     }),
   });

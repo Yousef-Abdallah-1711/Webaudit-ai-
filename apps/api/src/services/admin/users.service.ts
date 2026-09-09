@@ -19,7 +19,7 @@
  */
 
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
-import { balanceOf } from '../credits/balance.js';
+import { balanceOf, balancesOf } from '../credits/balance.js';
 import { recordAuditLog } from './audit-log.js';
 
 export class UserNotFoundError extends Error {
@@ -93,25 +93,28 @@ export async function listUsers(
     db.user.count(),
   ]);
 
-  const users = await Promise.all(
-    rows.map(async (row): Promise<AdminUserSummary> => {
-      const balance = await balanceOf(db, row.id);
-      return {
-        id: row.id,
-        email: row.email,
-        isOperator: row.isOperator,
-        createdAt: row.createdAt,
-        planId: row.subscription?.planId ?? FREE_PLAN_ID,
-        subscriptionStatus: row.subscription?.status ?? null,
-        balance: { plan: balance.plan, purchased: balance.purchased },
-      };
-    }),
-  );
+  const balances = await balancesOf(db, rows.map((row) => row.id));
+
+  const users = rows.map((row): AdminUserSummary => {
+    const balance = balances.get(row.id);
+    return {
+      id: row.id,
+      email: row.email,
+      isOperator: row.isOperator,
+      createdAt: row.createdAt,
+      planId: row.subscription?.planId ?? FREE_PLAN_ID,
+      subscriptionStatus: row.subscription?.status ?? null,
+      balance: { plan: balance?.plan ?? 0, purchased: balance?.purchased ?? 0 },
+    };
+  });
 
   return { users, total, limit, offset };
 }
 
-export async function getUser(db: PrismaClient, userId: string): Promise<AdminUserDetail> {
+/** Structural, not `PrismaClient` — so a `$transaction` callback's `tx` works here too. */
+type UserAndLotReader = Pick<PrismaClient, 'user' | 'creditLot'>;
+
+export async function getUser(db: UserAndLotReader, userId: string): Promise<AdminUserDetail> {
   const row = await db.user.findUnique({
     where: { id: userId },
     select: {
@@ -169,34 +172,44 @@ export interface UpdateUserInput {
  * A no-op patch (nothing set, or setting the field to its current value)
  * still writes the row it reads, but before/after will be identical — that
  * is honest, not a bug: the operator issued the request either way.
+ *
+ * The read of `before`, the write, and the `after` read all happen inside
+ * one transaction with the row locked `FOR UPDATE` — the same pattern
+ * `credits/debit.ts` uses. Without the lock, two concurrent PATCHes on the
+ * same user both read the row's state before either write, so the second
+ * write's audit entry would claim a `before` that was never actually true
+ * immediately before it ran (Prisma has no way to express `FOR UPDATE`,
+ * hence the raw query).
  */
 export async function updateUser(
   db: PrismaClient,
   input: UpdateUserInput,
 ): Promise<AdminUserDetail> {
-  const before = await db.user.findUnique({
-    where: { id: input.userId },
-    select: { isOperator: true },
-  });
-  if (before === null) throw new UserNotFoundError(input.userId);
+  return db.$transaction(async (tx) => {
+    const locked = await tx.$queryRaw<{ isOperator: boolean }[]>`
+      SELECT "isOperator" FROM "User" WHERE id = ${input.userId} FOR UPDATE
+    `;
+    const before = locked[0];
+    if (before === undefined) throw new UserNotFoundError(input.userId);
 
-  if (input.isOperator !== undefined) {
-    await db.user.update({
-      where: { id: input.userId },
-      data: { isOperator: input.isOperator },
+    if (input.isOperator !== undefined) {
+      await tx.user.update({
+        where: { id: input.userId },
+        data: { isOperator: input.isOperator },
+      });
+    }
+
+    const after = await getUser(tx, input.userId);
+
+    await recordAuditLog(tx, {
+      actorId: input.operatorId,
+      action: 'user.update',
+      subjectType: 'User',
+      subjectId: input.userId,
+      before: { isOperator: before.isOperator },
+      after: { isOperator: after.isOperator },
     });
-  }
 
-  const after = await getUser(db, input.userId);
-
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'user.update',
-    subjectType: 'User',
-    subjectId: input.userId,
-    before: { isOperator: before.isOperator },
-    after: { isOperator: after.isOperator },
+    return after;
   });
-
-  return after;
 }

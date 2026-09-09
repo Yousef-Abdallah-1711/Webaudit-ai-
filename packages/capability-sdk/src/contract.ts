@@ -22,12 +22,20 @@
  *   - **Reach the network, the disk, or a provider.** Everything a capability
  *     may do to the outside world is on `CodeLayerContext`, and nothing on it
  *     is a raw client.
+ *   - **Read the target's control level.** T252 — `CapabilityInput` has no
+ *     `controlLevel` field. Gating on it is `module-runner/resolve.ts`'s
+ *     `resolveApplicable` alone: a capability whose `requiredControlLevel`
+ *     exceeds the target's is never invoked at all, so there is nothing for
+ *     capability code to branch on even if it wanted to (FR-017). Passing
+ *     the raw value through to `canRun`/`runCodeLayer` as well, the way this
+ *     type used to, would let a future capability read it and behave
+ *     differently at a control level no external verification ever
+ *     confirmed the runner actually checked for that specific call.
  */
 
 import type {
   CapabilityFinding,
   CapabilityLayer,
-  ControlLevel,
   ModuleState,
   ModuleType,
   Severity,
@@ -93,7 +101,6 @@ export interface CapabilityInput {
    * the report it is supposed to appear in.
    */
   readonly priorModuleResults: Readonly<Partial<Record<ModuleType, ModuleSummary>>>;
-  readonly controlLevel: ControlLevel;
 }
 
 // ─── Context: the capability's only door to the outside ──────────────────────
@@ -222,6 +229,18 @@ export interface AuditCapability {
    * capability that guesses.
    */
   reverify?(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult>;
+
+  /**
+   * The `checkId` namespace(s) this capability owns — the segment before the
+   * first `.` in every `checkId` its findings carry (e.g. `'headers'` for
+   * `headers.csp-missing`). Declared here, on the capability itself, so
+   * `apps/worker`'s reverify resolver can find the owner of a `checkId`
+   * without a hardcoded namespace-to-capability table (Constitution I).
+   * Absent or empty means this capability's checks cannot be resolved for
+   * targeted re-verification even if `reverify` exists — declare it whenever
+   * `reverify` does.
+   */
+  readonly checkNamespaces?: readonly string[];
 }
 
 export type { CapabilityFinding };

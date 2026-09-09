@@ -58,7 +58,7 @@ afterAll(async () => {
 });
 
 function inputFor(files: readonly CodeFile[]): CapabilityInput {
-  return { code: { files, frameworks: [] }, priorModuleResults: {}, controlLevel: 'NONE' };
+  return { code: { files, frameworks: [] }, priorModuleResults: {} };
 }
 
 async function checkIdsFrom(
@@ -95,7 +95,7 @@ describe('dependency-scanner (T175)', () => {
   });
 
   it('is not applicable to an audit with no source attached (FR-021)', () => {
-    expect(dependencyScanner.canRun({ priorModuleResults: {}, controlLevel: 'NONE' })).toBe(false);
+    expect(dependencyScanner.canRun({ priorModuleResults: {} })).toBe(false);
   });
 });
 

@@ -36,10 +36,15 @@ without checking the plan regardless — it remains historical, only these three
 current task, the six environment gotchas that each cost an hour, and the honest scoreboard.
 
 Spec-driven via [Spec Kit](https://github.com/github/spec-kit). Constitution, spec, plan and tasks
-are complete, and **so is the build: 250 of 250 tasks done** (+T236a, not in the original count) —
-every phase, from Phase 1 (setup) through Phase 11 (polish), closed as of 2026-09-04. `tasks.md` is
-authoritative for task state; PROGRESS.md carries the honest scoreboard, the full per-phase account,
-and every open decision worth knowing before touching a given area.
+are complete, and **the original 250-task plan is done** (+T236a, not in the original count) — every
+phase, from Phase 1 (setup) through Phase 11 (polish), closed as of 2026-09-04. A `/speckit-converge`
+pass on 2026-09-08 (Phase 12) found and closed four more real gaps against the constitution and
+FR-029 — T249 (capability identity no longer hardcoded in core), T250 (admin console visual-regression
+baseline), T251 (upload conformance's manifest-completeness half), T252 (capability code can no longer
+read `controlLevel` at all) — and split out one genuinely new architectural question, T253 (Phase 13,
+open): wiring a passing upload verdict into the registry so a real scan can dispatch the capability.
+`tasks.md` is authoritative for task state; PROGRESS.md carries the honest scoreboard, the full
+per-phase account, and every open decision worth knowing before touching a given area.
 
 **All 11 adversarial gates are green**: SC-006 attribution, **SC-007 verified-fix loop** (T144, Phase
 4), **SC-008 never-billed-for-a-failure** (T180, Phase 7), SC-011 capability disable, SC-012 provider
@@ -251,9 +256,18 @@ Carried forward and not yet resolved:
    A banner at the top plus an inline note at each of the three points now correct the document in
    place rather than leaving readers to discover the mismatch themselves.
 3. **Monetary price points** are unset; credits and entitlements are fixed.
-4. **CSS Modules are not covered by the design-adherence lint's raw-value rule.**
-   `_adherence.oxlintrc.json`'s `no-restricted-syntax` matches JS/JSX `Literal` AST nodes only, so a
-   `.module.css` file with a raw `px` value passes `pnpm lint` today even though this file's UI
-   section states "a raw hex or raw px value fails `pnpm lint`." Two known instances fixed by hand
-   (2026-09-02 review, Finding 15); the rule itself is not yet extended to `.css` files. Needs either
-   a CSS-aware lint rule or a documented exception.
+4. ~~**CSS Modules are not covered by the design-adherence lint's raw-value rule.**~~ —
+   **Resolved, 2026-09-08**, as a ratchet rather than a strict rule. `apps/web/tests/unit/
+   css-adherence-lint.test.ts` now scans every `.module.css` file under `apps/web` for raw hex/px.
+   The real scope, measured directly rather than assumed: 46 of 47 files carry a raw px value
+   (pervasive, ported component-intrinsic sizing — button heights, font sizes — never meant to route
+   through `--space-*` one literal at a time) and 8 carry a raw hex color, two of which
+   (`AdminShell.module.css`, `ModuleStatus.module.css`) are pre-existing, deliberately documented
+   escape hatches from the JS-side rule for a shell intentionally off the token palette. A "full
+   remediation" (real tokens for all 46 files) would be a large, unrequested design-system change
+   with real dark-mode/visual-regression risk. Instead: every current count is recorded in a
+   `BASELINE` map, and the gate fails if any file's count goes *up*, or if a brand-new `.module.css`
+   file introduces even one raw literal — real, mechanical protection against new drift, the actual
+   complaint this item raised, without silently blessing the 46 files as fine or demanding a rewrite
+   nobody asked for. Fixing a real instance shrinks its `BASELINE` entry; the gate only ever tightens
+   from here.

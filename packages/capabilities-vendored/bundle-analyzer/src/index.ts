@@ -311,6 +311,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const bundleAnalyzer: AuditCapability = {
   id: 'bundle-analyzer',
+  checkNamespaces: ['bundle'],
   module: 'PERFORMANCE',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => allBuiltScripts(input).length > 0,

@@ -101,6 +101,14 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return text === '' ? undefined : JSON.parse(text);
 }
 
+/** T251 — absent is valid (RUN_CODE_LAYER/REVERIFY never send one); present must be well-shaped. */
+function isWellShapedManifestField(value: unknown): boolean {
+  if (value === undefined) return true;
+  if (typeof value !== 'object' || value === null) return false;
+  const m = value as Record<string, unknown>;
+  return typeof m['name'] === 'string' && typeof m['version'] === 'string';
+}
+
 function isWireSandboxRequest(value: unknown): value is WireSandboxRequest {
   if (typeof value !== 'object' || value === null) return false;
   const v = value as Record<string, unknown>;
@@ -113,7 +121,8 @@ function isWireSandboxRequest(value: unknown): value is WireSandboxRequest {
     typeof v['limits'] === 'object' &&
     v['limits'] !== null &&
     typeof (v['limits'] as Record<string, unknown>)['wallClockMs'] === 'number' &&
-    typeof (v['limits'] as Record<string, unknown>)['memoryMb'] === 'number'
+    typeof (v['limits'] as Record<string, unknown>)['memoryMb'] === 'number' &&
+    isWellShapedManifestField(v['manifest'])
   );
 }
 
@@ -261,6 +270,7 @@ export async function createSandboxHost(options: CreateSandboxHostOptions = {}):
           operation: body.operation,
           input: body.input,
           limits: body.limits,
+          ...(body.manifest === undefined ? {} : { manifest: body.manifest }),
         };
 
         const response = await executeOne(request, bundlePath, readAllowlist);

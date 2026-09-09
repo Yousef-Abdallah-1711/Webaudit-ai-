@@ -394,7 +394,6 @@ async function runAndPersistModule(
     // dedicated post-audit QA phase to be fully useful — but the threading
     // mechanism it depends on is now real rather than hard-coded `{}`.
     priorModuleResults,
-    controlLevel: effectiveControlLevel,
   };
 
   const startedAt = new Date();
@@ -410,6 +409,7 @@ async function runAndPersistModule(
     timeoutMs: options.moduleTimeoutMs ?? 60_000,
     scanId: scan.id,
     targetId: scan.targetId,
+    targetControlLevel: effectiveControlLevel,
     requiredControlLevels,
     ...(source === null ? {} : { workspaceRoot: source.workspace.path }),
   });

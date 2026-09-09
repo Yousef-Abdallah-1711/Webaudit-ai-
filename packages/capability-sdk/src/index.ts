@@ -32,6 +32,14 @@ export {
 } from './manifest.js';
 export type { CapabilityManifest, ManifestProblem, ParseResult } from './manifest.js';
 
+export { discoverManifestsInRoot } from './discover.js';
+export type {
+  DiscoveredManifest,
+  ManifestTrustClaim,
+  RejectedManifest,
+  SingleRootDiscoveryResult,
+} from './discover.js';
+
 export { WorkspaceEscapeError, createCodeLayerContext, workspacePathFor } from './context.js';
 export type { ContextOptions, LogSink } from './context.js';
 

@@ -209,6 +209,84 @@ export async function screenshotReferencePage(
   }
 }
 
+/**
+ * T250 — the admin console's reference page is one interactive bundler
+ * document, not one file per screen: `App`'s `useState("overview")` picks a
+ * single view from a map and renders it inside `AdminShell`, exactly the way
+ * the real `/admin/*` routes each render one screen. `design-system/
+ * reference-pages/` has no per-screen file to diff against because the
+ * source itself doesn't have one — this list is how a single screenshot
+ * turns into ten, by clicking the sidebar nav to the named view before
+ * capturing, the same interaction a real operator uses.
+ */
+export interface AdminViewSpec {
+  readonly key: string;
+  /** Exact sidebar button text — `AdminShell.jsx`'s own `AGROUPS` labels. */
+  readonly label: string;
+}
+
+export const ADMIN_VIEWS: readonly AdminViewSpec[] = [
+  { key: 'overview', label: 'Overview' },
+  { key: 'queue', label: 'Queue' },
+  { key: 'scans', label: 'Scans' },
+  { key: 'caps', label: 'Capabilities' },
+  { key: 'providers', label: 'AI providers' },
+  { key: 'users', label: 'Users' },
+  { key: 'plans', label: 'Plans' },
+  { key: 'margin', label: 'Margin' },
+  { key: 'log', label: 'Audit log' },
+  { key: 'settings', label: 'Settings' },
+];
+
+/**
+ * Screenshots one named view of the admin console's single combined
+ * reference bundle. Identical to `screenshotReferencePage` up through the
+ * unpack wait — the difference is the click that follows: `view` starts at
+ * `"overview"` (`AdminShell.jsx`'s own default), so every other view needs
+ * its sidebar button clicked first, and React's state update is applied
+ * before the next paint, well within the settle wait already used for the
+ * font swap.
+ */
+export async function screenshotAdminReferenceView(
+  browser: Browser,
+  htmlPath: string,
+  viewLabel: string,
+  viewport: Viewport,
+): Promise<Buffer> {
+  const page = await browser.newPage({
+    viewport: { width: viewport.width, height: viewport.height },
+  });
+  try {
+    await page.goto(pathToFileURL(htmlPath).href, { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#__bundler_thumbnail', {
+      state: 'detached',
+      timeout: UNPACK_TIMEOUT_MS,
+    });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(100);
+
+    if (viewLabel !== 'Overview') {
+      await page.getByRole('button', { name: viewLabel, exact: true }).click();
+      await page.waitForTimeout(100);
+    }
+
+    // Same reasoning as `screenshotReferencePage`: `fullPage` does not
+    // reliably re-measure a bundler-swapped document, so the real scroll
+    // size is read directly and the viewport resized to it before the shot.
+    const contentSize = await page.evaluate(() => ({
+      width: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+      height: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+    }));
+    await page.setViewportSize({
+      width: Math.max(viewport.width, Math.ceil(contentSize.width)),
+      height: Math.max(viewport.height, Math.ceil(contentSize.height)),
+    });
+    return await page.screenshot({ fullPage: true });
+  } finally {
+    await page.close();
+  }
+}
+
 /** Diff two screenshots. Dimension mismatch is reported, never guessed past. */
 export function diffScreenshots(a: Buffer, b: Buffer): DiffResult {
   const imgA = PNG.sync.read(a);

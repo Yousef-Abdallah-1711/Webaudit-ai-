@@ -27,8 +27,8 @@ verify the leak fix at the OS process level rather than trust the first pass's o
 | 3 | **Critical** (same root cause as #1) | `packages/capability-sdk/src/conformance/suite.ts` | The shared `runConformanceSuite`, reused for the sandbox's `CONFORMANCE` operation, builds its own `canRun` trap `Proxy` and `reverify` probe object as host-realm values and passes them directly to the vm-native capability — a third, narrower instance of Finding 1's bug, outside `harness.ts`'s own control | ✅ Fixed |
 | 4 | Minor | `packages/capability-sdk/src/contain.ts` | `describeThrown`'s `value instanceof Error` check has the identical cross-realm blind spot: an `Error` thrown inside the vm context is a real `Error`, but a different realm's `Error`, so `instanceof` against the host realm's `Error` is always false — a sandboxed capability's genuine bug in `canRun` was reported as `"canRun threw: {}"` instead of its real message | ✅ Fixed |
 | 5 | Important | `host/server.ts` | `readJsonBody` had no size limit — a 20 MiB body was accepted and fully buffered before any parsing, an unbounded-memory DoS vector on the host process itself | ✅ Fixed |
-| 6 | — | Windows dev environment | `fork(..., {env: {}})` still injects ~11 real OS-required env vars (`HOMEDRIVE`, `PATH`, `SYSTEMROOT`, etc.) despite an empty `env` object being passed | 🔴 Open (documented, unverified on the real Linux deploy target — see below) |
-| 7 | — | Windows dev environment | `--allow-fs-read`/`-write` path-glob matching produced a garbled, mis-cased resource path (`\\?\c:\uSERS\...`) for certain glob forms on this machine; worked around with narrowly-scoped, `path.sep`-consistent allow-paths rather than root-caused | 🔴 Open (worked around, not diagnosed — Windows-specific, not expected on Linux) |
+| 6 | — | Windows dev environment | `fork(..., {env: {}})` still injects ~11 real OS-required env vars (`HOMEDRIVE`, `PATH`, `SYSTEMROOT`, etc.) despite an empty `env` object being passed | ✅ Resolved (2026-09-08) — verified on real Linux, does not reproduce, see below |
+| 7 | — | Windows dev environment | `--allow-fs-read`/`-write` path-glob matching produced a garbled, mis-cased resource path (`\\?\c:\uSERS\...`) for certain glob forms on this machine; worked around with narrowly-scoped, `path.sep`-consistent allow-paths rather than root-caused | ✅ Resolved (2026-09-08) — verified on real Linux, does not reproduce, see below |
 
 No findings beyond the above in either pass. Findings 1–3 share one root cause and are reported
 together below as "the vm-context escape"; finding order in the table reflects genuine independent
@@ -164,27 +164,31 @@ existing `.catch()` handler write the 413 normally. A new test sends an oversize
 
 ---
 
-## Recorded, not fixed — two Windows-specific residual gaps
+## Findings 6 and 7 — resolved 2026-09-08, verified on real Linux
 
-Both found through live debugging on this dev machine (Windows, Node v24.15.0) during implementation,
-not during either formal review pass. Recorded honestly per this project's "report honestly, don't
-silently ignore a gap" convention rather than treated as closed.
+Both originally found through live debugging on this dev machine (Windows, Node v24.15.0) during
+implementation, not during either formal review pass, and left open pending Linux verification.
+That verification has now happened, using a `node:22-slim` Docker container (this project's pinned
+Node 22, real Linux/glibc) rather than the live production host itself — the closest available proxy,
+and sufficient here because both findings are Node/OS platform behavior, not application logic.
 
-- **Finding 6 — empty `env` still leaks ~11 real OS variables.** `fork(child, args, {env: {}})`
-  measurably still exposes `HOMEDRIVE`, `PATH`, `SYSTEMROOT`, and roughly eight others to the child,
-  confirmed via a live escape reproduction reading `process.env` from inside the sandbox. Assessed as
-  very likely a Windows-specific `fork()` behavior (Windows requires several of these for the OS loader
-  itself to function) and not necessarily present on the real Linux deployment target, but this has not
-  been verified on Linux and is not something this session's environment can verify. **Action for
-  Session 8 (T225, real deployment):** confirm empty-env behavior on the actual Linux target before
-  treating this as closed.
-- **Finding 7 — `--allow-fs-read`/`-write` glob-matching quirk.** Certain glob forms (mixed-separator
-  paths, a bare wildcard-everything pattern) produced a garbled, mis-cased `\\?\c:\uSERS\...` resource
-  path in the permission-denial error on this machine. Root cause not diagnosed. Worked around by using
-  `path.sep`-consistent, narrowly-scoped allow-paths (three specific directories, not a broad glob) in
-  the shipped `readAllowlist` — the workaround is what's running, not a fragile glob depended on for
-  correctness, so this does not weaken the actual guarantee, but the underlying quirk itself remains
-  unexplained.
+- **Finding 6 — empty `env` still leaks ~11 real OS variables (Windows only).** `fork(child, args,
+  {env: {}})` measurably exposed `HOMEDRIVE`, `PATH`, `SYSTEMROOT`, and roughly eight others to the
+  child on Windows. **Verified on Linux:** the identical call — `fork(childPath, [], { env: {},
+  stdio: [...] })` — produced a child whose `Object.keys(process.env)` was `[]`. Zero leakage. This
+  confirms the original assessment: Windows's `CreateProcess` loader requires several of these
+  variables to start `node.exe` at all, an OS-level behavior `child_process.fork` cannot suppress on
+  that platform, and it simply does not exist on Linux. No code change — `env: {}` in `host/server.ts`
+  already delivers the intended guarantee on the deployment target.
+- **Finding 7 — `--allow-fs-read`/`-write` glob-matching quirk (Windows only).** Certain glob forms
+  (mixed-separator paths, a bare wildcard-everything pattern) produced a garbled, mis-cased
+  `\\?\c:\uSERS\...` resource path in the permission-denial error on Windows. **Verified on Linux:**
+  the exact invocation `host/server.ts` uses — `--permission --allow-fs-read=<dir>/*` inside a
+  `fork()` with `env: {}` — cleanly permitted reading a file inside the allowed directory (exit 0, no
+  stderr) with no mis-casing. Unsurprising once verified: the reported artifact (`\\?\` extended-length
+  path prefix) is a Windows-only path convention with no Linux equivalent, so the quirk cannot occur
+  there by construction. No code change — the shipped narrow, `path.sep`-consistent `readAllowlist` in
+  `host/server.ts` already works correctly on the deployment target.
 
 ---
 
@@ -208,8 +212,9 @@ the Open Decisions entries for Findings 6 and 7.
 
 ## Not fixed in this review (recorded, not silently dropped)
 
-- Finding 6 (empty-env leakage on Windows) — deferred to Session 8/T225's real deployment, where the
-  actual target OS can be checked.
-- Finding 7 (glob-matching quirk on Windows) — worked around with narrow explicit paths in the shipped
-  code; the underlying Node permission-model behavior itself was not root-caused, and doing so is
+- Finding 6 (empty-env leakage on Windows) — resolved 2026-09-08; verified on real Linux via
+  `node:22-slim`, does not reproduce. See "Findings 6 and 7 — resolved" above.
+- Finding 7 (glob-matching quirk on Windows) — resolved 2026-09-08; verified on real Linux via
+  `node:22-slim`, does not reproduce (the artifact is a Windows-only path convention). The underlying
+  Node permission-model behavior on Windows itself remains unexplained, and doing so is
   outside this review's scope (a Node platform question, not a defect in this codebase).

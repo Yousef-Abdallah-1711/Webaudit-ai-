@@ -49,3 +49,46 @@ export async function totalAvailable(db: LotReader, userId: string): Promise<num
   const b = await balanceOf(db, userId);
   return b.plan + b.purchased;
 }
+
+/**
+ * `balanceOf` for many users in one query — for list views (e.g. the admin
+ * users list) where calling `balanceOf` per row would be an N+1. Every user
+ * id gets an entry, even one with no lots at all (zero balance, no expiry).
+ */
+export async function balancesOf(
+  db: LotReader,
+  userIds: readonly string[],
+): Promise<Map<string, CreditBalance>> {
+  const now = new Date();
+  const lots =
+    userIds.length === 0
+      ? []
+      : await db.creditLot.findMany({
+          where: {
+            userId: { in: [...userIds] },
+            amountRemaining: { gt: 0 },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+          },
+          select: { userId: true, kind: true, amountRemaining: true, expiresAt: true },
+        });
+
+  const byUser = new Map<string, typeof lots>();
+  for (const id of userIds) byUser.set(id, []);
+  for (const lot of lots) byUser.get(lot.userId)?.push(lot);
+
+  const result = new Map<string, CreditBalance>();
+  for (const [userId, userLots] of byUser) {
+    const sum = (kind: CreditKind): number =>
+      userLots.filter((l) => l.kind === kind).reduce((n, l) => n + l.amountRemaining, 0);
+    const nextExpiry = userLots
+      .filter((l) => l.kind === 'PLAN' && l.expiresAt !== null)
+      .map((l) => l.expiresAt as Date)
+      .sort((a, b) => a.getTime() - b.getTime())[0];
+    result.set(userId, {
+      plan: sum('PLAN'),
+      purchased: sum('PURCHASED'),
+      planExpiresAt: nextExpiry ?? null,
+    });
+  }
+  return result;
+}

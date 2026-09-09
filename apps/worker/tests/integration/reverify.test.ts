@@ -24,6 +24,10 @@ function fakeCapability(id: string, result: ReverifyResult | (() => Promise<Reve
     module: 'SECURITY',
     layer: 'CODE',
     canRun: () => true,
+    // Every checkId this file seeds is `headers.csp-missing` (or an
+    // intentionally unowned namespace) — this is the one namespace any test
+    // capability here needs to declare ownership of.
+    checkNamespaces: ['headers'],
     reverify: typeof result === 'function' ? () => result() : () => Promise.resolve(result),
   };
 }

@@ -9,7 +9,7 @@
 import { PrismaClient } from '../../prisma/generated/client/index.js';
 import { PLAN_TIERS } from '@webaudit/config';
 
-const TEST_DB_URL =
+export const TEST_DB_URL =
   process.env['TEST_DATABASE_URL'] ??
   'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public';
 

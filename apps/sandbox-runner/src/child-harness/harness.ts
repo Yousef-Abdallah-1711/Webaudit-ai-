@@ -117,18 +117,50 @@ function isReverifyRequestShaped(input: unknown): input is { readonly checkId: s
   return typeof input === 'object' && input !== null && typeof (input as { checkId?: unknown }).checkId === 'string';
 }
 
+/**
+ * A bundle IS its own entry module — there is no second file for a relative
+ * `entrypoint` to point at, the way a vendored capability's manifest points
+ * at its own `src/index.ts`. `manifestSchema.entrypoint` still requires a
+ * syntactically valid relative path (T251), so this is a fixed, documented
+ * sentinel rather than a claim about real file structure the sandbox could
+ * ever check.
+ */
+const UPLOADED_BUNDLE_ENTRYPOINT = 'bundle.js';
+
 async function runConformance(
   loaded: LoadedCapability,
   request: SandboxRequest,
   startedAt: number,
 ): Promise<SandboxResponse> {
   const { capability, context } = loaded;
+
+  // T251 — `manifest-valid` needs `name`/`version`, and only the operator
+  // who uploaded this bundle can supply them; a request missing this is a
+  // caller bug (this platform's own code builds every `SandboxRequest`),
+  // not an attacker-controlled input, so it is reported plainly rather than
+  // guessed past with a placeholder.
+  if (request.manifest === undefined) {
+    return {
+      requestId: request.requestId,
+      ok: false,
+      reason: 'BUNDLE_INVALID',
+      detail: 'CONFORMANCE requires manifest metadata (name, version); none was supplied',
+    };
+  }
+
   const nativeInput = cloneIntoContext(context, request.input);
 
   const report = await runConformanceSuite(capability, {
     makeContext: () => buildSandboxedContext(context),
     input: nativeInput as CapabilityInput,
-    rawManifest: { id: capability.id, module: capability.module, layer: capability.layer },
+    rawManifest: {
+      id: capability.id,
+      module: capability.module,
+      layer: capability.layer,
+      name: request.manifest.name,
+      version: request.manifest.version,
+      entrypoint: UPLOADED_BUNDLE_ENTRYPOINT,
+    },
     timeoutMs: inChildTimeoutMs(request.limits.wallClockMs),
     buildCanRunTrap: () => buildSandboxedCanRunTrap(context),
     buildReverifyProbe: (location) =>

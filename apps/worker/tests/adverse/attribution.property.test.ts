@@ -196,7 +196,8 @@ describe('SC-006 - no unattributed finding survives any path through the runner'
       const result = await runModule({
         module,
         capabilities,
-        input: { priorModuleResults: {}, controlLevel: 'NONE', targetUrl: 'https://example.com' },
+        input: { priorModuleResults: {}, targetUrl: 'https://example.com' },
+        targetControlLevel: 'NONE',
         executor: executorFor(aiKind),
         makeContext: refusingContext,
         timeoutMs: 500,
@@ -275,7 +276,8 @@ describe('SC-006 - the type system refuses an unattributed issue', () => {
     const result = await runModule({
       module: 'SECURITY',
       capabilities: [makeCapability('real', 'SECURITY', 'findings', 2, rng(3), false)],
-      input: { priorModuleResults: {}, controlLevel: 'NONE', targetUrl: 'https://example.com' },
+      input: { priorModuleResults: {}, targetUrl: 'https://example.com' },
+      targetControlLevel: 'NONE',
       executor: executorFor('works'),
       makeContext: refusingContext,
       timeoutMs: 500,

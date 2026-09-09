@@ -14,8 +14,10 @@ import express from 'express';
 import request from 'supertest';
 import { SignJWT } from 'jose';
 import { env } from '../../src/config/env.js';
+import { PrismaClient } from '../../prisma/generated/client/index.js';
 import { adminUsersRoutes } from '../../src/routes/admin/users.routes.js';
-import { closeDb, resetDb, testDb } from '../helpers/db.js';
+import { updateUser } from '../../src/services/admin/users.service.js';
+import { closeDb, resetDb, testDb, TEST_DB_URL } from '../helpers/db.js';
 
 function buildApp() {
   const app = express();
@@ -78,6 +80,56 @@ describe('GET /users', () => {
     expect(body.total).toBe(6);
     expect(body.limit).toBe(2);
     expect(body.offset).toBe(1);
+  });
+
+  it('looks up balances in one batched query, not one per user', async () => {
+    const actor = await makeUser('operator@example.com');
+    const members = await Promise.all([
+      makeUser('member0@example.com'),
+      makeUser('member1@example.com'),
+      makeUser('member2@example.com'),
+    ]);
+    for (const [i, member] of members.entries()) {
+      await testDb.creditLot.create({
+        data: {
+          userId: member.id,
+          kind: 'PURCHASED',
+          source: 'PURCHASE',
+          amountGranted: 100 * (i + 1),
+          amountRemaining: 100 * (i + 1),
+          expiresAt: null,
+        },
+      });
+    }
+    const token = await tokenFor(actor.id);
+
+    // A separate PrismaClient with query-event logging, rather than spying on
+    // the shared `testDb`'s prototype methods — Prisma's model delegates are
+    // not plain own-properties, so `vi.spyOn(...).mockRestore()` on one can
+    // leave `findMany` broken for every later test sharing `testDb`.
+    const queryingDb = new PrismaClient({
+      datasources: { db: { url: TEST_DB_URL } },
+      log: [{ emit: 'event', level: 'query' }],
+    });
+    let creditLotQueries = 0;
+    queryingDb.$on('query' as never, (e: { query: string }) => {
+      if (e.query.includes('"CreditLot"')) creditLotQueries++;
+    });
+    const queryingApp = express();
+    queryingApp.use(express.json());
+    queryingApp.use(adminUsersRoutes(queryingDb));
+
+    const res = await request(queryingApp).get('/users').set(auth(token)).expect(200);
+    await queryingDb.$disconnect();
+    expect(creditLotQueries).toBe(1);
+
+    const body = res.body as {
+      users: { id: string; balance: { plan: number; purchased: number } }[];
+    };
+    for (const [i, member] of members.entries()) {
+      const found = body.users.find((u) => u.id === member.id);
+      expect(found?.balance).toEqual({ plan: 0, purchased: 100 * (i + 1) });
+    }
   });
 });
 
@@ -147,5 +199,31 @@ describe('PATCH /users/:id', () => {
     const actor = await makeUser('operator@example.com');
     const token = await tokenFor(actor.id);
     await request(app).patch('/users/does-not-exist').set(auth(token)).send({ isOperator: true }).expect(404);
+  });
+
+  it('records the true immediately-preceding state under concurrent updates, not a stale one', async () => {
+    const actor = await makeUser('operator@example.com');
+    const target = await makeUser('member@example.com', { isOperator: false });
+
+    // Direct service calls, not two HTTP round trips: each `request(app)` call
+    // spins up its own ephemeral supertest server, and that latency is enough
+    // to accidentally serialize the two requests instead of racing them.
+    await Promise.allSettled([
+      updateUser(testDb, { operatorId: actor.id, userId: target.id, isOperator: true }),
+      updateUser(testDb, { operatorId: actor.id, userId: target.id, isOperator: false }),
+    ]);
+
+    const entries = await testDb.auditLogEntry.findMany({
+      where: { subjectType: 'User', subjectId: target.id },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(entries.length).toBe(2);
+    const [first, second] = entries as unknown as [
+      { before: { isOperator: boolean }; after: { isOperator: boolean } },
+      { before: { isOperator: boolean }; after: { isOperator: boolean } },
+    ];
+    // Whatever the second write's `before` claims, it must be what the first
+    // write actually left behind — not both reading the row's original value.
+    expect(second.before.isOperator).toBe(first.after.isOperator);
   });
 });

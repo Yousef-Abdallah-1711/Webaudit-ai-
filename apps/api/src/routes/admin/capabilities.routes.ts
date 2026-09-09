@@ -79,6 +79,17 @@ function pathId(req: AuthedRequest): string {
   return typeof raw === 'string' ? raw : '';
 }
 
+/**
+ * T251 — the manifest fields the upload body (a raw bundle, not JSON) has no
+ * room for. Mirrors `@webaudit/capability-sdk`'s `manifestSchema` `name`/
+ * `version` constraints so a malformed value is refused here with a clear
+ * 400 rather than surfacing later as an opaque `manifest-valid: false`.
+ */
+const uploadCapabilityQuery = z.object({
+  name: z.string().trim().min(1).max(200),
+  version: z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/, 'must be a three-part version'),
+});
+
 const patchCapabilityBody = z
   .object({
     isEnabled: z.boolean(),
@@ -206,10 +217,21 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
         return;
       }
 
+      const parsedQuery = uploadCapabilityQuery.safeParse(req.query);
+      if (!parsedQuery.success) {
+        badRequest(
+          res,
+          'Upload requires ?name=&version= query parameters (the bundle itself carries no manifest file).',
+          parsedQuery.error.flatten(),
+        );
+        return;
+      }
+
       try {
         const result = await uploadCapability(db, {
           operatorId: req.auth!.userId,
           bundle: req.body,
+          manifest: { name: parsedQuery.data.name, version: parsedQuery.data.version },
         });
         res.status(200).json(result);
       } catch (error) {

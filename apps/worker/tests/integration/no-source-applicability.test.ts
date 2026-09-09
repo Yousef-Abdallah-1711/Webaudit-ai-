@@ -53,7 +53,6 @@ const SOURCE_ONLY: readonly {
 const URL_ONLY_INPUT: CapabilityInput = {
   targetUrl: 'https://example.com/',
   priorModuleResults: {},
-  controlLevel: 'NONE',
 };
 
 /**
@@ -62,7 +61,6 @@ const URL_ONLY_INPUT: CapabilityInput = {
  */
 const SOURCE_INPUT: CapabilityInput = {
   priorModuleResults: {},
-  controlLevel: 'NONE',
   code: {
     files: [
       { path: 'package.json', sizeBytes: 320 },
@@ -78,6 +76,7 @@ describe.each(SOURCE_ONLY)('$capability.id on a URL-only audit', ({ module, capa
     const resolution = await resolveApplicable({
       capabilities: [capability],
       input: URL_ONLY_INPUT,
+      targetControlLevel: 'NONE',
     });
 
     expect(resolution.applicable).toHaveLength(0);
@@ -92,6 +91,7 @@ describe.each(SOURCE_ONLY)('$capability.id on a URL-only audit', ({ module, capa
     const resolution = await resolveApplicable({
       capabilities: [capability],
       input: SOURCE_INPUT,
+      targetControlLevel: 'NONE',
     });
 
     expect(resolution.skipped).toHaveLength(0);
@@ -107,6 +107,7 @@ describe.each(SOURCE_ONLY)('$capability.id on a URL-only audit', ({ module, capa
       makeContext: (signal, capabilityId) => createCodeLayerContext({ signal, capabilityId }),
       timeoutMs: 5_000,
       scanId: 'no-source-applicability',
+      targetControlLevel: 'NONE',
     });
 
     expect(result.state).toBe('NOT_APPLICABLE');
@@ -133,6 +134,7 @@ describe('the code layer never runs for a capability that was skipped', () => {
       },
       timeoutMs: 5_000,
       scanId: 'no-source-applicability-2',
+      targetControlLevel: 'NONE',
     });
 
     // FR-021's "rather than running it". A context is built per code-layer

@@ -69,6 +69,8 @@ export class SandboxUnavailableError extends Error {
 export interface UploadCapabilityInput {
   readonly operatorId: string;
   readonly bundle: Buffer;
+  /** T251 — the operator's own name/version for the uploaded bundle; see `UploadedCapabilityManifest`. */
+  readonly manifest: { readonly name: string; readonly version: string };
 }
 
 export interface UploadCapabilityResult {
@@ -82,15 +84,14 @@ export interface UploadCapabilityResult {
  * Mirrors the fixture `packages/capabilities-vendored/tests/
  * conformance.test.ts` already uses for the same purpose — a real
  * `targetUrl`, no code tree (this is not a source-backed capability check),
- * an empty `priorModuleResults`, and `controlLevel: 'NONE'` (the lowest
- * level, so a check requiring anything higher is exercised honestly rather
- * than given a control level upload has no way to have actually verified).
+ * an empty `priorModuleResults`. No `controlLevel` (T252 removed it from
+ * `CapabilityInput` entirely — gating on it is the runner's job, never the
+ * capability's, so conformance has nothing of the kind to supply here).
  */
 function sampleCapabilityInput(): CapabilityInput {
   return {
     targetUrl: 'https://example.com/',
     priorModuleResults: {},
-    controlLevel: 'NONE',
   };
 }
 
@@ -118,6 +119,7 @@ export async function uploadCapability(
       capabilityBundle: input.bundle,
       sampleInput: sampleCapabilityInput(),
       limits: SANDBOX_LIMITS,
+      manifest: input.manifest,
     });
   } catch (error) {
     // A real network failure (connection refused, DNS failure, etc.) throws

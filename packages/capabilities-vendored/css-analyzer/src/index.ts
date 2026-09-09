@@ -294,6 +294,7 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
 
 export const cssAnalyzer: AuditCapability = {
   id: 'css-analyzer',
+  checkNamespaces: ['css'],
   module: 'UI',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean => stylesheets(input).length > 0,

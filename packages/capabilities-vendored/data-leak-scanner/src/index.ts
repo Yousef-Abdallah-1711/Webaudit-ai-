@@ -161,6 +161,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 export const dataLeakScanner: AuditCapability = {
   id: 'data-leak-scanner',
+  // Detection is delegated to `@webaudit/redaction`, whose findings carry
+  // `redaction.secret-in-source` — not `data-leak-scanner.*`.
+  checkNamespaces: ['redaction'],
   module: 'SECURITY',
   layer: 'CODE',
   canRun: (input: CapabilityInput): boolean =>
