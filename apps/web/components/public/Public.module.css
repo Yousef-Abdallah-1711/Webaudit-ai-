@@ -52,6 +52,35 @@
   margin-inline-start: auto;
 }
 
+/* Found via manual testing at the 390px mobile viewport: the vendored
+ * source (design-system/ui_kits/marketing/Public.jsx) has no mobile
+ * treatment for this header at all — the nav links pushed the sign-in/
+ * start-free actions off-screen, causing horizontal overflow. 640px matches
+ * the breakpoint already used elsewhere in this codebase (ScanForm.module
+ * .css, reports/[id]/page.module.css) rather than inventing a new one; the
+ * secondary nav links are hidden rather than collapsed into a new
+ * hamburger-menu component, since no such component exists in the vendored
+ * design to port ("port, never author") and the primary actions (sign in,
+ * start free) are what a mobile visitor actually needs. */
+@media (max-width: 640px) {
+  .nav {
+    display: none;
+  }
+  .headerInner {
+    gap: 12px;
+    padding: 0 16px;
+  }
+  /* Hiding .nav alone (297px of headerActions: lang toggle, theme toggle,
+   * two buttons) still didn't fit next to the wordmark at 390px — measured
+   * directly, not assumed. The lang/theme toggles are the least essential
+   * controls for a mobile visitor arriving to sign in or start a free
+   * audit; hidden here, they stay reachable from every dashboard page's
+   * own sidebar toggle once signed in. */
+  .headerActions button[aria-label^='Switch to'] {
+    display: none;
+  }
+}
+
 .footer {
   background: var(--surface-raised);
   border-top: var(--border-width) solid var(--border-default);
@@ -63,6 +92,16 @@
   max-width: 1120px;
   margin: 0 auto;
   padding: 48px 24px 24px;
+}
+/* Same real, measured gap as the header above: the vendored source's fixed
+ * 4-column grid has no mobile treatment, so the last column overflowed the
+ * viewport at 390px. A single column at the same 640px breakpoint used
+ * throughout this fix keeps every link readable rather than squeezed. */
+@media (max-width: 640px) {
+  .footerGrid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
 }
 .footerTag {
   max-width: 34ch;

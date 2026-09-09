@@ -105,13 +105,29 @@ export function ScanProgress({
 
   // Authoritative baseline (FR-047): fetched once on mount, and again after
   // every realtime resubscribe — a client that missed events while
-  // disconnected must not trust its own stale in-memory state.
+  // disconnected must not trust its own stale in-memory state. Per-module
+  // state is part of that baseline too, from `scan.moduleResults` — without
+  // this, a connection that never delivered a single `module:*` event (a
+  // dropped socket, a resubscribe that raced an already-fast scan) left
+  // every badge on "Waiting" forever, even once the scan had genuinely
+  // completed. A module missing from `moduleResults` (no phase has touched
+  // it yet) is left out of the map, same as before — the render's own
+  // `moduleStates[module] ?? 'waiting'` fallback already covers that.
   const refetch = useMemo(
     () => (): void => {
       void getScan(scanId).then(({ scan }) => {
         setModules(scan.requestedModules as ModuleType[]);
         setStartedAt(scan.startedAt === null ? null : new Date(scan.startedAt).getTime());
         setScanState(scan.state as ScanState);
+        if (scan.moduleResults !== undefined) {
+          setModuleStates((current) => {
+            const next = { ...current };
+            for (const result of scan.moduleResults!) {
+              next[result.module as ModuleType] = TO_UI_STATE[result.state as ModuleState];
+            }
+            return next;
+          });
+        }
       });
     },
     [scanId],

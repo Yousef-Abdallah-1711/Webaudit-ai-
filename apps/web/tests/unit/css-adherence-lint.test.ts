@@ -92,7 +92,11 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/(dashboard)/reports/[id]/page.module.css': { hex: 0, px: 14 },
   'app/(dashboard)/settings/page.module.css': { hex: 1, px: 28 },
   'app/(dashboard)/usage/page.module.css': { hex: 0, px: 20 },
-  'app/(public)/page.module.css': { hex: 2, px: 43 },
+  // px 43 -> 45: the two fixed-column grids (.diffGrid, .loopGrid) got a
+  // 640px mobile breakpoint collapsing them to one column — a real,
+  // measured horizontal-overflow bug found via manual testing, not a new
+  // design decision.
+  'app/(public)/page.module.css': { hex: 2, px: 45 },
   'app/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   'app/theme.module.css': { hex: 0, px: 10 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
@@ -101,7 +105,10 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'components/dashboard/Sidebar.module.css': { hex: 1, px: 62 },
   'components/fixes/FixesBoard.module.css': { hex: 0, px: 3 },
   'components/fixes/IssueRow.module.css': { hex: 0, px: 17 },
-  'components/public/Public.module.css': { hex: 0, px: 23 },
+  // px 23 -> 28: the same real, measured mobile-overflow fix — a 640px
+  // breakpoint hiding the nav/lang/theme toggle and collapsing the footer
+  // grid to one column.
+  'components/public/Public.module.css': { hex: 0, px: 28 },
   'components/report/AnnotatedScreenshot.module.css': { hex: 0, px: 6 },
   'components/report/AttributionMark.module.css': { hex: 0, px: 3 },
   'components/report/IssueCard.module.css': { hex: 0, px: 13 },

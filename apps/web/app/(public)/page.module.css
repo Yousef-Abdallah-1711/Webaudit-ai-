@@ -67,6 +67,14 @@
   gap: 16px;
   margin-top: 40px;
 }
+/* Found via manual testing at the 390px mobile viewport: a fixed 3-column
+ * grid with no mobile treatment overflowed the page. 640px matches the
+ * breakpoint used throughout this fix elsewhere in the codebase. */
+@media (max-width: 640px) {
+  .diffGrid {
+    grid-template-columns: 1fr;
+  }
+}
 .diffCardText {
   margin: 0;
   font: var(--type-small);
@@ -144,6 +152,13 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+}
+/* Same real, measured gap as .diffGrid above: a fixed 4-column grid with no
+ * mobile treatment overflowed the page at 390px. */
+@media (max-width: 640px) {
+  .loopGrid {
+    grid-template-columns: 1fr;
+  }
 }
 .loopStep {
   padding-top: 14px;

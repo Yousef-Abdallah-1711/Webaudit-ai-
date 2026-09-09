@@ -1,8 +1,21 @@
 /* Ported from design-system/ui_kits/marketing/AuthPages.jsx (T128). */
 
+/* Found via manual testing at the 390px mobile viewport: the vendored
+ * source (design-system/ui_kits/marketing/AuthPages.jsx) uses `display:grid;
+ * place-items:center` here, faithfully ported — but a CSS grid's implicit
+ * auto-sized column with non-stretching (`center`) alignment can grow past
+ * the container's available width to fit a child's own specified width,
+ * which defeats `.inner`'s `max-width:100%` below and produces real
+ * horizontal overflow on every narrow screen. Flexbox's `justify-content:
+ * center` centers the exact same way but correctly constrains the child to
+ * the container's actual width, letting `max-width:100%` work as intended
+ * — same visual result at every width the bug wasn't visible at (1440,
+ * every artboard), the fix only on the widths where it was actually
+ * broken. No token, colour, or spacing value changes. */
 .wrap {
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 72px 24px;
 }
 

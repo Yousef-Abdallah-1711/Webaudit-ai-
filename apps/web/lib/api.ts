@@ -214,6 +214,11 @@ export interface ScanSummary {
   readonly startedAt: string | null;
   /** Only present on `GET /scans/:id` — what the scan is auditing. */
   readonly target?: { readonly displayName: string };
+  /** Only present on `GET /scans/:id` — each requested module's real,
+   * current state, for a client whose realtime connection missed the
+   * events that would otherwise carry this (see ScanProgress.tsx's own
+   * note on why this exists). */
+  readonly moduleResults?: readonly { readonly module: string; readonly state: string }[];
 }
 
 export function createScan(

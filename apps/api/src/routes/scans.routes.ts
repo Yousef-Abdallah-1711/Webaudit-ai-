@@ -253,12 +253,20 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
 
   router.get('/:id', async (req: AuthedRequest, res: Response) => {
     const userId = req.auth!.userId;
-    // `target` is included for the live-progress screen, which has nothing
-    // else to name what it is auditing — additive only, every existing field
-    // on `scan` is untouched.
+    // `target` and `moduleResults` are included for the live-progress screen
+    // — additive only, every existing field on `scan` is untouched.
+    // `moduleResults` closes a real gap found in manual testing: per-module
+    // status in ScanProgress.tsx updated only from realtime WebSocket
+    // events with no REST fallback, so a dropped connection left every
+    // badge stuck on "Waiting" forever even after the scan completed.
+    // FR-047's "current state served from the database" on resync now
+    // covers per-module state too, not just the aggregate scan state.
     const scan = await db.scan.findFirst({
       where: { id: pathId(req), userId },
-      include: { target: { select: { displayName: true } } },
+      include: {
+        target: { select: { displayName: true } },
+        moduleResults: { select: { module: true, state: true } },
+      },
     });
     if (scan === null) {
       res.status(404).json(NOT_FOUND);
