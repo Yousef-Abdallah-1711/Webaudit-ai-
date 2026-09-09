@@ -65,6 +65,13 @@ export interface SandboxSuccess {
   readonly ok: true;
   readonly findings: readonly CapabilityFinding[];
   readonly durationMs: number;
+  /**
+   * RUN_CODE_LAYER only — whether the capability's own `canRun` accepted
+   * this input before `runCodeLayer` ran. Absent (CONFORMANCE, REVERIFY,
+   * and every response before this field existed) means true. `false`
+   * means `runCodeLayer` was never called and `findings` is always `[]`.
+   */
+  readonly applicable?: boolean;
 }
 
 export interface SandboxErrorResult {

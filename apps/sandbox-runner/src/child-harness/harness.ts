@@ -188,7 +188,7 @@ async function runConformance(
   };
 }
 
-async function runCodeLayerOp(
+export async function runCodeLayerOp(
   loaded: LoadedCapability,
   request: SandboxRequest,
   startedAt: number,
@@ -203,8 +203,38 @@ async function runCodeLayerOp(
     };
   }
   const nativeInput = cloneIntoContext(context, request.input);
-  const ctx = buildSandboxedContext(context);
 
+  // T253: canRun runs inside this same sandbox dispatch, not a separate
+  // one — one process fork per installed-capability call, not two. A
+  // capability that declines is reported applicable:false with no
+  // findings, and runCodeLayer is never invoked for it.
+  const canRunOutcome = await containCapabilityCall(
+    () => Promise.resolve(capability.canRun(nativeInput as CapabilityInput)),
+    { timeoutMs: inChildTimeoutMs(request.limits.wallClockMs) },
+  );
+  if (canRunOutcome.kind === 'timeout') {
+    return { requestId: request.requestId, ok: false, reason: 'TIMEOUT' };
+  }
+  if (canRunOutcome.kind === 'rejected') {
+    const escape = classifyEscapeAttempt(canRunOutcome.error);
+    return {
+      requestId: request.requestId,
+      ok: false,
+      reason: escape ?? 'CONTRACT_VIOLATION',
+      detail: describeThrown(canRunOutcome.error),
+    };
+  }
+  if (canRunOutcome.value !== true) {
+    return {
+      requestId: request.requestId,
+      ok: true,
+      findings: [],
+      durationMs: Date.now() - startedAt,
+      applicable: false,
+    };
+  }
+
+  const ctx = buildSandboxedContext(context);
   const outcome = await containCapabilityCall(
     () => capability.runCodeLayer!(nativeInput as CapabilityInput, ctx),
     { timeoutMs: inChildTimeoutMs(request.limits.wallClockMs) },
@@ -235,6 +265,7 @@ async function runCodeLayerOp(
     ok: true,
     findings: outcome.value,
     durationMs: Date.now() - startedAt,
+    applicable: true,
   };
 }
 
