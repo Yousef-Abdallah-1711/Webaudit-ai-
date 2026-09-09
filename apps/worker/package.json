@@ -39,6 +39,7 @@
     "@webaudit/redaction": "workspace:*",
     "@webaudit/safe-archive": "workspace:*",
     "@webaudit/safe-net": "workspace:*",
+    "@webaudit/sandbox-runner": "workspace:*",
     "@webaudit/scoring": "workspace:*",
     "@webaudit/types": "workspace:*",
     "zod": "3.25.76",

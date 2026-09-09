@@ -16,10 +16,22 @@
  * that exists is whatever real directories with a valid
  * `capability.manifest.json` are on disk.
  *
- * `apps/api`'s dual-root discovery is not reused wholesale — this worker
- * only ever runs *this* process's own trusted, reviewed code (Principle V:
- * untrusted code runs isolated, in `sandbox-runner`, never here), so only
- * the vendored root is walked. `installedRoot` is deliberately absent.
+ * **T253 adds a second root — `installedRoot`, the same directory
+ * `apps/api`'s upload path writes an operator-uploaded, passing-conformance
+ * bundle into. This worker still never runs that code in-process.**
+ * Constitution Non-Negotiable #5 — untrusted code runs in `sandbox-runner`
+ * only, no exceptions — applies exactly as much to a real scan as it does
+ * to the upload-time conformance check. So an installed manifest's
+ * `entrypointPath` is read as inert bytes (`readFile`, never `import()`)
+ * and wrapped in a plain object whose `canRun`/`runCodeLayer` dispatch to
+ * `sandbox-runner` over HTTP (`makeSandboxedCapability`, below) — the real
+ * decision and the real findings both come back from a sandboxed process,
+ * never this one. Kept as a genuinely separate discovery walk and a
+ * genuinely separate loading path from the vendored one, rather than
+ * merged into one list with a trust flag threaded through — the two paths
+ * do fundamentally different things with what they find, and collapsing
+ * them into one code path would be the easiest way to one day blur that
+ * difference by accident.
  *
  * Discovery and each capability's dynamic import are cached per module for
  * the life of the process — the vendored tree does not change while a
@@ -37,27 +49,114 @@
  * `requiredControlLevel` at execution time, not just its manifest default.
  */
 
+import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { discoverManifestsInRoot, type DiscoveredManifest } from '@webaudit/capability-sdk';
-import type { AuditCapability } from '@webaudit/capability-sdk';
+import type { AuditCapability, CapabilityInput } from '@webaudit/capability-sdk';
+import { runCodeLayerCheck } from '@webaudit/sandbox-runner/dispatch';
+import { SANDBOX_LIMITS } from '@webaudit/config';
 import type { ModuleType } from '@webaudit/types';
+import { getSandboxRunnerUrl } from './sandbox-config.js';
 
 /** `packages/capabilities-vendored/`, resolved relative to this file. */
 function vendoredRoot(): string {
   return fileURLToPath(new URL('../../../../packages/capabilities-vendored', import.meta.url));
 }
 
-let discoveryCache: Promise<readonly DiscoveredManifest[]> | undefined;
+/**
+ * The same directory `apps/api`'s registry writes uploaded bundles into
+ * (T253) — `INSTALLED_CAPABILITIES_ROOT` env var, or the repo-relative
+ * default `apps/api/src/services/registry/boot.ts`'s `defaultInstalledRoot`
+ * already uses. Duplicated rather than imported: `apps/worker` does not
+ * depend on `apps/api`'s registry module (only its generated Prisma
+ * client, per Open Decision #10), and this is a five-line function, not
+ * shared logic worth a new package subpath.
+ */
+function installedRoot(): string {
+  return (
+    process.env['INSTALLED_CAPABILITIES_ROOT'] ??
+    fileURLToPath(new URL('../../../../var/capabilities-installed', import.meta.url))
+  );
+}
+
+let vendoredDiscoveryCache: Promise<readonly DiscoveredManifest[]> | undefined;
+let installedDiscoveryCache: Promise<readonly DiscoveredManifest[]> | undefined;
 
 /** Walks the vendored root exactly once per process; every caller shares the result. */
 function discoverVendored(): Promise<readonly DiscoveredManifest[]> {
-  discoveryCache ??= discoverManifestsInRoot(vendoredRoot()).then((result) => {
+  vendoredDiscoveryCache ??= discoverManifestsInRoot(vendoredRoot()).then((result) => {
     for (const rejected of result.rejected) {
       console.error(`[capability-loader] rejected ${rejected.id}: ${rejected.reason}`);
     }
     return result.found;
   });
-  return discoveryCache;
+  return vendoredDiscoveryCache;
+}
+
+/**
+ * T253. A separate root walk from `discoverVendored` — never merged into
+ * one list — because what happens next diverges completely: a vendored
+ * manifest's entrypoint gets `import()`'d into this process; an installed
+ * manifest's never does.
+ */
+function discoverInstalled(): Promise<readonly DiscoveredManifest[]> {
+  installedDiscoveryCache ??= discoverManifestsInRoot(installedRoot()).then((result) => {
+    for (const rejected of result.rejected) {
+      console.error(`[capability-loader] rejected installed ${rejected.id}: ${rejected.reason}`);
+    }
+    return result.found;
+  });
+  return installedDiscoveryCache;
+}
+
+/**
+ * A capability whose `canRun`/`runCodeLayer` never execute in this
+ * process — every call is a real HTTP dispatch to `sandbox-runner`,
+ * carrying the on-disk bundle bytes read once at construction (not
+ * re-read per call; the bundle does not change while a worker runs, the
+ * same assumption `discoverVendored`'s cache already makes about the
+ * vendored tree).
+ *
+ * **This is the one and only place in `apps/worker` an installed
+ * capability's bytes are read from disk, and they are never passed to
+ * `import()`, `eval`, `new Function`, or anything else that would execute
+ * them in this process.** They are base64-encoded (inside
+ * `runCodeLayerCheck`) and sent as the body of an HTTP request — inert
+ * data, not code, from this process's point of view.
+ */
+function makeSandboxedCapability(manifest: DiscoveredManifest, bundle: Uint8Array): AuditCapability {
+  const { id, module, layer } = manifest.manifest;
+
+  async function dispatch(input: CapabilityInput) {
+    const outcome = await runCodeLayerCheck(getSandboxRunnerUrl(), {
+      requestId: randomUUID(),
+      capabilityBundle: bundle,
+      input,
+      limits: SANDBOX_LIMITS,
+    });
+    if (!outcome.ok) {
+      throw new Error(`sandbox dispatch failed for installed capability ${id}: ${outcome.reason}`);
+    }
+    return outcome;
+  }
+
+  return {
+    id,
+    module,
+    layer,
+    // The real decision happens inside the one sandbox dispatch
+    // runCodeLayer makes (sandbox-runner's runCodeLayerOp folds canRun
+    // into that same call, T253) — this always optimistically returns
+    // true so `resolve.ts` adds it to `applicable` and reaches
+    // `runCodeLayer`, which is where the real answer actually comes from.
+    // One round trip per call, not two.
+    canRun: () => true,
+    runCodeLayer: async (input) => {
+      const outcome = await dispatch(input);
+      return outcome.applicable ? [...outcome.findings] : [];
+    },
+  };
 }
 
 const importCacheByModule = new Map<ModuleType, Promise<readonly AuditCapability[]>>();
@@ -66,10 +165,14 @@ async function loadModuleCapabilities(module: ModuleType): Promise<readonly Audi
   let cached = importCacheByModule.get(module);
   if (cached === undefined) {
     cached = (async () => {
-      const manifests = await discoverVendored();
-      const forModule = manifests.filter((m) => m.manifest.module === module);
-      const loaded = await Promise.all(
-        forModule.map(async (m): Promise<AuditCapability | null> => {
+      const [vendoredManifests, installedManifests] = await Promise.all([
+        discoverVendored(),
+        discoverInstalled(),
+      ]);
+
+      const vendoredForModule = vendoredManifests.filter((m) => m.manifest.module === module);
+      const loadedVendored = await Promise.all(
+        vendoredForModule.map(async (m): Promise<AuditCapability | null> => {
           try {
             const imported = (await import(pathToFileURL(m.entrypointPath).href)) as {
               default?: AuditCapability;
@@ -96,7 +199,26 @@ async function loadModuleCapabilities(module: ModuleType): Promise<readonly Audi
           }
         }),
       );
-      return loaded.filter((capability): capability is AuditCapability => capability !== null);
+
+      const installedForModule = installedManifests.filter((m) => m.manifest.module === module);
+      const loadedInstalled = await Promise.all(
+        installedForModule.map(async (m): Promise<AuditCapability | null> => {
+          try {
+            const bundle = await readFile(m.entrypointPath);
+            return makeSandboxedCapability(m, bundle);
+          } catch (error) {
+            console.error(
+              `[capability-loader] failed to read an installed ${module} capability (${m.id})`,
+              error,
+            );
+            return null;
+          }
+        }),
+      );
+
+      return [...loadedVendored, ...loadedInstalled].filter(
+        (capability): capability is AuditCapability => capability !== null,
+      );
     })();
     importCacheByModule.set(module, cached);
   }

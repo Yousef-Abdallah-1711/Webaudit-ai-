@@ -298,6 +298,9 @@ importers:
       '@webaudit/safe-net':
         specifier: workspace:*
         version: link:../../packages/safe-net
+      '@webaudit/sandbox-runner':
+        specifier: workspace:*
+        version: link:../sandbox-runner
       '@webaudit/scoring':
         specifier: workspace:*
         version: link:../../packages/scoring
