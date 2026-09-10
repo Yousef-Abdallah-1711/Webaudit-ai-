@@ -23,7 +23,7 @@ export interface OAuthResult {
   created: boolean;
 }
 
-type Db = Pick<PrismaClient, 'oAuthIdentity' | 'user' | '$transaction'>;
+type Db = Pick<PrismaClient, 'oAuthIdentity' | 'user' | 'refreshToken' | '$transaction'>;
 
 export async function resolveOAuthIdentity(db: Db, profile: OAuthProfile): Promise<OAuthResult> {
   const email = normalizeEmail(profile.email);
@@ -50,6 +50,47 @@ export async function resolveOAuthIdentity(db: Db, profile: OAuthProfile): Promi
   // is not a match (FR-009): social sign-in must not resurrect one.
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
+    // Account pre-hijacking (the "classic-federation merge" attack): an
+    // attacker can register this address with a password of their own
+    // choosing before the real owner ever signs in, then simply wait —
+    // FR-001 only refuses a *second* registration, so the row exists,
+    // unverified, and the attacker's password sits on it. If this join
+    // handed the row to the real owner without touching that password, the
+    // owner would now be using an account someone else can also log into:
+    // the moment `emailVerifiedAt` is set by any later, unrelated path (the
+    // victim's own confirmation email, a resend they trigger, anything),
+    // the attacker's original password satisfies `login()`'s verification
+    // gate and signs straight in. A row nobody had verified before this
+    // moment has no legitimate password on it — the provider has just
+    // supplied the ONLY proof of ownership this account has ever had, so
+    // that proof, not whoever typed a password first, must decide who
+    // controls it. Clearing the password (already a valid state — a
+    // social-only account has none, see the creation branch below) and
+    // revoking any session that password might already have produced closes
+    // the path without disturbing the ordinary case: an account the owner
+    // already verified themselves keeps its password untouched, exactly as
+    // `auth.oauth-join.test.ts` proves.
+    if (!existing.emailVerifiedAt) {
+      await db.$transaction([
+        db.user.update({
+          where: { id: existing.id },
+          data: { passwordHash: null, emailVerifiedAt: new Date() },
+        }),
+        db.oAuthIdentity.create({
+          data: {
+            userId: existing.id,
+            provider: profile.provider,
+            providerUserId: profile.providerUserId,
+          },
+        }),
+        db.refreshToken.updateMany({
+          where: { userId: existing.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        }),
+      ]);
+      return { userId: existing.id, created: false };
+    }
+
     await db.oAuthIdentity.create({
       data: {
         userId: existing.id,

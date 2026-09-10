@@ -123,6 +123,58 @@ function trustProxyHops(): number {
 }
 
 /**
+ * The error shapes `express.json()` (via `body-parser`/`raw-body`) throws for
+ * a request it refuses to read: unreadable JSON, a body over the configured
+ * limit, an unsupported charset, a client that aborted mid-upload, or a
+ * length mismatch. Every one of these is built with `http-errors`, which sets
+ * BOTH `status` and `statusCode` to the same value, and a `type` unique to
+ * body-parser's own errors — checked here so this handler cannot mistake an
+ * unrelated error that happens to carry a `status` (a route handler's own
+ * thrown `HttpError`, say) for one of these.
+ */
+const BODY_PARSER_ERROR_TYPES = new Set([
+  'entity.parse.failed',
+  'entity.too.large',
+  'entity.verify.failed',
+  'charset.unsupported',
+  'encoding.unsupported',
+  'request.aborted',
+  'request.size.invalid',
+]);
+
+interface BodyParserError {
+  readonly type: string;
+  readonly status?: number;
+  readonly statusCode?: number;
+}
+
+function isBodyParserError(err: unknown): err is BodyParserError {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'type' in err &&
+    typeof err.type === 'string' &&
+    BODY_PARSER_ERROR_TYPES.has(err.type)
+  );
+}
+
+function bodyParserErrorHandler(
+  err: unknown,
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  if (!isBodyParserError(err)) {
+    next(err);
+    return;
+  }
+  const status = err.statusCode ?? err.status ?? 400;
+  res.status(status).json({
+    error: { code: 'BAD_REQUEST', message: 'The request body could not be read.' },
+  });
+}
+
+/**
  * The CORS allowlist.
  *
  * `WEB_URL` is the frontend origin; `CORS_ORIGINS` is an optional
@@ -269,6 +321,19 @@ export function createApp(deps: AppDeps): Express {
   app.use(webhooksRoutes(deps.db, deps.webhooks ?? {}));
 
   app.use(express.json({ limit: '1mb' }));
+  // `express.json()` reports a malformed body or one over the 1mb limit by
+  // calling `next(err)` synchronously — Express then skips every ordinary
+  // middleware and routes straight to the first 4-argument handler, which
+  // without this would be the catch-all below. That handler exists for
+  // genuine server faults: it answers 500 and logs the error as `unhandled`.
+  // A client that sent broken JSON is not a server fault, and treating every
+  // one exactly like a real crash — same status, same alerting signal, same
+  // log line — buries the incidents that log actually exists to catch under
+  // routine, expected client noise (a fuzzer, a stale client, a truncated
+  // upload). This handler answers with the status body-parser already
+  // computed (400 for unreadable JSON, 413 for over-limit) before the
+  // request ever reaches that catch-all.
+  app.use(bodyParserErrorHandler);
   app.use(cookieParser());
 
   // Deliberately ahead of the limiters: a platform health check that can be
