@@ -43,6 +43,55 @@
  * call is still wrapped to translate a late FK violation (Prisma P2003) into
  * the same 409, rather than a raw 500, as a defensive backstop.
  *
+ * ─── T254: deleting an INSTALLED row also removes its bundle from disk ──
+ *
+ * T253 gave `reconcile.ts`'s "disk is existence" half a way to write a new
+ * directory (`installedRoot/<id>/`) outside of discovery finding it there
+ * already. That exposed a real gap this same file's history check never
+ * covered: a `trust: 'INSTALLED'` row with zero executions could be deleted
+ * from the database while its bundle and manifest stayed on disk — and the
+ * very next reconciliation (a routine boot, or the on-demand `reconcileNow`
+ * every upload already triggers) would find that manifest, see no matching
+ * database row, and silently `create` it again. An operator's delete of an
+ * unreviewed, potentially-malicious uploaded capability must not be
+ * reversible by a process restart.
+ *
+ * The fix removes `installedRoot/<capabilityId>/` from disk **before**
+ * deleting the database row, not after: reconciliation reads "does this id
+ * exist in the database" and "is this id's manifest on disk" independently,
+ * so the dangerous window is the one where the database row is already gone
+ * but the directory still exists — removing the directory first closes that
+ * window instead of narrowing it. If the disk removal itself fails, the
+ * database delete never runs and the capability is left fully intact (fail
+ * closed) rather than half-deleted. `trust: 'VENDORED'` rows never take this
+ * path — their directory lives under `packages/capabilities-vendored/`,
+ * which this file has no business touching and reconcile.ts's own docs say
+ * is never operator-removable.
+ *
+ * **A second, previously-latent race this same change makes worth closing
+ * properly rather than tolerating.** Before T254, the check-then-delete's
+ * only failure mode when a `CapabilityExecution` landed between the count
+ * check and the `delete` was a caught FK violation translated to the same
+ * 409 the up-front check gives — annoying, but harmless: nothing had
+ * happened yet, so refusing after the fact left the row exactly as it was.
+ * Once the pre-delete step can destroy a real bundle on disk, that is no
+ * longer true: the same race would remove `installedRoot/<id>/` and *then*
+ * discover (via the FK violation) that the row cannot actually be deleted —
+ * leaving a capability whose cost history and `Capability` row survive, but
+ * whose code is permanently gone and will never run again, appearing
+ * `isEnabled: true` with no error surfaced anywhere. `removeCapability`
+ * closes this by taking the same `lockCapability` `FOR UPDATE` lock the
+ * other two mutations in this file already use, and re-counting executions
+ * *after* acquiring it, before ever touching disk: Postgres requires a
+ * `FOR KEY SHARE` lock on the referenced row for any `CapabilityExecution`
+ * insert to satisfy the FK, which conflicts with `FOR UPDATE` — so once this
+ * lock is held, no concurrent execution can land until the transaction
+ * commits or rolls back. The recount is therefore authoritative for the
+ * rest of the transaction, and disk removal only ever runs once that is
+ * true. The disk removal happens *inside* the same transaction, strictly
+ * before the row delete, so both "closes, not narrows" properties above
+ * hold simultaneously rather than trading one race for the other.
+ *
  * ─── CapabilityPlan (tier restriction): a real but partial gap ──────────
  *
  * `setCapabilityPlanRestrictions` below is genuine, working admin CRUD over
@@ -65,7 +114,10 @@
  * separate, larger, cross-cutting change nobody has asked for.
  */
 
+import { rm } from 'node:fs/promises';
+import path from 'node:path';
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
+import { defaultInstalledRoot } from '../registry/boot.js';
 import { recordAuditLog } from './audit-log.js';
 
 export class CapabilityNotFoundError extends Error {
@@ -313,6 +365,18 @@ export interface RemoveCapabilityResult {
  * only for a row that has none. Always records an `AuditLogEntry` — an
  * operator action was taken (a refusal is still a decision worth a record)
  * regardless of whether the row ends up gone.
+ *
+ * T254 — for a `trust: 'INSTALLED'` row, this also removes
+ * `installedRoot/<capabilityId>/` from disk, strictly before the database
+ * delete (see the module note's "T254" section for why the order matters):
+ * otherwise the next reconciliation finds the manifest still on disk with no
+ * matching row and resurrects it. The up-front `_count.executions` check
+ * below is a fast, unlocked rejection for the common case (avoids taking a
+ * row lock at all when the answer is an obvious no); the real decision for
+ * an actual deletion is made *inside* the locked transaction that follows,
+ * which re-counts under `FOR UPDATE` before doing anything irreversible —
+ * see the module note's second T254 paragraph for why the recount, not just
+ * the disk-then-database ordering, is what actually closes the race.
  */
 export async function removeCapability(
   db: PrismaClient,
@@ -336,12 +400,55 @@ export async function removeCapability(
   }
 
   try {
-    await db.capability.delete({ where: { id: input.capabilityId } });
+    await db.$transaction(async (tx) => {
+      await lockCapability(tx, input.capabilityId);
+
+      // Authoritative recount, taken under the lock above. Nothing else can
+      // insert a `CapabilityExecution` referencing this id while this
+      // transaction holds `FOR UPDATE` on the row (Postgres requires a
+      // `FOR KEY SHARE` lock on the referenced row to satisfy the FK, which
+      // conflicts with `FOR UPDATE`) — so once this passes, it stays true
+      // for the rest of this transaction, including the disk removal below.
+      const executionCount = await tx.capabilityExecution.count({
+        where: { capabilityId: input.capabilityId },
+      });
+      if (executionCount > 0) {
+        throw new CapabilityHasHistoryError(input.capabilityId, executionCount);
+      }
+
+      if (row.trust === 'INSTALLED') {
+        await rm(path.join(defaultInstalledRoot(), input.capabilityId), {
+          recursive: true,
+          force: true,
+        });
+      }
+
+      await tx.capability.delete({ where: { id: input.capabilityId } });
+
+      await recordAuditLog(tx, {
+        actorId: input.operatorId,
+        action: 'capability.delete',
+        subjectType: 'Capability',
+        subjectId: input.capabilityId,
+        before: { id: row.id, name: row.name },
+      });
+    });
   } catch (error) {
-    // Defensive backstop for the race the check-then-delete above cannot
-    // close: an execution landing between the count and the delete would
-    // surface here as Prisma's foreign-key-violation code instead of the
-    // pre-check above.
+    if (error instanceof CapabilityHasHistoryError) {
+      await recordAuditLog(db, {
+        actorId: input.operatorId,
+        action: 'capability.delete_refused',
+        subjectType: 'Capability',
+        subjectId: input.capabilityId,
+        before: { executionCount: error.executionCount },
+      });
+      throw error;
+    }
+    // Defensive backstop only: with the recount above taken under the same
+    // lock a concurrent insert would need, this should be unreachable in
+    // practice. Kept because a raw Postgres FK violation surfacing as a 500
+    // would be a worse failure mode than this 409 if some future change
+    // ever lets a write past the lock above.
     if (isForeignKeyViolation(error)) {
       const count = await db.capabilityExecution.count({
         where: { capabilityId: input.capabilityId },
@@ -357,14 +464,6 @@ export async function removeCapability(
     }
     throw error;
   }
-
-  await recordAuditLog(db, {
-    actorId: input.operatorId,
-    action: 'capability.delete',
-    subjectType: 'Capability',
-    subjectId: input.capabilityId,
-    before: { id: row.id, name: row.name },
-  });
 
   return { capabilityId: input.capabilityId };
 }

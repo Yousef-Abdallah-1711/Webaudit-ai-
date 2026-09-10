@@ -44,5 +44,8 @@
     "@webaudit/types": "workspace:*",
     "zod": "3.25.76",
     "@webaudit/config": "workspace:*"
+  },
+  "devDependencies": {
+    "jose": "5.9.6"
   }
 }

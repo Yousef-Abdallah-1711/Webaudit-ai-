@@ -21,7 +21,10 @@ import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db
 import { reconcileCapabilitiesAtBoot } from '@webaudit/api';
 import { createSandboxHost, type SandboxHost } from '@webaudit/sandbox-runner';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';
@@ -86,7 +89,11 @@ function writeInstalledCapability(root: string): void {
 
 async function scanFor(modules: readonly ('SECURITY' | 'SEO')[]): Promise<string> {
   const user = await db.user.create({
-    data: { email: `installed-e2e-${Date.now()}@x.com`, passwordHash: 'x', emailVerifiedAt: new Date() },
+    data: {
+      email: `installed-e2e-${Date.now()}@x.com`,
+      passwordHash: 'x',
+      emailVerifiedAt: new Date(),
+    },
   });
   const target = await db.target.create({
     data: {
@@ -163,5 +170,28 @@ describe('an installed capability really dispatches through sandbox-runner durin
     // FR-032/SC-006 — a code-layer finding is MEASURED, assigned by the
     // runner, never by the capability (which never even mentions attribution).
     expect(ours?.attribution).toBe('MEASURED');
+  });
+
+  // T255 — every other test in this file proves an enabled installed
+  // capability really dispatches; `capability-loader.ts`'s `enabledIds`
+  // filter (the same mechanism `orchestrator-capability-enabled.test.ts`
+  // proves for a vendored capability) had never been exercised for the
+  // INSTALLED path specifically before this.
+  it('does not dispatch to the sandbox once an operator disables the installed capability', async () => {
+    await db.capability.update({
+      where: { id: CAPABILITY_ID },
+      data: { isEnabled: false },
+    });
+
+    const scanId = await scanFor(['SECURITY']);
+    await createPhaseHandler(options())(
+      { scanId, phase: 'RUNNING_PHASE_1', modules: ['SECURITY'], attempt: 1 },
+      FAKE_JOB,
+    );
+
+    const exec = await db.capabilityExecution.findFirst({
+      where: { scanId, capabilityId: CAPABILITY_ID },
+    });
+    expect(exec, 'a disabled installed capability must not dispatch to the sandbox').toBeNull();
   });
 });

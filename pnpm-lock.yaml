@@ -316,6 +316,10 @@ importers:
       zod:
         specifier: 3.25.76
         version: 3.25.76
+    devDependencies:
+      jose:
+        specifier: 5.9.6
+        version: 5.9.6
 
   packages/ai-executor:
     dependencies:

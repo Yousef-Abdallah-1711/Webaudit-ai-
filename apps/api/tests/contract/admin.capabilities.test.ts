@@ -22,12 +22,17 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import express from 'express';
 import request from 'supertest';
 import { SignJWT } from 'jose';
-import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createSandboxHost, type SandboxHost } from '@webaudit/sandbox-runner';
 import { env } from '../../src/config/env.js';
 import { adminCapabilitiesRoutes } from '../../src/routes/admin/capabilities.routes.js';
+import { reconcileNow } from '../../src/services/registry/boot.js';
+import {
+  CapabilityHasHistoryError,
+  removeCapability,
+} from '../../src/services/admin/capabilities.service.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 
 function buildApp() {
@@ -306,6 +311,322 @@ describe('DELETE /capabilities/:id', () => {
     const { token } = await makeOperatorToken();
     await request(app).delete('/capabilities/does-not-exist').set(auth(token)).expect(404);
   });
+
+  /**
+   * Strict-review finding on T254 itself, closed in the same change: once a
+   * passing delete can destroy a real on-disk bundle (T254), the pre-existing
+   * "count-then-delete is not atomic" race (the `isForeignKeyViolation`
+   * backstop above already documents it) stops being harmless. Before T254,
+   * that race's worst case was a caught FK violation turned into the same
+   * 409 the up-front check gives — nothing had actually happened yet. After
+   * T254, the same race would delete the bundle and *then* discover the row
+   * cannot be dropped, orphaning a capability with real cost history and a
+   * `Capability` row that is permanently non-functional.
+   *
+   * `removeCapability` closes this with the same `FOR UPDATE` lock
+   * `setCapabilityEnabled`/`setCapabilityPlanRestrictions` already take, and
+   * recounts executions *after* acquiring it, before ever touching disk.
+   * This test proves the mechanism that recount relies on: Postgres requires
+   * a `FOR KEY SHARE` lock on the referenced `Capability` row to satisfy the
+   * `CapabilityExecution` foreign key, and that conflicts with `FOR UPDATE` —
+   * so a concurrent execution insert genuinely blocks, on the database
+   * itself, for as long as a delete holds the lock. It does not call the
+   * HTTP route (there is no reliable way to pause an in-flight request
+   * exactly inside its transaction from outside), but exercises the exact
+   * SQL `removeCapability`'s transaction issues.
+   */
+  it('a FOR UPDATE lock on the row blocks a concurrent CapabilityExecution insert (the mechanism the T254 delete race relies on)', async () => {
+    await seedCapability();
+    const user = await testDb.user.create({
+      data: { email: `lock-race-${Date.now()}@x.com`, emailVerifiedAt: new Date() },
+    });
+    const target = await testDb.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://example.com',
+        displayName: 'x',
+        controlLevel: 'NONE',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 1,
+        chargedCredits: 1,
+        state: 'QUEUED',
+        startedAt: new Date(),
+      },
+    });
+
+    let insertSettled = false;
+    let insertPromise: Promise<unknown> = Promise.resolve();
+
+    await testDb.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Capability" WHERE id = ${CAP_ID} FOR UPDATE`;
+
+      // Fired on a separate connection from `tx`, against the same row the
+      // transaction above still holds `FOR UPDATE` on. If the FK's implicit
+      // lock genuinely conflicts, this stays pending until `tx` commits.
+      insertPromise = testDb.capabilityExecution
+        .create({
+          data: {
+            scanId: scan.id,
+            capabilityId: CAP_ID,
+            module: 'SECURITY',
+            succeeded: true,
+            durationMs: 1,
+          },
+        })
+        .then(() => {
+          insertSettled = true;
+        });
+
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      expect(
+        insertSettled,
+        'a concurrent insert referencing the locked row must still be blocked',
+      ).toBe(false);
+    });
+
+    await insertPromise;
+    expect(insertSettled, 'the insert must complete once the lock is released').toBe(true);
+  });
+});
+
+/**
+ * T255 — every test above seeds a `VENDORED` fixture (`headers-checker`),
+ * which has no on-disk `installedRoot` presence at all. This block exercises
+ * PATCH and DELETE against a real `INSTALLED`-trust row instead, closing the
+ * coverage gap T254's own task description named directly.
+ */
+describe('PATCH/DELETE /capabilities/:id against an INSTALLED-trust capability (T255)', () => {
+  const INSTALLED_ID = 'installed-t255-probe';
+  let installedRoot: string;
+
+  beforeEach(() => {
+    installedRoot = mkdtempSync(path.join(tmpdir(), 'installed-t255-'));
+  });
+
+  afterEach(() => {
+    rmSync(installedRoot, { recursive: true, force: true });
+  });
+
+  function writeInstalledBundle(): void {
+    const dir = path.join(installedRoot, INSTALLED_ID);
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, 'bundle.js'), '({ id: "installed-t255-probe" })');
+    writeFileSync(
+      path.join(dir, 'capability.manifest.json'),
+      JSON.stringify({
+        id: INSTALLED_ID,
+        name: 'Installed T255 probe',
+        version: '1.0.0',
+        module: 'SECURITY',
+        layer: 'CODE',
+        entrypoint: 'bundle.js',
+        requiresCode: false,
+        requiresScreenshot: false,
+        requiredControlLevel: 'NONE',
+        estimatedTokens: 0,
+      }),
+    );
+  }
+
+  async function seedInstalledCapability(): Promise<void> {
+    writeInstalledBundle();
+    await testDb.capability.create({
+      data: {
+        id: INSTALLED_ID,
+        name: 'Installed T255 probe',
+        version: '1.0.0',
+        module: 'SECURITY',
+        layer: 'CODE',
+        trust: 'INSTALLED',
+        requiresCode: false,
+        requiresScreenshot: false,
+        requiredControlLevel: 'NONE',
+        estimatedTokens: 0,
+        isEnabled: true,
+        installedAt: new Date(),
+      },
+    });
+  }
+
+  it('PATCH disables an installed capability exactly as it would a vendored one', async () => {
+    await seedInstalledCapability();
+    const { token, actorId } = await makeOperatorToken();
+
+    const res = await request(app)
+      .patch(`/capabilities/${INSTALLED_ID}`)
+      .set(auth(token))
+      .send({ isEnabled: false })
+      .expect(200);
+    expect((res.body as { capability: { isEnabled: boolean } }).capability.isEnabled).toBe(false);
+
+    const persisted = await testDb.capability.findUnique({ where: { id: INSTALLED_ID } });
+    expect(persisted?.isEnabled).toBe(false);
+    expect(persisted?.trust).toBe('INSTALLED');
+
+    const entries = await testDb.auditLogEntry.findMany({
+      where: { subjectType: 'Capability', subjectId: INSTALLED_ID, action: 'capability.update' },
+    });
+    expect(entries.length).toBe(1);
+    expect(entries[0]?.actorId).toBe(actorId);
+  });
+
+  it('DELETE removes both the row and installedRoot/<id>/ from disk', async () => {
+    await seedInstalledCapability();
+    const dir = path.join(installedRoot, INSTALLED_ID);
+    expect(existsSync(dir)).toBe(true);
+    const { token } = await makeOperatorToken();
+
+    process.env['INSTALLED_CAPABILITIES_ROOT'] = installedRoot;
+    try {
+      await request(app).delete(`/capabilities/${INSTALLED_ID}`).set(auth(token)).expect(200);
+    } finally {
+      delete process.env['INSTALLED_CAPABILITIES_ROOT'];
+    }
+
+    const persisted = await testDb.capability.findUnique({ where: { id: INSTALLED_ID } });
+    expect(persisted).toBeNull();
+    expect(existsSync(dir), 'the on-disk bundle must be gone, not just the database row').toBe(
+      false,
+    );
+  });
+
+  it('T254 — a later reconciliation does not resurrect a deleted installed capability', async () => {
+    await seedInstalledCapability();
+    const { token } = await makeOperatorToken();
+
+    process.env['INSTALLED_CAPABILITIES_ROOT'] = installedRoot;
+    const emptyVendoredRoot = mkdtempSync(path.join(tmpdir(), 'empty-vendored-'));
+    try {
+      await request(app).delete(`/capabilities/${INSTALLED_ID}`).set(auth(token)).expect(200);
+
+      // The exact scenario T254 closes: a routine boot (or the on-demand
+      // reconcileNow every upload triggers) must not find a leftover
+      // manifest on disk and re-create the row an operator just removed.
+      await reconcileNow(testDb, {
+        vendoredRoot: emptyVendoredRoot,
+        installedRoot,
+        assertLocal: false,
+      });
+    } finally {
+      delete process.env['INSTALLED_CAPABILITIES_ROOT'];
+      rmSync(emptyVendoredRoot, { recursive: true, force: true });
+    }
+
+    const afterReconcile = await testDb.capability.findUnique({ where: { id: INSTALLED_ID } });
+    expect(afterReconcile).toBeNull();
+  });
+
+  /**
+   * Strict-review finding: the two tests above only ever exercise
+   * `removeCapability`'s fast, unlocked pre-check (the row already has zero
+   * executions before the delete request even arrives). Neither one reaches
+   * the in-transaction recount added to close the race described in
+   * `capabilities.service.ts`'s own "T254" module note — the actual new
+   * logic this task added, previously untested. This test forces that exact
+   * race deterministically: it holds the row's `FOR UPDATE` lock from a
+   * separate connection, inserts a real `CapabilityExecution` while holding
+   * it (so `removeCapability`'s own up-front check — which runs first and
+   * sees the pre-race state — still reads zero), then releases the lock only
+   * once `removeCapability` is already blocked waiting on it. Proves two
+   * things at once: the recount catches the race (409, not a false 200), and
+   * — the actual point of moving the disk removal inside the lock — the
+   * on-disk bundle is untouched, because the recount's throw happens before
+   * `rm()` is ever reached.
+   */
+  it('a race landing between the up-front check and the lock is caught by the in-transaction recount, and never touches disk', async () => {
+    await seedInstalledCapability();
+    process.env['INSTALLED_CAPABILITIES_ROOT'] = installedRoot;
+    const dir = path.join(installedRoot, INSTALLED_ID);
+
+    const user = await testDb.user.create({
+      data: { email: `race-${Date.now()}@x.com`, emailVerifiedAt: new Date() },
+    });
+    const target = await testDb.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://example.com',
+        displayName: 'x',
+        controlLevel: 'NONE',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 1,
+        chargedCredits: 1,
+        state: 'QUEUED',
+        startedAt: new Date(),
+      },
+    });
+
+    let releaseHold: () => void = () => {};
+    const holdReleased = new Promise<void>((resolve) => {
+      releaseHold = resolve;
+    });
+
+    // Takes the lock and inserts the "concurrent" execution immediately,
+    // then just sits on the open transaction (and therefore the lock) until
+    // told to let go.
+    const holdTx = testDb.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Capability" WHERE id = ${INSTALLED_ID} FOR UPDATE`;
+      await tx.capabilityExecution.create({
+        data: {
+          scanId: scan.id,
+          capabilityId: INSTALLED_ID,
+          module: 'SECURITY',
+          succeeded: true,
+          durationMs: 1,
+        },
+      });
+      await holdReleased;
+    });
+
+    try {
+      // Give the hold above time to take the lock and insert (uncommitted,
+      // so removeCapability's own up-front read below still sees zero).
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const removePromise = removeCapability(testDb, {
+        operatorId: user.id,
+        capabilityId: INSTALLED_ID,
+      });
+
+      // Give removeCapability time to pass its up-front check and start
+      // blocking on the lock before releasing it.
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      releaseHold();
+      await holdTx;
+
+      await expect(removePromise).rejects.toThrow(CapabilityHasHistoryError);
+    } finally {
+      delete process.env['INSTALLED_CAPABILITIES_ROOT'];
+    }
+
+    expect(existsSync(dir), 'the recount must refuse before rm() ever runs').toBe(true);
+    const persisted = await testDb.capability.findUnique({ where: { id: INSTALLED_ID } });
+    expect(persisted).not.toBeNull();
+
+    const entries = await testDb.auditLogEntry.findMany({
+      where: {
+        subjectType: 'Capability',
+        subjectId: INSTALLED_ID,
+        action: 'capability.delete_refused',
+      },
+    });
+    expect(entries.length).toBe(1);
+  }, 10_000);
 });
 
 describe('POST /capabilities/upload (T216/T226)', () => {
@@ -444,7 +765,10 @@ describe('POST /capabilities/upload (T226 — real dispatch)', () => {
     const body = res.body as {
       capabilityId: string;
       passed: boolean;
-      report: { capabilityId: string; results: readonly { check: string; passed: boolean; skipped: boolean }[] };
+      report: {
+        capabilityId: string;
+        results: readonly { check: string; passed: boolean; skipped: boolean }[];
+      };
     };
     expect(body.capabilityId).toBe('e2e-benign-probe');
     expect(body.report.capabilityId).toBe('e2e-benign-probe');
@@ -538,7 +862,9 @@ describe('POST /capabilities/upload (T253 — a passing verdict installs the cap
     const dir = path.join(installedRoot, 't253-real-scan-ready');
     expect(existsSync(path.join(dir, 'bundle.js'))).toBe(true);
     expect(readFileSync(path.join(dir, 'bundle.js'), 'utf8')).toBe(PASSING_BUNDLE);
-    const manifest = JSON.parse(readFileSync(path.join(dir, 'capability.manifest.json'), 'utf8')) as {
+    const manifest = JSON.parse(
+      readFileSync(path.join(dir, 'capability.manifest.json'), 'utf8'),
+    ) as {
       id: string;
       module: string;
       layer: string;
@@ -562,7 +888,9 @@ describe('POST /capabilities/upload (T253 — a passing verdict installs the cap
       .expect(200);
 
     expect((res.body as { passed: boolean }).passed).toBe(false);
-    const persisted = await testDb.capability.findUnique({ where: { id: 't253-should-not-install' } });
+    const persisted = await testDb.capability.findUnique({
+      where: { id: 't253-should-not-install' },
+    });
     expect(persisted).toBeNull();
     expect(existsSync(path.join(installedRoot, 't253-should-not-install'))).toBe(false);
   });

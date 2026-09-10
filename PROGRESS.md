@@ -1287,6 +1287,104 @@ pnpm db:seed
    after touching anything the harness bundles, before trusting a test result (found live, T253,
    2026-09-09).
 
+### T254/T255 done (2026-09-10) — Phase 14/Convergence closed
+
+T253 made a new thing reachable for the first time — an `INSTALLED`-trust `Capability` row that
+actually exists on disk and in the database — and that exposed a real gap `/speckit-converge` caught
+immediately: `removeCapability` deleted only the database row, never the on-disk
+`installedRoot/<id>/` directory T253's own `installCapability` writes, so the very next
+reconciliation (a routine boot, or the on-demand `reconcileNow` every upload already triggers) would
+find the orphaned manifest and silently resurrect the row an operator just deleted — reversing a
+delete of unreviewed, potentially-malicious uploaded code with no error and no trace.
+
+**T254** closes it directly: `removeCapability` (`apps/api/src/services/admin/capabilities.service.ts`)
+now removes `installedRoot/<capabilityId>/` from disk for a `trust: 'INSTALLED'` row, and does so
+**before** the database delete. Order is the actual guarantee here, not a style choice — the dangerous
+window is "row gone, directory still there," and removing the directory first means that window never
+opens, rather than just narrowing it. A disk-removal failure aborts before the database delete runs, so
+a failed delete leaves the capability fully intact (fail closed) instead of half-gone. `VENDORED` rows
+are untouched by this path, exactly as `reconcile.ts`'s own "never operator-removable" note requires.
+
+**T255** proves it, at both layers the task named. `admin.capabilities.test.ts` gained a real
+`INSTALLED`-trust fixture (bundle + manifest on a throwaway `installedRoot`) and three tests: PATCH
+disables it the same as a vendored row, DELETE removes both the row and the on-disk directory, and a
+`reconcileNow` call against that same directory right after the delete does not bring the row back —
+the literal scenario T254 exists for. On the worker side, a new test next to T253's own real-sandbox
+integration test disables the same real installed capability mid-suite and asserts zero
+`CapabilityExecution` rows for it, proving `capability-loader.ts`'s `enabledIds` filter (already proven
+for a vendored capability by `orchestrator-capability-enabled.test.ts`) also gates the sandboxed
+dispatch path — never directly exercised for `INSTALLED` before. All three new assertions were
+confirmed to fail for the right reason first: stashing T254's fix out reproduces the leftover-directory
+and resurrection failures exactly as the task describes, not a flake.
+
+With both done, every task in `tasks.md` across all 14 phases is `[X]` again. Zero regressions: 124/124
+`apps/api` test files pass except 5 pre-existing, unrelated real-Redis/BullMQ timing failures
+(`admin.queue.test.ts`, `gated-check-partial.test.ts`, `progress-streaming.test.ts`) — reproduced
+identically with this phase's changes stashed out, so not introduced here; `pnpm -r typecheck` clean
+across all 34 workspace projects; `pnpm lint` clean on every file this phase touched (the 44 pre-existing
+errors it reports live entirely in the untracked `showcase-eink`/`showcase-trimora` demo directories).
+
+### A strict follow-up review of T254/T255 found and closed a real race the first pass introduced (2026-09-10)
+
+Requested explicitly as a full code review of this phase, not a rubber stamp. It found one genuine
+defect in T254's own fix, not just gaps in T255's coverage.
+
+**The defect: closing the resurrection race reopened a worse one.** T254's `rm`-then-`delete` ordering
+correctly closes "row gone, directory still there" — but the check-then-delete beneath it was never
+atomic (the file's own pre-existing `isForeignKeyViolation` backstop comment already named this gap).
+Before T254 that race was harmless: a `CapabilityExecution` landing between the count check and the
+delete just surfaced as a caught FK violation, a 409, nothing had actually happened. After T254, the
+same race deletes the real bundle from disk and *then* discovers the row cannot be dropped — orphaning
+a capability with genuine cost history and no working code left behind it, silently showing
+`isEnabled: true` forever. **Fixed in the same file**: `removeCapability` now takes the same
+`lockCapability` `FOR UPDATE` lock `setCapabilityEnabled`/`setCapabilityPlanRestrictions` already use,
+and re-counts executions *inside* that locked transaction, before ever touching disk. Postgres requires
+a `FOR KEY SHARE` lock on the referenced row to satisfy the `CapabilityExecution` foreign key, which
+conflicts with `FOR UPDATE` — so once the lock is held, no concurrent execution can land until the
+transaction ends, and the disk removal (still strictly before the row delete) only ever runs once that
+is true. Both races close together instead of one being traded for the other.
+
+**Four new tests, two of which prove the fix rather than just its symptoms.** A deterministic test locks
+a row `FOR UPDATE` from one transaction and proves a concurrent `CapabilityExecution` insert genuinely
+blocks on it — the Postgres mechanism the whole fix depends on — confirmed to fail the moment the
+`FOR UPDATE` clause is removed. A second test forces the actual race through `removeCapability` itself:
+it holds the lock from a separate connection, inserts a real execution while holding it, and only
+releases once `removeCapability` is already blocked waiting — driving execution through the in-transaction
+recount branch that neither T255's original tests nor T254's own description ever actually reached (both
+only exercised the fast, unlocked pre-check). It asserts the refusal happens *and* that the on-disk
+bundle is still there — the actual point of moving the disk removal inside the lock. A new end-to-end
+lifecycle file, `apps/worker/tests/integration/capability-lifecycle-e2e.test.ts`, boots a real
+`startApi()` server with `requireAuth`/`requireOperator` genuinely live — every other test covering this
+phase drives a bare `adminCapabilitiesRoutes` app that bypasses that gate entirely — plus a real
+`sandbox-runner`, and drives an operator through upload-over-HTTP → real sandboxed worker dispatch → HTTP
+disable stopping it → HTTP delete removing the disk bundle → reconciliation not resurrecting it, split
+across two capabilities (one dispatched-then-disabled, one uploaded-and-deleted-with-zero-history) since
+a capability the test itself dispatches against correctly and permanently earns undeletable cost
+history — asserting the resulting 409 is the point, not something to route around. `jose` was added as
+an `apps/worker` devDependency to mint a real access token cross-package for this file, the same
+precedent `progress-streaming.test.ts` already set for a cross-package `startApi`/`startWorker` test
+dependency.
+
+**All four new assertions were confirmed to catch the defect, not just document it.** Deliberately
+reverting `removeCapability` to its pre-review `rm`-then-`delete` ordering (no lock, no recount) made
+both the race-recount test and the new e2e test fail exactly as predicted — disk bundle gone, database
+row still present, via the caught FK violation — before the fix was restored.
+
+**Verified clean and single-threaded.** A concurrent Playwright e2e session shares this same
+`webaudit_test` database and flagged real cross-session interference mid-review (deadlocks, unique-
+constraint violations) when a leftover background run of this review's own testing overlapped with it —
+coordinated via a short pause rather than trusting a contended result. The numbers below are from a
+verified-uncontended run: `pnpm -r typecheck` clean across all 34 projects, `eslint` clean on every
+touched or added file, and a full `pnpm test` — **1007/1007 passed, 127/127 files** — with nothing else
+touching the shared test database at the time.
+
+**Next natural step: run `/speckit-converge` again** to check for anything a fresh pass would find now
+that T254/T255 exist — the same reasoning that found T254 itself applies recursively — or, if the
+honest exceptions listed in this file's own "Reality check on 'production ready'" section are
+acceptable as-is, this is a reasonable point to treat the baseline as feature-complete and shift to the
+unresolved "needs a call" decisions (monetary price points #3, OpenAI/Google provider pricing #9) that
+block an actual production boot rather than correctness.
+
 ### T253 done (2026-09-09) — Phase 13/Convergence closed, nothing left in the tracked plan
 
 Open Decision #20's installation half (an upload verdict now writes a real `Capability` row and
@@ -1294,14 +1392,6 @@ dispatches through `sandbox-runner` during a real scan — see Open Decision #22
 entry for the full account) was the last item Phase 13's own `/speckit-converge` pass had appended.
 With it done, every task in `tasks.md` across all 13 phases is `[X]`, and Open Decisions #18-#21 are
 all resolved (#1, #3, #4, #7-#9, #16 remain genuine "needs a call" items, none blocking correctness).
-**Next natural step: run `/speckit-converge` again** to check for anything a fresh pass would find now
-that T253 exists (a prior pass found four real gaps after the original 250-task plan looked done, so a
-second pass after a genuinely new architectural surface is worth doing rather than assuming there is
-nothing left) — or, if the honest exceptions listed in this file's own "Reality check on 'production
-ready'" section are
-acceptable as-is, this is a reasonable point to treat the baseline as feature-complete and shift to the
-unresolved "needs a call" decisions (monetary price points #3, OpenAI/Google provider pricing #9) that
-block an actual production boot rather than correctness.
 
 ### Is the tree healthy?
 
