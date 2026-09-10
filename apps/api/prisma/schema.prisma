@@ -132,6 +132,15 @@ enum LotSource {
   PURCHASE
   REFUND
   PROMOTIONAL
+  /// An operator-initiated manual grant or correction (PLAN.md's Finding
+  /// HIGH-2 / ADMIN-001). Deliberately distinct from PROMOTIONAL — a
+  /// marketing promo redemption and a support-initiated balance correction
+  /// are different events for audit purposes, and collapsing them into one
+  /// value would make a `CreditTransaction`'s source ambiguous about which
+  /// actually happened. `PROMOTIONAL` remains declared-but-unreferenced
+  /// (verified: no application code reads or writes it) — not touched by
+  /// this addition.
+  ADMIN_GRANT
 }
 
 enum TxType {

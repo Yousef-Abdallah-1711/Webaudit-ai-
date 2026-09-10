@@ -27,7 +27,7 @@ import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
 import { scansRoutes, type ScanRoutesDeps } from './routes/scans.routes.js';
 import { intakeRoutes, type IntakeRoutesDeps } from './routes/intake.routes.js';
-import { billingRoutes } from './routes/billing.routes.js';
+import { billingRoutes, type BillingRoutesDeps } from './routes/billing.routes.js';
 import { webhooksRoutes, type WebhookRoutesDeps } from './routes/webhooks.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
 import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
@@ -91,6 +91,14 @@ export interface AppDeps {
    * connections). Defaults to a real one.
    */
   admin?: AdminRoutesDeps;
+  /**
+   * Seam for the billing routes — currently only `isProduction`, which gates
+   * `/billing/subscribe` and `/billing/credits/purchase` to non-production
+   * (PLAN.md, Finding CRIT-1). Defaults to the real `env.isProduction`; a
+   * suite overrides it directly since `env` cannot be changed by mutating
+   * `process.env` after module load.
+   */
+  billing?: BillingRoutesDeps;
 }
 
 /**
@@ -318,7 +326,7 @@ export function createApp(deps: AppDeps): Express {
 
   // `/billing/*` — plans, the movement-history receipt, subscribe/change/cancel,
   // and credit purchase. All behind requireAuth, declared inside the router.
-  app.use(billingRoutes(deps.db));
+  app.use(billingRoutes(deps.db, deps.billing ?? {}));
 
   // `/admin/*` — users, plans, margin, capabilities, providers, queue.
   // requireAuth then requireOperator, both declared inside adminRoutes so no

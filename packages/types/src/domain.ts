@@ -169,6 +169,9 @@ export const LOT_SOURCES = [
   'PURCHASE',
   'REFUND',
   'PROMOTIONAL',
+  /** An operator-initiated manual grant or correction. See PLAN.md's Finding
+   * HIGH-2 / ADMIN-001, `apps/api/src/services/credits/adjust.ts`. */
+  'ADMIN_GRANT',
 ] as const;
 export type LotSource = (typeof LOT_SOURCES)[number];
 

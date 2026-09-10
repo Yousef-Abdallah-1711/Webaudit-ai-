@@ -25,6 +25,7 @@
     "db:migrate": "prisma migrate dev --schema apps/api/prisma/schema.prisma",
     "db:deploy": "prisma migrate deploy --schema apps/api/prisma/schema.prisma",
     "db:seed": "tsx scripts/seed.ts",
+    "credits:check": "tsx scripts/credits-integrity-check.ts",
     "db:studio": "prisma studio --schema apps/api/prisma/schema.prisma",
     "services:up": "docker compose -f infrastructure/docker-compose.yml up -d",
     "services:down": "docker compose -f infrastructure/docker-compose.yml down",

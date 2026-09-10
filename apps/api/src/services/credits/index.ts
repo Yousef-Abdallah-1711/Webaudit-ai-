@@ -1,3 +1,4 @@
+export * from './adjust.js';
 export * from './balance.js';
 export * from './debit.js';
 export * from './expiry.js';

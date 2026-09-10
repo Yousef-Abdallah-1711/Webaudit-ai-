@@ -23,6 +23,14 @@ interface GrantInput {
    * provider event to deduplicate against.
    */
   billingEventId?: string | null;
+  /**
+   * Overrides the default `grant:<source>` reason. Used by `adjustCredits`
+   * (ADMIN-001) to carry the operator's own free-text reason on the
+   * `CreditTransaction` row instead of a generic label — an operator grant
+   * without a stated reason is exactly the kind of unaccountable mutation
+   * this feature exists to prevent.
+   */
+  reason?: string;
 }
 
 type Tx = Pick<PrismaClient, 'creditLot' | 'creditTransaction' | 'creditAllocation'>;
@@ -52,21 +60,28 @@ function isBillingEventIdConflict(error: unknown): boolean {
   return asText.includes('billingEventId') || asText === '';
 }
 
-export async function grantLot(db: Tx, input: GrantInput): Promise<void> {
+export interface GrantResult {
+  readonly transactionId: string;
+  readonly lotId: string;
+}
+
+export async function grantLot(db: Tx, input: GrantInput): Promise<GrantResult> {
   // The CreditTransaction insert goes FIRST, not the lot: if this is a
   // duplicate delivery of a billing event already granted, the conflict must
   // be detected before any lot is created — that's what makes the whole
   // grant a no-op under a caller's $transaction, not a lot committed with
   // nothing to prevent a second one on the next retry.
+  let transaction: { id: string };
   try {
-    await db.creditTransaction.create({
+    transaction = await db.creditTransaction.create({
       data: {
         userId: input.userId,
         type: 'GRANT',
         amount: input.amount,
-        reason: `grant:${input.source.toLowerCase()}`,
+        reason: input.reason ?? `grant:${input.source.toLowerCase()}`,
         billingEventId: input.billingEventId ?? null,
       },
+      select: { id: true },
     });
   } catch (error) {
     if (
@@ -79,7 +94,7 @@ export async function grantLot(db: Tx, input: GrantInput): Promise<void> {
     throw error;
   }
 
-  await db.creditLot.create({
+  const lot = await db.creditLot.create({
     data: {
       userId: input.userId,
       kind: input.kind,
@@ -88,7 +103,10 @@ export async function grantLot(db: Tx, input: GrantInput): Promise<void> {
       amountRemaining: input.amount,
       expiresAt: input.expiresAt ?? null,
     },
+    select: { id: true },
   });
+
+  return { transactionId: transaction.id, lotId: lot.id };
 }
 
 /**
@@ -96,7 +114,7 @@ export async function grantLot(db: Tx, input: GrantInput): Promise<void> {
  * see spec.md, Plan Tiers. `expiresAt` is null: this grant does not renew, so
  * there is no renewal boundary to expire it at.
  */
-export function grantFreeAllocation(db: Tx, userId: string): Promise<void> {
+export function grantFreeAllocation(db: Tx, userId: string): Promise<GrantResult> {
   return grantLot(db, {
     userId,
     amount: FREE_ALLOCATION,

@@ -1,0 +1,12 @@
+-- PLAN.md, Finding HIGH-2 / TASKS.md DB-002 — a distinct LotSource value for
+-- an operator-initiated manual grant or correction (ADMIN-001), so a
+-- CreditTransaction's source is never ambiguous about whether it came from
+-- a real purchase, a promo redemption (PROMOTIONAL, already declared,
+-- verified unreferenced by any application code), or an operator action.
+--
+-- Postgres requires ALTER TYPE ... ADD VALUE to run outside an explicit
+-- transaction block in older versions; Prisma's migrate deploy already runs
+-- each migration file as its own statement batch, matching this project's
+-- own existing enum-value additions (none prior to this one touch LotSource,
+-- but the same constraint applies to any enum ALTER).
+ALTER TYPE "LotSource" ADD VALUE 'ADMIN_GRANT';
