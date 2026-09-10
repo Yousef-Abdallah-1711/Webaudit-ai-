@@ -196,7 +196,8 @@
   background: var(--surface-sunken);
 }
 .creditsBarFill {
-  width: 77%;
+  /* Real width set inline from the account's actual balance (Sidebar.tsx); this is only the pre-fetch default. */
+  width: 0%;
   height: 100%;
   background: var(--accent);
 }

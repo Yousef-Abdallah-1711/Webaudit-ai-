@@ -62,12 +62,17 @@ export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
   // re-run every render and the two components would loop.
   const onSelectionChange = useCallback((next: InputSelection | null) => {
     setSelection(next);
+    setError(null);
   }, []);
 
   function toggle(area: ModuleType): void {
     setSelected((current) =>
       current.includes(area) ? current.filter((a) => a !== area) : [...current, area],
     );
+    // A refusal like "insufficient credits" is a fact about the *previous*
+    // selection's cost. Changing areas invalidates that fact immediately —
+    // leaving the message up would misreport the newly chosen quote.
+    setError(null);
   }
 
   /**

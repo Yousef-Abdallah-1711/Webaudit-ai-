@@ -106,6 +106,30 @@ export async function login(email: string, password: string): Promise<{ accessTo
   return result;
 }
 
+/**
+ * `GET /auth/me` — the authenticated user's own identity, plan, and derived
+ * credit balance in one round trip (the balance is derived from live lots,
+ * never stored, same as `GET /billing/credits`). No `name` field exists:
+ * `User` has no name column at all (T128's own note), so the caller shows
+ * the real email rather than inventing one.
+ */
+export interface CurrentUser {
+  readonly id: string;
+  readonly email: string;
+  readonly isOperator: boolean;
+  readonly emailVerified: boolean;
+  readonly plan: PlanId | 'free';
+  readonly credits: {
+    readonly plan: number;
+    readonly purchased: number;
+    readonly planExpiresAt: string | null;
+  };
+}
+
+export function getMe(): Promise<CurrentUser> {
+  return request('/auth/me');
+}
+
 export function resendVerification(email: string): Promise<{ message: string }> {
   return request('/auth/verify/resend', { method: 'POST', body: { email }, token: null });
 }

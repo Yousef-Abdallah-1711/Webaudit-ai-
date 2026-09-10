@@ -20,21 +20,48 @@
  * Adjust these if a later task decides differently; nothing here is a
  * contract.
  *
- * Credit balance (1,120 / 77%), the badge on "Fixes" (4), and the profile
- * identity (Khalid Ahmed / KA / Pro plan) are the exact placeholder values
- * the vendored source shows — not real data, and this port doesn't invent
- * a wiring for them that doesn't exist yet either.
+ * **Credit balance, plan, and identity are real, as of a manual-testing
+ * fix**: `1,120` / `77%` / `Khalid Ahmed` / `Pro plan` were the exact
+ * placeholder values the vendored source ships, wired to nothing — found
+ * live (Playwright MCP against a real dev stack) showing a signed-in free
+ * user "1,120 credits" and "Pro plan" while the real account genuinely had
+ * 50. `GET /auth/me` (derived from live, unexpired lots, same rule
+ * `GET /billing/credits` already uses — FR-078) supplies the real balance,
+ * plan id, and email; `GET /billing/plans` supplies the current plan's real
+ * `monthlyCredits` so the bar fill is a real fraction, not an invented one.
+ * `User` has no `name` column at all (T128's own note) — the email is shown
+ * instead of a fabricated name, and initials are derived from it rather
+ * than reusing "KA" for every account.
+ *
+ * The badge on "Fixes" (still a hardcoded `4`) is untouched — out of scope
+ * for this fix, which only covers identity/plan/credits.
  *
  * `open`/`setOpen` (sidebar collapse) has no routing meaning — kept as
  * local state, same as the source.
  */
 import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { LangToggle, ThemeToggle, useT } from '../../app/theme';
 import type { StringKey } from '../../lib/strings';
+import { getMe, getPlans, type CurrentUser, type Plan } from '../../lib/api';
 import styles from './Sidebar.module.css';
+
+/** First letter of up to two "words" in the email's local part — real, deterministic, no invented name. */
+function initialsFromEmail(email: string): string {
+  const local = email.split('@')[0] ?? '';
+  const words = local.split(/[.\-_+]/).filter((w) => w.length > 0);
+  const source = words.length > 0 ? words : [local];
+  return source
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join('');
+}
+
+function planLabel(planId: string): string {
+  return planId.length === 0 ? 'Free plan' : `${planId.charAt(0).toUpperCase()}${planId.slice(1)} plan`;
+}
 
 interface NavEntry {
   readonly key: string;
@@ -114,6 +141,38 @@ export interface SidebarProps {
 export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
   const [t] = useT();
   const pathname = usePathname();
+  const [me, setMe] = useState<CurrentUser | null>(null);
+  const [plans, setPlans] = useState<readonly Plan[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getMe().then(
+      (user) => {
+        if (!cancelled) setMe(user);
+      },
+      () => {
+        /* Not signed in yet, or the request failed — the loading fallback below stays up rather than showing a fake identity. */
+      },
+    );
+    void getPlans().then(
+      (result) => {
+        if (!cancelled) setPlans(result.plans);
+      },
+      () => {
+        /* The bar fill degrades to unfilled below; the balance and identity do not depend on this. */
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const totalCredits = me === null ? null : me.credits.plan + me.credits.purchased;
+  const currentPlan = plans.find((p) => p.id === me?.plan);
+  const creditsFillPercent =
+    totalCredits !== null && currentPlan !== undefined && currentPlan.monthlyCredits > 0
+      ? Math.min(100, Math.max(0, (totalCredits / currentPlan.monthlyCredits) * 100))
+      : 0;
 
   const sidebarClasses = [styles.sidebar, open ? styles.sidebarOpen : undefined]
     .filter(Boolean)
@@ -178,11 +237,16 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
         {open && (
           <div className={styles.creditsBox}>
             <div className={styles.creditsRow}>
-              <span className={styles.creditsValue}>1,120</span>
+              <span className={styles.creditsValue}>
+                {totalCredits === null ? '—' : totalCredits.toLocaleString()}
+              </span>
               <span className={styles.creditsLabel}>{t('credits_left')}</span>
             </div>
             <div className={styles.creditsBar}>
-              <div className={styles.creditsBarFill} />
+              <div
+                className={styles.creditsBarFill}
+                style={{ width: `${String(creditsFillPercent)}%` }}
+              />
             </div>
             <a href="/billing" className={styles.topUpBtn}>
               {t('top_up')}
@@ -206,11 +270,11 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
           </div>
         )}
         <a href="/settings" className={styles.profileBtn}>
-          <div className={styles.avatar}>KA</div>
+          <div className={styles.avatar}>{me === null ? '—' : initialsFromEmail(me.email)}</div>
           {open && (
             <div className={styles.profileText}>
-              <div className={styles.profileName}>Khalid Ahmed</div>
-              <div className={styles.profilePlan}>Pro plan</div>
+              <div className={styles.profileName}>{me === null ? '…' : me.email}</div>
+              <div className={styles.profilePlan}>{me === null ? '…' : planLabel(me.plan)}</div>
             </div>
           )}
           {open && (

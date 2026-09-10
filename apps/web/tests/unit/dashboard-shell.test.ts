@@ -69,11 +69,15 @@ describe('Sidebar', () => {
     expect(closed).not.toContain(sidebarStyles.navItemLabel);
   });
 
-  it('shows the credit balance and top-up control only when open', () => {
+  it('shows the credit balance box and top-up control only when open', () => {
+    // A static render never fires `useEffect`, so the real `GET /auth/me`
+    // fetch never runs here — this asserts the loading fallback's shape
+    // (never a fabricated number), matching sidebar-live.test.ts for the
+    // real fetched value.
     const open = render(createElement(Sidebar, { open: true, setOpen: () => {} }));
     const closed = render(createElement(Sidebar, { open: false, setOpen: () => {} }));
-    expect(open).toContain('1,120');
-    expect(closed).not.toContain('1,120');
+    expect(open).toContain('Top up');
+    expect(closed).not.toContain('Top up');
   });
 });
 
