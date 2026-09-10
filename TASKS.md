@@ -593,6 +593,22 @@ the Credit domain. Full detail and evidence: `PLAN.md` §26.
 **Verdict: no bypass found. All 17 invariants hold. The 8 unrelated failures are proven
 pre-existing. `PLAN.md` §26 carries the full record.**
 
+## Phase 27: Full Manual Testing Pass
+
+- [x] **MANUAL-001** Booted the real `startApi()` process boundary (not the test-only
+      `createApp()` shortcut) in both simulated-production and dev mode, plus a real
+      `createSandboxHost()`, and drove them with genuine `fetch()` HTTP requests over ephemeral
+      ports against an isolated `webaudit_test` database. 32/32 manual checks passed across
+      both the credit-hardening work (A1–A11) and the capability delete-race fix (B1–B7).
+- [x] **MANUAL-002** Found and fixed two real gaps invisible to every prior automated test:
+      `startApi()` never forwarded `options.billing` or `options.webhooks` into its internal
+      `createApp({...})` call, silently dropping both overrides. Fixed in `apps/api/src/index.ts`;
+      regression tests added in `billing-production-gate.test.ts` proving both fail before the
+      fix (403/503) and pass after. Full record in `PLAN.md` §27.
+- [x] **MANUAL-003** Final regression: `pnpm -r typecheck` clean (34/34), `eslint`/`prettier`
+      clean, full `test:adverse` suite green — **43/43 files, 665/665 tests passed, 1 skipped,
+      0 failed.**
+
 ---
 
 ## Explicitly out of scope for this execution pass

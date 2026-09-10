@@ -922,3 +922,79 @@ each with a test that would fail if it did not (verified for the new ones by the
 "break it, watch it fail, fix it, watch it pass" discipline used throughout this task). The 8
 `pnpm test` failures are proven — not merely argued — to be unrelated infrastructure
 contention. This task is complete.
+
+## 27. Full Manual Testing Pass (2026-09-10)
+
+Everything above (§1–26, plus the separate capability delete-race fix at T254/T255) had been
+proven exclusively through automated tests calling `createApp()` directly. This pass instead
+booted the **real process boundary** — `startApi()`, the function an actual deployment invokes,
+not the test-only factory — and drove it with genuine `fetch()` HTTP requests against ephemeral
+ports on an isolated `webaudit_test` database, exercising both the credit-hardening work and the
+capability delete-race fix end to end.
+
+### 27.1 Method
+
+A throwaway script (`apps/api/manual-qa-temp.ts`, deleted after use — never part of any commit)
+booted:
+- a real `startApi()` instance in simulated-production mode (`billing: { isProduction: true }`)
+- a real `startApi()` instance in dev mode
+- a real `createSandboxHost()`
+- `createPhaseHandler` called directly in-process (bypassing BullMQ so this run did not compete
+  for job locks with the peer session's live dev-server worker on the same Redis instance)
+
+32 checks were run this way: A1–A11 against the credit surfaces (production gate on both
+billing routes, malformed-body 404 leak, `userId`-smuggling refusal, operator grant path,
+webhook signature verification, concurrent-debit non-oversell, refund routing), B1–B7 against
+the capability delete-race fix (concurrent delete-vs-reconcile, disk-removal-vs-DB-delete
+ordering). Final result: **32/32 passed.**
+
+### 27.2 Two real bugs found — both invisible to 1007+ existing automated tests
+
+Manual testing through `startApi()` (not `createApp()`) surfaced two genuine gaps that no
+prior automated test had ever exercised, because every prior test used `createApp()` directly:
+
+1. **`startApi()` never forwarded `options.billing` to its internal `createApp({...})` call.**
+   `ApiServiceOptions` had no `billing` field at all, so a caller passing
+   `billing: { isProduction: true }` through `startApi()` had it silently dropped — the app
+   underneath fell back to the real `env.isProduction`, not the caller's override.
+2. **`startApi()` never forwarded `options.webhooks` either**, for the same reason — a caller
+   signing a test payload with a custom secret via `startApi()` got a 503
+   `WEBHOOK_NOT_CONFIGURED` instead of real signature verification.
+
+Both are harmless for an actual deployment, which never passes either override and correctly
+falls back to the real environment variables — but both made the options a lie for any caller,
+including this session's own manual-QA script, and both went unnoticed because: (a) TypeScript's
+excess-property check would have caught a bad `billing`/`webhooks` key at a literal call site,
+but no code before this session ever passed either option to `startApi()` at all; (b) the
+throwaway QA script ran under `tsx`, which does not type-check.
+
+**Fix** (`apps/api/src/index.ts`): added `billing?: BillingRoutesDeps` and
+`webhooks?: WebhookRoutesDeps` to `ApiServiceOptions`, and forwarded both into the
+`createApp({...})` call the same way `mailer` and `rateLimiters` already were — spread in only
+when defined, so a real deployment that never sets them sees no behavioural change.
+
+**Regression tests** (`apps/api/tests/adverse/billing-production-gate.test.ts`, new
+`describe('startApi itself forwards the billing.isProduction override, not just createApp')`
+block): two tests boot a real `startApi()` instance (ephemeral port, `installSignalHandlers:
+false`, `reconcileCapabilities: false`) and prove both fixes against the actual HTTP surface —
+a production-mode purchase 404s, and a webhook signed with a custom secret verifies and credits
+the correct lot. Both were confirmed to fail against the pre-fix code (403 and 503
+respectively) before the fix, and pass after.
+
+### 27.3 Final verification
+
+```
+pnpm -r typecheck                                                          # clean, 34/34 projects
+npx eslint apps/api/src/index.ts apps/api/tests/adverse/billing-production-gate.test.ts   # clean
+npx prettier --write apps/api/tests/adverse/billing-production-gate.test.ts               # 1 file reformatted
+npx prettier --check apps/api/src/index.ts apps/api/tests/adverse/billing-production-gate.test.ts   # clean
+npx vitest run --project adverse --no-file-parallelism   # full adverse suite: 43/43 files, 665/665 passed, 1 skipped
+```
+
+### 27.4 Verdict
+
+Manual testing through the real production entry point found what a thousand-plus automated
+tests calling the test-only `createApp()` shortcut never could: two silent option-forwarding
+gaps in `startApi()` itself. Both are now fixed, both have dedicated regression tests exercising
+the real HTTP surface through `startApi()`, and the full adverse suite is green with zero
+regressions. This is the concrete value the user's "full manual testing" instruction produced.

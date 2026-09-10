@@ -51,6 +51,8 @@ import { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 import { buildResolveRequiredControlLevel } from './services/registry/resolve-required-control-level.js';
 import type { RateLimiters } from './middleware/ratelimit.middleware.js';
 import type { Mailer } from './services/email/mailer.js';
+import type { BillingRoutesDeps } from './routes/billing.routes.js';
+import type { WebhookRoutesDeps } from './routes/webhooks.routes.js';
 
 export { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 export {
@@ -176,6 +178,27 @@ export interface ApiServiceOptions {
    * escape hatch is the documented way around that; this just forwards it.
    */
   readonly rateLimiters?: RateLimiters | null;
+  /**
+   * Seam for the billing routes — currently only `isProduction`, which gates
+   * `/billing/subscribe` and `/billing/credits/purchase` to non-production
+   * (PLAN.md, Finding CRIT-1). Omit for the real `env.isProduction` — the
+   * correct default for an actual deployment, which never passes this at
+   * all. Exists so a caller that boots the real process (not `createApp`
+   * directly) can still exercise the gate, the same reason `rateLimiters`
+   * exists above: `env` is a frozen module-load-time snapshot, so mutating
+   * `process.env['NODE_ENV']` after `startApi()` has already run cannot
+   * reach it.
+   */
+  readonly billing?: BillingRoutesDeps;
+  /**
+   * Seam for the billing webhook — the HMAC signing secret and the header it
+   * arrives in. Omit for the real `BILLING_WEBHOOK_SECRET` / `x-webhook-signature`
+   * — the correct default for an actual deployment. Exists for the same
+   * reason `billing` above does: a caller that boots the real process needs
+   * a way to sign a test payload without setting a real, deployment-wide
+   * environment variable.
+   */
+  readonly webhooks?: WebhookRoutesDeps;
   /** Defaults to true. A suite that does not need real capability rows may skip it. */
   readonly reconcileCapabilities?: boolean;
   readonly drainMs?: number;
@@ -238,6 +261,8 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
     scans: { resolveRequiredControlLevel: buildResolveRequiredControlLevel(db) },
     ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
     ...(options.rateLimiters === undefined ? {} : { rateLimiters: options.rateLimiters }),
+    ...(options.billing === undefined ? {} : { billing: options.billing }),
+    ...(options.webhooks === undefined ? {} : { webhooks: options.webhooks }),
   });
   const server = createServer(app);
 

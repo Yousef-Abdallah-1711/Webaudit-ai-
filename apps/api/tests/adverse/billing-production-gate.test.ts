@@ -16,9 +16,10 @@
  * dependency documents for `shouldRateLimit`.
  */
 
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
+import { startApi, type ApiService } from '../../src/index.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
 
@@ -109,5 +110,122 @@ describe('CRIT-1 regression: direct-effect billing routes are production-gated',
       .set(auth(token))
       .send({ planId: 'not-a-real-plan' })
       .expect(404);
+  });
+});
+
+/**
+ * Found during manual QA against the real running process: `createApp`'s own
+ * `billing` dependency was proven above, but `startApi` — the actual
+ * function a real deployment boots from, and the only one manual/e2e-style
+ * verification tends to reach for — never forwarded its own `options.billing`
+ * into the `createApp({...})` call at all. Passing it silently did nothing:
+ * TypeScript's excess-property check would have caught this in code that
+ * runs through `tsc`, but a throwaway `tsx` script (no type-checking step)
+ * did not, and no existing automated test exercised `startApi` with this
+ * option, so the gap went unnoticed. Harmless for a real deployment (which
+ * never passes `billing` at all, and correctly falls back to the real
+ * `env.isProduction`), but it made the option a lie for anyone who did pass
+ * it. This is the regression test for `startApi` specifically, distinct
+ * from the `createApp`-direct tests above.
+ */
+describe('startApi itself forwards the billing.isProduction override, not just createApp', () => {
+  let api: ApiService | undefined;
+
+  afterEach(async () => {
+    await api?.shutdown('test cleanup');
+    api = undefined;
+  });
+
+  it('POST /billing/credits/purchase 404s in production when booted through startApi', async () => {
+    api = await startApi({
+      db: testDb,
+      port: 0,
+      installSignalHandlers: false,
+      billing: { isProduction: true },
+      reconcileCapabilities: false,
+    });
+    const base = `http://127.0.0.1:${String(api.port)}`;
+
+    const reg = await fetch(`${base}/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'startapi-crit1@example.com',
+        password: 'correct-horse-battery-staple',
+      }),
+    });
+    expect(reg.status).toBe(201);
+    await testDb.user.update({
+      where: { email: 'startapi-crit1@example.com' },
+      data: { emailVerifiedAt: new Date() },
+    });
+    const login = await fetch(`${base}/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: 'startapi-crit1@example.com',
+        password: 'correct-horse-battery-staple',
+      }),
+    });
+    const { accessToken } = (await login.json()) as { accessToken: string };
+
+    const purchase = await fetch(`${base}/billing/credits/purchase`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${accessToken}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ credits: 500 }),
+    });
+    expect(purchase.status).toBe(404);
+  });
+
+  /**
+   * Same finding, same fix pattern, for the webhook seam: `startApi` never
+   * forwarded `options.webhooks` to `createApp` either, so a caller signing
+   * a payload with a custom test secret through `startApi` got a 503
+   * "not configured" instead of the intended signature check — the real
+   * webhook secret env var was never set in this test process at all.
+   */
+  it('a webhook signed with a custom secret verifies correctly when booted through startApi', async () => {
+    const { createHmac } = await import('node:crypto');
+    const secret = 'startapi-webhook-secret';
+    api = await startApi({
+      db: testDb,
+      port: 0,
+      installSignalHandlers: false,
+      webhooks: { secret },
+      reconcileCapabilities: false,
+    });
+    const base = `http://127.0.0.1:${String(api.port)}`;
+
+    const email = 'startapi-webhook@example.com';
+    await fetch(`${base}/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password: 'correct-horse-battery-staple' }),
+    });
+    const { id: userId } = await testDb.user.findUniqueOrThrow({ where: { email } });
+    await testDb.subscription.create({
+      data: {
+        userId,
+        planId: 'pro',
+        status: 'ACTIVE',
+        periodStart: new Date(),
+        periodEnd: new Date(Date.now() + 30 * 86_400_000),
+      },
+    });
+
+    const payload = JSON.stringify({
+      id: 'evt_startapi_1',
+      type: 'credits.purchased',
+      data: { userId, credits: 111 },
+    });
+    const sig = createHmac('sha256', secret).update(payload).digest('hex');
+    const res = await fetch(`${base}/webhooks/billing`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-webhook-signature': sig },
+      body: payload,
+    });
+    expect(res.status).toBe(200);
+    const lot = await testDb.creditLot.findFirst({ where: { userId, source: 'PURCHASE' } });
+    expect(lot?.amountGranted).toBe(111);
   });
 });
