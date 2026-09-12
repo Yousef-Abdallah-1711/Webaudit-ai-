@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
 import path from 'node:path';
 import { PrismaClient } from '@webaudit/api/prisma-client';
+import { PLAN_TIERS } from '@webaudit/config';
 import { startApi, type ApiService } from '@webaudit/api';
 import { startWorker, type WorkerService } from '@webaudit/worker';
 import { createCapturingMailer, type CapturingMailer } from '@webaudit/api/test-mailer';
@@ -56,6 +57,9 @@ const TABLES_TO_CLEAR = [
   'TargetVerification',
   'Target',
   'Subscription',
+  'PendingPayment',
+  'Receipt',
+  'BillingEvent',
   'RefreshToken',
   'EmailToken',
   'OAuthIdentity',
@@ -64,33 +68,61 @@ const TABLES_TO_CLEAR = [
   'ProviderChainEntry',
 ] as const;
 
+/**
+ * Every real tier (`@webaudit/config`'s `PLAN_TIERS` — free/starter/pro/
+ * business), reset to their real defaults on every call, mirroring
+ * `apps/api/tests/helpers/db.ts`'s own `seedPlans()` exactly.
+ *
+ * Found live while debugging spurious e2e failures: `Plan` is not in
+ * `TABLES_TO_CLEAR` (plan rows are reference data a scan/subscription
+ * foreign-keys against, so truncating them on every reset would be wrong),
+ * but the old version of this function only ever upserted a single
+ * hand-rolled "free" row with `update: {}` — a genuine no-op on every call
+ * after the first. Two real, separate leaks followed: (1) `pnpm test`'s own
+ * contract suites call the real `seedPlans()` against this exact same
+ * `webaudit_test` database and left starter/pro/business rows permanently
+ * seeded, so any e2e spec that subscribed to "pro" (payment-and-receipts.spec.ts)
+ * only worked by accident of that cross-tool leakage, not because this
+ * fixture actually provisions it; (2) a spec that deactivates "free"
+ * (capabilities-and-plans.spec.ts, queue-and-log.spec.ts) left it inactive
+ * for the next file's fresh `startStack()` to inherit, timing out waiting
+ * for a "Deactivate" button that correctly did not exist because the row
+ * was already inactive. Re-seeding all four tiers with real field values on
+ * every reset closes both gaps at once.
+ */
 async function resetDb(db: PrismaClient): Promise<void> {
   const list = TABLES_TO_CLEAR.map((t) => `"${t}"`).join(', ');
   await db.$executeRawUnsafe(`TRUNCATE TABLE ${list} RESTART IDENTITY CASCADE;`);
-  await db.plan.upsert({
-    where: { id: 'free' },
-    create: {
-      id: 'free',
-      name: 'Free',
-      monthlyCredits: 50,
-      creditsRecur: false,
-      allowedInputTypes: ['URL'],
-      allowLoadGeneration: false,
-      allowReadinessPass: false,
-      allowCreditPurchase: false,
-      allowCustomCapability: false,
-      concurrentScanLimit: 1,
-      queuePriority: 40,
-      retentionDays: 7,
-    },
-    update: {},
-  });
+  await db.plan.deleteMany({ where: { id: { notIn: PLAN_TIERS.map((tier) => tier.id) } } });
+  for (const tier of PLAN_TIERS) {
+    const { id, ...rest } = tier;
+    // `PlanTier` (the static catalogue) has no `isActive` field at all — it
+    // is a runtime, admin-toggleable column, not part of a tier's fixed
+    // definition. Forced back to `true` here explicitly: a prior spec's
+    // admin-deactivate test (capabilities-and-plans.spec.ts,
+    // queue-and-log.spec.ts) otherwise leaves it `false` for every
+    // subsequent file's fresh `startStack()` to inherit, since an `update`
+    // with no `isActive` key leaves Prisma's existing value untouched.
+    const row = { ...rest, allowedInputTypes: [...rest.allowedInputTypes], isActive: true };
+    await db.plan.upsert({ where: { id }, create: { id, ...row }, update: row });
+  }
 }
 
 export async function startStack(): Promise<Stack> {
   process.env['AI_MODE'] = 'fixtures';
   process.env['WORKSPACE_BASE_DIR'] = mkdtempSync(path.join(tmpdir(), 'webaudit-e2e-'));
 
+  // `startApi` (below, called with no explicit `billing`/`webhooks` deps)
+  // wires the stub `PaymentProvider` by default outside production — the
+  // price catalog it needs reads these directly from `process.env`
+  // (`checkout-pricing.ts`'s `createEnvBillingPriceCatalog`), and the
+  // webhook secret must be known here too so a spec can sign a real webhook
+  // call the same way a real payment gateway would.
+  process.env['BILLING_STARTER_PRICE_MICROS'] ??= '29000000';
+  process.env['BILLING_PRO_PRICE_MICROS'] ??= '99000000';
+  process.env['BILLING_BUSINESS_PRICE_MICROS'] ??= '299000000';
+  process.env['BILLING_CREDIT_PRICE_MICROS'] ??= '1000';
+  process.env['BILLING_WEBHOOK_SECRET'] ??= 'e2e-stack-webhook-secret';
 
   // WEB_URL must be set before `startApi` — `app.ts`'s `corsAllowlist()`
   // reads it while building the Express app inside `startApi`, once,
