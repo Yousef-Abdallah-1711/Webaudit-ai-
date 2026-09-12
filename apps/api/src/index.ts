@@ -43,8 +43,9 @@ import { pathToFileURL } from 'node:url';
 import { Redis } from 'ioredis';
 import { createLogger } from '@webaudit/config';
 import type { PrismaClient } from '../prisma/generated/client/index.js';
-import { createApp } from './app.js';
+import { createApp, corsAllowlist } from './app.js';
 import { prisma, disconnect } from './db/client.js';
+import { env } from './config/env.js';
 import { createRealtimeServer, type RealtimeServer } from './services/realtime/server.js';
 import { startFanout, type Fanout, type RedisSubscriber } from './services/realtime/fanout.js';
 import { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
@@ -53,6 +54,9 @@ import type { RateLimiters } from './middleware/ratelimit.middleware.js';
 import type { Mailer } from './services/email/mailer.js';
 import type { BillingRoutesDeps } from './routes/billing.routes.js';
 import type { WebhookRoutesDeps } from './routes/webhooks.routes.js';
+import { createStubPaymentProvider } from './services/billing/stub-payment-provider.js';
+import { createEnvBillingPriceCatalog } from './services/billing/checkout-pricing.js';
+import type { PaymentProvider } from './services/billing/payment-provider.js';
 
 export { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 export {
@@ -113,8 +117,15 @@ function portFromEnv(): number {
  * limit, a blocking command that fails during a Redis restart takes the process
  * down instead of reconnecting.
  */
+export const REALTIME_REDIS_OPTIONS = {
+  maxRetriesPerRequest: null,
+  lazyConnect: false,
+  connectTimeout: 2_000,
+  commandTimeout: 500,
+} as const;
+
 function createSubscriber(url: string): RedisSubscriber & { disconnect(): void } {
-  const client = new Redis(url, { maxRetriesPerRequest: null, lazyConnect: false });
+  const client = new Redis(url, REALTIME_REDIS_OPTIONS);
 
   // ioredis emits `error` on every failed reconnection attempt, and an
   // EventEmitter with no `error` listener rethrows as an uncaught exception. A
@@ -253,6 +264,32 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
     await reconcileCapabilitiesAtBoot(db);
   }
 
+  // T263's acceptance criterion: the stub `PaymentProvider` must be
+  // "wired-by-default-in-dev/test" — otherwise the whole checkout/webhook/
+  // receipt flow (T264-T266) is fully built and tested but unreachable by
+  // the actual running process, which only ever calls `createApp` through
+  // this factory. Production is never defaulted: Paymob (T267) is explicitly
+  // blocked, so a real deployment must keep `/billing/subscribe` and
+  // `/billing/credits/purchase` on the existing `devTestOnly` 404 path until
+  // a real provider lands, never silently accept the dev stub's fixed
+  // fallback webhook secret. A caller that explicitly passes `billing`/
+  // `webhooks` (every existing test) is respected as-is, with no stub merged
+  // in underneath it.
+  const defaultPaymentProvider: PaymentProvider | undefined = env.isProduction
+    ? undefined
+    : createStubPaymentProvider();
+  const defaultBilling: BillingRoutesDeps | undefined =
+    defaultPaymentProvider === undefined
+      ? undefined
+      : {
+          paymentProvider: defaultPaymentProvider,
+          priceCatalog: createEnvBillingPriceCatalog(process.env),
+        };
+  const defaultWebhooks: WebhookRoutesDeps | undefined =
+    defaultPaymentProvider === undefined ? undefined : { paymentProvider: defaultPaymentProvider };
+  const billing = options.billing ?? defaultBilling;
+  const webhooks = options.webhooks ?? defaultWebhooks;
+
   // FR-017's whole-scan control-level gate — with no `scans` deps, the
   // `() => 'NONE'` default in `scans.routes.ts` wins and the gate never
   // actually fires in production, which is exactly the finding this closes.
@@ -261,15 +298,26 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
     scans: { resolveRequiredControlLevel: buildResolveRequiredControlLevel(db) },
     ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
     ...(options.rateLimiters === undefined ? {} : { rateLimiters: options.rateLimiters }),
-    ...(options.billing === undefined ? {} : { billing: options.billing }),
-    ...(options.webhooks === undefined ? {} : { webhooks: options.webhooks }),
+    ...(billing === undefined ? {} : { billing }),
+    ...(webhooks === undefined ? {} : { webhooks }),
   });
   const server = createServer(app);
 
   // `ws` upgrades this server rather than binding a second port. Constructed
   // before `listen` so no connection can arrive before there is something to
-  // handle the upgrade.
-  const realtime = createRealtimeServer({ server, db });
+  // handle the upgrade. `allowedOrigins` reuses the same allowlist `cors()`
+  // enforces on the ordinary HTTP surface (`app.ts`'s own `corsAllowlist`) —
+  // one policy, not two to keep in sync. `maxConnectionsPerIp` bounds how
+  // many sockets one source address may hold open at once; generous enough
+  // to be invisible to a real browser client (a handful of tabs, each
+  // opening one socket) while bounding an unbounded-connection-count issue a
+  // prior review found here (Section 6d).
+  const realtime = createRealtimeServer({
+    server,
+    db,
+    allowedOrigins: corsAllowlist(),
+    maxConnectionsPerIp: 50,
+  });
 
   // Attached before the port opens: a client that subscribes in the first
   // milliseconds must not miss the channel.
