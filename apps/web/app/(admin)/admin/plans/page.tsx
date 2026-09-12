@@ -14,17 +14,19 @@
  * operator can toggle a plan back on, and needs a way to tell active and
  * inactive plans apart. The mock's generic "Edit" action is replaced with
  * the one real mutation, `PATCH /admin/plans/:id` toggling `isActive`.
- * "New plan" stays present but inert — no create-plan form exists, the same
- * "designed but not yet wired" precedent as `AdminProvidersPage`'s
- * "Add provider".
+ * "New plan" opens a real create-plan form backed by `POST /admin/plans`
+ * (`createAdminPlan`); the same form is reused to edit an existing plan's
+ * fields via the same `PATCH /admin/plans/:id` used for the active toggle.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
   ApiError,
+  createAdminPlan,
   getAdminPlans,
   setPlanActive,
+  type AdminPlanInput,
   type AdminPlanRecord,
 } from '../../../../lib/api';
 import styles from './page.module.css';
@@ -52,6 +54,21 @@ export default function AdminPlansPage(): React.ReactElement {
   const [plans, setPlans] = useState<readonly AdminPlanRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState<AdminPlanInput | null>({
+    id: '',
+    name: '',
+    monthlyCredits: 300,
+    creditsRecur: true,
+    allowedInputTypes: ['URL', 'REPOSITORY', 'ARCHIVE'],
+    allowLoadGeneration: false,
+    allowReadinessPass: false,
+    allowCreditPurchase: false,
+    allowCustomCapability: false,
+    concurrentScanLimit: 1,
+    queuePriority: 10,
+    retentionDays: 30,
+  });
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -80,16 +97,127 @@ export default function AdminPlansPage(): React.ReactElement {
       });
   };
 
+  const beginCreate = (): void =>
+    setForm({
+      id: '',
+      name: '',
+      monthlyCredits: 300,
+      creditsRecur: true,
+      allowedInputTypes: ['URL', 'REPOSITORY', 'ARCHIVE'],
+      allowLoadGeneration: false,
+      allowReadinessPass: false,
+      allowCreditPurchase: false,
+      allowCustomCapability: false,
+      concurrentScanLimit: 1,
+      queuePriority: 10,
+      retentionDays: 30,
+    });
+  const beginEdit = (plan: AdminPlanRecord): void => setForm({ ...plan });
+  const savePlan = async (): Promise<void> => {
+    if (form === null) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (plans.some((plan) => plan.id === form.id))
+        await setPlanActive(form.id, form.isActive ?? true, form);
+      else await createAdminPlan(form);
+      setForm(null);
+      await load();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The plan could not be saved.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div>
       <AHead
         eyebrow="Commerce"
         title="Plans"
         meta="entitlements are enforced server-side before any charge"
-        actions={<Button size="sm">New plan</Button>}
+        actions={
+          <Button size="sm" onClick={beginCreate}>
+            New plan
+          </Button>
+        }
       />
 
       {error !== null && <p className={styles.error}>{error}</p>}
+
+      {form !== null && (
+        <Card
+          padding={20}
+          title={plans.some((plan) => plan.id === form.id) ? `Edit ${form.name}` : 'Create plan'}
+        >
+          <div className={styles.formGrid}>
+            <label className={styles.field}>
+              <span>Plan ID</span>
+              <input
+                value={form.id}
+                disabled={plans.some((plan) => plan.id === form.id)}
+                onChange={(event) => setForm({ ...form, id: event.target.value })}
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Name</span>
+              <input
+                value={form.name}
+                onChange={(event) => setForm({ ...form, name: event.target.value })}
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Monthly credits</span>
+              <input
+                type="number"
+                min="0"
+                value={form.monthlyCredits}
+                onChange={(event) =>
+                  setForm({ ...form, monthlyCredits: Number(event.target.value) })
+                }
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Concurrent scan limit</span>
+              <input
+                type="number"
+                min="1"
+                value={form.concurrentScanLimit}
+                onChange={(event) =>
+                  setForm({ ...form, concurrentScanLimit: Number(event.target.value) })
+                }
+              />
+            </label>
+            <label className={styles.field}>
+              <span>Retention days</span>
+              <input
+                type="number"
+                min="1"
+                value={form.retentionDays}
+                onChange={(event) =>
+                  setForm({ ...form, retentionDays: Number(event.target.value) })
+                }
+              />
+            </label>
+            <label className={styles.check}>
+              <input
+                type="checkbox"
+                checked={form.creditsRecur}
+                onChange={(event) => setForm({ ...form, creditsRecur: event.target.checked })}
+              />{' '}
+              Credits recur monthly
+            </label>
+          </div>
+          <div className={styles.formActions}>
+            <Button size="sm" disabled={saving} onClick={() => void savePlan()}>
+              {saving ? 'Saving...' : 'Save plan'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setForm(null)}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
+      )}
 
       <Table
         cols={[
@@ -99,6 +227,7 @@ export default function AdminPlansPage(): React.ReactElement {
           { label: 'Concurrent', width: 110 },
           { label: 'Retention', width: 100 },
           { label: 'State', width: 100 },
+          { label: '', width: 120 },
           { label: '', width: 120 },
         ]}
         rows={plans.map((plan) => [
@@ -121,6 +250,15 @@ export default function AdminPlansPage(): React.ReactElement {
           >
             {plan.isActive ? 'Deactivate' : 'Activate'}
           </Button>,
+          <Button
+            key="edit"
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => beginEdit(plan)}
+          >
+            Edit
+          </Button>,
         ])}
       />
 
@@ -140,8 +278,8 @@ export default function AdminPlansPage(): React.ReactElement {
         </Card>
         <Card padding={20} title="Two credit lifetimes">
           <p className={styles.cardText}>
-            Plan credits expire at renewal. Purchased top-ups never expire. Expiring lots are
-            always drawn first, so nothing paid for is quietly destroyed.
+            Plan credits expire at renewal. Purchased top-ups never expire. Expiring lots are always
+            drawn first, so nothing paid for is quietly destroyed.
           </p>
         </Card>
         <Card padding={20} title="Top-ups">

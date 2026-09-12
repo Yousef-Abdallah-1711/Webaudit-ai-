@@ -24,14 +24,19 @@
  * The mock's `perCapability` rows carry no revenue at all, matching the
  * backend exactly — a single capability execution has no credit charge of
  * its own to attribute (`CapabilityMarginRow` has no `chargedCredits`
- * field). "Export" stays present but inert, matching this admin console's
- * existing precedent for a designed action with no backing endpoint yet
- * (`AdminScansPage`'s search box, `AdminProvidersPage`'s "Add provider").
+ * field). "Export" downloads a real CSV from `GET /admin/margin/export`
+ * (`exportMarginReport`) — a genuine file, not a designed-but-unwired
+ * action.
  */
 import { useEffect, useState } from 'react';
 import { Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Stat, Table } from '../../../../components/admin';
-import { ApiError, getMarginReport, type MarginReport } from '../../../../lib/api';
+import {
+  ApiError,
+  exportMarginReport,
+  getMarginReport,
+  type MarginReport,
+} from '../../../../lib/api';
 import styles from './page.module.css';
 
 function formatCredits(n: number): string {
@@ -45,6 +50,25 @@ function formatUsd(costMicros: number): string {
 export default function AdminBillingPage(): React.ReactElement {
   const [report, setReport] = useState<MarginReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const onExport = async (): Promise<void> => {
+    setExporting(true);
+    setError(null);
+    try {
+      const blob = await exportMarginReport();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'margin-report.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'The margin export failed.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +85,8 @@ export default function AdminBillingPage(): React.ReactElement {
     };
   }, []);
 
-  const totalCharged = report === null ? 0 : report.perScan.reduce((sum, s) => sum + s.chargedCredits, 0);
+  const totalCharged =
+    report === null ? 0 : report.perScan.reduce((sum, s) => sum + s.chargedCredits, 0);
   const totalCostMicros =
     report === null ? 0 : report.perScan.reduce((sum, s) => sum + s.costMicros, 0);
 
@@ -72,8 +97,13 @@ export default function AdminBillingPage(): React.ReactElement {
         title="Margin"
         meta="attributable to the individual capability that caused the cost"
         actions={
-          <Button variant="secondary" size="sm">
-            Export
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={exporting}
+            onClick={() => void onExport()}
+          >
+            {exporting ? 'Exporting...' : 'Export'}
           </Button>
         }
       />
@@ -81,7 +111,10 @@ export default function AdminBillingPage(): React.ReactElement {
       {error !== null && <p className={styles.error}>{error}</p>}
 
       <div className={styles.statsGrid}>
-        <Stat label="Credits recognised" value={report === null ? '—' : formatCredits(totalCharged)} />
+        <Stat
+          label="Credits recognised"
+          value={report === null ? '—' : formatCredits(totalCharged)}
+        />
         <Stat label="Provider cost" value={report === null ? '—' : formatUsd(totalCostMicros)} />
         <Stat
           label="Scans in window"
