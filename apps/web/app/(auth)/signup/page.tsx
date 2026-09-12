@@ -5,12 +5,13 @@
  * AuthPages.jsx`. Submits against `POST /auth/register`, then routes to
  * `/verify-email` with the address in the query string.
  *
- * **The `Name` field is not sent anywhere.** The source shows it (and the
- * visual gate needs it present to match), but `apps/api`'s `User` model has
- * no name column at all — `credentials` in `auth.routes.ts` accepts only
- * `email`/`password`. Kept in the UI for fidelity, not wired, rather than
- * silently dropped (which would break the visual diff) or silently
- * pretended to be saved (which it is not).
+ * The `Name` field is optional on both ends: `register()`'s third argument
+ * is omitted entirely (not sent as `''`) when left blank, matching
+ * `auth.routes.ts`'s own `name: z.string().trim().min(1).max(100).optional()`
+ * — present-but-empty is a validation error there, absent is fine. Found via
+ * real-browser e2e testing: leaving Name blank used to send `name: ''`
+ * unconditionally, which the API refused with a real `422` on every
+ * registration that didn't fill in an optional field.
  */
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -34,7 +35,8 @@ export default function RegisterPage(): React.ReactElement {
     if (!email || password.length < 12) return;
     setSubmitting(true);
     try {
-      await register(email, password);
+      const trimmedName = name.trim();
+      await register(email, password, trimmedName === '' ? undefined : trimmedName);
       router.push(`/verify-email?email=${encodeURIComponent(email)}`);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'CONFLICT') {
@@ -86,11 +88,7 @@ export default function RegisterPage(): React.ReactElement {
         />
         <div className={styles.note}>{t('auth_register_note')}</div>
         {error !== null && <div className={styles.error}>{error}</div>}
-        <Button
-          fullWidth
-          disabled={submitting}
-          onClick={() => void onSubmit()}
-        >
+        <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
           {t('auth_register_submit')}
         </Button>
       </div>
