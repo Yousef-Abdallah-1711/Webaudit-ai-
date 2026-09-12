@@ -46,6 +46,18 @@ describe('POST /auth/register', () => {
     expect(user?.passwordHash).toMatch(/^\$2[aby]\$/);
   });
 
+  it('persists the optional display name on the new account', async () => {
+    await request(app)
+      .post('/auth/register')
+      .send({ ...VALID, name: 'Ada Lovelace' })
+      .expect(201);
+
+    const rows = await testDb.$queryRaw<{ name: string | null }[]>`
+      SELECT name FROM "User" WHERE email = ${VALID.email}
+    `;
+    expect(rows[0]?.name).toBe('Ada Lovelace');
+  });
+
   it('grants the free allocation of 50 credits as a non-recurring lot', async () => {
     await request(app).post('/auth/register').send(VALID).expect(201);
 

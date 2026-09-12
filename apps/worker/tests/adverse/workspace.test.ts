@@ -36,7 +36,7 @@ import { lstat, mkdtemp, mkdir, readdir, rm, stat, symlink, writeFile } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { ModuleType, ScanState } from '@webaudit/types';
+import type { ModuleState, ModuleType, ScanState } from '@webaudit/types';
 import { transition } from '../../src/orchestrator/state-machine.js';
 import { sweepTimedOutScans } from '../../src/orchestrator/timeout.js';
 import { createScanWorkspace } from '../../src/workspace/create.js';
@@ -107,7 +107,7 @@ interface Row {
   quotedCredits: number;
   chargedCredits: number;
   requestedModules: readonly ModuleType[];
-  moduleResults: readonly { module: ModuleType; state: string }[];
+  moduleResults: readonly { module: ModuleType; state: ModuleState }[];
   extra: Record<string, unknown>;
 }
 
@@ -132,39 +132,54 @@ function row(state: ScanState, overrides: Partial<Row> = {}): Row {
  */
 function fakeDb(rows: Row[]) {
   let nulled = 0;
-  const db = {
-    scan: {
-      updateMany: (args: {
-        where: { id: string; state: ScanState };
-        data: Record<string, unknown>;
-      }): Promise<{ count: number }> => {
-        const found = rows.find((r) => r.id === args.where.id && r.state === args.where.state);
-        if (found === undefined) return Promise.resolve({ count: 0 });
-        const { state, ...rest } = args.data;
-        found.state = state as ScanState;
-        found.extra = { ...found.extra, ...rest };
-        return Promise.resolve({ count: 1 });
-      },
-      findUnique: (args: {
-        where: { id: string };
-        select: { state: true };
-      }): Promise<{ state: ScanState } | null> => {
-        const found = rows.find((r) => r.id === args.where.id);
-        return Promise.resolve(found === undefined ? null : { state: found.state });
-      },
-      update: (args: {
-        where: { id: string };
-        data: { workspacePath: string | null };
-      }): Promise<unknown> => {
-        const found = rows.find((r) => r.id === args.where.id);
-        if (found === undefined) return Promise.reject(new Error('no such scan'));
-        if (args.data.workspacePath === null) nulled += 1;
-        found.workspacePath = args.data.workspacePath;
-        return Promise.resolve(found);
-      },
-      findMany: (_args: unknown): Promise<readonly never[]> =>
-        Promise.resolve(rows.map((r) => ({ ...r })) as never[]),
+  const scan = {
+    updateMany: (args: {
+      where: { id: string; state: ScanState };
+      data: Record<string, unknown>;
+    }): Promise<{ count: number }> => {
+      const found = rows.find((r) => r.id === args.where.id && r.state === args.where.state);
+      if (found === undefined) return Promise.resolve({ count: 0 });
+      const { state, ...rest } = args.data;
+      found.state = state as ScanState;
+      found.extra = { ...found.extra, ...rest };
+      return Promise.resolve({ count: 1 });
     },
+    findUnique: (args: {
+      where: { id: string };
+      select: { state: true };
+    }): Promise<{ state: ScanState } | null> => {
+      const found = rows.find((r) => r.id === args.where.id);
+      return Promise.resolve(found === undefined ? null : { state: found.state });
+    },
+    update: (args: {
+      where: { id: string };
+      data: { workspacePath: string | null };
+    }): Promise<unknown> => {
+      const found = rows.find((r) => r.id === args.where.id);
+      if (found === undefined) return Promise.reject(new Error('no such scan'));
+      if (args.data.workspacePath === null) nulled += 1;
+      found.workspacePath = args.data.workspacePath;
+      return Promise.resolve(found);
+    },
+    findMany: (_args: unknown): Promise<readonly never[]> =>
+      Promise.resolve(rows.map((r) => ({ ...r })) as never[]),
+    findUniqueOrThrow: (args: { where: { id: string } }) => {
+      const found = rows.find((r) => r.id === args.where.id);
+      if (found === undefined) return Promise.reject(new Error('no such scan'));
+      return Promise.resolve({
+        chargedCredits: found.chargedCredits,
+        requestedModules: found.requestedModules,
+        moduleResults: found.moduleResults,
+      });
+    },
+  };
+  const db = {
+    scan,
+    // No real transactional isolation to simulate here — this fake is an
+    // in-memory array, not a database with concurrent-connection semantics,
+    // and none of these tests exercise that. `terminate()` only needs `fn`
+    // invoked with something that satisfies the same narrow interface.
+    $transaction: <T>(fn: (tx: { scan: typeof scan }) => Promise<T>): Promise<T> => fn({ scan }),
   };
   return {
     db,

@@ -21,6 +21,7 @@ export interface InputProps {
   invalid?: boolean;
   /** Mono face for machine-truth values (headers, selectors, paths) */
   mono?: boolean;
+  readOnly?: boolean;
   /** For an input with no visible, associated `<label>` — e.g. login's password field. */
   'aria-label'?: string;
 }
@@ -34,6 +35,7 @@ export function Input({
   fullWidth = true,
   invalid = false,
   mono = false,
+  readOnly = false,
   ...rest
 }: InputProps): React.ReactElement {
   const wrapClasses = [styles.wrap, fullWidth ? styles.fullWidth : undefined]
@@ -56,6 +58,7 @@ export function Input({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        readOnly={readOnly}
         className={fieldClasses}
         {...rest}
       />

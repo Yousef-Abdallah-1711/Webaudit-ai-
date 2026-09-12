@@ -1,52 +1,61 @@
 'use client';
 
-/**
- * Ported from design-system/ui_kits/admin/AdminScreens.jsx's `Providers`
- * (T244). The reorder buttons mutate local state only — no backend wiring
- * exists yet (T075+, AI executor) — so this needs `'use client'`.
- *
- * The initial chain (claude/openai/gemini, their health, invocation counts,
- * cost) is the exact placeholder data the vendored source shows.
- */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  getAdminProviders,
+  setAdminProviderChain,
+  type AdminProviderChainEntry,
+} from '../../../../lib/api.js';
 import { Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import styles from './page.module.css';
 
-type ProviderRow = readonly [
-  id: string,
-  vendor: string,
-  health: string,
-  invocations: string,
-  cost: string,
-];
-
-const INITIAL_CHAIN: readonly ProviderRow[] = [
-  ['claude', 'Anthropic', 'healthy', '1,204', '$28.10'],
-  ['openai', 'OpenAI', 'degraded', '168', '$9.02'],
-  ['gemini', 'Google', 'healthy', '41', '$4.10'],
-];
-
 export default function AdminProvidersPage(): React.ReactElement {
-  const [chain, setChain] = useState(INITIAL_CHAIN);
-  const vendors = new Set(chain.map((c) => c[1])).size;
+  const [chain, setChain] = useState<readonly AdminProviderChainEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const moveUp = (i: number): void => {
-    setChain((ch) => {
-      if (i === 0) return ch;
-      const next = [...ch];
-      [next[i - 1], next[i]] = [next[i]!, next[i - 1]!];
-      return next;
-    });
+  useEffect(() => {
+    let active = true;
+    void getAdminProviders()
+      .then(({ chain: persisted }) => {
+        if (!active) return;
+        setChain(persisted);
+        setLoading(false);
+      })
+      .catch((cause: unknown) => {
+        if (!active) return;
+        setError(cause instanceof Error ? cause.message : 'Unable to load provider chain.');
+        setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const vendors = new Set(chain.map((entry) => entry.vendor)).size;
+
+  const persist = async (next: readonly AdminProviderChainEntry[]): Promise<void> => {
+    setSaving(true);
+    setError(null);
+    try {
+      const result = await setAdminProviderChain(
+        next.map(({ vendor, model, isEnabled }) => ({ vendor, model, isEnabled })),
+      );
+      setChain(result.chain);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to save provider chain.');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const moveDown = (i: number): void => {
-    setChain((ch) => {
-      if (i === ch.length - 1) return ch;
-      const next = [...ch];
-      [next[i + 1], next[i]] = [next[i]!, next[i + 1]!];
-      return next;
-    });
+  const move = (index: number, delta: -1 | 1): void => {
+    if (index + delta < 0 || index + delta >= chain.length || saving) return;
+    const next = [...chain];
+    [next[index], next[index + delta]] = [next[index + delta]!, next[index]!];
+    void persist(next);
   };
 
   return (
@@ -55,9 +64,14 @@ export default function AdminProvidersPage(): React.ReactElement {
         eyebrow="Catalogue"
         title="AI providers"
         meta={`ordered fallback chain · ${String(vendors)} vendors`}
-        actions={<Button size="sm">Add provider</Button>}
       />
-      {vendors < 2 && (
+      <p className={styles.caveat}>
+        Changes are persisted for the next worker deployment; running workers keep their boot-time
+        provider chain until redeployed.
+      </p>
+      {loading && <p className={styles.status}>Loading provider chain...</p>}
+      {error && <p className={styles.error}>{error}</p>}
+      {vendors < 2 && !loading && (
         <div className={styles.warning}>
           A chain spanning fewer than two vendors is refused at startup.
         </div>
@@ -67,43 +81,37 @@ export default function AdminProvidersPage(): React.ReactElement {
           { label: '#', width: 40 },
           { label: 'Provider', width: '1fr' },
           { label: 'Vendor', width: 150 },
-          { label: 'Health', width: 110 },
+          { label: 'Status', width: 110 },
           { label: 'Invocations', width: 120 },
           { label: 'Cost 24h', width: 100 },
           { label: '', width: 160 },
         ]}
-        rows={chain.map(([id, vendor, health, invocations, cost], i) => [
-          num(i + 1),
-          mono(id),
+        rows={chain.map(({ vendor, model, isEnabled }, index) => [
+          num(index + 1),
+          mono(model),
           vendor,
           <span
-            key="health"
-            className={
-              health === 'healthy'
-                ? `${styles.health} ${styles.healthHealthy}`
-                : `${styles.health} ${styles.healthDegraded}`
-            }
+            key="status"
+            className={`${styles.health} ${isEnabled ? styles.healthHealthy : styles.healthDegraded}`}
           >
-            {health}
+            {isEnabled ? 'enabled' : 'disabled'}
           </span>,
-          num(invocations),
-          num(cost),
+          num(0),
+          num(0),
           <span key="actions" className={styles.actions}>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                moveUp(i);
-              }}
+              disabled={index === 0 || saving}
+              onClick={() => move(index, -1)}
             >
               Up
             </Button>
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => {
-                moveDown(i);
-              }}
+              disabled={index === chain.length - 1 || saving}
+              onClick={() => move(index, 1)}
             >
               Down
             </Button>

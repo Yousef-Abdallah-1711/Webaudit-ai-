@@ -57,6 +57,7 @@ export interface AiInvocationRecord {
   readonly latencyMs: number;
   readonly costMicros: number;
   readonly outcome: AiOutcome;
+  readonly promptVersion?: string;
   /** Redacted before it is stored: a provider error can echo the prompt back. */
   readonly errorMessage?: string;
 }
@@ -77,6 +78,7 @@ export interface AiRequest<T> {
   /** Attributes cost to a capability execution — Principle VI, SC-009. */
   readonly executionId?: string;
   readonly scanId?: string;
+  readonly promptVersion?: string;
   readonly maxOutputTokens?: number;
   readonly signal?: AbortSignal;
 }
@@ -95,7 +97,7 @@ export interface AiExecutor {
   readonly chain: readonly Provider[];
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
+export const AI_PROVIDER_ATTEMPT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_OUTPUT_TOKENS = 16_000;
 
 interface Attempt {
@@ -167,7 +169,7 @@ async function attempt(
 export function createExecutor(options: ExecutorOptions): AiExecutor {
   // Validated here, at construction, which is boot for every real caller.
   const chain = buildChain(options.chain);
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs ?? AI_PROVIDER_ATTEMPT_TIMEOUT_MS;
   const defaultMaxOutput = options.maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS;
   const now = options.now ?? (() => Date.now());
 
@@ -223,6 +225,7 @@ export function createExecutor(options: ExecutorOptions): AiExecutor {
           latencyMs,
           costMicros,
           outcome,
+          ...(request.promptVersion === undefined ? {} : { promptVersion: request.promptVersion }),
           // A provider error message can quote the request back at us, and this
           // string is stored and logged (FR-091).
           ...(errorMessage === undefined ? {} : { errorMessage: redactText(errorMessage) }),

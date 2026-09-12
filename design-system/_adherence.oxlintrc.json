@@ -59,8 +59,8 @@
         "message": "<Badge> tone must be one of 'neutral' | 'accent' | 'success' | 'inverse'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|fullWidth|icon|onClick|href|children|key|ref|className|style|children)$/]",
-        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, fullWidth, icon, onClick, href, children."
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|type|fullWidth|icon|onClick|href|children|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, type, fullWidth, icon, onClick, href, children, className, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|ghost|inverse)$/]",
@@ -83,8 +83,8 @@
         "message": "<Eyebrow> tone must be one of 'muted' | 'accent'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|key|ref|className|style|children)$/]",
-        "message": "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono."
+        "selector": "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|readOnly|aria-label|key|ref|className|style|children)$/]",
+        "message": "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono, readOnly, aria-label."
       },
       {
         "selector": "JSXOpeningElement[name.name='IssueCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:severity|title|location|description|attribution|prompt|area|onCopy|key|ref|className|style|children)$/]",

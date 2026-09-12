@@ -14,33 +14,28 @@ function render(element: React.ReactElement): string {
 }
 
 describe('AdminOverviewPage', () => {
-  it('renders all 4 stat cards and both "needs attention" / "area health" panels', () => {
+  it('renders the overview shell without inventing platform metrics', () => {
     const html = render(createElement(AdminOverviewPage));
     expect(html).toContain('Audits completed');
-    expect(html).toContain('248');
     expect(html).toContain('Credits recognised');
     expect(html).toContain('Needs attention');
     expect(html).toContain('Area health');
+    expect(html).toContain('Live overview data is not available');
+    expect(html).not.toContain('248');
+    expect(html).not.toContain('4,180');
+    expect(html).not.toContain('$41.22');
   });
 
   it('FR-053: the degraded area (Testing) never reads as complete', () => {
     const html = render(createElement(AdminOverviewPage));
-    expect(html).toContain('playwright-runner disabled by operator');
-    // Every complete area carries an issue count; the degraded one carries
-    // a detail string instead — the two must not collapse into one class.
-    const stateClasses = [...html.matchAll(/class="[^"]*state(Complete|Degraded)[^"]*"/g)].map(
-      (m) => m[1],
-    );
-    expect(stateClasses).toContain('Complete');
-    expect(stateClasses).toContain('Degraded');
+    expect(html).toContain('Live area health data is not available');
+    expect(html).not.toMatch(/state(Complete|Degraded)/);
   });
 
   it('every "needs attention" entry gets its own severity badge', () => {
     const html = render(createElement(AdminOverviewPage));
-    expect(html).toContain('openai adapter degraded');
-    expect(html).toContain('playwright-runner disabled');
-    expect(html).toContain('sandbox-runner unavailable');
+    expect(html).toContain('No live attention items are available');
     const badges = [...html.matchAll(/<svg[^>]*>/g)];
-    expect(badges.length).toBeGreaterThanOrEqual(3);
+    expect(badges.length).toBe(0);
   });
 });

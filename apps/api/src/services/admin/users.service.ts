@@ -93,7 +93,10 @@ export async function listUsers(
     db.user.count(),
   ]);
 
-  const balances = await balancesOf(db, rows.map((row) => row.id));
+  const balances = await balancesOf(
+    db,
+    rows.map((row) => row.id),
+  );
 
   const users = rows.map((row): AdminUserSummary => {
     const balance = balances.get(row.id);

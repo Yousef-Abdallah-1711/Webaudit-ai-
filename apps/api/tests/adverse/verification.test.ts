@@ -72,7 +72,12 @@ async function seedScanWithIssues(
   count: number,
 ): Promise<{ scanId: string; issueIds: string[] }> {
   const target = await testDb.target.create({
-    data: { userId, inputType: 'URL', canonicalValue: 'https://sc007.example.com', displayName: 'sc007' },
+    data: {
+      userId,
+      inputType: 'URL',
+      canonicalValue: 'https://sc007.example.com',
+      displayName: 'sc007',
+    },
   });
   const scan = await testDb.scan.create({
     data: {

@@ -93,18 +93,69 @@ const MAX_LIST_LIMIT = 200;
  * read back). List-only — nothing here writes or mutates a row. */
 export async function listAuditLog(
   db: AuditLogReader,
-  opts: { readonly limit?: number | undefined; readonly offset?: number | undefined } = {},
+  opts: {
+    readonly limit?: number | undefined;
+    readonly offset?: number | undefined;
+    readonly action?: string | undefined;
+    readonly actorId?: string | undefined;
+    readonly search?: string | undefined;
+    readonly from?: Date | undefined;
+    readonly to?: Date | undefined;
+  } = {},
 ): Promise<ListAuditLogResult> {
   const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
   const offset = Math.max(opts.offset ?? 0, 0);
 
   const [rows, total] = await Promise.all([
     db.auditLogEntry.findMany({
+      where: {
+        ...(opts.action === undefined ? {} : { action: opts.action }),
+        ...(opts.actorId === undefined ? {} : { actorId: opts.actorId }),
+        ...(opts.search === undefined
+          ? {}
+          : {
+              OR: [
+                { action: { contains: opts.search, mode: 'insensitive' } },
+                { subjectType: { contains: opts.search, mode: 'insensitive' } },
+                { subjectId: { contains: opts.search, mode: 'insensitive' } },
+              ],
+            }),
+        ...(opts.from === undefined && opts.to === undefined
+          ? {}
+          : {
+              createdAt: {
+                ...(opts.from === undefined ? {} : { gte: opts.from }),
+                ...(opts.to === undefined ? {} : { lte: opts.to }),
+              },
+            }),
+      },
       orderBy: { createdAt: 'desc' },
       skip: offset,
       take: limit,
     }),
-    db.auditLogEntry.count(),
+    db.auditLogEntry.count({
+      where: {
+        ...(opts.action === undefined ? {} : { action: opts.action }),
+        ...(opts.actorId === undefined ? {} : { actorId: opts.actorId }),
+        ...(opts.search === undefined
+          ? {}
+          : {
+              OR: [
+                { action: { contains: opts.search, mode: 'insensitive' } },
+                { subjectType: { contains: opts.search, mode: 'insensitive' } },
+                { subjectId: { contains: opts.search, mode: 'insensitive' } },
+              ],
+            }),
+        ...(opts.from === undefined && opts.to === undefined
+          ? {}
+          : {
+              createdAt: {
+                ...(opts.from === undefined ? {} : { gte: opts.from }),
+                ...(opts.to === undefined ? {} : { lte: opts.to }),
+              },
+            }),
+      },
+    }),
   ]);
 
   const actorIds = [...new Set(rows.map((row) => row.actorId))];
@@ -114,19 +165,17 @@ export async function listAuditLog(
   });
   const emailById = new Map(actors.map((actor) => [actor.id, actor.email]));
 
-  const entries = rows.map(
-    (row): AdminAuditLogEntry => ({
-      id: row.id,
-      actorId: row.actorId,
-      actorEmail: emailById.get(row.actorId) ?? null,
-      action: row.action,
-      subjectType: row.subjectType,
-      subjectId: row.subjectId,
-      before: row.before,
-      after: row.after,
-      createdAt: row.createdAt,
-    }),
-  );
+  const entries = rows.map((row): AdminAuditLogEntry => ({
+    id: row.id,
+    actorId: row.actorId,
+    actorEmail: emailById.get(row.actorId) ?? null,
+    action: row.action,
+    subjectType: row.subjectType,
+    subjectId: row.subjectId,
+    before: row.before,
+    after: row.after,
+    createdAt: row.createdAt,
+  }));
 
   return { entries, total, limit, offset };
 }

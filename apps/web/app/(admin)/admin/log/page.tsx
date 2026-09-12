@@ -26,20 +26,36 @@ export default function AdminLogPage(): React.ReactElement {
   const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
+  const [action, setAction] = useState('');
+  const [actorId, setActorId] = useState('');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
 
-  const load = useCallback(async (offset: number, append: boolean) => {
-    setBusy(true);
-    try {
-      const page = await getAdminAuditLog({ limit: PAGE_SIZE, offset });
-      setEntries((prev) => (append ? [...prev, ...page.entries] : page.entries));
-      setTotal(page.total);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The audit log could not be loaded.');
-    } finally {
-      setBusy(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (offset: number, append: boolean) => {
+      setBusy(true);
+      try {
+        const page = await getAdminAuditLog({
+          limit: PAGE_SIZE,
+          offset,
+          search,
+          action,
+          actorId,
+          from: from === '' ? undefined : new Date(`${from}T00:00:00.000Z`).toISOString(),
+          to: to === '' ? undefined : new Date(`${to}T23:59:59.999Z`).toISOString(),
+        });
+        setEntries((prev) => (append ? [...prev, ...page.entries] : page.entries));
+        setTotal(page.total);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'The audit log could not be loaded.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [action, actorId, from, search, to],
+  );
 
   useEffect(() => {
     void load(0, false);
@@ -55,6 +71,48 @@ export default function AdminLogPage(): React.ReactElement {
 
       {error !== null && <p className={styles.error}>{error}</p>}
 
+      <form
+        className={styles.filters}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void load(0, false);
+        }}
+      >
+        <input
+          aria-label="Search audit log"
+          placeholder="Search action or subject"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <input
+          aria-label="Filter action"
+          placeholder="Action"
+          value={action}
+          onChange={(event) => setAction(event.target.value)}
+        />
+        <input
+          aria-label="Filter actor"
+          placeholder="Actor ID"
+          value={actorId}
+          onChange={(event) => setActorId(event.target.value)}
+        />
+        <input
+          aria-label="From date"
+          type="date"
+          value={from}
+          onChange={(event) => setFrom(event.target.value)}
+        />
+        <input
+          aria-label="To date"
+          type="date"
+          value={to}
+          onChange={(event) => setTo(event.target.value)}
+        />
+        <Button type="submit" size="sm">
+          Filter
+        </Button>
+      </form>
+
       <Table
         cols={[
           { label: 'When', width: 170 },
@@ -68,7 +126,9 @@ export default function AdminLogPage(): React.ReactElement {
           <Badge key="action" mono pill={false}>
             {entry.action}
           </Badge>,
-          entry.subjectId === null ? entry.subjectType : `${entry.subjectType} ${entry.subjectId.slice(0, 8)}`,
+          entry.subjectId === null
+            ? entry.subjectType
+            : `${entry.subjectType} ${entry.subjectId.slice(0, 8)}`,
         ])}
       />
 

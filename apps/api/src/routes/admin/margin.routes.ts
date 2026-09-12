@@ -29,6 +29,16 @@ const marginQuery = z.object({
   to: z.string().datetime().optional(),
 });
 
+function csvCell(value: unknown): string {
+  const text =
+    value === null || value === undefined
+      ? ''
+      : typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
+        ? String(value)
+        : JSON.stringify(value);
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
 export function adminMarginRoutes(db: PrismaClient): Router {
   const router = Router();
   router.use(requireAuth);
@@ -44,6 +54,57 @@ export function adminMarginRoutes(db: PrismaClient): Router {
       to: parsed.data.to === undefined ? undefined : new Date(parsed.data.to),
     });
     res.status(200).json({ report });
+  });
+
+  router.get('/margin/export', async (req: AuthedRequest, res: Response) => {
+    const parsed = marginQuery.safeParse(req.query);
+    if (!parsed.success) {
+      badRequest(res, 'from and to, if given, must be ISO 8601 datetimes.', parsed.error.flatten());
+      return;
+    }
+    const report = await getMarginReport(db, {
+      from: parsed.data.from === undefined ? undefined : new Date(parsed.data.from),
+      to: parsed.data.to === undefined ? undefined : new Date(parsed.data.to),
+    });
+    const rows = [
+      ['section', 'id', 'module', 'credits', 'cost_micros', 'count', 'succeeded', 'failed'],
+      ...report.perScan.map((row) => [
+        'scan',
+        row.scanId,
+        '',
+        row.chargedCredits,
+        row.costMicros,
+        '',
+        '',
+        '',
+      ]),
+      ...report.perArea.map((row) => [
+        'area',
+        '',
+        row.module,
+        row.chargedCredits,
+        row.costMicros,
+        '',
+        '',
+        '',
+      ]),
+      ...report.perCapability.map((row) => [
+        'capability',
+        row.capabilityId,
+        row.module,
+        '',
+        row.costMicros,
+        row.executionCount,
+        row.succeededCount,
+        row.failedCount,
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+    res
+      .status(200)
+      .type('text/csv')
+      .set('Content-Disposition', 'attachment; filename="margin-report.csv"')
+      .send(csv);
   });
 
   return router;

@@ -31,6 +31,7 @@
 import { assemblePrompt, secretsToFindings } from '@webaudit/redaction';
 import type { RedactedSecretRef } from '@webaudit/redaction';
 import type { AiExecutor, AiInvocationRecord } from '@webaudit/ai-executor';
+import { computePromptVersion } from '@webaudit/ai-executor';
 import type { CapabilityFinding, ModuleType } from '@webaudit/types';
 import { containCapabilityCall } from '@webaudit/capability-sdk';
 import type { CapabilityInput } from '@webaudit/capability-sdk';
@@ -198,9 +199,14 @@ export async function runAiLayer(options: AiLayerOptions): Promise<AiLayerOutcom
     (secret) => !targetSuppliedPaths.has(secret.path),
   );
   for (const secret of contributorSecrets) {
+    // T310: scanId is included so this line can be correlated with the scan's
+    // other AI-relevant log lines and AiInvocation/CapabilityExecution rows
+    // (both already carry scanId) without a full tracing platform (see
+    // docs/reviews/AI-ENGINEERING-CURRENT-VS-TARGET-AUDIT.md Part 9.2).
     console.warn(
-      `[module-runner] ${secret.kind} in the prompt contribution at ${secret.path}. ` +
-        'It was redacted and is not reported as a finding about the target.',
+      `[module-runner] scanId=${options.scanId ?? 'unknown'} ${secret.kind} in the prompt ` +
+        `contribution at ${secret.path}. It was redacted and is not reported as a finding ` +
+        'about the target.',
     );
   }
 
@@ -208,6 +214,7 @@ export async function runAiLayer(options: AiLayerOptions): Promise<AiLayerOutcom
     task: prompt.task,
     prompt: assembled.prompt,
     schema: prompt.responseSchema,
+    promptVersion: computePromptVersion(prompt.systemPrompt),
     ...(options.scanId === undefined ? {} : { scanId: options.scanId }),
   });
 

@@ -25,6 +25,7 @@ const isBrowser = typeof window !== 'undefined';
 let accessToken: string | undefined = isBrowser
   ? (localStorage.getItem(TOKEN_KEY) ?? undefined)
   : undefined;
+const unauthorizedListeners = new Set<() => void>();
 
 export function getAccessToken(): string | undefined {
   return accessToken;
@@ -40,6 +41,16 @@ export function setAccessToken(token: string | undefined): void {
     // Storage unavailable (private mode, quota) — the in-memory token still works
     // for the rest of this page's lifetime.
   }
+}
+
+/** Lets the single UI auth owner react to a 401 from any API operation. */
+export function subscribeToUnauthorized(listener: () => void): () => void {
+  unauthorizedListeners.add(listener);
+  return () => unauthorizedListeners.delete(listener);
+}
+
+function notifyUnauthorized(): void {
+  for (const listener of unauthorizedListeners) listener();
 }
 
 export class ApiError extends Error {
@@ -77,6 +88,10 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   const parsed: unknown = text === '' ? undefined : JSON.parse(text);
 
   if (!res.ok) {
+    if (res.status === 401) {
+      setAccessToken(undefined);
+      notifyUnauthorized();
+    }
     const errorBody = (parsed as { error?: { code?: string; message?: string; details?: unknown } })
       ?.error;
     throw new ApiError(
@@ -92,14 +107,37 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
 
-export function register(email: string, password: string): Promise<{ message: string }> {
-  return request('/auth/register', { method: 'POST', body: { email, password }, token: null });
+export function register(
+  email: string,
+  password: string,
+  name?: string,
+): Promise<{ message: string }> {
+  return request('/auth/register', {
+    method: 'POST',
+    body: { email, password, ...(name === undefined ? {} : { name }) },
+    token: null,
+  });
 }
 
 export async function login(email: string, password: string): Promise<{ accessToken: string }> {
   const result = await request<{ accessToken: string }>('/auth/login', {
     method: 'POST',
     body: { email, password },
+    token: null,
+  });
+  setAccessToken(result.accessToken);
+  return result;
+}
+
+/** Invalidates the server-side refresh session; callers still clear the access token locally. */
+export async function logout(): Promise<void> {
+  await request<undefined>('/auth/logout', { method: 'POST' });
+}
+
+/** Restores an access token from the HTTP-only refresh cookie when one is valid. */
+export async function refreshAccessToken(): Promise<{ accessToken: string }> {
+  const result = await request<{ accessToken: string }>('/auth/refresh', {
+    method: 'POST',
     token: null,
   });
   setAccessToken(result.accessToken);
@@ -116,9 +154,11 @@ export async function login(email: string, password: string): Promise<{ accessTo
 export interface CurrentUser {
   readonly id: string;
   readonly email: string;
+  readonly name: string | null;
   readonly isOperator: boolean;
   readonly emailVerified: boolean;
   readonly plan: PlanId | 'free';
+  readonly githubLogin: string | null;
   readonly credits: {
     readonly plan: number;
     readonly purchased: number;
@@ -128,6 +168,29 @@ export interface CurrentUser {
 
 export function getMe(): Promise<CurrentUser> {
   return request('/auth/me');
+}
+
+export function updateProfile(name: string): Promise<{ name: string | null }> {
+  return request('/auth/me', { method: 'PATCH', body: { name } });
+}
+
+export function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<{ message: string }> {
+  return request('/auth/change-password', {
+    method: 'POST',
+    body: { currentPassword, newPassword },
+  });
+}
+
+export function disconnectGithub(): Promise<{ connected: boolean }> {
+  return request('/auth/github/connect', { method: 'DELETE' });
+}
+
+export async function deleteAccount(): Promise<void> {
+  await request<undefined>('/auth/me', { method: 'DELETE' });
+  setAccessToken(undefined);
 }
 
 export function resendVerification(email: string): Promise<{ message: string }> {
@@ -221,6 +284,42 @@ export async function uploadArchive(file: File): Promise<{ upload: StagedUpload 
   return parsed as { upload: StagedUpload };
 }
 
+export interface CapabilityUploadResult {
+  readonly passed: boolean;
+  readonly verdict?: unknown;
+}
+
+export async function uploadCapability(
+  file: File,
+  name: string,
+  version: string,
+): Promise<CapabilityUploadResult> {
+  const form = new FormData();
+  form.append('bundle', file);
+  const headers: Record<string, string> = {};
+  if (accessToken !== undefined) headers['Authorization'] = `Bearer ${accessToken}`;
+  const query = new URLSearchParams({ name, version });
+  const res = await fetch(`${API_BASE}/admin/capabilities/upload?${query.toString()}`, {
+    method: 'POST',
+    headers,
+    credentials: 'include',
+    body: form,
+  });
+  const text = await res.text();
+  const parsed: unknown = text === '' ? undefined : JSON.parse(text);
+  if (!res.ok) {
+    const errorBody = (parsed as { error?: { code?: string; message?: string; details?: unknown } })
+      ?.error;
+    throw new ApiError(
+      res.status,
+      errorBody?.code ?? 'UNKNOWN',
+      errorBody?.message ?? 'The capability could not be uploaded.',
+      errorBody?.details,
+    );
+  }
+  return parsed as CapabilityUploadResult;
+}
+
 export function quoteScan(
   targetId: string,
   modules: readonly string[],
@@ -294,6 +393,29 @@ export function getReport(scanId: string): Promise<{ report: Report }> {
   return request(`/scans/${scanId}/report`);
 }
 
+export async function getReportExport(
+  scanId: string,
+): Promise<{ readonly html: string; readonly filename: string }> {
+  const headers: Record<string, string> = {};
+  if (accessToken !== undefined) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE}/scans/${encodeURIComponent(scanId)}/export`, {
+    method: 'GET',
+    headers,
+    credentials: 'include',
+  });
+  const html = await res.text();
+  if (!res.ok) {
+    throw new ApiError(
+      res.status,
+      'REPORT_EXPORT_FAILED',
+      'The report export could not be created.',
+    );
+  }
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const filename = /filename="([^"]+)"/i.exec(disposition)?.[1] ?? `report-${scanId}.html`;
+  return { html, filename };
+}
+
 // ─── Fix loop (US2) ─────────────────────────────────────────────────────────
 
 export type IssueState = 'OPEN' | 'ASSERTED_FIXED' | 'RESOLVED' | 'UNVERIFIABLE' | 'REOPENED';
@@ -334,6 +456,10 @@ export function getIssues(
   if (filters.state !== undefined) params.set('state', filters.state);
   const query = params.toString();
   return request(`/scans/${scanId}/issues${query === '' ? '' : `?${query}`}`);
+}
+
+export function getOutstandingIssueCount(): Promise<{ readonly count: number }> {
+  return request('/issues/count');
 }
 
 export function getIssueAttempts(
@@ -514,11 +640,39 @@ export function getCredits(): Promise<{
   return request('/billing/credits');
 }
 
-export function subscribe(planId: SubscribablePlanId): Promise<{ subscription: SubscriptionView }> {
+export interface UsageSummary {
+  readonly balance: CreditBalanceView;
+  readonly spentCredits: number;
+  readonly auditsRun: number;
+  readonly rechecks: number;
+  readonly dailySpend: readonly { readonly date: string; readonly credits: number }[];
+  readonly byArea: readonly { readonly area: string; readonly credits: number }[];
+  readonly refunds: readonly {
+    readonly date: string;
+    readonly reason: string;
+    readonly credits: number;
+  }[];
+}
+
+export function getUsage(): Promise<UsageSummary> {
+  return request('/billing/usage');
+}
+
+export interface CheckoutView {
+  readonly checkoutUrl: string;
+  readonly providerReference: string;
+}
+
+export type SubscribeResult =
+  { readonly checkout: CheckoutView } | { readonly subscription: SubscriptionView };
+
+export function subscribe(planId: SubscribablePlanId): Promise<SubscribeResult> {
   return request('/billing/subscribe', { method: 'POST', body: { planId } });
 }
 
-export function changePlan(planId: SubscribablePlanId): Promise<{ subscription: SubscriptionView }> {
+export function changePlan(
+  planId: SubscribablePlanId,
+): Promise<{ subscription: SubscriptionView }> {
   return request('/billing/change-plan', { method: 'POST', body: { planId } });
 }
 
@@ -531,11 +685,56 @@ export function cancelSubscription(): Promise<{
 
 export function purchaseCredits(
   credits: number,
-): Promise<{ purchase: { creditsAdded: number; kind: 'PURCHASED' } }> {
+): Promise<
+  | { readonly checkout: CheckoutView }
+  | { readonly purchase: { readonly lot: unknown; readonly transaction: unknown } }
+> {
   return request('/billing/credits/purchase', { method: 'POST', body: { credits } });
 }
 
 // ─── Admin: users (US7, T205) ───────────────────────────────────────────────
+
+export interface BillingReceiptSummary {
+  readonly id: string;
+  readonly billingEventId: string;
+  readonly providerReference: string;
+  readonly kind: string;
+  readonly amountMicros: number;
+  readonly createdAt: string;
+}
+
+export function getReceipts(): Promise<{ receipts: readonly BillingReceiptSummary[] }> {
+  return request('/billing/receipts');
+}
+
+export async function getReceiptHtml(id: string): Promise<string> {
+  const headers: Record<string, string> = {};
+  if (accessToken !== undefined) headers['Authorization'] = `Bearer ${accessToken}`;
+
+  const res = await fetch(`${API_BASE}/billing/receipts/${encodeURIComponent(id)}`, {
+    method: 'GET',
+    headers,
+    credentials: 'include',
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    let parsed: unknown;
+    try {
+      parsed = text === '' ? undefined : JSON.parse(text);
+    } catch {
+      parsed = undefined;
+    }
+    const errorBody = (parsed as { error?: { code?: string; message?: string; details?: unknown } })
+      ?.error;
+    throw new ApiError(
+      res.status,
+      errorBody?.code ?? 'UNKNOWN',
+      errorBody?.message ?? 'The request failed.',
+      errorBody?.details,
+    );
+  }
+  return text;
+}
 
 export interface AdminUserSummary {
   readonly id: string;
@@ -564,6 +763,52 @@ export function setUserOperator(
   return request(`/admin/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
     body: { isOperator },
+  });
+}
+
+export interface AdminUserDetail extends AdminUserSummary {
+  readonly subscription: unknown;
+  readonly creditLots: readonly unknown[];
+}
+
+export function getAdminUserDetail(userId: string): Promise<{ readonly user: AdminUserDetail }> {
+  return request(`/admin/users/${encodeURIComponent(userId)}`);
+}
+
+export function adjustUserCredits(
+  userId: string,
+  input: {
+    readonly amount: number;
+    readonly kind: 'PLAN' | 'PURCHASED';
+    readonly expiresAt: string | null;
+    readonly reason: string;
+  },
+): Promise<{ readonly balanceAfter: unknown }> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/credits`, {
+    method: 'POST',
+    body: input,
+  });
+}
+
+export interface AdminProviderChainEntry {
+  readonly vendor: string;
+  readonly model: string;
+  readonly position: number;
+  readonly isEnabled: boolean;
+}
+
+export function getAdminProviders(): Promise<{
+  readonly chain: readonly AdminProviderChainEntry[];
+}> {
+  return request('/admin/providers');
+}
+
+export function setAdminProviderChain(
+  chain: readonly Pick<AdminProviderChainEntry, 'vendor' | 'model' | 'isEnabled'>[],
+): Promise<{ readonly chain: readonly AdminProviderChainEntry[] }> {
+  return request('/admin/providers', {
+    method: 'PATCH',
+    body: { chain },
   });
 }
 
@@ -600,11 +845,18 @@ export function getAdminPlans(
 export function setPlanActive(
   planId: string,
   isActive: boolean,
+  patch: Partial<Omit<AdminPlanRecord, 'id'>> = {},
 ): Promise<{ plan: AdminPlanRecord }> {
   return request(`/admin/plans/${encodeURIComponent(planId)}`, {
     method: 'PATCH',
-    body: { isActive },
+    body: { ...patch, isActive },
   });
+}
+
+export type AdminPlanInput = Omit<AdminPlanRecord, 'isActive'> & { readonly isActive?: boolean };
+
+export function createAdminPlan(input: AdminPlanInput): Promise<{ plan: AdminPlanRecord }> {
+  return request('/admin/plans', { method: 'POST', body: input });
 }
 
 // ─── Admin: margin (US7, T206) ──────────────────────────────────────────────
@@ -650,6 +902,14 @@ export function getMarginReport(): Promise<{ report: MarginReport }> {
   return request('/admin/margin');
 }
 
+export async function exportMarginReport(): Promise<Blob> {
+  const headers: Record<string, string> = {};
+  if (accessToken !== undefined) headers['Authorization'] = `Bearer ${accessToken}`;
+  const res = await fetch(`${API_BASE}/admin/margin/export`, { headers, credentials: 'include' });
+  if (!res.ok) throw new ApiError(res.status, 'EXPORT_FAILED', 'The margin export failed.');
+  return res.blob();
+}
+
 // ─── Admin: capabilities (US7, T207) ────────────────────────────────────────
 
 export interface AdminCapabilitySummary {
@@ -679,6 +939,16 @@ export function setCapabilityEnabled(
   return request(`/admin/capabilities/${encodeURIComponent(capabilityId)}`, {
     method: 'PATCH',
     body: { isEnabled },
+  });
+}
+
+export function setCapabilityPlanRestrictions(
+  capabilityId: string,
+  planIds: readonly string[],
+): Promise<{ capability: AdminCapabilitySummary }> {
+  return request(`/admin/capabilities/${encodeURIComponent(capabilityId)}`, {
+    method: 'PATCH',
+    body: { planIds },
   });
 }
 
@@ -718,7 +988,15 @@ export interface AdminAuditLogEntry {
 }
 
 export function getAdminAuditLog(
-  opts: { readonly limit?: number; readonly offset?: number } = {},
+  opts: {
+    readonly limit?: number | undefined;
+    readonly offset?: number | undefined;
+    readonly action?: string | undefined;
+    readonly actorId?: string | undefined;
+    readonly search?: string | undefined;
+    readonly from?: string | undefined;
+    readonly to?: string | undefined;
+  } = {},
 ): Promise<{
   entries: readonly AdminAuditLogEntry[];
   total: number;
@@ -728,6 +1006,11 @@ export function getAdminAuditLog(
   const params = new URLSearchParams();
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.offset !== undefined) params.set('offset', String(opts.offset));
+  if (opts.action !== undefined && opts.action !== '') params.set('action', opts.action);
+  if (opts.actorId !== undefined && opts.actorId !== '') params.set('actorId', opts.actorId);
+  if (opts.search !== undefined && opts.search !== '') params.set('search', opts.search);
+  if (opts.from !== undefined && opts.from !== '') params.set('from', opts.from);
+  if (opts.to !== undefined && opts.to !== '') params.set('to', opts.to);
   const query = params.toString();
   return request(`/admin/audit-log${query === '' ? '' : `?${query}`}`);
 }

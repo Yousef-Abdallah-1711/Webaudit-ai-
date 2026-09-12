@@ -72,8 +72,18 @@ describe('mechanism check: admin console reference extraction + comparison is re
   });
 
   it('extracts two different named views from the one combined reference bundle', async () => {
-    const overview = await screenshotAdminReferenceView(browser, ADMIN_REFERENCE, 'Overview', VIEWPORTS[0]!);
-    const users = await screenshotAdminReferenceView(browser, ADMIN_REFERENCE, 'Users', VIEWPORTS[0]!);
+    const overview = await screenshotAdminReferenceView(
+      browser,
+      ADMIN_REFERENCE,
+      'Overview',
+      VIEWPORTS[0]!,
+    );
+    const users = await screenshotAdminReferenceView(
+      browser,
+      ADMIN_REFERENCE,
+      'Users',
+      VIEWPORTS[0]!,
+    );
     expect(overview.length).toBeGreaterThan(1000);
     expect(users.length).toBeGreaterThan(1000);
     expect(Buffer.compare(overview, users)).not.toBe(0);

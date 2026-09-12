@@ -40,7 +40,7 @@ vi.mock('../../lib/realtime.js', () => ({
 }));
 
 describe('ScanProgress', () => {
-  it('shows each area\'s real state from the REST resync, even when no realtime event ever arrives', async () => {
+  it("shows each area's real state from the REST resync, even when no realtime event ever arrives", async () => {
     const { ScanProgress } = await import('../../components/scan/ScanProgress.js');
     const mounted = await renderClient(
       createElement(ScanProgress, { scanId: 'scan-1', hostname: 'example.com' }),

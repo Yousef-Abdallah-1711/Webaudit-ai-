@@ -141,8 +141,7 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
         if (cancelled) return;
         setLoad({
           status: 'error',
-          message:
-            error instanceof ApiError ? error.message : 'Could not load the questionnaire.',
+          message: error instanceof ApiError ? error.message : 'Could not load the questionnaire.',
         });
       });
     return () => {
@@ -190,9 +189,7 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
     void handleResolve(() =>
       submitQuestionnaire(scanId, {
         ...(audience !== undefined && audience !== '' ? { audience } : {}),
-        ...(stylePreference !== undefined && stylePreference !== ''
-          ? { stylePreference }
-          : {}),
+        ...(stylePreference !== undefined && stylePreference !== '' ? { stylePreference } : {}),
         ...(admiredReferences.length > 0 ? { admiredReferences } : {}),
         ...(brandColors.length > 0 ? { brandColors } : {}),
       }),
@@ -215,8 +212,8 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
     return (
       <Card eyebrow="Design intent" title="A quick question about your brand">
         <p className={styles.note}>
-          This question is no longer waiting for an answer — it resumed on its own, and the
-          audit is continuing.
+          This question is no longer waiting for an answer — it resumed on its own, and the audit is
+          continuing.
         </p>
       </Card>
     );
@@ -230,16 +227,15 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
     );
   }
 
-  const remainingMs =
-    load.deadline === null ? null : new Date(load.deadline).getTime() - now;
+  const remainingMs = load.deadline === null ? null : new Date(load.deadline).getTime() - now;
   const urgent = remainingMs !== null && remainingMs < 60_000;
 
   return (
     <Card eyebrow="Design intent" title="A quick question about your brand">
       {remainingMs !== null && (
         <p className={urgent ? `${styles.deadline} ${styles.deadlineUrgent}` : styles.deadline}>
-          You have <span dir="ltr">{formatRemaining(Math.max(0, remainingMs))}</span> left to
-          answer — after that the audit resumes on its own.
+          You have <span dir="ltr">{formatRemaining(Math.max(0, remainingMs))}</span> left to answer
+          — after that the audit resumes on its own.
         </p>
       )}
 

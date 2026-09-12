@@ -9,31 +9,20 @@
  * Not ported, for the same reason `AdminShell`'s dead `useTheme()`
  * destructure wasn't (see components/admin/AdminShell.tsx).
  *
- * No hooks anywhere in the source, so this stays a Server Component.
- * All figures (audits, credits, provider cost, the three "needs attention"
- * entries, per-area issue counts) are the exact placeholder content the
- * vendored source shows.
+ * No hooks anywhere in the source, so this stays a Server Component. The
+ * overview endpoint is not available yet, so this page deliberately renders
+ * an honest unavailable state instead of presenting vendored placeholder data
+ * as production telemetry.
  */
 import { Card } from '../../../components/ui';
 import { AHead, Stat } from '../../../components/admin';
-import { ModuleStatus, SeverityBadge } from '../../../components/report';
 import styles from './page.module.css';
 
 const STATS: readonly (readonly [string, string, string])[] = [
-  ['Audits completed', '248', '9 degraded · 2 failed'],
-  ['Credits recognised', '4,180', '112 refunded'],
-  ['Provider cost', '$41.22', 'gross margin 78%'],
-  ['Queue depth', '3', 'longest wait 41s'],
-];
-
-const NEEDS_ATTENTION: readonly (readonly [
-  string,
-  string,
-  'critical' | 'high' | 'medium' | 'low' | 'info' | 'resolved',
-])[] = [
-  ['openai adapter degraded', 'Chain still spans two vendors — no action required', 'medium'],
-  ['playwright-runner disabled', 'Testing area reports 2 of 5 checks unavailable', 'high'],
-  ['sandbox-runner unavailable', 'Capability upload returns 503 with no fallback', 'info'],
+  ['Audits completed', 'Unavailable', 'Live overview data is not available'],
+  ['Credits recognised', 'Unavailable', 'Live overview data is not available'],
+  ['Provider cost', 'Unavailable', 'Live overview data is not available'],
+  ['Queue depth', 'Unavailable', 'Live overview data is not available'],
 ];
 
 export default function AdminOverviewPage(): React.ReactElement {
@@ -49,28 +38,10 @@ export default function AdminOverviewPage(): React.ReactElement {
 
       <div className={styles.twoCol}>
         <Card padding={22} title="Needs attention">
-          {NEEDS_ATTENTION.map(([title, desc, level]) => (
-            <div key={title} className={styles.attentionRow}>
-              <SeverityBadge level={level} />
-              <div>
-                <div className={styles.attentionTitle}>{title}</div>
-                <div className={styles.attentionDesc}>{desc}</div>
-              </div>
-            </div>
-          ))}
+          <div className={styles.attentionDesc}>No live attention items are available.</div>
         </Card>
         <Card padding={22} title="Area health">
-          <div className={styles.areaHealth}>
-            <ModuleStatus area="Security" state="complete" issues={412} />
-            <ModuleStatus area="Performance" state="complete" issues={301} />
-            <ModuleStatus area="Design" state="complete" issues={188} />
-            <ModuleStatus area="Search visibility" state="complete" issues={140} />
-            <ModuleStatus
-              area="Testing"
-              state="degraded"
-              detail="playwright-runner disabled by operator"
-            />
-          </div>
+          <div className={styles.attentionDesc}>Live area health data is not available.</div>
         </Card>
       </div>
     </div>

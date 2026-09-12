@@ -19,9 +19,7 @@ import metaChecker from '@webaudit/capability-meta-checker';
 import contentChecker from '@webaudit/capability-content-checker';
 import dataLeakScanner from '@webaudit/capability-data-leak-scanner';
 
-function ctxReturning(
-  responses: SafeResponse | readonly SafeResponse[],
-): CodeLayerContext {
+function ctxReturning(responses: SafeResponse | readonly SafeResponse[]): CodeLayerContext {
   const queue = Array.isArray(responses) ? [...responses] : [responses];
   const one = Array.isArray(responses) ? undefined : (responses as SafeResponse);
   return {
@@ -35,7 +33,8 @@ function ctxReturning(
 }
 
 function res(overrides: Partial<SafeResponse> & { body?: string } = {}): SafeResponse {
-  const body = overrides.body ?? '<html><head><title>Home</title></head><body><h1>Hi</h1></body></html>';
+  const body =
+    overrides.body ?? '<html><head><title>Home</title></head><body><h1>Hi</h1></body></html>';
   return {
     url: overrides.url ?? 'https://example.com/',
     status: overrides.status ?? 200,
@@ -63,7 +62,8 @@ describe('headers-checker.reverify', () => {
   it('FAILED with evidence when it is still absent', async () => {
     const r = await headersChecker.reverify!(at('headers.csp-missing'), ctxReturning(res()));
     expect(r.outcome).toBe('FAILED');
-    if (r.outcome === 'FAILED') expect(r.evidence).toMatchObject({ header: 'content-security-policy' });
+    if (r.outcome === 'FAILED')
+      expect(r.evidence).toMatchObject({ header: 'content-security-policy' });
   });
   it('UNVERIFIABLE for a checkId it does not own', async () => {
     const r = await headersChecker.reverify!(at('ssl.hsts-missing'), ctxReturning(res()));
@@ -113,7 +113,8 @@ describe('owasp-checker.reverify', () => {
       ctxReturning(
         res({
           headers: {
-            'set-cookie': 'sid=abc; Secure; HttpOnly, tracking=xyz; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+            'set-cookie':
+              'sid=abc; Secure; HttpOnly, tracking=xyz; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
           },
         }),
       ),
@@ -126,7 +127,8 @@ describe('owasp-checker.reverify', () => {
       ctxReturning(
         res({
           headers: {
-            'set-cookie': 'sid=abc; Secure; HttpOnly, tracking=xyz; Secure; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
+            'set-cookie':
+              'sid=abc; Secure; HttpOnly, tracking=xyz; Secure; Path=/; Expires=Wed, 21 Oct 2026 07:28:00 GMT',
           },
         }),
       ),

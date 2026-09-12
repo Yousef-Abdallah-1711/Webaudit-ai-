@@ -70,7 +70,12 @@ beforeEach(async () => {
   });
   userId = user.id;
   const target = await testDb.target.create({
-    data: { userId, inputType: 'URL', canonicalValue: 'https://recur.example.com', displayName: 'recur' },
+    data: {
+      userId,
+      inputType: 'URL',
+      canonicalValue: 'https://recur.example.com',
+      displayName: 'recur',
+    },
   });
   targetId = target.id;
 });

@@ -20,8 +20,13 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Button, Card, StatRow } from '../../../../components/ui';
 import { PageHead } from '../../../../components/dashboard';
-import { ScoreArc, ModuleStatus, IssueCard, type ModuleStatusProps } from '../../../../components/report';
-import { getReport, type Report, type ReportIssue } from '../../../../lib/api';
+import {
+  ScoreArc,
+  ModuleStatus,
+  IssueCard,
+  type ModuleStatusProps,
+} from '../../../../components/report';
+import { getReport, getReportExport, type Report, type ReportIssue } from '../../../../lib/api';
 import styles from './page.module.css';
 
 const MODULE_LABEL: Readonly<Record<string, string>> = {
@@ -65,6 +70,8 @@ export default function ReportPage(): React.ReactElement {
   const scanId = params.id;
   const [report, setReport] = useState<Report | null>(null);
   const [area, setArea] = useState('All');
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,6 +83,24 @@ export default function ReportPage(): React.ReactElement {
     };
   }, [scanId]);
 
+  const onExport = async (): Promise<void> => {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const { html, filename } = await getReportExport(scanId);
+      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setExportError('The report export could not be created.');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   if (report === null) {
     return (
       <div>
@@ -85,9 +110,7 @@ export default function ReportPage(): React.ReactElement {
   }
 
   const list =
-    area === 'All'
-      ? report.issues
-      : report.issues.filter((i) => MODULE_LABEL[i.module] === area);
+    area === 'All' ? report.issues : report.issues.filter((i) => MODULE_LABEL[i.module] === area);
 
   const counts = {
     critical: report.issues.filter((i) => i.severity === 'CRITICAL').length,
@@ -104,13 +127,19 @@ export default function ReportPage(): React.ReactElement {
         meta={`state ${report.state.toLowerCase()}`}
         actions={
           <>
-            <Button variant="secondary" size="sm">
-              Export
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={exporting}
+              onClick={() => void onExport()}
+            >
+              {exporting ? 'Exporting...' : 'Export'}
             </Button>
             <Button size="sm">Re-audit</Button>
           </>
         }
       />
+      {exportError !== null && <p className={styles.empty}>{exportError}</p>}
       <div className={styles.grid}>
         <div className={styles.side}>
           <Card padding={20}>

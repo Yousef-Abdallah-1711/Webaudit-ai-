@@ -7,11 +7,16 @@
  * apps/web/components/dashboard/.
  */
 import { AdminShell } from '../../components/admin';
+import { RouteGuard } from '../../components/auth/RouteGuard';
 
 export default function AdminLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>): React.ReactElement {
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <RouteGuard requireOperator>
+      <AdminShell>{children}</AdminShell>
+    </RouteGuard>
+  );
 }

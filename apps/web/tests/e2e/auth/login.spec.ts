@@ -20,7 +20,9 @@ test('correct credentials reach the dashboard', async ({ page }) => {
   await page.waitForURL(/\/scan$/);
 });
 
-test('wrong password shows the real, specific error — not a generic network failure', async ({ page }) => {
+test('wrong password shows the real, specific error — not a generic network failure', async ({
+  page,
+}) => {
   await page.goto(`${stack.webBaseUrl}/login`);
   await page.getByLabel('Email').fill(creds.email);
   await page.getByLabel('Password').fill('definitely-wrong');
@@ -30,7 +32,9 @@ test('wrong password shows the real, specific error — not a generic network fa
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test('an unverified account is refused with a specific reason, not silently logged in', async ({ page }) => {
+test('an unverified account is refused with a specific reason, not silently logged in', async ({
+  page,
+}) => {
   const unverified = { email: 'unverified@example.com', password: 'correct-horse-battery-staple' };
   const res = await fetch(`${stack.apiBaseUrl}/auth/register`, {
     method: 'POST',

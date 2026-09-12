@@ -33,7 +33,11 @@ export interface RunCodeLayerInput {
 }
 
 export type RunCodeLayerOutcome =
-  | { readonly ok: true; readonly findings: readonly CapabilityFinding[]; readonly applicable: boolean }
+  | {
+      readonly ok: true;
+      readonly findings: readonly CapabilityFinding[];
+      readonly applicable: boolean;
+    }
   | { readonly ok: false; readonly reason: SandboxFailure; readonly detail?: string };
 
 export async function runCodeLayerCheck(
@@ -53,11 +57,19 @@ export async function runCodeLayerCheck(
   });
 
   const body = (await res.json()) as
-    | { readonly ok: true; readonly findings: readonly CapabilityFinding[]; readonly applicable?: boolean }
+    | {
+        readonly ok: true;
+        readonly findings: readonly CapabilityFinding[];
+        readonly applicable?: boolean;
+      }
     | { readonly ok: false; readonly reason: SandboxFailure; readonly detail?: string };
 
   if (!body.ok) {
-    return { ok: false, reason: body.reason, ...(body.detail === undefined ? {} : { detail: body.detail }) };
+    return {
+      ok: false,
+      reason: body.reason,
+      ...(body.detail === undefined ? {} : { detail: body.detail }),
+    };
   }
   return { ok: true, findings: body.findings, applicable: body.applicable ?? true };
 }

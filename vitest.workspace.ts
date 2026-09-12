@@ -38,6 +38,9 @@ export default defineWorkspace([
       environment: 'node',
       env: {
         AI_MODE: 'fixtures',
+        // Keep Vitest queues isolated from any live development worker. The
+        // tests use real BullMQ workers and must not race a user's dev stack.
+        REDIS_URL: 'redis://localhost:6389/15',
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values
@@ -56,6 +59,7 @@ export default defineWorkspace([
       environment: 'node',
       env: {
         AI_MODE: 'fixtures',
+        REDIS_URL: 'redis://localhost:6389/15',
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values
@@ -79,6 +83,7 @@ export default defineWorkspace([
       environment: 'node',
       env: {
         AI_MODE: 'fixtures',
+        REDIS_URL: 'redis://localhost:6389/15',
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values

@@ -44,4 +44,10 @@ describe('AdminUsersPage', () => {
     expect(html).not.toContain('0 accounts');
     expect(html).not.toContain('accounts');
   });
+
+  it('renders the real credit-grant and user-detail controls', () => {
+    const html = render(createElement(AdminUsersPage));
+    expect(html).toContain('Grant credits');
+    expect(html).toContain('View detail');
+  });
 });

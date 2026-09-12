@@ -19,41 +19,40 @@ function render(element: React.ReactElement): string {
 }
 
 describe('UsagePage', () => {
-  it('renders every stat card, the chart legend, and both breakdown tables', () => {
+  it('renders the real-data loading shell, stat cards, chart, and breakdown tables', () => {
     const html = render(createElement(UsagePage));
     expect(html).toContain('Spent this period');
-    expect(html).toContain('980');
-    expect(html).toContain('peak 143 cr');
-    expect(html).toContain('Security');
+    expect(html).toContain('Loading usage...');
+    expect(html).toContain('peak 1 cr');
+    expect(html).toContain('By area');
     expect(html).toContain('Refunds and adjustments');
   });
 
-  it('renders 24 daily-spend bars, one per day', () => {
+  it('does not fabricate daily-spend bars before the usage query resolves', () => {
     const html = render(createElement(UsagePage));
     const bars = [...html.matchAll(/title="\d+ credits"/g)];
-    expect(bars).toHaveLength(24);
+    expect(bars).toHaveLength(0);
   });
 
-  it('gives a zero-credit day a different class than a non-zero day', () => {
+  it('keeps the chart empty rather than inventing zero and non-zero days', () => {
     const html = render(createElement(UsagePage));
-    // DAYS[1] is 0, DAYS[0] is 38 — their bars must not share a class list.
     const barClasses = [...html.matchAll(/title="\d+ credits" class="([^"]+)"/g)].map((m) => m[1]);
-    expect(barClasses[0]).not.toBe(barClasses[1]);
+    expect(barClasses).toHaveLength(0);
   });
 });
 
 describe('SettingsPage', () => {
-  it('pre-fills name and email as editable, controlled fields', () => {
+  it('does not render the former fabricated profile name on the server shell', () => {
     const html = render(createElement(SettingsPage));
-    expect(html).toContain('value="Khalid Ahmed"');
-    expect(html).toContain('value="you@company.com"');
+    expect(html).toContain('>Profile</h1>');
+    expect(html).not.toContain('Khalid Ahmed');
   });
 
-  it('renders the connected-account, sessions, and delete-account cards', () => {
+  it('renders connected-account, honest session, and delete-account cards', () => {
     const html = render(createElement(SettingsPage));
-    expect(html).toContain('khalid-a');
-    expect(html).toContain('macOS · Chrome');
-    expect(html).toContain('This device');
+    expect(html).toContain('Loading...');
+    expect(html).toContain('Session device details are not available yet.');
+    expect(html).not.toContain('khalid-a');
     expect(html).toContain('Delete my account');
   });
 

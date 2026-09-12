@@ -34,20 +34,30 @@ const CREDS = { email: 'sc008@example.com', password: 'correct-horse-battery-sta
 
 async function signIn(): Promise<string> {
   await request(app).post('/auth/register').send(CREDS).expect(201);
-  await testDb.user.update({ where: { email: CREDS.email }, data: { emailVerifiedAt: new Date() } });
+  await testDb.user.update({
+    where: { email: CREDS.email },
+    data: { emailVerifiedAt: new Date() },
+  });
   const res = await request(app).post('/auth/login').send(CREDS).expect(200);
   return (res.body as { accessToken: string }).accessToken;
 }
 const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
 
-async function createScan(token: string, modules: string[]): Promise<{ scanId: string; charged: number }> {
+async function createScan(
+  token: string,
+  modules: string[],
+): Promise<{ scanId: string; charged: number }> {
   const target = await request(app)
     .post('/targets')
     .set(auth(token))
     .send({ inputType: 'URL', value: 'https://example.com/' })
     .expect(201);
   const targetId = (target.body as { target: { id: string } }).target.id;
-  const quote = await request(app).post('/scans/quote').set(auth(token)).send({ targetId, modules }).expect(200);
+  const quote = await request(app)
+    .post('/scans/quote')
+    .set(auth(token))
+    .send({ targetId, modules })
+    .expect(200);
   const cost = (quote.body as { quote: { credits: number } }).quote.credits;
   const created = await request(app)
     .post('/scans')
@@ -58,14 +68,20 @@ async function createScan(token: string, modules: string[]): Promise<{ scanId: s
 }
 
 /** What terminal-refund.ts does on a FAILED transition. */
-async function simulatePlatformFailure(scanId: string, deliveredModules: string[]): Promise<number> {
+async function simulatePlatformFailure(
+  scanId: string,
+  deliveredModules: string[],
+): Promise<number> {
   const scan = await testDb.scan.findUniqueOrThrow({ where: { id: scanId } });
   for (const module of deliveredModules) {
     await testDb.moduleResult.create({
       data: { scanId, module: module as never, state: 'COMPLETE', score: 70 },
     });
   }
-  await testDb.scan.update({ where: { id: scanId }, data: { state: 'FAILED', failureReason: 'provider chain crashed' } });
+  await testDb.scan.update({
+    where: { id: scanId },
+    data: { state: 'FAILED', failureReason: 'provider chain crashed' },
+  });
 
   const credits = refundForUndelivered({
     chargedCredits: scan.chargedCredits,
@@ -118,9 +134,17 @@ describe('SC-008 — a platform failure is not billed, and the refund is visible
     const refunded = await simulatePlatformFailure(scanId, []);
 
     const res = await request(app).get('/billing/credits').set(auth(token)).expect(200);
-    const movements = (res.body as {
-      movements: { type: string; amount: number; reason: string; scanId: string | null; createdAt: string }[];
-    }).movements;
+    const movements = (
+      res.body as {
+        movements: {
+          type: string;
+          amount: number;
+          reason: string;
+          scanId: string | null;
+          createdAt: string;
+        }[];
+      }
+    ).movements;
 
     const refundLine = movements.find((m) => m.type === 'REFUND');
     expect(refundLine).toBeDefined();

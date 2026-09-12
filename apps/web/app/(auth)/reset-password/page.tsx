@@ -96,7 +96,9 @@ function ResetPageInner(): React.ReactElement {
           </svg>
           {t('auth_min_chars')}
         </div>
-        {confirm !== '' && !matches && <div className={styles.error}>{t('auth_error_passwords_match')}</div>}
+        {confirm !== '' && !matches && (
+          <div className={styles.error}>{t('auth_error_passwords_match')}</div>
+        )}
         {error !== null && <div className={styles.error}>{error}</div>}
         <Button fullWidth disabled={!ok || submitting} onClick={() => void onSubmit()}>
           {t('auth_reset_submit')}

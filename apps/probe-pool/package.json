@@ -12,6 +12,7 @@
     "@webaudit/types": "workspace:*",
     "@webaudit/config": "workspace:*",
     "@webaudit/capability-sdk": "workspace:*",
+    "@webaudit/safe-net": "workspace:*",
     "@playwright/test": "1.62.1"
   }
 }

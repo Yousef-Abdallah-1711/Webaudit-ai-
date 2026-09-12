@@ -166,7 +166,7 @@ describe('PATCH /providers', () => {
     expect(entries.length).toBe(0);
   });
 
-  it('rejects a chain with a blank model, surfacing buildChain\'s own message, and persists nothing', async () => {
+  it("rejects a chain with a blank model, surfacing buildChain's own message, and persists nothing", async () => {
     const { token } = await makeOperatorToken();
 
     const res = await request(app)
@@ -213,10 +213,12 @@ describe('PATCH /providers', () => {
       .expect(200);
 
     const rows = await testDb.providerChainEntry.findMany({ orderBy: { position: 'asc' } });
-    expect(rows.map((r) => ({ vendor: r.vendor, model: r.model, isEnabled: r.isEnabled }))).toEqual([
-      { vendor: 'google', model: 'gemini-1.5-pro', isEnabled: true },
-      { vendor: 'openai', model: 'gpt-4o-mini', isEnabled: false },
-    ]);
+    expect(rows.map((r) => ({ vendor: r.vendor, model: r.model, isEnabled: r.isEnabled }))).toEqual(
+      [
+        { vendor: 'google', model: 'gemini-1.5-pro', isEnabled: true },
+        { vendor: 'openai', model: 'gpt-4o-mini', isEnabled: false },
+      ],
+    );
   });
 
   it('rejects a malformed body with 400', async () => {

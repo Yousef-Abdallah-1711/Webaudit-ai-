@@ -12,7 +12,9 @@
 
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
 import * as publicSurface from '../../src/index.js';
+import { ok, startFixture, type FixtureServer } from '../helpers/http-fixture.js';
 
 interface PackageManifest {
   readonly exports: Record<string, string>;
@@ -30,10 +32,15 @@ describe('the package entry point', () => {
     expect(manifest.exports['.']).toBe('./src/index.ts');
   });
 
-  it('exports the guarded fetch and the refusal, and nothing else', () => {
+  it('exports the guarded fetch, the browser proxy, the refusal, and nothing else', () => {
+    // `createSafeBrowserProxy` (P2-SSRF-1) is the one deliberate addition to
+    // this list since T051 — its own signature accepts no `policy`/
+    // `allowLoopback` (see the dedicated smuggling test below), so it does
+    // not reopen the gap this test exists to catch.
     expect(Object.keys(publicSurface).sort()).toEqual([
       'SsrfRefusedError',
       'assertPublicTarget',
+      'createSafeBrowserProxy',
       'safeFetch',
     ]);
   });
@@ -66,6 +73,45 @@ describe('the package entry point', () => {
     await expect(
       smuggle('http://127.0.0.1/', { policy: { allowLoopback: true } }),
     ).rejects.toMatchObject({ name: 'SsrfRefusedError', addressClass: 'LOOPBACK' });
+  });
+
+  it('gives createSafeBrowserProxy no policy seam either (P2-SSRF-1)', async () => {
+    // Same shape of test as the two above: a caller reaching for the
+    // internal implementation's shape through the public function still
+    // gets the default policy, so loopback stays refused through the proxy
+    // too — smuggling `policy`/`allowLoopback` through the public export has
+    // no effect. A real local server stands in for the disallowed target,
+    // so a leak would be observable as its content actually arriving.
+    let victim: FixtureServer | undefined;
+    let proxy: { port: number; close(): Promise<void> } | undefined;
+    try {
+      victim = await startFixture(ok('LOOPBACK-MUST-NOT-LEAK'));
+      const smuggle = publicSurface.createSafeBrowserProxy as unknown as (
+        options?: unknown,
+      ) => Promise<{ port: number; close(): Promise<void> }>;
+      proxy = await smuggle({ policy: { allowLoopback: true }, resolver: undefined });
+
+      const tunneled = await new Promise<{ status: number }>((resolve, reject) => {
+        const req = httpRequest({
+          host: '127.0.0.1',
+          port: proxy!.port,
+          method: 'CONNECT',
+          path: `127.0.0.1:${String(victim!.port)}`,
+        });
+        req.on('connect', (res, socket) => {
+          resolve({ status: res.statusCode ?? 0 });
+          socket.destroy();
+        });
+        req.on('error', reject);
+        req.end();
+      });
+
+      expect(tunneled.status).not.toBe(200);
+      expect(victim.requests).toHaveLength(0);
+    } finally {
+      await victim?.close();
+      await proxy?.close();
+    }
   });
 
   it('reaches the network through undici only', () => {

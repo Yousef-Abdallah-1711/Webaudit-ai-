@@ -45,7 +45,14 @@ import { Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { LangToggle, ThemeToggle, useT } from '../../app/theme';
 import type { StringKey } from '../../lib/strings';
-import { getMe, getPlans, type CurrentUser, type Plan } from '../../lib/api';
+import {
+  getMe,
+  getOutstandingIssueCount,
+  getPlans,
+  type CurrentUser,
+  type Plan,
+} from '../../lib/api';
+import { useAuth } from '../auth/AuthProvider';
 import styles from './Sidebar.module.css';
 
 /** First letter of up to two "words" in the email's local part — real, deterministic, no invented name. */
@@ -60,7 +67,9 @@ function initialsFromEmail(email: string): string {
 }
 
 function planLabel(planId: string): string {
-  return planId.length === 0 ? 'Free plan' : `${planId.charAt(0).toUpperCase()}${planId.slice(1)} plan`;
+  return planId.length === 0
+    ? 'Free plan'
+    : `${planId.charAt(0).toUpperCase()}${planId.slice(1)} plan`;
 }
 
 interface NavEntry {
@@ -141,8 +150,10 @@ export interface SidebarProps {
 export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
   const [t] = useT();
   const pathname = usePathname();
+  const { isOperator } = useAuth();
   const [me, setMe] = useState<CurrentUser | null>(null);
   const [plans, setPlans] = useState<readonly Plan[]>([]);
+  const [outstandingIssues, setOutstandingIssues] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +177,21 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getOutstandingIssueCount().then(
+      ({ count }) => {
+        if (!cancelled) setOutstandingIssues(count);
+      },
+      () => {
+        /* A badge cannot be inferred safely when the count request fails. */
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   const totalCredits = me === null ? null : me.credits.plan + me.credits.purchased;
   const currentPlan = plans.find((p) => p.id === me?.plan);
@@ -225,7 +251,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
                   label={t(item.label)}
                   icon={item.icon}
                   href={item.href}
-                  badge={item.key === 'fixes' ? 4 : null}
+                  badge={item.key === 'fixes' ? outstandingIssues : null}
                 />
               ))}
             </div>
@@ -259,9 +285,11 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
               <ThemeToggle label />
             </div>
             <LangToggle />
-            <a href="/admin" title="Admin console" className={styles.adminLink}>
-              <Icon name="shield" size={16} />
-            </a>
+            {isOperator && (
+              <a href="/admin" title="Admin console" className={styles.adminLink}>
+                <Icon name="shield" size={16} />
+              </a>
+            )}
           </div>
         )}
         {!open && (

@@ -45,18 +45,17 @@ describe('AdminScansPage', () => {
 });
 
 describe('AdminProvidersPage', () => {
-  it('starts with 3 vendors and no warning banner', () => {
+  it('renders the live-data shell without fabricated provider rows', () => {
     const html = render(createElement(AdminProvidersPage));
-    expect(html).toContain('Anthropic');
-    expect(html).toContain('3 vendors');
-    expect(html).not.toContain('refused at startup');
+    expect(html).toContain('AI providers');
+    expect(html).toContain('Loading provider chain');
+    expect(html).toContain('persisted for the next worker deployment');
+    expect(html).not.toContain('Anthropic');
   });
 
-  it('gives healthy and degraded providers visually distinct classes', () => {
+  it('does not claim provider health before the live chain arrives', () => {
     const html = render(createElement(AdminProvidersPage));
-    const spans = [...html.matchAll(/<span class="([^"]+)">(healthy|degraded)<\/span>/g)];
-    const byState = new Map(spans.map((m) => [m[2], m[1]]));
-    expect(byState.get('healthy')).not.toBe(byState.get('degraded'));
+    expect(html).not.toMatch(/<span[^>]*>(healthy|degraded|enabled|disabled)<\/span>/);
   });
 });
 
@@ -77,20 +76,14 @@ describe('AdminLogPage', () => {
 });
 
 describe('AdminSettingsPage', () => {
-  it('renders every feature flag, limit, and retention row', () => {
+  it('renders configuration reference data without pretending switches persist', () => {
     const html = render(createElement(AdminSettingsPage));
     expect(html).toContain('Repository input');
     expect(html).toContain('Archive upload');
     expect(html).toContain('Scan timeout');
     expect(html).toContain('12 months');
-  });
-
-  it('gives an on flag and an off flag visually distinct switch classes', () => {
-    // "Repository input" defaults true, "Archive upload" defaults false.
-    const html = render(createElement(AdminSettingsPage));
-    const switches = [...html.matchAll(/aria-label="([^"]+)" class="([^"]+)"/g)];
-    const on = switches.find((m) => m[1] === 'Repository input')?.[2];
-    const off = switches.find((m) => m[1] === 'Archive upload')?.[2];
-    expect(on).not.toBe(off);
+    expect(html).toContain('Platform settings are read-only');
+    expect(html).not.toContain('Save');
+    expect(html).not.toMatch(/aria-label="Repository input"/);
   });
 });

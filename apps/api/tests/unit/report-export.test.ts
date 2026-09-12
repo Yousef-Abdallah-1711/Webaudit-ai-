@@ -6,10 +6,20 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { ReportNotExportableError, exportReport } from '../../src/services/storage/export.js';
 
-async function seed(state: string, opts: { removed?: boolean } = {}): Promise<{ scanId: string; userId: string }> {
-  const user = await testDb.user.create({ data: { email: `exp-${Math.random()}@example.com`, emailVerifiedAt: new Date() } });
+async function seed(
+  state: string,
+  opts: { removed?: boolean } = {},
+): Promise<{ scanId: string; userId: string }> {
+  const user = await testDb.user.create({
+    data: { email: `exp-${Math.random()}@example.com`, emailVerifiedAt: new Date() },
+  });
   const target = await testDb.target.create({
-    data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://exp.example.com', displayName: 'acme.com' },
+    data: {
+      userId: user.id,
+      inputType: 'URL',
+      canonicalValue: 'https://exp.example.com',
+      displayName: 'acme.com',
+    },
   });
   const scan = await testDb.scan.create({
     data: {
@@ -74,7 +84,9 @@ describe('exportReport', () => {
 
   it('refuses an unfinished audit', async () => {
     const { scanId, userId } = await seed('RUNNING_PHASE_1');
-    await expect(exportReport(testDb, { scanId, userId })).rejects.toMatchObject({ reason: 'not-ready' });
+    await expect(exportReport(testDb, { scanId, userId })).rejects.toMatchObject({
+      reason: 'not-ready',
+    });
   });
 
   it('refuses once the report has been removed by retention', async () => {
@@ -84,7 +96,7 @@ describe('exportReport', () => {
     );
   });
 
-  it('refuses someone else\'s report', async () => {
+  it("refuses someone else's report", async () => {
     const { scanId } = await seed('COMPLETED');
     const other = await testDb.user.create({ data: { email: 'other@example.com' } });
     await expect(exportReport(testDb, { scanId, userId: other.id })).rejects.toMatchObject({

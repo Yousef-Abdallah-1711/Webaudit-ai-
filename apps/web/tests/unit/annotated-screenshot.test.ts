@@ -29,7 +29,9 @@ const ANNOTATIONS: readonly ScreenshotAnnotation[] = [
 
 describe('AnnotatedScreenshot', () => {
   it('renders the unavailable state when no screenshot URL is given, with no image and no pins', () => {
-    const html = render(createElement(AnnotatedScreenshot, { alt: 'Home page', annotations: ANNOTATIONS }));
+    const html = render(
+      createElement(AnnotatedScreenshot, { alt: 'Home page', annotations: ANNOTATIONS }),
+    );
     expect(html).toContain('not available for this scan yet');
     expect(html).not.toContain('<img');
     expect(html).not.toContain('Missing CSP header');
@@ -37,7 +39,10 @@ describe('AnnotatedScreenshot', () => {
 
   it('renders the image with the required alt text when a screenshot URL is given', () => {
     const html = render(
-      createElement(AnnotatedScreenshot, { screenshotUrl: 'https://cdn.example/shot.png', alt: 'Home page' }),
+      createElement(AnnotatedScreenshot, {
+        screenshotUrl: 'https://cdn.example/shot.png',
+        alt: 'Home page',
+      }),
     );
     expect(html).toContain('<img');
     expect(html).toContain('src="https://cdn.example/shot.png"');
@@ -76,7 +81,10 @@ describe('AnnotatedScreenshot', () => {
 
   it('renders no legend at all when there are no annotations', () => {
     const html = render(
-      createElement(AnnotatedScreenshot, { screenshotUrl: 'https://cdn.example/shot.png', alt: 'Home page' }),
+      createElement(AnnotatedScreenshot, {
+        screenshotUrl: 'https://cdn.example/shot.png',
+        alt: 'Home page',
+      }),
     );
     expect(html).not.toContain('<ol');
   });

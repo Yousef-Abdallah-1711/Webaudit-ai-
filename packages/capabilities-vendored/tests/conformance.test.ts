@@ -89,7 +89,11 @@ const CAPABILITIES: readonly CapabilityUnderTest[] = [
     load: () => import('@webaudit/capability-bundle-analyzer'),
     sourceBacked: true,
   },
-  { dir: 'css-analyzer', load: () => import('@webaudit/capability-css-analyzer'), sourceBacked: true },
+  {
+    dir: 'css-analyzer',
+    load: () => import('@webaudit/capability-css-analyzer'),
+    sourceBacked: true,
+  },
 ];
 
 let fixture: FixtureSite;

@@ -20,9 +20,36 @@ import {
   type SafeFetchInit,
   type SafeResponse,
 } from './safe-fetch.js';
+import { createSafeBrowserProxyInternal, type SafeBrowserProxy } from './browser-proxy.js';
+import type { AddressResolver } from './resolve-guard.js';
 
 export type { SafeFetchInit, SafeResponse } from './safe-fetch.js';
 export { SsrfRefusedError, type SsrfRefusalReason } from './errors.js';
+export type { SafeBrowserProxy } from './browser-proxy.js';
+export type { AddressResolver } from './resolve-guard.js';
+
+/**
+ * P2-SSRF-1 — the local forward proxy a real browser is launched with
+ * (`chromium.launch({ proxy: { server: ... } })`) to get the same
+ * connect-time SSRF guarantee `safeFetch` already gives `fetch()`. See
+ * `browser-proxy.ts`'s own module note for the full mechanism.
+ *
+ * **Deliberately narrower than the internal implementation**: only `resolver`
+ * is accepted here — never `policy`/`allowLoopback`. Supplying a resolver
+ * cannot make a disallowed address allowed (whatever it answers with is still
+ * fully classified); it only lets a caller in a different package choose
+ * which hostname maps to which address, for testing. This package's own
+ * tests reach the full internal option surface (including
+ * `policy: { allowLoopback: true }`) by importing `browser-proxy.ts` directly
+ * — see specs/003-fix-browser-pool-ssrf/research.md, Decision 3.
+ */
+export function createSafeBrowserProxy(options?: {
+  readonly resolver?: AddressResolver;
+}): Promise<SafeBrowserProxy> {
+  return createSafeBrowserProxyInternal({
+    ...(options?.resolver === undefined ? {} : { resolver: options.resolver }),
+  });
+}
 
 /**
  * Fetch a URL with all four R6 layers applied: form, resolution, connect-time

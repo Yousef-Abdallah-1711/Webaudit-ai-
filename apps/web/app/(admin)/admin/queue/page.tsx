@@ -153,8 +153,8 @@ export default function AdminQueuePage(): React.ReactElement {
       />
 
       <p className={styles.note}>
-        A questionnaire pause holds no worker slot. Stalled jobs are terminated by the timeout
-        sweep and only delivered areas are charged.
+        A questionnaire pause holds no worker slot. Stalled jobs are terminated by the timeout sweep
+        and only delivered areas are charged.
       </p>
     </div>
   );

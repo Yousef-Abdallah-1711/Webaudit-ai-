@@ -76,7 +76,11 @@ async function loadOne(
   rootReal: string,
   entryName: string,
 ): Promise<
-  | { readonly ok: true; readonly capability: DiscoveredManifest; readonly claims: readonly string[] }
+  | {
+      readonly ok: true;
+      readonly capability: DiscoveredManifest;
+      readonly claims: readonly string[];
+    }
   | { readonly ok: false; readonly rejected: RejectedManifest }
 > {
   const declared = join(root, entryName);

@@ -76,7 +76,9 @@ const BUILD_SCRIPT_SOURCE = `(function (message) {
 })`;
 
 export function buildSandboxedContext(context: Context): CodeLayerContext {
-  const build = new Script(BUILD_SCRIPT_SOURCE).runInContext(context) as (message: string) => unknown;
+  const build = new Script(BUILD_SCRIPT_SOURCE).runInContext(context) as (
+    message: string,
+  ) => unknown;
   return build(UNAVAILABLE) as CodeLayerContext;
 }
 

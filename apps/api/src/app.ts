@@ -22,13 +22,16 @@ import cors, { type CorsOptions } from 'cors';
 import type { PrismaClient } from '../prisma/generated/client/index.js';
 import type { Mailer } from './services/services-types.js';
 import { createConsoleMailer } from './services/email/mailer.js';
+import { createResendMailerFromEnv } from './services/email/resend-mailer.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
 import { scansRoutes, type ScanRoutesDeps } from './routes/scans.routes.js';
 import { intakeRoutes, type IntakeRoutesDeps } from './routes/intake.routes.js';
 import { billingRoutes, type BillingRoutesDeps } from './routes/billing.routes.js';
+import { receiptsRoutes } from './routes/receipts.routes.js';
 import { webhooksRoutes, type WebhookRoutesDeps } from './routes/webhooks.routes.js';
+import { paymentReturnRoutes } from './routes/payment-return.routes.js';
 import { reportsRoutes } from './routes/reports.routes.js';
 import { issuesRoutes, type IssueRoutesDeps } from './routes/issues.routes.js';
 import { readinessRoutes, type ReadinessRoutesDeps } from './routes/readiness.routes.js';
@@ -99,6 +102,10 @@ export interface AppDeps {
    * `process.env` after module load.
    */
   billing?: BillingRoutesDeps;
+}
+
+function createDefaultMailer(): Mailer {
+  return env.isProduction ? createResendMailerFromEnv() : createConsoleMailer();
 }
 
 /**
@@ -188,7 +195,7 @@ function bodyParserErrorHandler(
  * than a wildcard: it makes every site on the internet a trusted origin for an
  * API that authenticates with cookies. An unlisted origin gets no CORS header.
  */
-function corsAllowlist(): ReadonlySet<string> {
+export function corsAllowlist(): ReadonlySet<string> {
   const raw = [process.env['WEB_URL'], process.env['CORS_ORIGINS']]
     .filter((v): v is string => typeof v === 'string')
     .flatMap((v) => v.split(','))
@@ -299,7 +306,7 @@ const CREDENTIAL_PATHS = [
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
-  const mailer = deps.mailer ?? createConsoleMailer();
+  const mailer = deps.mailer ?? createDefaultMailer();
 
   const limiters =
     deps.rateLimiters === undefined
@@ -335,6 +342,15 @@ export function createApp(deps: AppDeps): Express {
   // request ever reaches that catch-all.
   app.use(bodyParserErrorHandler);
   app.use(cookieParser());
+
+  app.use(
+    paymentReturnRoutes(
+      deps.db,
+      deps.webhooks?.paymentProvider === undefined
+        ? {}
+        : { paymentProvider: deps.webhooks.paymentProvider },
+    ),
+  );
 
   // Deliberately ahead of the limiters: a platform health check that can be
   // rate-limited will eventually take a healthy service out of rotation.
@@ -375,15 +391,17 @@ export function createApp(deps: AppDeps): Express {
   // Every route here is behind requireAuth too, declared inside the router.
   app.use('/scans', scansRoutes(deps.db, deps.scans ?? {}));
 
+  // Also mounted at root: issuesRoutes declares its own full paths
+  // (`/issues/count`, `/issues/:id/assert-fixed`, `/issues/:id/attempts`).
+  // It must precede reportsRoutes because reportsRoutes owns the parameterized
+  // `/issues/:id` route; otherwise `/issues/count` is consumed as an issue ID
+  // and the real sidebar badge endpoint returns 404.
+  app.use(issuesRoutes(deps.db, deps.issues ?? {}));
+
   // Mounted at root: reportsRoutes declares its own full paths
   // (`/scans/:id/report`, `/scans/:id/issues`, `/issues/:id`) rather than
   // sharing one prefix, the same way oauthRoutes sits alongside authRoutes.
   app.use(reportsRoutes(deps.db));
-
-  // Also mounted at root: issuesRoutes declares its own full paths
-  // (`/issues/:id/assert-fixed`, `/issues/:id/attempts`), the same as
-  // reportsRoutes beside it.
-  app.use(issuesRoutes(deps.db, deps.issues ?? {}));
 
   // Root-mounted for the same reason — `/scans/:id/readiness[...]`. The mailer
   // is threaded through so the congratulations email uses the same transport.
@@ -392,6 +410,7 @@ export function createApp(deps: AppDeps): Express {
   // `/billing/*` — plans, the movement-history receipt, subscribe/change/cancel,
   // and credit purchase. All behind requireAuth, declared inside the router.
   app.use(billingRoutes(deps.db, deps.billing ?? {}));
+  app.use(receiptsRoutes(deps.db));
 
   // `/admin/*` — users, plans, margin, capabilities, providers, queue.
   // requireAuth then requireOperator, both declared inside adminRoutes so no

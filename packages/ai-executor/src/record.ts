@@ -38,6 +38,7 @@ interface AiInvocationRow {
   latencyMs: number;
   costMicros: number;
   outcome: AiOutcome;
+  promptVersion: string | null;
 }
 
 /** Only the one model and one method this module touches. */
@@ -79,6 +80,7 @@ export async function recordInvocations(
         latencyMs: invocation.latencyMs,
         costMicros: invocation.costMicros,
         outcome: invocation.outcome,
+        promptVersion: invocation.promptVersion ?? null,
       })),
     });
     return { written: result.count };

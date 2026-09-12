@@ -5,6 +5,7 @@ import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';
 
 let stack: Stack;
 let fixture: FixtureSite;
+const previousRedisUrl = process.env['REDIS_URL'];
 const creds = { email: 'onboarding@example.com', password: 'correct-horse-battery-staple' };
 
 test.beforeAll(async () => {
@@ -14,6 +15,9 @@ test.beforeAll(async () => {
   // reads it live on every call, but there is no reason to leave a wider
   // window open than the fixture's own lifetime.
   process.env['SAFE_NET_ALLOW_TARGETS'] = fixture.origin;
+  // Keep this scan's BullMQ queues away from any live worker using the default
+  // Redis logical database during manual development work.
+  process.env['REDIS_URL'] = 'redis://localhost:6389/15';
   stack = await startStack();
   await registerAndVerify(stack, creds);
 });
@@ -22,11 +26,17 @@ test.afterAll(async () => {
   await stack.stop();
   await fixture.close();
   delete process.env['SAFE_NET_ALLOW_TARGETS'];
+  if (previousRedisUrl === undefined) delete process.env['REDIS_URL'];
+  else process.env['REDIS_URL'] = previousRedisUrl;
 });
 
-test('a new user submits a URL, watches progress, and receives a scored report with a fix prompt', async ({
+test('a new user receives a real report, export, clipboard prompt, and fixes count', async ({
   page,
+  request,
 }) => {
+  await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], {
+    origin: stack.webBaseUrl,
+  });
   await loginViaUi(page, stack.webBaseUrl, creds);
   // login's post-auth redirect: /scan is the new-scan form, not a scaffold —
   // see apps/web/app/(dashboard)/scan/page.tsx's own header note.
@@ -62,4 +72,37 @@ test('a new user submits a URL, watches progress, and receives a scored report w
   await expect(page.getByRole('button', { name: 'Copy fix prompt' }).first()).toBeVisible({
     timeout: 5_000,
   });
+
+  const accessToken = await page.evaluate(() => localStorage.getItem('wa-access-token'));
+  expect(accessToken).not.toBeNull();
+  const issueCountResponse = await request.get(`${stack.apiBaseUrl}/issues/count`, {
+    headers: { Authorization: `Bearer ${String(accessToken)}` },
+  });
+  expect(issueCountResponse.ok()).toBe(true);
+  const issueCount = ((await issueCountResponse.json()) as { count: number }).count;
+
+  const fixesLink = page.getByRole('link', { name: /Fixes/ });
+  await expect(fixesLink).toContainText(String(issueCount));
+
+  const copyButton = page.getByRole('button', { name: 'Copy fix prompt' }).first();
+  const scanId = page.url().split('/').pop();
+  expect(scanId).toBeTruthy();
+  const reportResponse = await request.get(`${stack.apiBaseUrl}/scans/${String(scanId)}/report`, {
+    headers: { Authorization: `Bearer ${String(accessToken)}` },
+  });
+  expect(reportResponse.ok()).toBe(true);
+  const reportBody = (await reportResponse.json()) as {
+    report: { issues: readonly { fixPrompt: string }[] };
+  };
+  const expectedPrompt = reportBody.report.issues[0]?.fixPrompt;
+  expect(expectedPrompt).toBeTruthy();
+  await copyButton.click();
+  await expect(page.getByRole('button', { name: 'Copied' }).first()).toBeVisible();
+  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(clipboardText.replaceAll('\r\n', '\n')).toBe(expectedPrompt?.replaceAll('\r\n', '\n'));
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.html$/);
 });

@@ -178,13 +178,17 @@ export async function updatePlan(db: PrismaClient, input: UpdatePlanInput): Prom
     if (patch.name !== undefined) data.name = patch.name;
     if (patch.monthlyCredits !== undefined) data.monthlyCredits = patch.monthlyCredits;
     if (patch.creditsRecur !== undefined) data.creditsRecur = patch.creditsRecur;
-    if (patch.allowedInputTypes !== undefined) data.allowedInputTypes = [...patch.allowedInputTypes];
-    if (patch.allowLoadGeneration !== undefined) data.allowLoadGeneration = patch.allowLoadGeneration;
+    if (patch.allowedInputTypes !== undefined)
+      data.allowedInputTypes = [...patch.allowedInputTypes];
+    if (patch.allowLoadGeneration !== undefined)
+      data.allowLoadGeneration = patch.allowLoadGeneration;
     if (patch.allowReadinessPass !== undefined) data.allowReadinessPass = patch.allowReadinessPass;
-    if (patch.allowCreditPurchase !== undefined) data.allowCreditPurchase = patch.allowCreditPurchase;
+    if (patch.allowCreditPurchase !== undefined)
+      data.allowCreditPurchase = patch.allowCreditPurchase;
     if (patch.allowCustomCapability !== undefined)
       data.allowCustomCapability = patch.allowCustomCapability;
-    if (patch.concurrentScanLimit !== undefined) data.concurrentScanLimit = patch.concurrentScanLimit;
+    if (patch.concurrentScanLimit !== undefined)
+      data.concurrentScanLimit = patch.concurrentScanLimit;
     if (patch.queuePriority !== undefined) data.queuePriority = patch.queuePriority;
     if (patch.retentionDays !== undefined) data.retentionDays = patch.retentionDays;
     if (patch.isActive !== undefined) data.isActive = patch.isActive;

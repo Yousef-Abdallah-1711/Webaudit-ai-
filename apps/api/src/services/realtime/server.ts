@@ -31,7 +31,7 @@
  */
 
 import { WebSocketServer, type WebSocket } from 'ws';
-import type { Server } from 'node:http';
+import type { IncomingMessage, Server } from 'node:http';
 import { scanRoom } from '@webaudit/types';
 import { verifyAccessToken } from '../auth/session.service.js';
 import type { RoomBroadcaster } from './fanout.js';
@@ -59,6 +59,7 @@ interface ClientMessage {
 interface Connection {
   readonly socket: WebSocket;
   readonly rooms: Set<string>;
+  readonly sourceKey: string;
 }
 
 export interface RealtimeServerOptions {
@@ -67,6 +68,44 @@ export interface RealtimeServerOptions {
   readonly path?: string;
   /** Bounds how many scans one socket may watch. */
   readonly maxRoomsPerConnection?: number;
+  /**
+   * Bounds how many sockets one source address may hold open at once — a
+   * different, earlier layer than `maxRoomsPerConnection`, which only ever
+   * bounded subscriptions *within* an already-open socket. Omit to leave
+   * connection count unbounded (this server's own prior behaviour).
+   */
+  readonly maxConnectionsPerIp?: number;
+  /**
+   * When set, the handshake's `Origin` header is checked against this list —
+   * mirroring `apps/api/src/app.ts`'s own `corsAllowlist` rule: a request
+   * with no `Origin` header at all (a non-browser client — curl, this
+   * repo's own adverse-test `ws` clients, a server-to-server call) is always
+   * allowed, since CORS-style checks do not apply to it. Omit to leave every
+   * origin accepted (this server's own prior behaviour).
+   */
+  readonly allowedOrigins?: ReadonlySet<string>;
+  /** Closes sockets that stop answering WebSocket-level ping frames. */
+  readonly heartbeatIntervalMs?: number;
+}
+
+const DEFAULT_MAX_CONNECTIONS_PER_IP = Infinity;
+
+/**
+ * Mirrors `apps/api/src/middleware/ratelimit.middleware.ts`'s own
+ * `clientKey`: `::ffff:` collapsed off (an IPv4 client via a dual-stack
+ * socket must not get a second bucket), and an IPv6 address collapsed to its
+ * /64 (the smallest unit that reliably means "one customer" — keying on the
+ * full address would give one attacker 2^64 buckets, i.e. no limit at all).
+ * Duplicated rather than imported: `req` here is a raw `http.IncomingMessage`
+ * from the WebSocket upgrade, not an Express `Request` with its own `.ip`
+ * (which depends on `trust proxy` being configured on the Express app this
+ * module has no access to).
+ */
+function sourceKeyFor(req: IncomingMessage): string {
+  const raw = req.socket.remoteAddress ?? 'unknown';
+  const ip = raw.startsWith('::ffff:') ? raw.slice('::ffff:'.length) : raw;
+  if (!ip.includes(':')) return ip;
+  return `${ip.split(':').slice(0, 4).join(':')}::/64`;
 }
 
 export interface RealtimeServer extends RoomBroadcaster {
@@ -110,16 +149,49 @@ function parseMessage(raw: string): ClientMessage | null {
 }
 
 export function createRealtimeServer(options: RealtimeServerOptions): RealtimeServer {
+  const maxConnectionsPerIp = options.maxConnectionsPerIp ?? DEFAULT_MAX_CONNECTIONS_PER_IP;
+  const connectionsBySource = new Map<string, number>();
+
   const wss = new WebSocketServer({
     server: options.server,
     path: options.path ?? '/realtime',
     maxPayload: MAX_MESSAGE_BYTES,
+    verifyClient: (info, callback) => {
+      const { allowedOrigins } = options;
+      if (allowedOrigins !== undefined && info.origin !== undefined && info.origin !== '') {
+        if (!allowedOrigins.has(info.origin)) {
+          callback(false, 403, 'Origin not allowed');
+          return;
+        }
+      }
+
+      const sourceKey = sourceKeyFor(info.req);
+      if ((connectionsBySource.get(sourceKey) ?? 0) >= maxConnectionsPerIp) {
+        callback(false, 429, 'Too many connections from this address');
+        return;
+      }
+
+      callback(true);
+    },
   });
 
   const connections = new Map<WebSocket, Connection>();
+  const alive = new WeakMap<WebSocket, boolean>();
   /** room -> sockets. Rebuilt on disconnect so a dead socket is never written. */
   const rooms = new Map<string, Set<WebSocket>>();
   const maxRooms = options.maxRoomsPerConnection ?? 10;
+  const heartbeatIntervalMs = options.heartbeatIntervalMs ?? 30_000;
+  const heartbeat = setInterval(() => {
+    for (const socket of connections.keys()) {
+      if (alive.get(socket) !== true) {
+        socket.terminate();
+        continue;
+      }
+      alive.set(socket, false);
+      socket.ping();
+    }
+  }, heartbeatIntervalMs);
+  heartbeat.unref?.();
 
   const send = (socket: WebSocket, payload: unknown): void => {
     if (socket.readyState === socket.OPEN) socket.send(JSON.stringify(payload));
@@ -131,8 +203,12 @@ export function createRealtimeServer(options: RealtimeServerOptions): RealtimeSe
     connections.get(socket)?.rooms.delete(room);
   };
 
-  wss.on('connection', (socket: WebSocket) => {
-    connections.set(socket, { socket, rooms: new Set() });
+  wss.on('connection', (socket: WebSocket, request: IncomingMessage) => {
+    const sourceKey = sourceKeyFor(request);
+    connectionsBySource.set(sourceKey, (connectionsBySource.get(sourceKey) ?? 0) + 1);
+    connections.set(socket, { socket, rooms: new Set(), sourceKey });
+    alive.set(socket, true);
+    socket.on('pong', () => alive.set(socket, true));
 
     socket.on('message', (data) => {
       void (async (): Promise<void> => {
@@ -212,6 +288,9 @@ export function createRealtimeServer(options: RealtimeServerOptions): RealtimeSe
           rooms.get(room)?.delete(socket);
           if (rooms.get(room)?.size === 0) rooms.delete(room);
         }
+        const remaining = (connectionsBySource.get(connection.sourceKey) ?? 1) - 1;
+        if (remaining <= 0) connectionsBySource.delete(connection.sourceKey);
+        else connectionsBySource.set(connection.sourceKey, remaining);
       }
       connections.delete(socket);
     };
@@ -238,6 +317,7 @@ export function createRealtimeServer(options: RealtimeServerOptions): RealtimeSe
     },
 
     close(): Promise<void> {
+      clearInterval(heartbeat);
       return new Promise((resolve, reject) => {
         for (const socket of connections.keys()) socket.close();
         wss.close((error) => (error ? reject(error) : resolve()));

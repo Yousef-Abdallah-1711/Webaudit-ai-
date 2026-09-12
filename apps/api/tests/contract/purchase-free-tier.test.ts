@@ -47,9 +47,9 @@ describe('FR-078 — credit purchase is a paid-plan feature', () => {
       .send({ credits: 500 })
       .expect(403);
     expect((res.body as { error: { code: string } }).error.code).toBe('PLAN_UPGRADE_REQUIRED');
-    expect((res.body as { error: { details: { requiredTier: string } } }).error.details.requiredTier).toBe(
-      'starter',
-    );
+    expect(
+      (res.body as { error: { details: { requiredTier: string } } }).error.details.requiredTier,
+    ).toBe('starter');
 
     const purchased = await testDb.creditLot.count({ where: { userId, kind: 'PURCHASED' } });
     expect(purchased).toBe(0);
@@ -57,7 +57,11 @@ describe('FR-078 — credit purchase is a paid-plan feature', () => {
 
   it('lets a subscribed user buy credits into a non-expiring lot', async () => {
     const { token, userId } = await signIn();
-    await request(app).post('/billing/subscribe').set(auth(token)).send({ planId: 'starter' }).expect(201);
+    await request(app)
+      .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'starter' })
+      .expect(201);
 
     await request(app)
       .post('/billing/credits/purchase')
@@ -73,7 +77,11 @@ describe('FR-078 — credit purchase is a paid-plan feature', () => {
 
   it('rejects a non-positive amount', async () => {
     const { token } = await signIn();
-    await request(app).post('/billing/subscribe').set(auth(token)).send({ planId: 'pro' }).expect(201);
+    await request(app)
+      .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'pro' })
+      .expect(201);
     await request(app)
       .post('/billing/credits/purchase')
       .set(auth(token))

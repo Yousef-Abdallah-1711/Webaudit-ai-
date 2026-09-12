@@ -30,7 +30,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button, Input } from '../ui';
 import { useT } from '../../app/theme';
-import { ApiError, listRepositories, uploadArchive, type ConnectedRepository } from '../../lib/api';
+import {
+  API_BASE,
+  ApiError,
+  listRepositories,
+  uploadArchive,
+  type ConnectedRepository,
+} from '../../lib/api';
 import styles from './InputTabs.module.css';
 
 export type InputTab = 'url' | 'repo' | 'archive';
@@ -182,7 +188,7 @@ export function InputTabs({ onChange }: InputTabsProps): React.ReactElement {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  window.location.href = '/auth/github/connect';
+                  window.location.href = `${API_BASE}/auth/oauth/github/start`;
                 }}
               >
                 {repos.code === 'REPO_CONNECTION_REVOKED'

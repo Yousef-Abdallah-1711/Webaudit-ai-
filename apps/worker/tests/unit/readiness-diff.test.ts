@@ -63,7 +63,12 @@ describe('diffAgainstBaseline — regressions are named (FR-069)', () => {
     const diff = diffAgainstBaseline(
       snap([{ module: 'TESTING', state: 'COMPLETE', score: 80 }]),
       snap([
-        { module: 'TESTING', state: 'DEGRADED', score: 80, degradedReason: 'provider chain exhausted' },
+        {
+          module: 'TESTING',
+          state: 'DEGRADED',
+          score: 80,
+          degradedReason: 'provider chain exhausted',
+        },
       ]),
     );
     expect(diff.regressions[0]?.kind).toBe('area');
@@ -73,12 +78,14 @@ describe('diffAgainstBaseline — regressions are named (FR-069)', () => {
 
   it('names a verified fix that has come back (recurrence)', () => {
     const diff = diffAgainstBaseline(
-      snap([{ module: 'SECURITY', state: 'COMPLETE', score: 90 }], [
-        { fingerprint: 'fp-hsts', severity: 'HIGH', title: 'Missing HSTS', state: 'RESOLVED' },
-      ]),
-      snap([{ module: 'SECURITY', state: 'COMPLETE', score: 90 }], [
-        { fingerprint: 'fp-hsts', severity: 'HIGH', title: 'Missing HSTS', state: 'OPEN' },
-      ]),
+      snap(
+        [{ module: 'SECURITY', state: 'COMPLETE', score: 90 }],
+        [{ fingerprint: 'fp-hsts', severity: 'HIGH', title: 'Missing HSTS', state: 'RESOLVED' }],
+      ),
+      snap(
+        [{ module: 'SECURITY', state: 'COMPLETE', score: 90 }],
+        [{ fingerprint: 'fp-hsts', severity: 'HIGH', title: 'Missing HSTS', state: 'OPEN' }],
+      ),
     );
     expect(diff.regressions).toContainEqual({
       kind: 'recurrence',
@@ -90,9 +97,10 @@ describe('diffAgainstBaseline — regressions are named (FR-069)', () => {
   it('names a new blocker absent from the original audit', () => {
     const diff = diffAgainstBaseline(
       snap([{ module: 'SECURITY', state: 'COMPLETE', score: 90 }], []),
-      snap([{ module: 'SECURITY', state: 'COMPLETE', score: 90 }], [
-        { fingerprint: 'fp-new', severity: 'CRITICAL', title: 'New RCE', state: 'OPEN' },
-      ]),
+      snap(
+        [{ module: 'SECURITY', state: 'COMPLETE', score: 90 }],
+        [{ fingerprint: 'fp-new', severity: 'CRITICAL', title: 'New RCE', state: 'OPEN' }],
+      ),
     );
     expect(diff.regressions).toContainEqual({
       kind: 'new-blocker',
@@ -104,9 +112,10 @@ describe('diffAgainstBaseline — regressions are named (FR-069)', () => {
   it('a new LOW issue is not a regression', () => {
     const diff = diffAgainstBaseline(
       snap([{ module: 'SEO', state: 'COMPLETE', score: 90 }], []),
-      snap([{ module: 'SEO', state: 'COMPLETE', score: 90 }], [
-        { fingerprint: 'fp-low', severity: 'LOW', title: 'Heading skip', state: 'OPEN' },
-      ]),
+      snap(
+        [{ module: 'SEO', state: 'COMPLETE', score: 90 }],
+        [{ fingerprint: 'fp-low', severity: 'LOW', title: 'Heading skip', state: 'OPEN' }],
+      ),
     );
     expect(diff.regressions).toHaveLength(0);
   });
@@ -115,9 +124,10 @@ describe('diffAgainstBaseline — regressions are named (FR-069)', () => {
 describe('diffAgainstBaseline — improvements', () => {
   it('reports a cleared blocking issue and a risen score', () => {
     const diff = diffAgainstBaseline(
-      snap([{ module: 'SECURITY', state: 'COMPLETE', score: 60 }], [
-        { fingerprint: 'fp-csp', severity: 'HIGH', title: 'Missing CSP', state: 'RESOLVED' },
-      ]),
+      snap(
+        [{ module: 'SECURITY', state: 'COMPLETE', score: 60 }],
+        [{ fingerprint: 'fp-csp', severity: 'HIGH', title: 'Missing CSP', state: 'RESOLVED' }],
+      ),
       snap([{ module: 'SECURITY', state: 'COMPLETE', score: 88 }], []),
     );
     expect(diff.improvements.map((i) => i.kind).sort()).toEqual(['area', 'issue-cleared']);

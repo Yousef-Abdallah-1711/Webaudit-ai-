@@ -31,6 +31,10 @@ const DEFAULT_CHAIN = 'anthropic,openai';
 
 type Env = Record<string, string | undefined>;
 
+function boolFromEnv(raw: string | undefined): boolean {
+  return raw?.trim().toLowerCase() === 'true';
+}
+
 function buildOne(name: string, env: Env): Provider {
   switch (name) {
     case 'anthropic': {
@@ -46,6 +50,7 @@ function buildOne(name: string, env: Env): Provider {
           {
             input: env['ANTHROPIC_INPUT_USD_PER_MTOK'],
             output: env['ANTHROPIC_OUTPUT_USD_PER_MTOK'],
+            freeTier: boolFromEnv(env['ANTHROPIC_FREE_TIER']),
           },
           ['ANTHROPIC_INPUT_USD_PER_MTOK', 'ANTHROPIC_OUTPUT_USD_PER_MTOK'],
         ),
@@ -66,7 +71,11 @@ function buildOne(name: string, env: Env): Provider {
         ...(env['OPENAI_BASE_URL'] === undefined ? {} : { baseURL: env['OPENAI_BASE_URL'] }),
         pricing: pricingFrom(
           name,
-          { input: env['OPENAI_INPUT_USD_PER_MTOK'], output: env['OPENAI_OUTPUT_USD_PER_MTOK'] },
+          {
+            input: env['OPENAI_INPUT_USD_PER_MTOK'],
+            output: env['OPENAI_OUTPUT_USD_PER_MTOK'],
+            freeTier: boolFromEnv(env['OPENAI_FREE_TIER']),
+          },
           ['OPENAI_INPUT_USD_PER_MTOK', 'OPENAI_OUTPUT_USD_PER_MTOK'],
         ),
       });
@@ -85,7 +94,11 @@ function buildOne(name: string, env: Env): Provider {
         model,
         pricing: pricingFrom(
           name,
-          { input: env['GOOGLE_INPUT_USD_PER_MTOK'], output: env['GOOGLE_OUTPUT_USD_PER_MTOK'] },
+          {
+            input: env['GOOGLE_INPUT_USD_PER_MTOK'],
+            output: env['GOOGLE_OUTPUT_USD_PER_MTOK'],
+            freeTier: boolFromEnv(env['GOOGLE_FREE_TIER']),
+          },
           ['GOOGLE_INPUT_USD_PER_MTOK', 'GOOGLE_OUTPUT_USD_PER_MTOK'],
         ),
       });
@@ -135,6 +148,32 @@ export function createExecutorFromEnv(env: Env = process.env): AiExecutor {
   }
 
   const names = (env['AI_CHAIN'] ?? DEFAULT_CHAIN)
+    .split(',')
+    .map((name) => name.trim().toLowerCase())
+    .filter((name) => name !== '');
+
+  return createExecutor({ chain: names.map((name) => buildOne(name, env)) });
+}
+
+/**
+ * T308 — an optional, separately-configured chain for the master-report call
+ * only. Not a general router: there is exactly one override, named for the
+ * one task shape distinct enough from the five module prompts to justify it
+ * (see docs/reviews/AI-ENGINEERING-CURRENT-VS-TARGET-AUDIT.md, Decision 2).
+ *
+ * Returns `fallback` unchanged when the override is unset — the common case,
+ * and the one every existing deployment already runs today.
+ */
+export function createMasterReportExecutorFromEnv(
+  env: Env = process.env,
+  fallback: AiExecutor,
+): AiExecutor {
+  const override = env['AI_CHAIN_MASTER_REPORT'];
+  if (override === undefined || override.trim() === '') return fallback;
+
+  if (isFixtureMode() || env['AI_MODE'] === 'fixtures') return fallback;
+
+  const names = override
     .split(',')
     .map((name) => name.trim().toLowerCase())
     .filter((name) => name !== '');

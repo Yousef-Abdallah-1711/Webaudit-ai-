@@ -25,15 +25,11 @@
  * producer wired yet (a recorded gap, not assumed away here).
  */
 
-import type {
-  AuditCapability,
-  CapabilityFinding,
-  CapabilityInput,
-} from '@webaudit/capability-sdk';
+import type { AuditCapability, CapabilityFinding, CapabilityInput } from '@webaudit/capability-sdk';
 
 function getSystemPromptAddition(): string {
   return [
-    'When critiquing this area\'s visual design, weigh these dimensions:',
+    "When critiquing this area's visual design, weigh these dimensions:",
     '- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.',
     '- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall ' +
       'of uniform text.',

@@ -34,7 +34,10 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import type { Queue } from 'bullmq';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
 import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';
@@ -77,7 +80,11 @@ async function makeScan(
   requestedModules: readonly ('SECURITY' | 'UI')[],
 ): Promise<{ scanId: string }> {
   const user = await db.user.create({
-    data: { email: `q-${requestedModules.join('-')}@example.com`, passwordHash: 'x', emailVerifiedAt: new Date() },
+    data: {
+      email: `q-${requestedModules.join('-')}@example.com`,
+      passwordHash: 'x',
+      emailVerifiedAt: new Date(),
+    },
   });
   const target = await db.target.create({
     data: {

@@ -7,11 +7,16 @@
  * apps/web/components/public/.
  */
 import { AppShell } from '../../components/dashboard';
+import { RouteGuard } from '../../components/auth/RouteGuard';
 
 export default function DashboardLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>): React.ReactElement {
-  return <AppShell>{children}</AppShell>;
+  return (
+    <RouteGuard>
+      <AppShell>{children}</AppShell>
+    </RouteGuard>
+  );
 }

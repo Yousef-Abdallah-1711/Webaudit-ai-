@@ -12,7 +12,11 @@
  * and it refuses a provider with no configured price (FR-081).
  */
 
-export { createExecutor, UnredactedPromptError } from './executor.js';
+export {
+  AI_PROVIDER_ATTEMPT_TIMEOUT_MS,
+  createExecutor,
+  UnredactedPromptError,
+} from './executor.js';
 export type {
   AiExecutor,
   AiInvocationRecord,
@@ -47,4 +51,5 @@ export { claudeProvider, CLAUDE_DEFAULT_MODEL } from './providers/claude.provide
 export { openAiProvider } from './providers/openai.provider.js';
 export { geminiProvider } from './providers/gemini.provider.js';
 
-export { createExecutorFromEnv } from './from-env.js';
+export { createExecutorFromEnv, createMasterReportExecutorFromEnv } from './from-env.js';
+export { computePromptVersion } from './prompt-version.js';

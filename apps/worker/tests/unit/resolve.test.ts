@@ -129,9 +129,9 @@ describe('resolveApplicable', () => {
         input,
         targetControlLevel: 'ATTESTED',
         requiredControlLevels: {
-          'cap1': 'NONE', // ATTESTED >= NONE → allowed
-          'cap2': 'ATTESTED', // ATTESTED >= ATTESTED → allowed
-          'cap3': 'VERIFIED', // ATTESTED < VERIFIED → skipped
+          cap1: 'NONE', // ATTESTED >= NONE → allowed
+          cap2: 'ATTESTED', // ATTESTED >= ATTESTED → allowed
+          cap3: 'VERIFIED', // ATTESTED < VERIFIED → skipped
         },
       });
 

@@ -21,7 +21,9 @@ afterAll(closeDb);
 
 describe('sendRenewalWarnings', () => {
   it('warns a user whose period ends within 3 days, stating the credits at risk, once', async () => {
-    const user = await testDb.user.create({ data: { email: 'rw1@example.com', emailVerifiedAt: new Date() } });
+    const user = await testDb.user.create({
+      data: { email: 'rw1@example.com', emailVerifiedAt: new Date() },
+    });
     await subscribe(testDb, { userId: user.id, planId: 'pro' });
     // Move the period end to two days from now, and re-anchor the plan lot's
     // expiry to the exact same instant.
@@ -45,7 +47,9 @@ describe('sendRenewalWarnings', () => {
   });
 
   it('does not warn a subscription whose period ends well in the future', async () => {
-    const user = await testDb.user.create({ data: { email: 'rw2@example.com', emailVerifiedAt: new Date() } });
+    const user = await testDb.user.create({
+      data: { email: 'rw2@example.com', emailVerifiedAt: new Date() },
+    });
     await subscribe(testDb, { userId: user.id, planId: 'starter' }); // periodEnd ~30 days out
 
     const result = await sendRenewalWarnings(testDb, mailer);

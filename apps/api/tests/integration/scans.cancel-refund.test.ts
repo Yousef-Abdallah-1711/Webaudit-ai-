@@ -80,11 +80,16 @@ async function createTwoModuleScan(
 }
 
 /**
- * Wraps `testDb` so its very first `scan.findUniqueOrThrow` call rejects,
+ * Wraps `testDb` so its very first `scan.findFirstOrThrow` call rejects,
  * then delegates to the real implementation for every call after that —
  * simulating exactly the transient-DB-error class of failure the widened
  * try/catch in the cancel route exists to survive. Every other model/method
  * passes straight through untouched.
+ *
+ * Targets `findFirstOrThrow` (not `findUniqueOrThrow`) because the cancel
+ * route's re-fetch (`fetchCancelledScanForUser`) now scopes its query to
+ * `{ id, userId }` rather than a bare id — a P3 hardening fix (full-workflow
+ * review Section 6g) that changed which Prisma method the route calls.
  */
 function withFlakyFirstScanLookup(): { db: PrismaClient; callCount: () => number } {
   let calls = 0;
@@ -94,26 +99,26 @@ function withFlakyFirstScanLookup(): { db: PrismaClient; callCount: () => number
       const realScan = Reflect.get(target, prop, receiver);
       return new Proxy(realScan, {
         get(scanTarget, scanProp, scanReceiver) {
-          if (scanProp !== 'findUniqueOrThrow') {
+          if (scanProp !== 'findFirstOrThrow') {
             return Reflect.get(scanTarget, scanProp, scanReceiver) as unknown;
           }
-          return (...args: Parameters<typeof testDb.scan.findUniqueOrThrow>) => {
+          return (...args: Parameters<typeof testDb.scan.findFirstOrThrow>) => {
             calls += 1;
             if (calls === 1) {
               return Promise.reject(new Error('simulated transient db failure'));
             }
             // `Reflect.get` returns the real, generically-overloaded
-            // `findUniqueOrThrow` here — its inferred type does not
+            // `findFirstOrThrow` here — its inferred type does not
             // sufficiently overlap with this narrower, concrete signature
             // for TypeScript's structural checker to accept a direct `as`.
             // Routing through `unknown` is TS's own documented escape hatch
             // for exactly this case: we know the runtime shape (it's the
             // same bound method every other call to `db.scan
-            // .findUniqueOrThrow` in this file already uses), just not one
+            // .findFirstOrThrow` in this file already uses), just not one
             // TS can verify from a `Reflect.get` return type alone.
             const real = Reflect.get(scanTarget, scanProp, scanReceiver) as unknown as (
-              ...a: Parameters<typeof testDb.scan.findUniqueOrThrow>
-            ) => ReturnType<typeof testDb.scan.findUniqueOrThrow>;
+              ...a: Parameters<typeof testDb.scan.findFirstOrThrow>
+            ) => ReturnType<typeof testDb.scan.findFirstOrThrow>;
             return real.apply(scanTarget, args);
           };
         },

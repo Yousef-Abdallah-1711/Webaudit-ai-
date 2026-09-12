@@ -7,7 +7,10 @@
  * disk resolve correctly, not just a test fixture's.
  */
 import { describe, expect, it } from 'vitest';
-import { capabilityIdForCheck, resolveReverifyCapability } from '../../src/reverify/resolve-check.js';
+import {
+  capabilityIdForCheck,
+  resolveReverifyCapability,
+} from '../../src/reverify/resolve-check.js';
 import { loadCapabilities } from '../../src/orchestrator/capability-loader.js';
 
 describe('capabilityIdForCheck', () => {
@@ -18,7 +21,9 @@ describe('capabilityIdForCheck', () => {
 
   it('finds the real data-leak-scanner for a redaction.* checkId (delegated detection)', async () => {
     const capabilities = await loadCapabilities('SECURITY');
-    expect(capabilityIdForCheck('redaction.secret-in-source', capabilities)).toBe('data-leak-scanner');
+    expect(capabilityIdForCheck('redaction.secret-in-source', capabilities)).toBe(
+      'data-leak-scanner',
+    );
   });
 
   it('returns null for a namespace no loaded capability declares', () => {

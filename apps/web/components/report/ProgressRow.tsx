@@ -42,7 +42,11 @@ export function ProgressRow({
       <div className={styles.track}>
         <div className={styles.fill} style={{ width: `${String(pct)}%` }} />
       </div>
-      {safeToClose && <div className={styles.safe}>You can close this tab. The audit keeps running and the report will be waiting.</div>}
+      {safeToClose && (
+        <div className={styles.safe}>
+          You can close this tab. The audit keeps running and the report will be waiting.
+        </div>
+      )}
     </div>
   );
 }

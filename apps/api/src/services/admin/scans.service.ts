@@ -54,18 +54,16 @@ export async function listScans(
     db.scan.count(),
   ]);
 
-  const scans = rows.map(
-    (row): AdminScanSummary => ({
-      id: row.id,
-      userEmail: row.user.email,
-      targetDisplayName: row.target.displayName,
-      state: row.state,
-      requestedModules: row.requestedModules,
-      chargedCredits: row.chargedCredits,
-      overallScore: row.overallScore,
-      createdAt: row.createdAt,
-    }),
-  );
+  const scans = rows.map((row): AdminScanSummary => ({
+    id: row.id,
+    userEmail: row.user.email,
+    targetDisplayName: row.target.displayName,
+    state: row.state,
+    requestedModules: row.requestedModules,
+    chargedCredits: row.chargedCredits,
+    overallScore: row.overallScore,
+    createdAt: row.createdAt,
+  }));
 
   return { scans, total, limit, offset };
 }

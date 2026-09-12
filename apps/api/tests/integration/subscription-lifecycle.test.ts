@@ -42,7 +42,14 @@ describe('subscription lifecycle', () => {
   it('subscribing keeps whatever free-grant credits the user still has', async () => {
     const userId = await makeUser('sub2@example.com');
     await testDb.creditLot.create({
-      data: { userId, kind: 'PLAN', source: 'FREE_GRANT', amountGranted: 50, amountRemaining: 50, expiresAt: null },
+      data: {
+        userId,
+        kind: 'PLAN',
+        source: 'FREE_GRANT',
+        amountGranted: 50,
+        amountRemaining: 50,
+        expiresAt: null,
+      },
     });
     await subscribe(testDb, { userId, planId: 'pro' });
     expect((await balanceOf(testDb, userId)).plan).toBe(1250); // 50 free + 1200 plan

@@ -17,6 +17,7 @@ export interface ButtonProps {
   /** md is the 48px control height and the default everywhere */
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
   fullWidth?: boolean;
   /** Leading icon node, 20px, currentColor stroke */
   icon?: ReactNode;
@@ -45,6 +46,7 @@ export function Button({
   variant = 'primary',
   size = 'md',
   disabled = false,
+  type = 'button',
   fullWidth = false,
   icon = null,
   onClick,
@@ -81,7 +83,7 @@ export function Button({
 
   return (
     <button
-      type="button"
+      type={type}
       className={classes}
       style={style}
       disabled={disabled}

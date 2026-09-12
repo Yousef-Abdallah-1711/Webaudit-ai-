@@ -19,14 +19,17 @@
  * fetch 50, "Load more" appends the next page — there is no existing
  * pagination-UI precedent elsewhere in this admin console to match.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
   ApiError,
   getAdminUsers,
+  getAdminUserDetail,
+  adjustUserCredits,
   setUserOperator,
   type AdminUserSummary,
+  type AdminUserDetail,
 } from '../../../../lib/api';
 import styles from './page.module.css';
 
@@ -45,6 +48,10 @@ export default function AdminUsersPage(): React.ReactElement {
   const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
+  const [detail, setDetail] = useState<AdminUserDetail | null>(null);
+  const [grantAmount, setGrantAmount] = useState('');
+  const [grantReason, setGrantReason] = useState('');
 
   const load = useCallback(async (offset: number, append: boolean) => {
     setBusy(true);
@@ -77,6 +84,44 @@ export default function AdminUsersPage(): React.ReactElement {
 
   const onLoadMore = (): void => {
     void load(users.length, true);
+  };
+
+  const onViewDetail = async (user: AdminUserSummary): Promise<void> => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await getAdminUserDetail(user.id);
+      setSelectedUser(user);
+      setDetail(result.user);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'User detail could not be loaded.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onGrantCredits = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (selectedUser === null || grantAmount === '' || grantReason.trim() === '') {
+      setError('Select a user and provide a positive amount and reason.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await adjustUserCredits(selectedUser.id, {
+        amount: Number(grantAmount),
+        kind: 'PURCHASED',
+        expiresAt: null,
+        reason: grantReason.trim(),
+      });
+      setGrantAmount('');
+      setGrantReason('');
+      await load(0, false);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Credits could not be granted.');
+      setBusy(false);
+    }
   };
 
   return (
@@ -112,17 +157,35 @@ export default function AdminUsersPage(): React.ReactElement {
               {status}
             </Badge>,
             new Date(user.createdAt).toLocaleDateString(),
-            <Button
-              key="toggle"
-              variant="ghost"
-              size="sm"
-              disabled={busy}
-              onClick={() => {
-                onToggleOperator(user);
-              }}
-            >
-              {user.isOperator ? 'Remove operator' : 'Make operator'}
-            </Button>,
+            <span key="actions" className={styles.actions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => onToggleOperator(user)}
+              >
+                {user.isOperator ? 'Remove operator' : 'Make operator'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => void onViewDetail(user)}
+              >
+                View detail
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={() => {
+                  setSelectedUser(user);
+                  setDetail(null);
+                }}
+              >
+                Grant credits
+              </Button>
+            </span>,
           ];
         })}
       />
@@ -138,6 +201,35 @@ export default function AdminUsersPage(): React.ReactElement {
           Load more
         </Button>
       )}
+
+      <form className={styles.actionPanel} onSubmit={(event) => void onGrantCredits(event)}>
+        <strong>
+          {selectedUser === null ? 'User actions' : `Actions for ${selectedUser.email}`}
+        </strong>
+        <label>
+          Amount
+          <input
+            value={grantAmount}
+            onChange={(event) => setGrantAmount(event.target.value)}
+            inputMode="numeric"
+          />
+        </label>
+        <label>
+          Reason
+          <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} />
+        </label>
+        <Button type="submit" disabled={selectedUser === null || busy}>
+          Grant credits
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={selectedUser === null || busy}
+          onClick={() => undefined}
+        >
+          View detail
+        </Button>
+        {detail !== null && <pre className={styles.detail}>{JSON.stringify(detail, null, 2)}</pre>}
+      </form>
     </div>
   );
 }

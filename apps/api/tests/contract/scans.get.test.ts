@@ -24,7 +24,10 @@ const CREDS = { email: 'scan-get@example.com', password: 'correct-horse-battery-
 
 async function signIn(): Promise<string> {
   await request(app).post('/auth/register').send(CREDS).expect(201);
-  await testDb.user.update({ where: { email: CREDS.email }, data: { emailVerifiedAt: new Date() } });
+  await testDb.user.update({
+    where: { email: CREDS.email },
+    data: { emailVerifiedAt: new Date() },
+  });
   const res = await request(app).post('/auth/login').send(CREDS).expect(200);
   return (res.body as { accessToken: string }).accessToken;
 }
@@ -37,11 +40,16 @@ beforeEach(resetDb);
 afterAll(closeDb);
 
 describe('GET /scans/:id', () => {
-  it('includes each requested module\'s real state, not just the aggregate scan state', async () => {
+  it("includes each requested module's real state, not just the aggregate scan state", async () => {
     const token = await signIn();
     const user = await testDb.user.findUniqueOrThrow({ where: { email: CREDS.email } });
     const target = await testDb.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://example.com', displayName: 'example.com' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://example.com',
+        displayName: 'example.com',
+      },
     });
     const scan = await testDb.scan.create({
       data: {
@@ -58,7 +66,13 @@ describe('GET /scans/:id', () => {
       data: { scanId: scan.id, module: 'SECURITY', state: 'COMPLETE', score: 69 },
     });
     await testDb.moduleResult.create({
-      data: { scanId: scan.id, module: 'SEO', state: 'DEGRADED', score: 91, degradedReason: 'provider exhausted' },
+      data: {
+        scanId: scan.id,
+        module: 'SEO',
+        state: 'DEGRADED',
+        score: 91,
+        degradedReason: 'provider exhausted',
+      },
     });
 
     const res = await request(app).get(`/scans/${scan.id}`).set(auth(token)).expect(200);
@@ -76,7 +90,12 @@ describe('GET /scans/:id', () => {
     const token = await signIn();
     const user = await testDb.user.findUniqueOrThrow({ where: { email: CREDS.email } });
     const target = await testDb.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://example.com', displayName: 'example.com' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://example.com',
+        displayName: 'example.com',
+      },
     });
     const scan = await testDb.scan.create({
       data: {

@@ -41,6 +41,8 @@ const TABLES_TO_CLEAR = [
   'TargetVerification',
   'Target',
   'Subscription',
+  'PendingPayment',
+  'Receipt',
   'BillingEvent',
   'RefreshToken',
   'EmailToken',
@@ -63,6 +65,10 @@ export async function resetDb(): Promise<void> {
  * Idempotent, so any test may call it.
  */
 export async function seedPlans(): Promise<void> {
+  await testDb.plan.deleteMany({
+    where: { id: { notIn: PLAN_TIERS.map((tier) => tier.id) } },
+  });
+
   for (const tier of PLAN_TIERS) {
     const { id, ...rest } = tier;
     const row = { ...rest, allowedInputTypes: [...rest.allowedInputTypes] };

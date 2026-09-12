@@ -29,3 +29,46 @@
   font: var(--type-small);
   color: var(--text-secondary);
 }
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.field input {
+  min-height: 40px;
+  padding: 0 10px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: var(--type-small);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.formActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+}

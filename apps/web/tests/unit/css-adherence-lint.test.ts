@@ -68,29 +68,39 @@ function countRawValues(source: string): { hex: number; px: number } {
 /** Recorded 2026-09-08. Keys are POSIX-style paths relative to `apps/web`. */
 const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/(admin)/admin/billing/page.module.css': { hex: 0, px: 4 },
-  'app/(admin)/admin/capabilities/page.module.css': { hex: 0, px: 3 },
+  // px 3 -> 15: capability upload/access controls and their responsive form.
+  'app/(admin)/admin/capabilities/page.module.css': { hex: 0, px: 15 },
   // px 1 -> 3: real-data wiring (GET /admin/audit-log) added an .error and
   // a .loadMore block, copied verbatim from admin/users/page.module.css's
   // own established pattern for the same guard.
-  'app/(admin)/admin/log/page.module.css': { hex: 0, px: 3 },
+  // px 3 -> 8: persisted audit-log filter controls.
+  'app/(admin)/admin/log/page.module.css': { hex: 0, px: 8 },
   'app/(admin)/admin/page.module.css': { hex: 0, px: 8 },
-  'app/(admin)/admin/plans/page.module.css': { hex: 0, px: 4 },
-  'app/(admin)/admin/providers/page.module.css': { hex: 0, px: 6 },
+  // px 4 -> 12: create/edit plan form controls.
+  'app/(admin)/admin/plans/page.module.css': { hex: 0, px: 12 },
+  // px 6 -> 7: provider persistence status/error copy.
+  'app/(admin)/admin/providers/page.module.css': { hex: 0, px: 7 },
   'app/(admin)/admin/queue/page.module.css': { hex: 0, px: 3 },
   // px 2 -> 4: real-data wiring (GET /admin/scans) added an .error and a
   // .loadMore block, copied verbatim from admin/users/page.module.css's own
   // established pattern for the same guard.
   'app/(admin)/admin/scans/page.module.css': { hex: 0, px: 4 },
   'app/(admin)/admin/settings/page.module.css': { hex: 1, px: 14 },
-  'app/(admin)/admin/users/page.module.css': { hex: 0, px: 2 },
+  // px 2 -> 10: user action panel and detail output.
+  'app/(admin)/admin/users/page.module.css': { hex: 0, px: 10 },
   'app/(auth)/forgot-password/page.module.css': { hex: 0, px: 1 },
   'app/(auth)/login/page.module.css': { hex: 0, px: 2 },
   'app/(auth)/reset-password/page.module.css': { hex: 0, px: 2 },
   'app/(auth)/signup/page.module.css': { hex: 0, px: 1 },
   'app/(auth)/verify-email/page.module.css': { hex: 0, px: 4 },
-  'app/(dashboard)/billing/page.module.css': { hex: 0, px: 24 },
+  // px 24 -> 29: receipt rows and receipt metadata typography.
+  'app/(dashboard)/billing/page.module.css': { hex: 0, px: 29 },
+  // New receipt detail surface; its 12px/13px values are intentional and
+  // documented beside the declarations.
+  'app/(dashboard)/billing/receipts/[id]/page.module.css': { hex: 0, px: 2 },
   'app/(dashboard)/reports/[id]/page.module.css': { hex: 0, px: 14 },
-  'app/(dashboard)/settings/page.module.css': { hex: 1, px: 28 },
+  // px 28 -> 32: delete-account confirmation label and error state.
+  'app/(dashboard)/settings/page.module.css': { hex: 1, px: 32 },
   'app/(dashboard)/usage/page.module.css': { hex: 0, px: 20 },
   // px 43 -> 45: the two fixed-column grids (.diffGrid, .loopGrid) got a
   // 640px mobile breakpoint collapsing them to one column — a real,
@@ -155,7 +165,9 @@ describe('CSS Modules raw hex/px is a ratchet, not an unmonitored gap', () => {
   });
 
   it('does not count a hex/px literal that appears only inside a comment', () => {
-    const result = countRawValues('/* the source uses #ff0000 and 16px here */\n.x { color: var(--accent); }');
+    const result = countRawValues(
+      '/* the source uses #ff0000 and 16px here */\n.x { color: var(--accent); }',
+    );
     expect(result).toEqual({ hex: 0, px: 0 });
   });
 

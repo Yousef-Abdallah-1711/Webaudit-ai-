@@ -107,7 +107,10 @@ describe('loadCapabilities — installed capabilities', () => {
     const capabilities = await loadCapabilities('SECURITY');
     const installed = capabilities.find((c) => c.id === 'dispatches')!;
 
-    const applies = await installed.canRun({ targetUrl: 'https://example.com/', priorModuleResults: {} });
+    const applies = await installed.canRun({
+      targetUrl: 'https://example.com/',
+      priorModuleResults: {},
+    });
     expect(applies).toBe(true);
     const findings = await installed.runCodeLayer!(
       { targetUrl: 'https://example.com/', priorModuleResults: {} },
@@ -126,7 +129,13 @@ describe('loadCapabilities — installed capabilities', () => {
     const ids = capabilities.map((c) => c.id).sort();
 
     expect(ids).toEqual(
-      ['data-leak-scanner', 'dependency-scanner', 'headers-checker', 'owasp-checker', 'ssl-analyzer'].sort(),
+      [
+        'data-leak-scanner',
+        'dependency-scanner',
+        'headers-checker',
+        'owasp-checker',
+        'ssl-analyzer',
+      ].sort(),
     );
   });
 });

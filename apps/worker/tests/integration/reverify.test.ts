@@ -18,7 +18,10 @@ import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db
 import type { AuditCapability, ReverifyResult } from '@webaudit/capability-sdk';
 import { runReverification } from '../../src/reverify/runner.js';
 
-function fakeCapability(id: string, result: ReverifyResult | (() => Promise<ReverifyResult>)): AuditCapability {
+function fakeCapability(
+  id: string,
+  result: ReverifyResult | (() => Promise<ReverifyResult>),
+): AuditCapability {
   return {
     id,
     module: 'SECURITY',
@@ -46,16 +49,38 @@ async function seedAssertedIssue(checkId = 'headers.csp-missing'): Promise<{
   debitId: string;
 }> {
   const user = await db.user.create({
-    data: { email: `rv-${String(Date.now())}-${String(Math.random())}@example.com`, emailVerifiedAt: new Date() },
+    data: {
+      email: `rv-${String(Date.now())}-${String(Math.random())}@example.com`,
+      emailVerifiedAt: new Date(),
+    },
   });
   const lot = await db.creditLot.create({
-    data: { userId: user.id, kind: 'PLAN', source: 'FREE_GRANT', amountGranted: 50, amountRemaining: 47, expiresAt: null },
+    data: {
+      userId: user.id,
+      kind: 'PLAN',
+      source: 'FREE_GRANT',
+      amountGranted: 50,
+      amountRemaining: 47,
+      expiresAt: null,
+    },
   });
   const target = await db.target.create({
-    data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://rv.example.com', displayName: 'rv' },
+    data: {
+      userId: user.id,
+      inputType: 'URL',
+      canonicalValue: 'https://rv.example.com',
+      displayName: 'rv',
+    },
   });
   const scan = await db.scan.create({
-    data: { userId: user.id, targetId: target.id, requestedModules: ['SECURITY'], capabilitySnapshot: {}, quotedCredits: 20, state: 'COMPLETED' },
+    data: {
+      userId: user.id,
+      targetId: target.id,
+      requestedModules: ['SECURITY'],
+      capabilitySnapshot: {},
+      quotedCredits: 20,
+      state: 'COMPLETED',
+    },
   });
   const mr = await db.moduleResult.create({
     data: { scanId: scan.id, module: 'SECURITY', state: 'COMPLETE', score: 40 },
@@ -78,7 +103,14 @@ async function seedAssertedIssue(checkId = 'headers.csp-missing'): Promise<{
     },
   });
   const debit = await db.creditTransaction.create({
-    data: { userId: user.id, type: 'DEBIT', amount: 3, reason: 'reverify:issue', issueId: issue.id, scanId: scan.id },
+    data: {
+      userId: user.id,
+      type: 'DEBIT',
+      amount: 3,
+      reason: 'reverify:issue',
+      issueId: issue.id,
+      scanId: scan.id,
+    },
   });
   await db.creditAllocation.create({
     data: { transactionId: debit.id, lotId: lot.id, amount: 3 },
@@ -97,14 +129,21 @@ describe('runReverification', () => {
   it('PASSED → issue RESOLVED, no refund, event published', async () => {
     const { issueId, debitId } = await seedAssertedIssue();
     const result = await runReverification(
-      { db, publisher, loadForModule: () => Promise.resolve([fakeCapability('headers-checker', { outcome: 'PASSED' })]) },
+      {
+        db,
+        publisher,
+        loadForModule: () =>
+          Promise.resolve([fakeCapability('headers-checker', { outcome: 'PASSED' })]),
+      },
       { issueId, debitTransactionId: debitId, creditsCharged: 3 },
     );
     expect(result.outcome).toBe('PASSED');
     expect(result.issueState).toBe('RESOLVED');
     expect(result.creditsRefunded).toBe(0);
     expect((await db.issue.findUniqueOrThrow({ where: { id: issueId } })).state).toBe('RESOLVED');
-    expect(published.some((e) => (e as { event?: { type?: string } }).event?.type === 'issue:verified')).toBe(true);
+    expect(
+      published.some((e) => (e as { event?: { type?: string } }).event?.type === 'issue:verified'),
+    ).toBe(true);
   });
 
   it('FAILED → issue OPEN, evidence stored, still charged', async () => {
@@ -114,7 +153,12 @@ describe('runReverification', () => {
         db,
         publisher,
         loadForModule: () =>
-          Promise.resolve([fakeCapability('headers-checker', { outcome: 'FAILED', evidence: { header: 'content-security-policy', observed: null } })]),
+          Promise.resolve([
+            fakeCapability('headers-checker', {
+              outcome: 'FAILED',
+              evidence: { header: 'content-security-policy', observed: null },
+            }),
+          ]),
       },
       { issueId, debitTransactionId: debitId, creditsCharged: 3 },
     );
@@ -127,7 +171,14 @@ describe('runReverification', () => {
   it('capability UNVERIFIABLE → issue UNVERIFIABLE, refunded', async () => {
     const { issueId, debitId } = await seedAssertedIssue();
     const result = await runReverification(
-      { db, publisher, loadForModule: () => Promise.resolve([fakeCapability('headers-checker', { outcome: 'UNVERIFIABLE', reason: 'gone' })]) },
+      {
+        db,
+        publisher,
+        loadForModule: () =>
+          Promise.resolve([
+            fakeCapability('headers-checker', { outcome: 'UNVERIFIABLE', reason: 'gone' }),
+          ]),
+      },
       { issueId, debitTransactionId: debitId, creditsCharged: 3 },
     );
     expect(result.issueState).toBe('UNVERIFIABLE');
@@ -167,7 +218,12 @@ describe('runReverification', () => {
     const { issueId, debitId } = await seedAssertedIssue();
     await db.issue.update({ where: { id: issueId }, data: { state: 'OPEN' } });
     const result = await runReverification(
-      { db, publisher, loadForModule: () => Promise.resolve([fakeCapability('headers-checker', { outcome: 'PASSED' })]) },
+      {
+        db,
+        publisher,
+        loadForModule: () =>
+          Promise.resolve([fakeCapability('headers-checker', { outcome: 'PASSED' })]),
+      },
       { issueId, debitTransactionId: debitId, creditsCharged: 3 },
     );
     expect(result.applied).toBe(false);

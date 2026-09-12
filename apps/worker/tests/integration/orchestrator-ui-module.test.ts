@@ -26,7 +26,10 @@ import type { Queue } from 'bullmq';
 import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
 import { reconcileCapabilitiesAtBoot } from '@webaudit/api';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';
@@ -87,7 +90,10 @@ describe('C1 — a UI-area scan completes through the real orchestrator', () => 
     });
 
     const handle = createPhaseHandler(makeOptions());
-    await handle({ scanId: scan.id, phase: 'RUNNING_PHASE_2', modules: ['UI'], attempt: 1 }, FAKE_JOB);
+    await handle(
+      { scanId: scan.id, phase: 'RUNNING_PHASE_2', modules: ['UI'], attempt: 1 },
+      FAKE_JOB,
+    );
 
     const after = await db.scan.findUniqueOrThrow({ where: { id: scan.id } });
     expect(after.state).not.toBe('FAILED');

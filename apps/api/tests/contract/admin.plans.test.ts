@@ -13,7 +13,10 @@ import { SignJWT } from 'jose';
 import { env } from '../../src/config/env.js';
 import { adminPlansRoutes } from '../../src/routes/admin/plans.routes.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
-import { PlanNotSubscribableError, subscribe } from '../../src/services/billing/subscription.service.js';
+import {
+  PlanNotSubscribableError,
+  subscribe,
+} from '../../src/services/billing/subscription.service.js';
 
 function buildApp() {
   const app = express();
@@ -94,7 +97,11 @@ describe('GET /plans', () => {
     const activeOnly = await request(app).get('/plans').set(auth(token)).expect(200);
     expect((activeOnly.body as { plans: unknown[] }).plans.length).toBe(3);
 
-    const all = await request(app).get('/plans').query({ includeInactive: 'true' }).set(auth(token)).expect(200);
+    const all = await request(app)
+      .get('/plans')
+      .query({ includeInactive: 'true' })
+      .set(auth(token))
+      .expect(200);
     expect((all.body as { plans: unknown[] }).plans.length).toBe(4);
   });
 });
@@ -166,7 +173,11 @@ describe('PATCH /plans/:id', () => {
 
   it('404s for a nonexistent plan', async () => {
     const { token } = await makeOperatorToken();
-    await request(app).patch('/plans/does-not-exist').set(auth(token)).send({ monthlyCredits: 5 }).expect(404);
+    await request(app)
+      .patch('/plans/does-not-exist')
+      .set(auth(token))
+      .send({ monthlyCredits: 5 })
+      .expect(404);
   });
 
   it('deactivating a plan here still refuses new subscriptions to it (loadSubscribablePlan)', async () => {
@@ -176,10 +187,14 @@ describe('PATCH /plans/:id', () => {
       data: { email: 'subscriber@example.com', emailVerifiedAt: new Date() },
     });
 
-    await request(app).patch('/plans/starter').set(auth(token)).send({ isActive: false }).expect(200);
+    await request(app)
+      .patch('/plans/starter')
+      .set(auth(token))
+      .send({ isActive: false })
+      .expect(200);
 
-    await expect(subscribe(testDb, { userId: subscriber.id, planId: 'starter' })).rejects.toBeInstanceOf(
-      PlanNotSubscribableError,
-    );
+    await expect(
+      subscribe(testDb, { userId: subscriber.id, planId: 'starter' }),
+    ).rejects.toBeInstanceOf(PlanNotSubscribableError);
   });
 });

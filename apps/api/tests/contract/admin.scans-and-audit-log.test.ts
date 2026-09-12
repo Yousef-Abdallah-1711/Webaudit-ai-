@@ -108,7 +108,11 @@ describe('GET /admin/scans', () => {
     }
     const token = await tokenFor(operator.id);
 
-    const res = await request(app).get('/scans').query({ limit: 2, offset: 1 }).set(auth(token)).expect(200);
+    const res = await request(app)
+      .get('/scans')
+      .query({ limit: 2, offset: 1 })
+      .set(auth(token))
+      .expect(200);
     const body = res.body as { scans: unknown[]; total: number; limit: number; offset: number };
     expect(body.scans.length).toBe(2);
     expect(body.total).toBe(3);
@@ -176,7 +180,11 @@ describe('GET /admin/audit-log', () => {
     }
     const token = await tokenFor(operator.id);
 
-    const res = await request(app).get('/audit-log').query({ limit: 1, offset: 0 }).set(auth(token)).expect(200);
+    const res = await request(app)
+      .get('/audit-log')
+      .query({ limit: 1, offset: 0 })
+      .set(auth(token))
+      .expect(200);
     const body = res.body as { entries: { action: string }[]; total: number };
     expect(body.total).toBe(3);
     expect(body.entries.length).toBe(1);

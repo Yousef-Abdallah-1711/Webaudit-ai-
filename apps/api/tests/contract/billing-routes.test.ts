@@ -44,14 +44,24 @@ describe('billing routes', () => {
   it('GET /billing/credits is a receipt: every movement, and which balance a debit drew against', async () => {
     const { token, userId } = await signIn();
     // The free-grant GRANT exists from registration. Subscribe adds a plan lot.
-    await request(app).post('/billing/subscribe').set(auth(token)).send({ planId: 'pro' }).expect(201);
+    await request(app)
+      .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'pro' })
+      .expect(201);
     // Spend 90 — plan credits are consumed first (SC-022).
     await debit(testDb, { userId, amount: 90, reason: 'scan:full_audit' });
 
     const res = await request(app).get('/billing/credits').set(auth(token)).expect(200);
     const body = res.body as {
       balance: { plan: number; purchased: number };
-      movements: { type: string; amount: number; reason: string; drewFrom: Record<string, number>; createdAt: string }[];
+      movements: {
+        type: string;
+        amount: number;
+        reason: string;
+        drewFrom: Record<string, number>;
+        createdAt: string;
+      }[];
     };
 
     expect(body.balance.plan).toBe(1200 + 50 - 90);
@@ -67,7 +77,11 @@ describe('billing routes', () => {
   it('subscribe → change-plan → cancel, with the retention consequence on cancel', async () => {
     const { token } = await signIn();
 
-    await request(app).post('/billing/subscribe').set(auth(token)).send({ planId: 'starter' }).expect(201);
+    await request(app)
+      .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'starter' })
+      .expect(201);
 
     const changed = await request(app)
       .post('/billing/change-plan')
@@ -77,14 +91,19 @@ describe('billing routes', () => {
     expect((changed.body as { subscription: { planId: string } }).subscription.planId).toBe('pro');
 
     const cancelled = await request(app).post('/billing/cancel').set(auth(token)).expect(200);
-    expect((cancelled.body as { subscription: { cancelAtPeriodEnd: boolean } }).subscription.cancelAtPeriodEnd).toBe(
-      true,
-    );
+    expect(
+      (cancelled.body as { subscription: { cancelAtPeriodEnd: boolean } }).subscription
+        .cancelAtPeriodEnd,
+    ).toBe(true);
     expect((cancelled.body as { reportsReadableUntil: string }).reportsReadableUntil).toBeDefined();
   });
 
   it('change-plan before subscribing is a 409', async () => {
     const { token } = await signIn();
-    await request(app).post('/billing/change-plan').set(auth(token)).send({ planId: 'pro' }).expect(409);
+    await request(app)
+      .post('/billing/change-plan')
+      .set(auth(token))
+      .send({ planId: 'pro' })
+      .expect(409);
   });
 });

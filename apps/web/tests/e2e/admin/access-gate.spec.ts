@@ -1,34 +1,55 @@
 import { test, expect } from '@playwright/test';
 import { startStack, type Stack } from '../support/stack.js';
-import { registerAndVerify, loginViaUi } from '../support/auth.js';
+import { promoteToOperator, registerAndVerify, loginViaUi } from '../support/auth.js';
 
 let stack: Stack;
 const nonOperator = { email: 'non-operator@example.com', password: 'correct-horse-battery-staple' };
-const otherReal = { email: 'other-real-account@example.com', password: 'correct-horse-battery-staple' };
+const otherReal = {
+  email: 'other-real-account@example.com',
+  password: 'correct-horse-battery-staple',
+};
+const operator = { email: 'operator@example.com', password: 'correct-horse-battery-staple' };
 
 test.beforeAll(async () => {
   test.setTimeout(180_000);
   stack = await startStack();
   await registerAndVerify(stack, nonOperator);
   await registerAndVerify(stack, otherReal);
+  await registerAndVerify(stack, operator);
+  await promoteToOperator(stack, operator.email);
 });
-test.afterAll(async () => stack.stop());
+test.afterAll(async () => {
+  if (stack !== undefined) await stack.stop();
+});
 
-test('a genuine non-operator account cannot see admin data even after navigating to /admin/users', async ({
+test('anonymous direct dashboard/admin URLs go to login without rendering protected shells', async ({
+  page,
+}) => {
+  await page.goto(`${stack.webBaseUrl}/scan`);
+  await expect(page).toHaveURL(/\/login\?next=%2Fscan$/);
+  await expect(page.getByRole('heading', { name: 'What should we audit?' })).not.toBeVisible();
+
+  await page.reload();
+  await expect(page).toHaveURL(/\/login\?next=%2Fscan$/);
+
+  await page.goto(`${stack.webBaseUrl}/admin/users`);
+  await expect(page).toHaveURL(/\/login\?next=%2Fadmin%2Fusers$/);
+  await expect(page.getByText('Platform')).not.toBeVisible();
+});
+
+test('a customer can use the dashboard but is returned to it from every admin deep link', async ({
   page,
 }) => {
   await loginViaUi(page, stack.webBaseUrl, nonOperator);
+  await expect(page).toHaveURL(/\/scan$/);
   await page.goto(`${stack.webBaseUrl}/admin/users`);
-  // CLAUDE.md: "Frontend route guards are usability, never security" — the
-  // page renders its shell regardless, but auth.middleware.ts's real
-  // requireOperator refuses the data fetch server-side with this exact
-  // message (FORBIDDEN, 403). Assert that real refusal, not a client
-  // redirect a hostile client could skip.
-  await expect(page.getByText('Operator access required.')).toBeVisible({ timeout: 10_000 });
-  // AHead's real account count only renders once a fetch actually succeeds
-  // (admin-error-paths.test.ts's own regression for the "fabricated 0
-  // accounts" defect) — its absence, plus the other real account's email
-  // never appearing, proves no data leaked past the refusal.
-  await expect(page.getByText('accounts')).not.toBeVisible();
+  await expect(page).toHaveURL(/\/scan$/);
   await expect(page.getByText(otherReal.email)).not.toBeVisible();
+});
+
+test('an operator can enter the admin console after a direct navigation', async ({ page }) => {
+  await loginViaUi(page, stack.webBaseUrl, operator);
+  await page.goto(`${stack.webBaseUrl}/admin`);
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByText(`operator · ${operator.email}`)).toBeVisible();
 });

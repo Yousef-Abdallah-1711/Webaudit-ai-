@@ -74,7 +74,7 @@ beforeEach(async () => {
 afterAll(closeDb);
 
 describe('SC-009 — margin/cost is attributable to the individual capability', () => {
-  it('reports each capability\'s own cost, not a module-blended or evenly-split figure', async () => {
+  it("reports each capability's own cost, not a module-blended or evenly-split figure", async () => {
     const { user, target } = await seedUserAndTarget();
     const scan = await seedScan(user.id, target.id, 80);
 
@@ -166,7 +166,7 @@ describe('SC-009 — margin/cost is attributable to the individual capability', 
     expect(report.note.length).toBeGreaterThan(0);
   });
 
-  it('per-area revenue split can leave a scan\'s own areas summing to less than its chargedCredits (documented floor-rounding shortfall)', async () => {
+  it("per-area revenue split can leave a scan's own areas summing to less than its chargedCredits (documented floor-rounding shortfall)", async () => {
     // 80 credits across 3 requested modules does not divide evenly:
     // floor(80/3) = 26 per module, 26*3 = 78 -- 2 credits are not attributed
     // to any area. This is the exact, documented tradeoff in margin.service.ts's
@@ -190,7 +190,10 @@ describe('SC-009 — margin/cost is attributable to the individual capability', 
     // is a window-wide aggregate across every scan in range, not scoped to
     // this test's own scan alone, so a delta assertion is correct regardless
     // of whatever else exists in the (now explicit) window.
-    const window = { from: new Date('2020-01-01T00:00:00.000Z'), to: new Date('2099-01-01T00:00:00.000Z') };
+    const window = {
+      from: new Date('2020-01-01T00:00:00.000Z'),
+      to: new Date('2099-01-01T00:00:00.000Z'),
+    };
     const { user, target } = await seedUserAndTarget();
     const before = await getMarginReport(testDb, window);
     const beforeByModule = new Map(before.perArea.map((r) => [r.module, r.chargedCredits]));

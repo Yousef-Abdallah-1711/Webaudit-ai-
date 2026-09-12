@@ -10,21 +10,22 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { AdminShell, AHead, Stat, Table } from '../../components/admin';
+import { AuthProvider } from '../../components/auth/AuthProvider';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/admin'),
 }));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(AuthProvider, null, element));
 }
 
 describe('AdminShell', () => {
   it('renders the operator chip, the top-bar identity, and the children', () => {
     const html = render(createElement(AdminShell, {}, 'page body'));
     expect(html).toContain('operator');
-    expect(html).toContain('khalid@webaudit.ai');
-    expect(html).toContain('7 workers');
+    expect(html).toContain('Unavailable');
+    expect(html).toContain('Workers unavailable');
     expect(html).toContain('page body');
   });
 

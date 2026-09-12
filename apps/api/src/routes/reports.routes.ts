@@ -107,7 +107,10 @@ export function reportsRoutes(db: PrismaClient): Router {
         score: scan.overallScore,
         summary: scan.summary,
         areas: scan.moduleResults,
-        issues: issues.map(({ moduleResult, ...issue }) => ({ ...issue, module: moduleResult.module })),
+        issues: issues.map(({ moduleResult, ...issue }) => ({
+          ...issue,
+          module: moduleResult.module,
+        })),
       },
     });
   });
@@ -116,7 +119,10 @@ export function reportsRoutes(db: PrismaClient): Router {
     const userId = req.auth!.userId;
     const parsed = issueFilter.safeParse(req.query);
     if (!parsed.success) {
-      badRequest(res, 'severity must be one of the known severities and state one of the known states.');
+      badRequest(
+        res,
+        'severity must be one of the known severities and state one of the known states.',
+      );
       return;
     }
 
@@ -170,7 +176,13 @@ export function reportsRoutes(db: PrismaClient): Router {
       if (error instanceof ReportNotExportableError) {
         res
           .status(error.reason === 'not-found' ? 404 : error.reason === 'removed' ? 410 : 409)
-          .json({ error: { code: 'NOT_EXPORTABLE', message: error.message, details: { reason: error.reason } } });
+          .json({
+            error: {
+              code: 'NOT_EXPORTABLE',
+              message: error.message,
+              details: { reason: error.reason },
+            },
+          });
         return;
       }
       throw error;

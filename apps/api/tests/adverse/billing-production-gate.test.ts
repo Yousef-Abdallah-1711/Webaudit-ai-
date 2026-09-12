@@ -80,6 +80,25 @@ describe('CRIT-1 regression: direct-effect billing routes are production-gated',
     expect(sub).toBeNull();
   });
 
+  it('POST /billing/change-plan 404s in production, applying no direct plan change', async () => {
+    const token = await signIn(devApp);
+    await request(devApp)
+      .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'starter' })
+      .expect(201);
+
+    const res = await request(prodApp)
+      .post('/billing/change-plan')
+      .set(auth(token))
+      .send({ planId: 'business' })
+      .expect(404);
+    expect((res.body as { error: { code: string } }).error.code).toBe('NOT_FOUND');
+
+    const sub = await testDb.subscription.findFirst({ where: { user: { email: CREDS.email } } });
+    expect(sub?.planId).toBe('starter');
+  });
+
   it('both routes are unaffected outside production', async () => {
     const token = await signIn(devApp);
     // Credit purchase is refused on the free tier regardless of this gate
@@ -107,6 +126,11 @@ describe('CRIT-1 regression: direct-effect billing routes are production-gated',
       .expect(404);
     await request(prodApp)
       .post('/billing/subscribe')
+      .set(auth(token))
+      .send({ planId: 'not-a-real-plan' })
+      .expect(404);
+    await request(prodApp)
+      .post('/billing/change-plan')
       .set(auth(token))
       .send({ planId: 'not-a-real-plan' })
       .expect(404);

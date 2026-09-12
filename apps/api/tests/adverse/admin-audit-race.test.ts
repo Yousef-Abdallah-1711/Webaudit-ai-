@@ -83,12 +83,24 @@ describe('admin audit-log races: the second write records what the first actuall
     });
 
     await Promise.allSettled([
-      setCapabilityEnabled(testDb, { operatorId, capabilityId: 'race-capability', isEnabled: true }),
-      setCapabilityEnabled(testDb, { operatorId, capabilityId: 'race-capability', isEnabled: false }),
+      setCapabilityEnabled(testDb, {
+        operatorId,
+        capabilityId: 'race-capability',
+        isEnabled: true,
+      }),
+      setCapabilityEnabled(testDb, {
+        operatorId,
+        capabilityId: 'race-capability',
+        isEnabled: false,
+      }),
     ]);
 
     const entries = await testDb.auditLogEntry.findMany({
-      where: { subjectType: 'Capability', subjectId: 'race-capability', action: 'capability.update' },
+      where: {
+        subjectType: 'Capability',
+        subjectId: 'race-capability',
+        action: 'capability.update',
+      },
       orderBy: { createdAt: 'asc' },
     });
     expect(entries.length).toBe(2);
@@ -127,7 +139,11 @@ describe('admin audit-log races: the second write records what the first actuall
     ]);
 
     const entries = await testDb.auditLogEntry.findMany({
-      where: { subjectType: 'Capability', subjectId: 'race-capability-2', action: 'capability.restrict' },
+      where: {
+        subjectType: 'Capability',
+        subjectId: 'race-capability-2',
+        action: 'capability.restrict',
+      },
       orderBy: { createdAt: 'asc' },
     });
     expect(entries.length).toBe(2);

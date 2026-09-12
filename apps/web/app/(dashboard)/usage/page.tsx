@@ -1,111 +1,130 @@
-/**
- * Ported from design-system/ui_kits/app/Account.jsx's `UsageScreen` (T242).
- *
- * All demo data (spend figures, the 24-day chart, per-area breakdown,
- * refund history) is the exact placeholder content the vendored source
- * shows — not real data, and this port doesn't invent a wiring for it that
- * doesn't exist yet (T158+, US5 billing lands the real numbers).
- *
- * No client interactivity anywhere in the source (no hooks, no handlers
- * beyond a static `Export CSV` button), so this stays a Server Component —
- * unlike every other T237–T241 screen, which needed `useT()`.
- */
+'use client';
+
+import { useEffect, useState } from 'react';
 import { Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
+import { getUsage, type UsageSummary } from '../../../lib/api';
 import styles from './page.module.css';
 
-const DAYS = [
-  38, 0, 80, 12, 3, 83, 0, 20, 60, 80, 3, 0, 143, 80, 6, 20, 0, 83, 3, 80, 60, 0, 20, 83,
-];
+const AREA_COLORS: Record<string, string> = {
+  SECURITY: 'var(--sev-critical)',
+  PERFORMANCE: 'var(--sev-high)',
+  UI: 'var(--sev-medium)',
+  TESTING: 'var(--sev-low)',
+  SEO: 'var(--sev-info)',
+};
 
-const STAT_CARDS: readonly (readonly [string, string, string])[] = [
-  ['Spent this period', '980', 'of 1,200 plan credits'],
-  ['Remaining', '1,120', '920 plan · 200 purchased'],
-  ['Audits run', '11', '9 full · 2 partial'],
-  ['Re-checks', '24', '72 credits · 7% of spend'],
-];
-
-const BY_AREA: readonly (readonly [string, number, string])[] = [
-  ['Security', 280, 'var(--sev-critical)'],
-  ['Performance', 220, 'var(--sev-high)'],
-  ['Design', 180, 'var(--sev-medium)'],
-  ['Testing', 180, 'var(--sev-low)'],
-  ['Search visibility', 120, 'var(--sev-info)'],
-];
-const BY_AREA_MAX = 280;
-
-const REFUNDS: readonly (readonly [string, string, string])[] = [
-  ['23 Aug', 'Provider outage — design area', '+20'],
-  ['19 Aug', 'Worker timeout — testing area', '+20'],
-  ['14 Aug', 'Archive rejected before extraction', '+80'],
-];
+function downloadCsv(usage: UsageSummary): void {
+  const rows = [
+    ['type', 'date', 'label', 'credits'],
+    ...usage.dailySpend.map((e) => ['daily_spend', e.date, '', String(e.credits)]),
+    ...usage.byArea.map((e) => ['area', '', e.area, String(e.credits)]),
+    ...usage.refunds.map((e) => ['refund', e.date, e.reason, String(e.credits)]),
+  ];
+  const csv = rows
+    .map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(','))
+    .join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'webaudit-usage.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function UsagePage(): React.ReactElement {
-  const max = Math.max(...DAYS);
-
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    void getUsage()
+      .then(setUsage)
+      .catch(() => setError('Usage data could not be loaded.'));
+  }, []);
+  const maxDaily = Math.max(...(usage?.dailySpend.map((entry) => entry.credits) ?? [0]), 1);
+  const maxArea = Math.max(...(usage?.byArea.map((entry) => entry.credits) ?? [0]), 1);
+  const audits = usage?.auditsRun ?? 0;
+  const rechecks = usage?.rechecks ?? 0;
+  const stats = [
+    ['Spent this period', String(usage?.spentCredits ?? 0), 'real ledger debits'],
+    [
+      'Remaining',
+      String((usage?.balance.plan ?? 0) + (usage?.balance.purchased ?? 0)),
+      `${usage?.balance.plan ?? 0} plan · ${usage?.balance.purchased ?? 0} purchased`,
+    ],
+    ['Audits run', String(audits), `${audits} initial scans`],
+    ['Re-checks', String(rechecks), `${rechecks} readiness scans`],
+  ] as const;
   return (
     <div>
       <PageHead
         eyebrow="Usage"
         title="Credit usage"
-        meta="current period · 12 Aug – 12 Sep 2026"
+        meta={usage ? 'current period · last 30 days' : 'Loading usage...'}
         actions={
-          <Button variant="secondary" size="sm">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={usage === null}
+            onClick={() => usage && downloadCsv(usage)}
+          >
             Export CSV
           </Button>
         }
       />
-
+      {error !== null && <p>{error}</p>}
       <div className={styles.statsGrid}>
-        {STAT_CARDS.map(([label, value, sub]) => (
+        {stats.map(([label, value, sub]) => (
           <Card key={label} padding={20} eyebrow={label}>
             <div className={styles.statValue}>{value}</div>
             <div className={styles.statSub}>{sub}</div>
           </Card>
         ))}
       </div>
-
       <Card padding={24} title="Daily spend">
         <div className={styles.chartRow}>
-          {DAYS.map((d, i) => (
+          {(usage?.dailySpend ?? []).map((entry) => (
             <div
-              key={i}
-              title={`${String(d)} credits`}
-              className={d ? `${styles.chartBar} ${styles.chartBarActive}` : styles.chartBar}
-              style={{ height: `${String(Math.max(2, (d / max) * 100))}%` }}
+              key={entry.date}
+              title={`${entry.credits} credits`}
+              className={
+                entry.credits ? `${styles.chartBar} ${styles.chartBarActive}` : styles.chartBar
+              }
+              style={{ height: `${Math.max(2, (entry.credits / maxDaily) * 100)}%` }}
             />
           ))}
         </div>
         <div className={styles.chartLegend}>
-          <span>12 Aug</span>
-          <span>peak 143 cr</span>
-          <span>23 Aug</span>
+          <span>last 30 days</span>
+          <span>peak {maxDaily} cr</span>
+          <span>today</span>
         </div>
       </Card>
-
       <div className={styles.twoCol}>
         <Card padding={22} title="By area">
-          {BY_AREA.map(([name, value, color]) => (
-            <div key={name} className={styles.areaRow}>
+          {(usage?.byArea ?? []).map((entry) => (
+            <div key={entry.area} className={styles.areaRow}>
               <div className={styles.areaRowHead}>
-                <span>{name}</span>
-                <span className={styles.areaRowValue}>{value} cr</span>
+                <span>{entry.area}</span>
+                <span className={styles.areaRowValue}>{entry.credits} cr</span>
               </div>
               <div className={styles.areaBar}>
                 <div
                   className={styles.areaBarFill}
-                  style={{ width: `${String((value / BY_AREA_MAX) * 100)}%`, background: color }}
+                  style={{
+                    width: `${(entry.credits / maxArea) * 100}%`,
+                    background: AREA_COLORS[entry.area] ?? 'var(--sev-info)',
+                  }}
                 />
               </div>
             </div>
           ))}
         </Card>
         <Card padding={22} title="Refunds and adjustments">
-          {REFUNDS.map(([date, reason, value]) => (
-            <div key={date + reason} className={styles.refundRow}>
-              <span className={styles.refundDate}>{date}</span>
-              <span className={styles.refundReason}>{reason}</span>
-              <span className={styles.refundValue}>{value}</span>
+          {(usage?.refunds ?? []).map((entry) => (
+            <div key={`${entry.date}-${entry.reason}`} className={styles.refundRow}>
+              <span className={styles.refundDate}>{new Date(entry.date).toLocaleDateString()}</span>
+              <span className={styles.refundReason}>{entry.reason}</span>
+              <span className={styles.refundValue}>+{entry.credits}</span>
             </div>
           ))}
           <p className={styles.refundNote}>

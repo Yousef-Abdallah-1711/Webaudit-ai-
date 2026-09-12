@@ -55,6 +55,9 @@ export function IssueCard({
 
   function copy(): void {
     setCopied(true);
+    void navigator.clipboard?.writeText(prompt ?? '').catch(() => {
+      // Clipboard permission can be denied; the prompt remains selectable in the card.
+    });
     onCopy?.(prompt ?? '');
     setTimeout(() => {
       setCopied(false);

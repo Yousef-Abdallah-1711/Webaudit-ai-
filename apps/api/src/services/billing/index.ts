@@ -28,6 +28,7 @@ export {
 } from './entitlements.js';
 
 export { sendRenewalWarnings, type RenewalWarningResult } from './renewal-warning.js';
+export { sweepExpiredPendingPayments } from './payment-expiry-sweep.js';
 
 /**
  * Renew every subscription whose period has ended. The pure per-user work is

@@ -125,9 +125,8 @@ async function pageFindings(
       await page.goto(targetUrl, { waitUntil: 'load' });
       const findings: CapabilityFinding[] = [];
 
-      const { renderBlockingScripts } = await page.evaluate<RenderBlockingResult>(
-        RENDER_BLOCKING_SCRIPT,
-      );
+      const { renderBlockingScripts } =
+        await page.evaluate<RenderBlockingResult>(RENDER_BLOCKING_SCRIPT);
       if (renderBlockingScripts > 0) {
         findings.push(
           finding(

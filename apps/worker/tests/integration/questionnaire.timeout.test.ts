@@ -75,7 +75,11 @@ async function makeScan(state: 'AWAITING_QUESTIONNAIRE' | 'RUNNING_PHASE_2'): Pr
   scanId: string;
 }> {
   const user = await db.user.create({
-    data: { email: `q-timeout-${state}@example.com`, passwordHash: 'x', emailVerifiedAt: new Date() },
+    data: {
+      email: `q-timeout-${state}@example.com`,
+      passwordHash: 'x',
+      emailVerifiedAt: new Date(),
+    },
   });
   const target = await db.target.create({
     data: {

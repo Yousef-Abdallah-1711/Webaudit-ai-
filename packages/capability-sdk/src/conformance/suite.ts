@@ -49,7 +49,12 @@
 
 import type { CapabilityFinding } from '@webaudit/types';
 import { fingerprintOf } from '@webaudit/scoring';
-import type { AuditCapability, CapabilityInput, CodeLayerContext, ReverifyRequest } from '../contract.js';
+import type {
+  AuditCapability,
+  CapabilityInput,
+  CodeLayerContext,
+  ReverifyRequest,
+} from '../contract.js';
 import { parseManifest, type CapabilityManifest } from '../manifest.js';
 import { containCapabilityCall, describeThrown } from '../contain.js';
 
@@ -120,7 +125,10 @@ export interface ConformanceDeps {
    * vendored capability — has no such concern and never needs this; the
    * default is unchanged from before this option existed.
    */
-  readonly buildCanRunTrap?: () => { readonly trap: object; readonly touched: () => readonly string[] };
+  readonly buildCanRunTrap?: () => {
+    readonly trap: object;
+    readonly touched: () => readonly string[];
+  };
   /**
    * Overrides `checkReverify`'s synthetic probe request — same reason as
    * `buildCanRunTrap` above, for the same one caller: the default object
@@ -221,7 +229,11 @@ function defaultCanRunTrap(): { readonly trap: object; readonly touched: () => r
   return { trap, touched: () => touched };
 }
 
-function checkCanRunPure(capability: AuditCapability, input: CapabilityInput, deps: ConformanceDeps): CheckResult {
+function checkCanRunPure(
+  capability: AuditCapability,
+  input: CapabilityInput,
+  deps: ConformanceDeps,
+): CheckResult {
   const { trap, touched } = (deps.buildCanRunTrap ?? defaultCanRunTrap)();
   const controller = new AbortController();
 
@@ -417,7 +429,8 @@ async function checkReverify(
       ...(location === undefined ? {} : { location }),
     }));
   const outcome = await containCapabilityCall(
-    () => capability.reverify!(buildProbe(deps.input.targetUrl), deps.makeContext(controller.signal)),
+    () =>
+      capability.reverify!(buildProbe(deps.input.targetUrl), deps.makeContext(controller.signal)),
     { timeoutMs },
   );
 

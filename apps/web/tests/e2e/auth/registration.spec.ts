@@ -37,7 +37,9 @@ test('registering the same address twice is refused with a specific reason', asy
   await page.getByLabel('Password').fill('another-correct-password');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   // lib/strings.ts's real copy: "That address cannot be registered."
-  await expect(page.getByText('That address cannot be registered.')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText('That address cannot be registered.')).toBeVisible({
+    timeout: 5_000,
+  });
   await expect(page).toHaveURL(`${stack.webBaseUrl}/signup`);
 });
 

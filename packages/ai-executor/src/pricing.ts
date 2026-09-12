@@ -11,7 +11,9 @@
  * So pricing is configuration, and a provider with no configured price **refuses
  * to be constructed**. That is deliberately louder than defaulting to zero:
  * zero-cost invocations make a provider look free, which is the one wrong answer
- * that nobody investigates.
+ * that nobody investigates. A genuinely free/trial-tier provider must therefore
+ * say so explicitly through `freeTier: true`; blank price fields still fail
+ * closed.
  *
  * Published rates at the time of writing, for the operator filling in `.env`:
  *
@@ -84,6 +86,7 @@ export function dollarsPerMillionToMicros(raw: string): number {
 export interface PricingEnv {
   readonly input?: string | undefined;
   readonly output?: string | undefined;
+  readonly freeTier?: boolean | undefined;
 }
 
 /**
@@ -94,6 +97,10 @@ export function pricingFrom(
   env: PricingEnv,
   variableNames: readonly [string, string],
 ): ModelPricing {
+  if (env.freeTier === true) {
+    return { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 };
+  }
+
   const input = dollarRate.safeParse(env.input ?? '');
   const output = dollarRate.safeParse(env.output ?? '');
   if (!input.success || !output.success) {

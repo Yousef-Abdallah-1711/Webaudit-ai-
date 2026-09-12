@@ -15,7 +15,14 @@
  */
 
 import { afterAll, describe, expect, it } from 'vitest';
-import { createQueues, QUEUE_NAMES, redisConnection } from '../../src/queue/queues.js';
+import {
+  createQueues,
+  QUEUE_LOCK_DURATION_MS,
+  QUEUE_NAMES,
+  QUEUE_STALLED_INTERVAL_MS,
+  redisConnection,
+  SCAN_PHASE_MAX_STALLED_COUNT,
+} from '../../src/queue/queues.js';
 import { createWorkers } from '../../src/queue/workers.js';
 
 const REDIS_URL = process.env['REDIS_URL'] ?? 'redis://127.0.0.1:6389';
@@ -51,6 +58,16 @@ describe('the pinned BullMQ version accepts every queue name this repo defines',
 
     it('constructs every production worker without throwing', async () => {
       const workers = createWorkers({ connection });
+      expect(workers.scanPhase.opts.lockDuration).toBe(QUEUE_LOCK_DURATION_MS);
+      expect(workers.scanPhase.opts.stalledInterval).toBe(QUEUE_STALLED_INTERVAL_MS);
+      // T312: a stalled scanPhase job must fail immediately, never be silently
+      // reprocessed — see this file's own SCAN_PHASE_MAX_STALLED_COUNT module note.
+      expect(workers.scanPhase.opts.maxStalledCount).toBe(SCAN_PHASE_MAX_STALLED_COUNT);
+      // Explicitly unchanged: reverify is idempotent by construction (R14) and
+      // maintenance has no evidence of this problem — neither should be touched
+      // by this fix.
+      expect(workers.reverify.opts.maxStalledCount).not.toBe(SCAN_PHASE_MAX_STALLED_COUNT);
+      expect(workers.maintenance.opts.maxStalledCount).not.toBe(SCAN_PHASE_MAX_STALLED_COUNT);
       await workers.close(true);
     });
   });

@@ -45,7 +45,6 @@ import { createLogger } from '@webaudit/config';
 import type { PrismaClient } from '../prisma/generated/client/index.js';
 import { createApp, corsAllowlist } from './app.js';
 import { prisma, disconnect } from './db/client.js';
-import { env } from './config/env.js';
 import { createRealtimeServer, type RealtimeServer } from './services/realtime/server.js';
 import { startFanout, type Fanout, type RedisSubscriber } from './services/realtime/fanout.js';
 import { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
@@ -54,7 +53,7 @@ import type { RateLimiters } from './middleware/ratelimit.middleware.js';
 import type { Mailer } from './services/email/mailer.js';
 import type { BillingRoutesDeps } from './routes/billing.routes.js';
 import type { WebhookRoutesDeps } from './routes/webhooks.routes.js';
-import { createStubPaymentProvider } from './services/billing/stub-payment-provider.js';
+import { createPaymentProviderFromEnv } from './services/billing/from-env.js';
 import { createEnvBillingPriceCatalog } from './services/billing/checkout-pricing.js';
 import type { PaymentProvider } from './services/billing/payment-provider.js';
 
@@ -275,9 +274,9 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
   // fallback webhook secret. A caller that explicitly passes `billing`/
   // `webhooks` (every existing test) is respected as-is, with no stub merged
   // in underneath it.
-  const defaultPaymentProvider: PaymentProvider | undefined = env.isProduction
-    ? undefined
-    : createStubPaymentProvider();
+  const defaultPaymentProvider: PaymentProvider | undefined = createPaymentProviderFromEnv(
+    process.env,
+  );
   const defaultBilling: BillingRoutesDeps | undefined =
     defaultPaymentProvider === undefined
       ? undefined

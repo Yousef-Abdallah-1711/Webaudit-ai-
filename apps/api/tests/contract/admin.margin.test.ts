@@ -126,6 +126,12 @@ describe('GET /margin', () => {
 
     expect(typeof body.report.note).toBe('string');
     expect(body.report.note.length).toBeGreaterThan(0);
+
+    const exported = await request(app).get('/margin/export').set(auth(token)).expect(200);
+    expect(exported.headers['content-type']).toContain('text/csv');
+    expect(exported.headers['content-disposition']).toContain('margin-report.csv');
+    expect(exported.text).toContain(scan.id);
+    expect(exported.text).toContain('250000');
   });
 
   it('rejects an invalid date range with 400', async () => {

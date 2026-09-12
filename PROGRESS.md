@@ -1,5 +1,113 @@
 # WebAudit AI — Build Progress
 
+**Updated 2026-09-11 (latest)**: 🎯 **All four remaining P3 hardening items from the full-workflow
+review are now fixed and regression-tested — every P0/P2/P3 finding from that review is closed.**
+Each fix followed the same test-first discipline as the P0/P2 fixes (red test confirmed, then the
+implementation, then green), with the full `pnpm test:adverse` suite (53 files, 818 tests) re-run clean
+afterward — zero regressions.
+1. **`master-report.ts`'s unguarded write**: `runMasterSynthesis` now takes an optional `isCancelled`
+   checkpoint (mirroring `runAndPersistModule`'s own P0-CANCEL-1 checkpoints) and skips its
+   `overallScore`/`summary` write if cancellation was discovered while the AI call was in flight.
+   `apps/worker/tests/adverse/master-synthesis-cancel-mid-flight.test.ts`.
+2. **The worker's Redis publisher had no `.on('error', ...)` handler**, unlike every sibling client in
+   this codebase — extracted into a new, exported `createPublisherRedisClient` (mirroring
+   `ratelimit.middleware.ts`'s own `createClient`) with the same handler attached.
+   `apps/worker/tests/adverse/publisher-redis-error-handling.test.ts`.
+3. **The raw WebSocket upgrade had no origin check or connection-count limit** — `verifyClient` now
+   checks an optional `allowedOrigins` set (reusing `app.ts`'s own `corsAllowlist`) and an optional
+   `maxConnectionsPerIp` cap (keyed the same way `ratelimit.middleware.ts`'s `clientKey` normalizes an
+   address), both wired with real values at the production call site.
+   `apps/api/tests/adverse/realtime-upgrade-limits.test.ts` (real HTTP server + real `ws` clients, the
+   only way to actually exercise `verifyClient`).
+4. **`scans.routes.ts`'s cancel route re-fetched a scan by bare id** after an already-ownership-checked
+   write — safe only because of ordering, not because the query itself proved it. Extracted into a new,
+   exported `fetchCancelledScanForUser(db, scanId, userId)`, scoped to `{ id, userId }`.
+   `apps/api/tests/integration/scans.cancel-refetch-scoping.test.ts` proves the scoping directly (two
+   users, confirms a mismatched user is refused even though the id alone would resolve it) — the only
+   way to catch a regression here, since the real route can never reach this code with a mismatched
+   user today.
+
+Full write-up: [docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md](docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md)
+Sections 6e/6g/6h and 7.2/7.4 — this closes every finding that review raised. The only genuinely open
+item left anywhere in this line of work is the honest load-testing boundary (unverified above 10
+concurrent audits, a real evidence-backed reason, not a gap in effort).
+
+**Updated 2026-09-11 (load-testing)**: 🎯 **The load-testing harness — the one remaining open item from the
+full-workflow review — is built, run, and reported** (`specs/004-load-testing-harness/`,
+`load-testing/`). A real k6-based harness drives the golden-path workflow (login → create target →
+quote → create scan → poll to terminal) against the actual running `apps/api`/`apps/worker`, staged at
+1, 5, and 10 concurrent audits — no product code changed to make this possible. All three measured
+stages: **100% success, zero errors, `time_to_terminal` flat at ~2.0-2.1s** regardless of concurrency.
+A real design bug was found and fixed mid-build, not just assumed correct from reading the plan: target
+canonicalization discards a URL's path/query down to the bare origin (confirmed via a live `POST
+/targets` curl call), so the original plan's "one distinct target per VU via a query-string suffix"
+silently produced identical target rows for VUs sharing a seeded user — corrected to 65 dedicated seeded
+users, one per VU, never shared, sidestepping both `Scan_one_active_per_target` and the entitlement
+ceiling below at once. Two real, evidence-backed findings came out of running this for real rather than
+just building it: (1) `concurrentScanLimit: 6` per user on the `business` tier — a real, by-design
+multi-tenant ceiling, not a bug; (2) `/auth/login`'s real strict rate limiter (10 attempts/15min per
+source IP) combined with a real JWT's 15-minute lifetime makes it **mathematically impossible** to run
+20+ concurrent fresh logins from a single source machine — discovered when stage 10's first attempt
+showed 6/10 logins refused with real `429 RATE_LIMITED` bodies, the arithmetic confirmed to the digit
+against the two prior stages' own login counts, then a clean isolated re-run at the true boundary
+confirmed 100% success. Stages 20/40/60 are reported **UNVERIFIABLE BY DESIGN** in
+`load-testing/REPORT.md` rather than run and misreported, or patched around by weakening the real
+limiter. Full write-up: [load-testing/REPORT.md](load-testing/REPORT.md); operator runbook:
+[load-testing/RUNBOOK.md](load-testing/RUNBOOK.md). The full-workflow review's verdict is updated to
+reflect this — see [docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md](docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md)
+Section 7.2 item 5 and 7.4.
+
+**Updated 2026-09-11**: 🎯 **P2-SSRF-1, the last confirmed finding from the full-workflow review, is
+now fixed** — `specs/003-fix-browser-pool-ssrf/`. `apps/probe-pool`'s browser automation pool
+(screenshot/CWV/Lighthouse-style capabilities) navigated target-controlled URLs with zero SSRF
+protection, unlike every other outbound path in this codebase. A full browser manages its own network
+stack, so `safeFetch`'s undici-specific connector couldn't transplant directly — the fix is a minimal
+local SSRF-safe forward proxy (`packages/safe-net/src/browser-proxy.ts` +
+`browser-proxy-handlers.ts`, both new) that reuses this package's existing address-classification and
+DNS-resolution logic unchanged. Chromium is launched with Playwright's real `proxy: { server }` option,
+so every request it makes — initial navigation, every redirect, every sub-resource — becomes an
+independent request through this proxy, each resolved and validated at the moment a real connection is
+about to open (connecting to the validated IP directly, never re-resolving the hostname, plus a
+post-connect belt-and-suspenders re-check mirroring the existing fetch guard's own discipline). One
+mechanism closes all four SSRF layers by construction, with no separate redirect-handling logic needed.
+The public export deliberately exposes only a `resolver` override for testing, never `policy`/
+`allowLoopback`, preserving `packages/safe-net`'s existing discipline. A real bug was found and fixed
+during testing, not just by inspection: the initial refusal answered a disallowed plain-HTTP request
+with a normal HTTP 502, which Playwright's `page.goto()` treats as a *successful* navigation to an
+error page rather than a failure (a browser only rejects on connection-level failures) — fixed by
+destroying the connection outright on refusal, confirmed red before green. Two new regression test
+files (9 tests total — `packages/safe-net/tests/adverse/browser-proxy.test.ts`,
+`apps/probe-pool/tests/adverse/browser-pool-ssrf.test.ts`), zero regressions in `packages/safe-net`'s
+136 pre-existing tests, added navigation latency measured (fairly, steady-state) at effectively zero.
+Full write-up: [docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md](docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md)
+— every P0 and P2 finding from that review is now closed; only the (pre-existing, tooling-scope) lack
+of a load-testing harness remains open.
+
+**Updated 2026-09-10**: 🎯 **Two more P0 financial-correctness defects found by an independent
+full-workflow review are now fixed** — `specs/002-fix-cancel-timeout-refunds/` (full spec → plan →
+research → tasks cycle). **P0-CANCEL-1**: cancelling a scan while a check was still in flight let the
+platform end up with a real, charged `ModuleResult` for a check the user had already been refunded for
+as undelivered — no signal reached the worker process at all before this fix. Closed with
+checkpoint-based cooperative cancellation: `apps/api`'s cancel route now publishes a Zod-validated,
+best-effort notification on a per-scan Redis channel (`packages/config/src/cancellation.ts`,
+`apps/api/src/services/queue/cancel-publisher.ts`) immediately after its guarded write commits;
+`apps/worker`'s orchestrator subscribes for exactly the lifetime of one phase-job invocation
+(`apps/worker/src/orchestrator/cancellation.ts`) and checks it at two checkpoints around each module's
+execution — never mid-capability, an explicit, spec'd scope boundary. **P0-TIMEOUT-1**: the timeout
+sweep computed refunds from a batch snapshot that could go stale across up to 50 scans' worth of
+processing, so a module delivered during that window could still be refunded as undelivered. Closed by
+moving the refund-amount computation inside the same per-scan transaction as the guarded terminal state
+write (`apps/worker/src/orchestrator/timeout.ts`) — `refund()` itself was deliberately left untouched
+(Prisma cannot nest an interactive transaction inside another, a real constraint found only by reading
+the code, not assumed from the original proposal). Both fixes have a dedicated regression test, each
+independently confirmed to fail against the pre-fix code before confirming it passes with the fix in
+place (`apps/worker/tests/adverse/cancel-mid-flight-no-charge.test.ts`,
+`apps/worker/tests/adverse/timeout-refund-staleness.test.ts`) — zero regressions in the existing
+suites. Full review write-up, including the third P0 this same pass found and fixed
+(P0-CREDIT-1, a debit-then-enqueue-failure race) and two accepted-but-not-yet-closed risks (a latent
+SSRF gap in the unwired `probe-pool`, and no load-testing harness existing in this repo at all):
+[docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md](docs/reviews/FULL-WORKFLOW-SECURITY-PERFORMANCE-CREDIT-REVIEW.md).
+
 **Updated** 2026-09-04 · **Tasks** 250 / 250 — the whole plan (+T236a, not in the original 250) ·
 **Tests** `unit` **938/938**, `adverse` **645 passed / 1 pre-existing skip** (+3 from `admin-authz.test.ts`'s
 expanded coverage — see the final review below), e2e **12/12** (new axe-core +

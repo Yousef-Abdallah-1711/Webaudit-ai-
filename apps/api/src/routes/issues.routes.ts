@@ -50,6 +50,13 @@ export function issuesRoutes(db: PrismaClient, deps: IssueRoutesDeps = {}): Rout
   const producer = deps.producer ?? createReverifyProducer();
   router.use(requireAuth);
 
+  router.get('/issues/count', async (req: AuthedRequest, res: Response) => {
+    const count = await db.issue.count({
+      where: { scan: { userId: req.auth!.userId }, state: { not: 'RESOLVED' } },
+    });
+    res.status(200).json({ count });
+  });
+
   router.post('/issues/:id/assert-fixed', async (req: AuthedRequest, res: Response) => {
     const userId = req.auth!.userId;
     const issueId = pathId(req);
@@ -108,7 +115,10 @@ export function issuesRoutes(db: PrismaClient, deps: IssueRoutesDeps = {}): Rout
       // Someone else asserted it (a double click, a second tab) between our read
       // and our write. Undo the charge and report the conflict.
       await refund(db, debitId, `reverify:lost-assert-race:${issue.id}`).catch((error: unknown) => {
-        console.error(`[issues.assert-fixed] refund after lost race failed for ${issue.id}:`, error);
+        console.error(
+          `[issues.assert-fixed] refund after lost race failed for ${issue.id}:`,
+          error,
+        );
       });
       res.status(409).json({
         error: {

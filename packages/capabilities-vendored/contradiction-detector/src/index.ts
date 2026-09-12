@@ -25,11 +25,7 @@
  * not a claim about the target's own site.
  */
 
-import type {
-  AuditCapability,
-  CapabilityFinding,
-  CapabilityInput,
-} from '@webaudit/capability-sdk';
+import type { AuditCapability, CapabilityFinding, CapabilityInput } from '@webaudit/capability-sdk';
 import type { ModuleType } from '@webaudit/types';
 
 /** Above this, a module's own score reads as "healthy" — an odd claim next to a severe finding. */
@@ -124,8 +120,7 @@ export const contradictionDetector: AuditCapability = {
   id: 'contradiction-detector',
   module: 'TESTING',
   layer: 'CODE',
-  canRun: (input: CapabilityInput): boolean =>
-    Object.keys(input.priorModuleResults).length > 0,
+  canRun: (input: CapabilityInput): boolean => Object.keys(input.priorModuleResults).length > 0,
   runCodeLayer,
 };
 

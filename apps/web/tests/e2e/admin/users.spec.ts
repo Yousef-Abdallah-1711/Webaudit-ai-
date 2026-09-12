@@ -15,7 +15,9 @@ test.beforeAll(async () => {
 });
 test.afterAll(async () => stack.stop());
 
-test('a real operator sees the real user list, and can promote another account', async ({ page }) => {
+test('a real operator sees the real user list, and can promote another account', async ({
+  page,
+}) => {
   await loginViaUi(page, stack.webBaseUrl, operator);
   await page.goto(`${stack.webBaseUrl}/admin/users`);
   await expect(page.getByText(listedUser.email)).toBeVisible({ timeout: 10_000 });

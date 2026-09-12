@@ -19,7 +19,11 @@ export interface ArmedTimeout {
   readonly cancel: () => void;
 }
 
-export function armTimeout(child: ChildProcess, wallClockMs: number, onTimeout: () => void): ArmedTimeout {
+export function armTimeout(
+  child: ChildProcess,
+  wallClockMs: number,
+  onTimeout: () => void,
+): ArmedTimeout {
   let fired = false;
   const timer = setTimeout(() => {
     fired = true;

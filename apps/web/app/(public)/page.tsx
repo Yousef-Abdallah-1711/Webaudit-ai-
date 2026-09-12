@@ -68,7 +68,7 @@ function Hero(): React.ReactElement {
               }}
             />
           </div>
-          <Button href="/register">{t('hero_cta')}</Button>
+          <Button href="/signup">{t('hero_cta')}</Button>
         </div>
         <div className={styles.heroStats}>
           <StatRow
@@ -200,7 +200,7 @@ function FinalCta(): React.ReactElement {
       <div className={styles.ctaInner}>
         <h2 className={styles.ctaH2}>{t('cta_h2')}</h2>
         <p className={styles.ctaLead}>{t('cta_lead')}</p>
-        <Button href="/register">{t('hero_cta')}</Button>
+        <Button href="/signup">{t('hero_cta')}</Button>
       </div>
     </section>
   );

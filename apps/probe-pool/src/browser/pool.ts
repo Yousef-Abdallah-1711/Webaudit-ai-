@@ -28,6 +28,8 @@
 
 import { chromium, type Browser } from '@playwright/test';
 import type { AuditPage } from '@webaudit/capability-sdk';
+import { createSafeBrowserProxy, type SafeBrowserProxy } from '@webaudit/safe-net';
+import type { AddressResolver } from '@webaudit/safe-net';
 
 export interface BrowserPool {
   /** Adapts a fresh, isolated page to `AuditPage` for the duration of `fn`. */
@@ -38,12 +40,33 @@ export interface BrowserPool {
 export interface CreatePoolOptions {
   readonly headless?: boolean;
   /** Injected so a test can supply a fake without a real Chromium install. */
-  readonly launch?: (options: { headless: boolean }) => Promise<Browser>;
+  readonly launch?: (options: { headless: boolean; proxy: { server: string } }) => Promise<Browser>;
+  /**
+   * P2-SSRF-1 test-only injection seam — mirrors `launch`'s own stated
+   * rationale ("supply a fake without needing real infrastructure to
+   * attack"). Threaded straight into the SSRF proxy's own resolver option;
+   * never a way to weaken enforcement (see `createSafeBrowserProxy`'s own
+   * contract — only DNS answers are overridable, never the policy).
+   */
+  readonly resolver?: AddressResolver;
 }
 
 export async function createBrowserPool(options: CreatePoolOptions = {}): Promise<BrowserPool> {
+  // P2-SSRF-1: every request this pool's pages make — the initial
+  // navigation, every redirect, every sub-resource — is routed through this
+  // local proxy, which independently resolves and classifies each one before
+  // ever opening a real connection (packages/safe-net/src/browser-proxy.ts).
+  // One proxy per pool, not per `withPage()` call, matching this file's own
+  // "one browser, short-lived contexts" design for the browser itself.
+  const proxy: SafeBrowserProxy = await createSafeBrowserProxy(
+    options.resolver === undefined ? {} : { resolver: options.resolver },
+  );
+
   const launch = options.launch ?? ((opts) => chromium.launch(opts));
-  const browser = await launch({ headless: options.headless ?? true });
+  const browser = await launch({
+    headless: options.headless ?? true,
+    proxy: { server: `http://127.0.0.1:${String(proxy.port)}` },
+  });
 
   return {
     async withPage<T>(fn: (page: AuditPage) => Promise<T>): Promise<T> {
@@ -55,7 +78,11 @@ export async function createBrowserPool(options: CreatePoolOptions = {}): Promis
         void response
           .body()
           .then((body) => {
-            requests.push({ url: response.url(), status: response.status(), sizeBytes: body.length });
+            requests.push({
+              url: response.url(),
+              status: response.status(),
+              sizeBytes: body.length,
+            });
           })
           // A response whose body cannot be read (redirect, aborted) still
           // happened; record it with a zero size rather than dropping it.
@@ -87,6 +114,9 @@ export async function createBrowserPool(options: CreatePoolOptions = {}): Promis
         await context.close();
       }
     },
-    close: () => browser.close(),
+    close: async () => {
+      await browser.close();
+      await proxy.close();
+    },
   };
 }

@@ -6,6 +6,46 @@
   color: var(--sev-critical);
 }
 
+.result {
+  margin: 0 0 16px;
+  font: var(--type-small);
+  color: var(--sev-resolved);
+}
+
+.uploadForm {
+  display: grid;
+  grid-template-columns: 1fr 160px 1.2fr auto;
+  align-items: end;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: var(--border-width) solid var(--border-default);
+  background: var(--surface-raised);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.field input {
+  min-height: 48px;
+  padding: 0 12px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: var(--type-small);
+}
+
+@media (max-width: 768px) {
+  .uploadForm {
+    grid-template-columns: 1fr;
+  }
+}
+
 .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -21,4 +61,25 @@
 
 .code {
   font-family: var(--font-mono);
+}
+
+.planAccess {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.planOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: var(--type-micro);
+  color: var(--text-secondary);
+}
+
+.planLegend {
+  margin: 12px 0 0;
+  font: var(--type-small);
+  color: var(--text-secondary);
 }

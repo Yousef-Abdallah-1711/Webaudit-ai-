@@ -60,6 +60,7 @@ const LOG_LEVELS = {
  */
 const DEFAULT_CONNECTION_LIMIT = 10;
 const DEFAULT_POOL_TIMEOUT_SECONDS = 20;
+const DEFAULT_CONNECT_TIMEOUT_SECONDS = 10;
 
 function positiveIntFromEnv(name: string, fallback: number): number {
   const raw = process.env[name];
@@ -91,6 +92,9 @@ export function withPoolSettings(url: string): string {
       'pool_timeout',
       String(positiveIntFromEnv('DATABASE_POOL_TIMEOUT', DEFAULT_POOL_TIMEOUT_SECONDS)),
     );
+  }
+  if (!parsed.searchParams.has('connect_timeout')) {
+    parsed.searchParams.set('connect_timeout', String(DEFAULT_CONNECT_TIMEOUT_SECONDS));
   }
   return parsed.toString();
 }

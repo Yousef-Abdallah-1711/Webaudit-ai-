@@ -58,9 +58,9 @@ describe('computeVerdict', () => {
     ];
     const v = computeVerdict({ freshAreas: areas, regressions: [] });
     expect(v.isReady).toBe(false);
-    expect(v.blockers.some((b) => b.includes('Testing') && b.includes('could not be audited'))).toBe(
-      true,
-    );
+    expect(
+      v.blockers.some((b) => b.includes('Testing') && b.includes('could not be audited')),
+    ).toBe(true);
     expect(v.moduleOutcomes.find((o) => o.module === 'TESTING')?.pass).toBe(false);
   });
 

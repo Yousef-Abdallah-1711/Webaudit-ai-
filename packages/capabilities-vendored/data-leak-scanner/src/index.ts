@@ -45,8 +45,23 @@ import type {
 const MAX_FILES = 200;
 const MAX_FILE_BYTES = 256 * 1024;
 const BINARY_EXTENSIONS = new Set([
-  '.png', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.woff', '.woff2', '.ttf', '.eot',
-  '.mp4', '.mp3', '.zip', '.gz', '.tar', '.pdf', '.wasm',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.mp4',
+  '.mp3',
+  '.zip',
+  '.gz',
+  '.tar',
+  '.pdf',
+  '.wasm',
 ]);
 
 function looksBinary(path: string): boolean {

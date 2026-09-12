@@ -83,6 +83,36 @@
   color: var(--sev-resolved);
 }
 
+.receiptRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-top: var(--border-width) solid var(--border-default);
+  color: inherit;
+  text-decoration: none;
+}
+.receiptKind {
+  display: block;
+  font: var(--type-small);
+  font-weight: 700;
+  color: var(--text-strong);
+}
+.receiptMeta {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: 12px; /* no --type-* token equals 12px; excepted (Finding 15) */
+  color: var(--text-muted);
+}
+.receiptAmount {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 13px; /* no --type-* token equals 13px; excepted (Finding 15) */
+  color: var(--text-secondary);
+}
+
 .tierGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

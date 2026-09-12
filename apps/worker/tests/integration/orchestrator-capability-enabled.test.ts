@@ -16,7 +16,10 @@ import type { Queue } from 'bullmq';
 import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
 import { reconcileCapabilitiesAtBoot } from '@webaudit/api';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';

@@ -15,6 +15,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { AppShell, PageHead, Sidebar } from '../../components/dashboard';
+import { AuthProvider } from '../../components/auth/AuthProvider';
 import sidebarStyles from '../../components/dashboard/Sidebar.module.css';
 
 vi.mock('next/navigation', () => ({
@@ -22,7 +23,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(AuthProvider, null, element));
 }
 
 function setPathname(path: string): void {
@@ -50,11 +51,9 @@ describe('Sidebar', () => {
     expect(activeLinks.length).toBeGreaterThan(0);
   });
 
-  it('shows the "Fixes" badge and no other nav item gets one', () => {
+  it('does not invent a Fixes badge before the live count arrives', () => {
     const html = render(createElement(Sidebar, { open: true, setOpen: () => {} }));
-    // The badge is a machine-truth number (4), rendered only next to Fixes.
-    const badgeSpans = [...html.matchAll(/<span[^>]*>4<\/span>/g)];
-    expect(badgeSpans).toHaveLength(1);
+    expect(html).not.toMatch(/<span[^>]*>\d+<\/span>/);
   });
 
   it('hides nav labels and the wordmark when collapsed', () => {

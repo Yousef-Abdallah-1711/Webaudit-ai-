@@ -70,7 +70,9 @@ function optionsFromEnv(): ReportStorageOptions {
   return { accountId, accessKeyId, secretAccessKey, bucket };
 }
 
-export function createReportStorage(options: ReportStorageOptions = optionsFromEnv()): ReportStorage {
+export function createReportStorage(
+  options: ReportStorageOptions = optionsFromEnv(),
+): ReportStorage {
   const client = new S3Client({
     region: 'auto',
     endpoint: `https://${options.accountId}.r2.cloudflarestorage.com`,

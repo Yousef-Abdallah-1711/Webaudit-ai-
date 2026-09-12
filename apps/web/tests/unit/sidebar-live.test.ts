@@ -32,12 +32,34 @@ vi.mock('../../lib/api.js', () => ({
   getPlans: vi.fn().mockResolvedValue({
     plans: [{ id: 'free', name: 'Free', monthlyCredits: 50 }],
   }),
+  getOutstandingIssueCount: vi.fn().mockResolvedValue({ count: 7 }),
+  logout: vi.fn(),
+  refreshAccessToken: vi.fn(),
+  setAccessToken: vi.fn(),
+  subscribeToUnauthorized: vi.fn(() => () => undefined),
 }));
 
 describe('Sidebar — real identity, plan, and credit balance', () => {
+  it('shows the real outstanding issue count instead of a fixed badge', async () => {
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    try {
+      expect(mounted.html()).toContain('>7<');
+      expect(mounted.html()).not.toContain('>4<');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
   it('shows the real signed-in email and plan instead of the vendored placeholder', async () => {
     const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
-    const mounted = await renderClient(createElement(Sidebar, { open: true, setOpen: () => {} }));
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
     try {
       const html = mounted.html();
       expect(html).toContain('fullstack-check@example.com');
@@ -51,7 +73,10 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
 
   it('shows the real derived credit total (plan + purchased lots), not the fixed 1,120', async () => {
     const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
-    const mounted = await renderClient(createElement(Sidebar, { open: true, setOpen: () => {} }));
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
     try {
       const html = mounted.html();
       expect(html).toContain('50'); // 42 + 8
@@ -63,7 +88,10 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
 
   it('derives avatar initials from the real email rather than reusing "KA"', async () => {
     const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
-    const mounted = await renderClient(createElement(Sidebar, { open: true, setOpen: () => {} }));
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
     try {
       // "fullstack-check@example.com" -> words ["fullstack", "check"] -> "FC"
       expect(mounted.html()).toContain('>FC<');
@@ -72,9 +100,12 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
     }
   });
 
-  it('fills the credits bar as a real fraction of the plan\'s monthly credits, not the fixed 77%', async () => {
+  it("fills the credits bar as a real fraction of the plan's monthly credits, not the fixed 77%", async () => {
     const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
-    const mounted = await renderClient(createElement(Sidebar, { open: true, setOpen: () => {} }));
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
     try {
       // 50 real credits / 50 monthlyCredits for the free plan = 100%.
       expect(mounted.html()).toContain('width: 100%');

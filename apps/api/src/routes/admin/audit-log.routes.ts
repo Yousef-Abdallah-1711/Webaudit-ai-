@@ -19,6 +19,11 @@ function badRequest(res: Response, message: string): void {
 const listQuery = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  action: z.string().trim().min(1).optional(),
+  actorId: z.string().trim().min(1).optional(),
+  search: z.string().trim().min(1).optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
 });
 
 export function adminAuditLogRoutes(db: PrismaClient): Router {
@@ -31,7 +36,11 @@ export function adminAuditLogRoutes(db: PrismaClient): Router {
       badRequest(res, 'limit and offset, if given, must be non-negative integers.');
       return;
     }
-    const result = await listAuditLog(db, parsed.data);
+    const result = await listAuditLog(db, {
+      ...parsed.data,
+      from: parsed.data.from === undefined ? undefined : new Date(parsed.data.from),
+      to: parsed.data.to === undefined ? undefined : new Date(parsed.data.to),
+    });
     res.status(200).json(result);
   });
 

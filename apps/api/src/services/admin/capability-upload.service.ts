@@ -89,7 +89,9 @@ export class SandboxUnavailableError extends Error {
     readonly reason: SandboxFailureReason | 'NETWORK_ERROR',
     readonly detail?: string,
   ) {
-    super(`Sandbox could not produce a conformance verdict (${reason}${detail === undefined ? '' : `: ${detail}`}).`);
+    super(
+      `Sandbox could not produce a conformance verdict (${reason}${detail === undefined ? '' : `: ${detail}`}).`,
+    );
   }
 }
 
@@ -188,7 +190,10 @@ export async function uploadCapability(
     // A real network failure (connection refused, DNS failure, etc.) throws
     // before ever producing a `SandboxResponse` — this is the "configured
     // but unreachable" case, distinct from "not configured at all" above.
-    throw new SandboxUnavailableError('NETWORK_ERROR', error instanceof Error ? error.message : String(error));
+    throw new SandboxUnavailableError(
+      'NETWORK_ERROR',
+      error instanceof Error ? error.message : String(error),
+    );
   }
 
   if (!outcome.ok) {

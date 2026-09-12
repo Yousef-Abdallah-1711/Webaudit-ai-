@@ -76,10 +76,7 @@ export function TierGrid(): React.ReactElement {
   return (
     <div className={styles.tierGrid}>
       {TIERS.map((t) => (
-        <div
-          key={t.name}
-          className={t.pop ? `${styles.tier} ${styles.tierPop}` : styles.tier}
-        >
+        <div key={t.name} className={t.pop ? `${styles.tier} ${styles.tierPop}` : styles.tier}>
           <div className={styles.tierHead}>
             <span className={styles.tierName}>{t.name}</span>
             {t.pop && <Badge tone="accent">Most depth</Badge>}
@@ -121,8 +118,8 @@ export function CostTable(): React.ReactElement {
         ))}
       </div>
       <p className={styles.costNote}>
-        Top-ups are paid-plan only. Platform faults, provider outages and internal errors refund
-        or never debit.
+        Top-ups are paid-plan only. Platform faults, provider outages and internal errors refund or
+        never debit.
       </p>
     </div>
   );
@@ -137,8 +134,8 @@ export default function PricingPage(): React.ReactElement {
       <section dir={dir} className={styles.headSection}>
         <h1 className={styles.h1}>Credits, not seats.</h1>
         <p className={styles.lead}>
-          Plan credits expire at renewal. Purchased top-ups never expire, and expiring credits
-          are always spent first.
+          Plan credits expire at renewal. Purchased top-ups never expire, and expiring credits are
+          always spent first.
         </p>
       </section>
       <section dir={dir} className={styles.bodySection}>

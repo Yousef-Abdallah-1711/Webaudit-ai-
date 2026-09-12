@@ -13,22 +13,28 @@
  * unconditionally, which the API refused with a real `422` on every
  * registration that didn't fill in an optional field.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
 import { useT } from '../../theme';
 import { ApiError, API_BASE, register } from '../../../lib/api';
+import { useAuth } from '../../../components/auth/AuthProvider';
 import styles from './page.module.css';
 
-export default function RegisterPage(): React.ReactElement {
+export default function RegisterPage(): React.ReactElement | null {
   const [t] = useT();
   const router = useRouter();
+  const { status } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (status === 'authenticated') router.replace('/scan');
+  }, [router, status]);
 
   async function onSubmit(): Promise<void> {
     setError(null);
@@ -48,6 +54,8 @@ export default function RegisterPage(): React.ReactElement {
       setSubmitting(false);
     }
   }
+
+  if (status === 'authenticated') return null;
 
   return (
     <AuthFrame

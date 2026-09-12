@@ -121,10 +121,13 @@ beforeEach(async () => {
 afterAll(closeDb);
 
 describe('every admin route refuses a non-operator, however constructed (FR-008)', () => {
-  it.each(ROUTES)('$method $path — no Authorization header at all — 401', async ({ method, path }) => {
-    const res = await request(app)[method](path).send({});
-    expect(res.status).toBe(401);
-  });
+  it.each(ROUTES)(
+    '$method $path — no Authorization header at all — 401',
+    async ({ method, path }) => {
+      const res = await request(app)[method](path).send({});
+      expect(res.status).toBe(401);
+    },
+  );
 
   it.each(ROUTES)(
     '$method $path — a valid token for a genuine non-operator account — 403',

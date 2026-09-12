@@ -17,6 +17,11 @@ export default tseslint.config(
       // lint/typecheck gate — separate work parked in this worktree, each with
       // its own tooling. Gitignored.
       'showcase-esaalnybot/**',
+      'showcase-eink/**',
+      'showcase-trimora/**',
+      'load-testing/**',
+      '.claude/**',
+      '.agents/**',
       'apps/early-access/**',
       'reference-landing/**',
       '**/prisma/generated/**',
@@ -133,6 +138,13 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
+      // Test doubles intentionally expose async-shaped callbacks and inspect
+      // methods detached from their owners; these are not production-boundary
+      // risks and otherwise make the suite reject harmless fixtures.
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+      '@typescript-eslint/consistent-type-imports': 'off',
     },
   },
   {
@@ -241,9 +253,9 @@ export default tseslint.config(
         },
         {
           selector:
-            "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|fullWidth|icon|onClick|href|children|key|ref|className|style|children)$/]",
+            "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|type|fullWidth|icon|onClick|href|children|key|ref|className|style|children)$/]",
           message:
-            "<Button> doesn't accept that prop. Declared props: variant, size, disabled, fullWidth, icon, onClick, href, children.",
+            "<Button> doesn't accept that prop. Declared props: variant, size, disabled, type, fullWidth, icon, onClick, href, children, className, style.",
         },
         {
           selector:
@@ -273,9 +285,9 @@ export default tseslint.config(
         },
         {
           selector:
-            "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|aria-label|key|ref|className|style|children)$/]",
+            "JSXOpeningElement[name.name='Input'] > JSXAttribute > JSXIdentifier[name!=/^(?:prefix|placeholder|value|onChange|type|fullWidth|invalid|mono|readOnly|aria-label|key|ref|className|style|children)$/]",
           message:
-            "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono, aria-label.",
+            "<Input> doesn't accept that prop. Declared props: prefix, placeholder, value, onChange, type, fullWidth, invalid, mono, readOnly, aria-label.",
         },
         {
           selector:

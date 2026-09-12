@@ -116,6 +116,21 @@
   text-wrap: pretty;
 }
 
+.confirmLabel {
+  display: grid;
+  gap: 6px;
+  max-width: 360px;
+  margin-bottom: 12px;
+  font: var(--type-small);
+  color: var(--text-secondary);
+}
+
+.deleteError {
+  margin: 0 0 12px;
+  font: var(--type-small);
+  color: var(--sev-critical);
+}
+
 .planValue {
   font: var(--type-h3);
   color: var(--text-strong);

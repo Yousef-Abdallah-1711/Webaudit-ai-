@@ -9,6 +9,22 @@
   color: var(--sev-critical);
 }
 
+.caveat,
+.status,
+.error {
+  margin: 0 0 16px;
+  font: var(--type-small);
+}
+
+.caveat,
+.status {
+  color: var(--text-secondary);
+}
+
+.error {
+  color: var(--sev-critical);
+}
+
 .health {
   font: var(--type-small);
   font-weight: 700;

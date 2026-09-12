@@ -68,6 +68,7 @@ import {
   createTeardownProducer,
   type TeardownProducer,
 } from '../services/queue/teardown-producer.js';
+import { createCancelPublisher, type CancelPublisher } from '../services/queue/cancel-publisher.js';
 import {
   QuestionnaireAlreadyResolvedError,
   QuestionnaireScanNotFoundError,
@@ -81,6 +82,8 @@ export interface ScanRoutesDeps {
   probe?: ControlProbe;
   producer?: ScanPhaseProducer;
   teardownProducer?: TeardownProducer;
+  /** P0-CANCEL-1's seam — see `cancel-publisher.ts`'s own module note. */
+  cancelPublisher?: CancelPublisher;
   resolveRequiredControlLevel?: (moduleType: string) => ControlLevel | Promise<ControlLevel>;
   /** T171's seam — see `CreateScanDeps.checkRepositoryConnection`. */
   checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
@@ -116,11 +119,31 @@ function badRequest(res: Response, message: string, details?: unknown): void {
   });
 }
 
+/**
+ * The cancel route's post-write re-fetch, scoped to the caller (P3
+ * hardening, full-workflow review Section 6g). The guarded `updateMany` the
+ * cancel route runs immediately before this already proves ownership, so a
+ * bare-id lookup here was never reachable with a mismatched user in
+ * practice — a scan `id` is a unique primary key, so it can only ever name
+ * the one row it already names. But the query itself carried no evidence of
+ * that scoping, unlike this codebase's own stated discipline for anything
+ * touching a user-owned row. Exported (mirroring
+ * `apps/api/src/middleware/ratelimit.middleware.ts`'s own `clientKey`) so the
+ * scoping is directly testable on its own.
+ */
+export function fetchCancelledScanForUser(db: PrismaClient, scanId: string, userId: string) {
+  return db.scan.findFirstOrThrow({
+    where: { id: scanId, userId },
+    include: { moduleResults: { select: { state: true } } },
+  });
+}
+
 export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router {
   const router = Router();
   const probe = deps.probe ?? createSafeNetProbe();
   const producer = deps.producer ?? createScanPhaseProducer();
   const teardownProducer = deps.teardownProducer ?? createTeardownProducer();
+  const cancelPublisher = deps.cancelPublisher ?? createCancelPublisher();
   const resolveRequiredControlLevel = deps.resolveRequiredControlLevel ?? (() => 'NONE' as const);
 
   router.use(requireAuth);
@@ -296,6 +319,15 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       return;
     }
 
+    // P0-CANCEL-1: a best-effort accelerant so a worker already handling a
+    // phase for this scan can stop before it starts (or persists) further
+    // work, rather than waiting to discover the cancellation at its next
+    // phase-boundary transition. Published only now, after the guarded write
+    // above has actually committed — never before — and its own failure
+    // handling (cancel-publisher.ts) means it can never undo or delay this
+    // already-succeeded cancellation.
+    await cancelPublisher.publishCancellation(pathId(req));
+
     // FR-090/SC-015's fourth exit path: cancellation never reaches apps/worker's
     // transition() (see this route's own module note), so the workspace
     // teardown observer registered there never fires. Enqueue it directly,
@@ -318,11 +350,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
     // never reaches this refund logic again, leaving the credits permanently
     // unrefundable. The whole lookup-through-refund sequence is therefore one
     // try/catch, matching how terminal-refund.ts wraps its own.
-    const fetchScanWithResults = () =>
-      db.scan.findUniqueOrThrow({
-        where: { id: pathId(req) },
-        include: { moduleResults: { select: { state: true } } },
-      });
+    const fetchScanWithResults = () => fetchCancelledScanForUser(db, pathId(req), userId);
 
     let scan: Awaited<ReturnType<typeof fetchScanWithResults>> | undefined;
     try {

@@ -125,7 +125,10 @@ function discoverInstalled(): Promise<readonly DiscoveredManifest[]> {
  * `runCodeLayerCheck`) and sent as the body of an HTTP request — inert
  * data, not code, from this process's point of view.
  */
-function makeSandboxedCapability(manifest: DiscoveredManifest, bundle: Uint8Array): AuditCapability {
+function makeSandboxedCapability(
+  manifest: DiscoveredManifest,
+  bundle: Uint8Array,
+): AuditCapability {
   const { id, module, layer } = manifest.manifest;
 
   async function dispatch(input: CapabilityInput) {
@@ -194,7 +197,10 @@ async function loadModuleCapabilities(module: ModuleType): Promise<readonly Audi
             }
             return capability;
           } catch (error) {
-            console.error(`[capability-loader] failed to load a ${module} capability (${m.id})`, error);
+            console.error(
+              `[capability-loader] failed to load a ${module} capability (${m.id})`,
+              error,
+            );
             return null;
           }
         }),

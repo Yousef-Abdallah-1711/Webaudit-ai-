@@ -18,12 +18,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { UIQuestionnaire } from '../../components/scan/UIQuestionnaire';
-import {
-  ApiError,
-  getQuestionnaire,
-  skipQuestionnaire,
-  submitQuestionnaire,
-} from '../../lib/api';
+import { ApiError, getQuestionnaire, skipQuestionnaire, submitQuestionnaire } from '../../lib/api';
 
 const render = (el: React.ReactElement): string => renderToStaticMarkup(el);
 

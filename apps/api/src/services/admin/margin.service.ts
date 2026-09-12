@@ -104,10 +104,10 @@ export interface MarginReport {
 const NOTE =
   'Revenue (chargedCredits) is denominated in credits; cost (costMicros) is real USD micros. ' +
   'This codebase has no published credit-to-dollar conversion rate, so no computed margin ' +
-  'figure is reported. Per-area revenue is an even, floor-rounded split of each scan\'s ' +
+  "figure is reported. Per-area revenue is an even, floor-rounded split of each scan's " +
   'chargedCredits across its requestedModules (the same attribution shape used for refunds) ' +
   '-- unlike a refund, any leftover credits from that rounding are not attributed to any area, ' +
-  'so a scan\'s own per-area rows can sum to slightly less than its real chargedCredits. ' +
+  "so a scan's own per-area rows can sum to slightly less than its real chargedCredits. " +
   'Per-capability rows carry cost only, since a single capability execution has no credit ' +
   'charge of its own.';
 

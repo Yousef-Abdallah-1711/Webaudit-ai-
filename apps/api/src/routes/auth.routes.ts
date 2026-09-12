@@ -23,6 +23,11 @@ import {
 } from '../services/auth/session.service.js';
 import { completeReset, requestReset } from '../services/auth/reset.service.js';
 import { deleteAccount } from '../services/auth/deletion.service.js';
+import { updateProfile } from '../services/auth/profile.service.js';
+import {
+  changePassword,
+  InvalidCurrentPasswordError,
+} from '../services/auth/change-password.service.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 
 const REFRESH_COOKIE = 'refresh_token';
@@ -31,7 +36,10 @@ const REFRESH_COOKIE = 'refresh_token';
 const credentials = z.object({
   email: z.string().email().max(320),
   password: z.string().min(12).max(200),
+  name: z.string().trim().min(1).max(100).optional(),
 });
+
+const profileBody = z.object({ name: z.string().trim().min(1).max(100) }).strict();
 
 const UNAUTHORIZED = { error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } };
 const BAD_CREDENTIALS = {
@@ -189,6 +197,34 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
     }
   });
 
+  r.post('/change-password', requireAuth, async (req: AuthedRequest, res) => {
+    const parsed = z
+      .object({
+        currentPassword: z.string().min(1).max(200),
+        newPassword: z.string().min(12).max(200),
+      })
+      .strict()
+      .safeParse(req.body);
+    if (!parsed.success) {
+      res.status(422).json({ error: { code: 'VALIDATION', message: 'Invalid password.' } });
+      return;
+    }
+    try {
+      await changePassword(db, {
+        userId: req.auth!.userId,
+        currentPassword: parsed.data.currentPassword,
+        newPassword: parsed.data.newPassword,
+      });
+      res.status(200).json({ message: 'Password changed. All sessions were signed out.' });
+    } catch (e) {
+      if (e instanceof InvalidCurrentPasswordError) {
+        res.status(401).json(BAD_CREDENTIALS);
+        return;
+      }
+      throw e;
+    }
+  });
+
   r.get('/me', requireAuth, async (req: AuthedRequest, res) => {
     const userId = req.auth?.userId;
     if (!userId) {
@@ -218,12 +254,18 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
       return;
     }
 
+    const nameRows = await db.$queryRaw<
+      { name: string | null }[]
+    >`SELECT name FROM "User" WHERE id = ${userId}`;
+
     const sum = (kind: 'PLAN' | 'PURCHASED'): number =>
       user.lots.filter((l) => l.kind === kind).reduce((n, l) => n + l.amountRemaining, 0);
 
     res.status(200).json({
       id: user.id,
       email: user.email,
+      name: nameRows[0]?.name ?? null,
+      githubLogin: user.githubLogin,
       isOperator: user.isOperator,
       emailVerified: user.emailVerifiedAt !== null,
       plan: user.subscription?.plan.id ?? 'free',
@@ -233,6 +275,16 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
         planExpiresAt: user.subscription?.periodEnd ?? null,
       },
     });
+  });
+
+  r.patch('/me', requireAuth, async (req: AuthedRequest, res) => {
+    const parsed = profileBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(422).json({ error: { code: 'VALIDATION', message: 'Invalid profile update.' } });
+      return;
+    }
+    const profile = await updateProfile(db, { userId: req.auth!.userId, name: parsed.data.name });
+    res.status(200).json({ ...profile });
   });
 
   r.delete('/me', requireAuth, async (req: AuthedRequest, res) => {

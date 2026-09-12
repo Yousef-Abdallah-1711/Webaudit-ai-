@@ -37,7 +37,12 @@ async function signInAndSeed(): Promise<{ token: string; userId: string; issueId
   const token = (res.body as { accessToken: string }).accessToken;
 
   const target = await testDb.target.create({
-    data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://sc005.example.com', displayName: 'sc005' },
+    data: {
+      userId: user.id,
+      inputType: 'URL',
+      canonicalValue: 'https://sc005.example.com',
+      displayName: 'sc005',
+    },
   });
   const scan = await testDb.scan.create({
     data: {
@@ -86,9 +91,9 @@ describe('SC-005 — a re-check costs a small fraction of a full audit', () => {
       .post(`/issues/${issueId}/assert-fixed`)
       .set({ Authorization: `Bearer ${token}` })
       .expect(202);
-    expect((res.body as { reverification: { creditsCharged: number } }).reverification.creditsCharged).toBe(
-      REVERIFY_COST,
-    );
+    expect(
+      (res.body as { reverification: { creditsCharged: number } }).reverification.creditsCharged,
+    ).toBe(REVERIFY_COST);
 
     const after = await totalAvailable(testDb, userId);
     expect(before - after).toBe(REVERIFY_COST);

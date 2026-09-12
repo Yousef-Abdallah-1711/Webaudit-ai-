@@ -75,9 +75,10 @@ export interface ReverifyRunResult {
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** The three `ReverifyResult` shapes, plus a reason string, folded to what we persist. */
-function outcomeOf(
-  result: ReverifyResult,
-): { outcome: VerificationOutcome; evidence: Record<string, unknown> | undefined } {
+function outcomeOf(result: ReverifyResult): {
+  outcome: VerificationOutcome;
+  evidence: Record<string, unknown> | undefined;
+} {
   switch (result.outcome) {
     case 'PASSED':
       return { outcome: 'PASSED', evidence: undefined };
@@ -89,7 +90,9 @@ function outcomeOf(
 }
 
 /** `issue:verified` only carries these; `ERRORED` maps to the client's "couldn't verify". */
-function eventOutcomeOf(outcome: VerificationOutcome): 'PASSED' | 'FAILED' | 'UNVERIFIABLE' | 'ERRORED' {
+function eventOutcomeOf(
+  outcome: VerificationOutcome,
+): 'PASSED' | 'FAILED' | 'UNVERIFIABLE' | 'ERRORED' {
   return outcome;
 }
 
@@ -164,7 +167,9 @@ export async function runReverification(
       ({ outcome, evidence } = outcomeOf(contained.value));
     } else if (contained.kind === 'timeout') {
       outcome = 'ERRORED';
-      evidence = { error: `The re-verification check did not finish within ${String(timeoutMs)}ms.` };
+      evidence = {
+        error: `The re-verification check did not finish within ${String(timeoutMs)}ms.`,
+      };
     } else {
       outcome = 'ERRORED';
       evidence = { error: describeThrown(contained.error) };
@@ -177,7 +182,9 @@ export async function runReverification(
     ...(evidence === undefined ? {} : { evidence }),
     creditsCharged: data.creditsCharged || REVERIFY_COST,
     durationMs,
-    ...(data.debitTransactionId === undefined ? {} : { debitTransactionId: data.debitTransactionId }),
+    ...(data.debitTransactionId === undefined
+      ? {}
+      : { debitTransactionId: data.debitTransactionId }),
   });
 
   if (recorded.applied && recorded.issueState !== null) {

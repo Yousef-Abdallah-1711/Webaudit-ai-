@@ -171,11 +171,20 @@ enum IntentSource {
   DEFAULTED
 }
 
+enum PendingPaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
 // ─── Identity and access ────────────────────────────────────────────── T014 ──
 
 model User {
   id              String    @id @default(cuid())
   email           String    @unique
+  name            String?
   passwordHash    String? // null when social-only
   emailVerifiedAt DateTime?
   isOperator      Boolean   @default(false) // FR-008, enforced server-side
@@ -192,6 +201,8 @@ model User {
   emailTokens   EmailToken[]
   refreshTokens RefreshToken[]
   subscription  Subscription?
+  pendingPayments PendingPayment[]
+  receipts      Receipt[]
   lots          CreditLot[]
   transactions  CreditTransaction[]
   targets       Target[]
@@ -292,6 +303,38 @@ model Subscription {
 
   @@index([status, periodEnd]) // renewal + expiry sweep
   @@index([planId])
+}
+
+model PendingPayment {
+  id                String   @id @default(cuid())
+  userId            String
+  kind              String
+  providerReference String   @unique
+  amountMicros      Int
+  status            PendingPaymentStatus @default(PENDING)
+  metadata          Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId, status])
+    @@index([status, createdAt])
+  }
+
+model Receipt {
+  id                String   @id @default(cuid())
+  userId            String
+  billingEventId    String   @unique
+  providerReference String
+  kind              String
+  amountMicros      Int
+  html              String
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 /// One row per grant. `amountRemaining` is the only mutable field, and it moves
@@ -659,6 +702,13 @@ model AiInvocation {
   latencyMs    Int
   costMicros   Int
   outcome      AiOutcome
+
+  /// T307 — a short hash of the static prompt `instructions` text that produced
+  /// this invocation (a module prompt or master-report), so historical rows can
+  /// be grouped by prompt wording without a full versioned prompt registry.
+  /// Null for invocations recorded before this column existed. Never derived
+  /// from scan-specific content (measured findings, capability notes).
+  promptVersion String?
 
   createdAt DateTime @default(now())
 

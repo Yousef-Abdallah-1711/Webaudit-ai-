@@ -7,6 +7,7 @@ import type { Mailer } from '../services-types.js';
 import { generateToken, hashPassword, hashToken } from './crypto.js';
 import { normalizeEmail, supersedeEmailTokens } from './registration.service.js';
 import { TokenInvalidError } from './registration.service.js';
+import { revokeAllSessions } from './session.service.js';
 
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — shorter than verification
 
@@ -81,10 +82,7 @@ export async function completeReset(
 
     // Changing a password ends every existing session: a reset is often a
     // response to compromise, and leaving old refresh tokens live defeats it.
-    await tx.refreshToken.updateMany({
-      where: { userId: row.userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await revokeAllSessions(tx, row.userId);
 
     return true;
   });

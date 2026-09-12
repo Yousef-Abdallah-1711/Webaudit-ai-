@@ -70,9 +70,7 @@ export function IssueRow({
         <SeverityBadge level={level} />
         <span className={styles.title}>{issue.title}</span>
         <span className={styles.actions}>
-          {resolved && (
-            <span className={styles.verified}>verified {timeOf(issue.resolvedAt)}</span>
-          )}
+          {resolved && <span className={styles.verified}>verified {timeOf(issue.resolvedAt)}</span>}
           {issue.previouslyResolved && !resolved && (
             <span className={styles.regressed}>regressed</span>
           )}

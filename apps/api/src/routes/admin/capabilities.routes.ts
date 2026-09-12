@@ -64,7 +64,10 @@ import {
   setCapabilityPlanRestrictions,
   validatePlanIdsExist,
 } from '../../services/admin/capabilities.service.js';
-import { SandboxUnavailableError, uploadCapability } from '../../services/admin/capability-upload.service.js';
+import {
+  SandboxUnavailableError,
+  uploadCapability,
+} from '../../services/admin/capability-upload.service.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such capability.' } };
 
@@ -130,7 +133,11 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
         await validatePlanIdsExist(db, parsed.data.planIds);
       }
       if (parsed.data.isEnabled !== undefined) {
-        await setCapabilityEnabled(db, { operatorId, capabilityId, isEnabled: parsed.data.isEnabled });
+        await setCapabilityEnabled(db, {
+          operatorId,
+          capabilityId,
+          isEnabled: parsed.data.isEnabled,
+        });
       }
       if (parsed.data.planIds !== undefined) {
         await setCapabilityPlanRestrictions(db, {
@@ -147,9 +154,7 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
         return;
       }
       if (error instanceof PlanNotFoundError) {
-        res
-          .status(400)
-          .json({ error: { code: 'INVALID_PLAN_ID', message: error.message } });
+        res.status(400).json({ error: { code: 'INVALID_PLAN_ID', message: error.message } });
         return;
       }
       throw error;
@@ -200,13 +205,17 @@ export function adminCapabilitiesRoutes(db: PrismaClient): Router {
   // which is exactly how the 415 branch below tells the two cases apart.
   router.post(
     '/capabilities/upload',
-    express.raw({ type: ['application/javascript', 'text/javascript', 'text/plain'], limit: '16mb' }),
+    express.raw({
+      type: ['application/javascript', 'text/javascript', 'text/plain'],
+      limit: '16mb',
+    }),
     async (req: AuthedRequest, res: Response) => {
       if (!Buffer.isBuffer(req.body)) {
         res.status(415).json({
           error: {
             code: 'UNSUPPORTED_MEDIA_TYPE',
-            message: 'Upload a capability bundle as application/javascript, text/javascript, or text/plain.',
+            message:
+              'Upload a capability bundle as application/javascript, text/javascript, or text/plain.',
           },
         });
         return;

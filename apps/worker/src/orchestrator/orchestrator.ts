@@ -90,6 +90,7 @@ import {
   type PhaseJobData,
 } from './phases.js';
 import { createScanEmitter, type EventPublisher } from './emit.js';
+import type { CancellationSource } from './cancellation.js';
 import type { JobRef } from '../queue/workers.js';
 import type { QueueSet } from '../queue/queues.js';
 
@@ -199,6 +200,21 @@ export interface OrchestratorOptions {
   readonly queues: Pick<QueueSet, 'scanPhase' | 'maintenance'>;
   readonly publisher: EventPublisher;
   readonly executor: AiExecutor;
+  /**
+   * T308 — an optional, separately-configured executor used only for the
+   * master-report synthesis call. Defaults to `executor` when absent, so
+   * every existing caller keeps today's behavior exactly.
+   */
+  readonly masterReportExecutor?: AiExecutor;
+  /**
+   * P0-CANCEL-1's checkpoint-based cooperative cancellation (research.md
+   * Decision 4). Optional so existing tests that never exercise cancellation
+   * don't need to construct one — `handlePhase` simply never learns of a
+   * cancellation if this is absent, which degrades to this codebase's
+   * pre-existing behavior (discovery only at the next phase-boundary
+   * transition), never a hard failure.
+   */
+  readonly cancellation?: CancellationSource;
   readonly moduleTimeoutMs?: number;
   /**
    * How an ARCHIVE or REPOSITORY target becomes a workspace (T174).
@@ -373,7 +389,22 @@ async function runAndPersistModule(
   enabledCapabilityIds: ReadonlySet<string>,
   source: MaterialisedSource | null,
   designIntent: CapabilityInput['designIntent'],
+  /**
+   * P0-CANCEL-1's checkpoint guard (research.md Decision 3). Checked at two
+   * points: before this module's `runModule` call starts, and again
+   * immediately before its result would be persisted. Neither checkpoint
+   * interrupts a capability call already in flight — that is explicitly out
+   * of scope (spec.md FR-007) — they only stop a *new* call from starting,
+   * and stop a *finished* call's result/cost from ever being recorded once
+   * the scan's cancellation has been discovered.
+   */
+  isCancelled: () => boolean = () => false,
 ): Promise<void> {
+  // Checkpoint A: this module hadn't started yet when cancellation was
+  // discovered — skip it entirely. No code-layer run, no AI call, no
+  // `module:started` emit, no persisted row of any kind for this module.
+  if (isCancelled()) return;
+
   await emitter.emit({ type: 'module:started', scanId: scan.id, module }, () => Promise.resolve());
 
   const input: CapabilityInput = {
@@ -413,6 +444,16 @@ async function runAndPersistModule(
     requiredControlLevels,
     ...(source === null ? {} : { workspaceRoot: source.workspace.path }),
   });
+
+  // Checkpoint B: `runModule` above may have already made real capability/AI
+  // calls (their cost, if any, was already incurred with the provider — this
+  // checkpoint cannot undo that, see research.md Decision 3's clarification)
+  // — but if the scan's cancellation was discovered at any point up to here,
+  // this module's result must never be persisted: no `ModuleResult`, `Issue`,
+  // `CapabilityExecution`, or `AiInvocation` row, and no `module:complete`
+  // emit, for a check its own scan already told the user was refunded as
+  // undelivered.
+  if (isCancelled()) return;
 
   // One transaction for the whole module result (review finding H2). Without
   // it a failure partway through — a constraint, a pool timeout, a malformed
@@ -530,6 +571,21 @@ export function createPhaseHandler(
       planQueuePriority: await planQueuePriorityFor(options.db, scan.userId),
     };
 
+    // P0-CANCEL-1: subscribed for exactly the lifetime of this phase-job
+    // invocation (research.md Decision 2) — a scan's later phases may run on
+    // a different worker process entirely, so this subscription must not
+    // outlive this one call. `isCancelled` is read at runAndPersistModule's
+    // two checkpoints; missing the signal (no `options.cancellation`
+    // configured, or the message never arrives) degrades to this codebase's
+    // pre-existing behavior — discovery only at the next lost phase-boundary
+    // transition — never a hard failure.
+    let cancelled = false;
+    const unsubscribeCancellation =
+      options.cancellation?.subscribe(data.scanId, () => {
+        cancelled = true;
+      }) ?? (() => {});
+    const isCancelled = (): boolean => cancelled;
+
     try {
       // A questionnaire resume has already performed this phase's entry
       // transition (`AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2`, the only edge
@@ -608,6 +664,7 @@ export function createPhaseHandler(
               enabledByModule.get(module) ?? new Set<string>(),
               source,
               designIntent,
+              isCancelled,
             ),
           ),
         );
@@ -681,7 +738,12 @@ export function createPhaseHandler(
       }
 
       if (data.phase === 'RUNNING_MASTER') {
-        await runMasterSynthesis(options.db, options.executor, data.scanId);
+        await runMasterSynthesis(
+          options.db,
+          options.masterReportExecutor ?? options.executor,
+          data.scanId,
+          isCancelled,
+        );
         await enqueuePhase(context, {
           scanId: data.scanId,
           phase: 'RUNNING_DOCS',
@@ -715,6 +777,8 @@ export function createPhaseHandler(
       }
     } catch (error) {
       await failScan(options.db, emitter, data.scanId, data.phase, error);
+    } finally {
+      unsubscribeCancellation();
     }
   };
 }

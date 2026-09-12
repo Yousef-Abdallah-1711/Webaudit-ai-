@@ -59,6 +59,16 @@ export async function verifyAccessToken(token: string): Promise<AccessClaims> {
 
 type SessionWriter = Pick<PrismaClient, 'refreshToken'>;
 
+export async function revokeAllSessions(
+  db: Pick<PrismaClient, 'refreshToken'>,
+  userId: string,
+): Promise<void> {
+  await db.refreshToken.updateMany({
+    where: { userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+}
+
 async function issueSession(
   db: SessionWriter,
   user: { id: string; isOperator: boolean },
@@ -155,10 +165,7 @@ export async function refresh(db: PrismaClient, raw: string | undefined): Promis
  * column, so "family" is all of the user's live tokens.
  */
 async function revokeFamily(db: PrismaClient, userId: string): Promise<void> {
-  await db.refreshToken.updateMany({
-    where: { userId, revokedAt: null },
-    data: { revokedAt: new Date() },
-  });
+  await revokeAllSessions(db, userId);
 }
 
 /** Revokes only the presented session — other devices stay signed in. */

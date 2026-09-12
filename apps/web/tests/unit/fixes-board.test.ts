@@ -47,7 +47,10 @@ describe('IssueRow', () => {
 
   it('an issue being re-checked shows "Re-checking…" and is disabled', () => {
     const html = render(
-      createElement(IssueRow, { issue: issue({ state: 'ASSERTED_FIXED' }), onAssertFixed: () => {} }),
+      createElement(IssueRow, {
+        issue: issue({ state: 'ASSERTED_FIXED' }),
+        onAssertFixed: () => {},
+      }),
     );
     expect(html).toContain('Re-checking…');
     expect(html).toContain('disabled');
@@ -101,7 +104,13 @@ describe('FixesBoard', () => {
   const issues: FixesIssue[] = [
     issue({ id: 'a', severity: 'CRITICAL', title: 'Crit A' }),
     issue({ id: 'b', severity: 'HIGH', title: 'High B' }),
-    issue({ id: 'c', severity: 'MEDIUM', title: 'Med C', state: 'RESOLVED', resolvedAt: '2026-08-30T12:00:00.000Z' }),
+    issue({
+      id: 'c',
+      severity: 'MEDIUM',
+      title: 'Med C',
+      state: 'RESOLVED',
+      resolvedAt: '2026-08-30T12:00:00.000Z',
+    }),
     issue({ id: 'd', severity: 'LOW', title: 'Low D' }),
   ];
 

@@ -4,6 +4,24 @@
   width: 240px;
 }
 
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filters input {
+  min-height: 40px;
+  min-width: 150px;
+  padding: 0 10px;
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-control);
+  background: var(--surface-page);
+  color: var(--text-primary);
+  font: var(--type-small);
+}
+
 .error {
   margin: 0 0 16px;
   font: var(--type-small);

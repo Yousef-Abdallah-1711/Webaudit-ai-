@@ -15,13 +15,21 @@ describe('loadCapabilities', () => {
     const capabilities = await loadCapabilities('SECURITY');
     const ids = capabilities.map((c) => c.id).sort();
     expect(ids).toEqual(
-      ['data-leak-scanner', 'dependency-scanner', 'headers-checker', 'owasp-checker', 'ssl-analyzer'].sort(),
+      [
+        'data-leak-scanner',
+        'dependency-scanner',
+        'headers-checker',
+        'owasp-checker',
+        'ssl-analyzer',
+      ].sort(),
     );
   });
 
   it('discovers all two real SEO capabilities from disk', async () => {
     const capabilities = await loadCapabilities('SEO');
-    expect(capabilities.map((c) => c.id).sort()).toEqual(['content-checker', 'meta-checker'].sort());
+    expect(capabilities.map((c) => c.id).sort()).toEqual(
+      ['content-checker', 'meta-checker'].sort(),
+    );
   });
 
   it('every loaded capability actually declares the module it was requested for', async () => {

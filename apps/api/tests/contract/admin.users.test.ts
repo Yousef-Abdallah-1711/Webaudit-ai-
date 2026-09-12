@@ -54,7 +54,13 @@ describe('GET /users', () => {
 
     const res = await request(app).get('/users').set(auth(token)).expect(200);
     const body = res.body as {
-      users: { id: string; email: string; isOperator: boolean; planId: string; balance: { plan: number; purchased: number } }[];
+      users: {
+        id: string;
+        email: string;
+        isOperator: boolean;
+        planId: string;
+        balance: { plan: number; purchased: number };
+      }[];
       total: number;
       limit: number;
       offset: number;
@@ -74,7 +80,11 @@ describe('GET /users', () => {
     for (let i = 0; i < 5; i++) await makeUser(`user${i}@example.com`);
     const token = await tokenFor(actor.id);
 
-    const res = await request(app).get('/users').query({ limit: 2, offset: 1 }).set(auth(token)).expect(200);
+    const res = await request(app)
+      .get('/users')
+      .query({ limit: 2, offset: 1 })
+      .set(auth(token))
+      .expect(200);
     const body = res.body as { users: unknown[]; total: number; limit: number; offset: number };
     expect(body.users.length).toBe(2);
     expect(body.total).toBe(6);
@@ -198,7 +208,11 @@ describe('PATCH /users/:id', () => {
   it('404s for a nonexistent user', async () => {
     const actor = await makeUser('operator@example.com');
     const token = await tokenFor(actor.id);
-    await request(app).patch('/users/does-not-exist').set(auth(token)).send({ isOperator: true }).expect(404);
+    await request(app)
+      .patch('/users/does-not-exist')
+      .set(auth(token))
+      .send({ isOperator: true })
+      .expect(404);
   });
 
   it('records the true immediately-preceding state under concurrent updates, not a stale one', async () => {

@@ -64,16 +64,27 @@ export async function runConformanceCheck(
   });
 
   const body = (await res.json()) as
-    | { readonly ok: true; readonly findings: readonly { readonly evidence?: { readonly report?: unknown } }[] }
+    | {
+        readonly ok: true;
+        readonly findings: readonly { readonly evidence?: { readonly report?: unknown } }[];
+      }
     | { readonly ok: false; readonly reason: SandboxFailure; readonly detail?: string };
 
   if (!body.ok) {
-    return { ok: false, reason: body.reason, ...(body.detail === undefined ? {} : { detail: body.detail }) };
+    return {
+      ok: false,
+      reason: body.reason,
+      ...(body.detail === undefined ? {} : { detail: body.detail }),
+    };
   }
 
   const report = body.findings[0]?.evidence?.report;
   if (report === undefined) {
-    return { ok: false, reason: 'CONTRACT_VIOLATION', detail: 'no conformance report in the sandbox response' };
+    return {
+      ok: false,
+      reason: 'CONTRACT_VIOLATION',
+      detail: 'no conformance report in the sandbox response',
+    };
   }
   return { ok: true, report: report as ConformanceReport };
 }

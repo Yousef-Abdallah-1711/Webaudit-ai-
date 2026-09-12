@@ -40,7 +40,9 @@ export function getSandboxRunnerUrl(): string {
   try {
     void new URL(raw);
   } catch {
-    throw new SandboxRunnerNotConfiguredError(`SANDBOX_RUNNER_URL is not a well-formed URL: ${raw}`);
+    throw new SandboxRunnerNotConfiguredError(
+      `SANDBOX_RUNNER_URL is not a well-formed URL: ${raw}`,
+    );
   }
   return raw;
 }

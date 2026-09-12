@@ -40,7 +40,7 @@ export function normalizeEmail(email: string): string {
 export async function register(
   db: PrismaClient,
   mailer: Mailer,
-  input: { email: string; password: string },
+  input: { email: string; password: string; name?: string | undefined },
 ): Promise<{ userId: string }> {
   const email = normalizeEmail(input.email);
 
@@ -54,6 +54,9 @@ export async function register(
   // verification token, is a broken account that support has to repair.
   const user = await db.$transaction(async (tx) => {
     const created = await tx.user.create({ data: { email, passwordHash } });
+    if (input.name !== undefined) {
+      await tx.$executeRaw`UPDATE "User" SET name = ${input.name.trim()} WHERE id = ${created.id}`;
+    }
     await tx.emailToken.create({
       data: {
         userId: created.id,

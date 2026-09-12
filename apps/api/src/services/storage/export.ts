@@ -72,7 +72,14 @@ export async function exportReport(
       reportRemovedAt: true,
       target: { select: { displayName: true, canonicalValue: true } },
       moduleResults: {
-        select: { module: true, state: true, score: true, summary: true, skippedReason: true, degradedReason: true },
+        select: {
+          module: true,
+          state: true,
+          score: true,
+          summary: true,
+          skippedReason: true,
+          degradedReason: true,
+        },
       },
     },
   });

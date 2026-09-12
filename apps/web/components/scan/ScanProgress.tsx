@@ -163,7 +163,12 @@ export function ScanProgress({
     };
   }, []);
 
-  const done = modules.filter((m) => moduleStates[m] !== undefined && moduleStates[m] !== 'waiting' && moduleStates[m] !== 'running').length;
+  const done = modules.filter(
+    (m) =>
+      moduleStates[m] !== undefined &&
+      moduleStates[m] !== 'waiting' &&
+      moduleStates[m] !== 'running',
+  ).length;
   const running = modules.find((m) => moduleStates[m] === 'running');
   const finished = SCAN_TERMINAL.has(scanState);
   const elapsed = startedAt === null ? '0:00' : formatElapsed(now - startedAt);

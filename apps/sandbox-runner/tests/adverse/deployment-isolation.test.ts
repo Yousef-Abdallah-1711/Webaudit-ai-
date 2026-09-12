@@ -82,7 +82,9 @@ describe('deployment isolation (R1: no network egress, no database credentials)'
     for (const file of tsFiles) {
       const contents = readFileSync(file, 'utf8');
       for (const forbiddenName of FORBIDDEN_ENV_VAR_NAMES) {
-        expect(contents, `${file} must never reference ${forbiddenName}`).not.toContain(forbiddenName);
+        expect(contents, `${file} must never reference ${forbiddenName}`).not.toContain(
+          forbiddenName,
+        );
       }
     }
   });

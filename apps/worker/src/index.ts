@@ -38,9 +38,14 @@
 
 import { pathToFileURL } from 'node:url';
 import { type ConnectionOptions } from 'bullmq';
-import { Redis } from 'ioredis';
+import { Redis, type RedisOptions } from 'ioredis';
 import { createLogger } from '@webaudit/config';
-import { createExecutorFromEnv, type AiExecutor } from '@webaudit/ai-executor';
+import {
+  AI_PROVIDER_ATTEMPT_TIMEOUT_MS,
+  createExecutorFromEnv,
+  createMasterReportExecutorFromEnv,
+  type AiExecutor,
+} from '@webaudit/ai-executor';
 import { createQueues, redisConnection, type QueueSet } from './queue/queues.js';
 import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers.js';
 import { installProcessGuards } from './process-guards.js';
@@ -54,6 +59,10 @@ import {
   scheduleTimeoutSweep,
 } from './orchestrator/timeout-scheduler.js';
 import { createBillingSweepHandler, scheduleBillingSweeps } from './orchestrator/billing-sweeps.js';
+import {
+  createPaymentExpirySweepHandler,
+  schedulePaymentExpirySweep,
+} from './orchestrator/payment-expiry-scheduler.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
 import {
   installTerminalTeardown,
@@ -61,6 +70,10 @@ import {
   processCleanupOwner,
 } from './workspace/teardown.js';
 import type { EventPublisher } from './orchestrator/emit.js';
+import {
+  createRedisCancellationSource,
+  type CancellationSource,
+} from './orchestrator/cancellation.js';
 
 export const SERVICE_NAME = '@webaudit/worker' as const;
 
@@ -74,6 +87,7 @@ export const SERVICE_NAME = '@webaudit/worker' as const;
  * never gets to run.
  */
 const DEFAULT_SHUTDOWN_GRACE_MS = 120_000;
+const MODULE_TIMEOUT_MARGIN_MS = 15_000;
 
 // T231 — structured, redacted (FR-091) process-lifecycle logging. Replaces
 // this file's own `console.warn`/`console.error` calls; nothing else about
@@ -105,6 +119,35 @@ function requiredEnv(name: string): string {
   return raw;
 }
 
+export function moduleTimeoutForExecutor(executor: AiExecutor): number {
+  // T256: the executor timeout is per provider attempt, while `runModule` is
+  // wrapped once around the whole module. Derive the outer budget from the
+  // configured chain length so a two- or three-vendor fallback can exhaust
+  // naturally and return DEGRADED instead of being killed by a stale 60s
+  // module default mid-fallback.
+  return executor.chain.length * AI_PROVIDER_ATTEMPT_TIMEOUT_MS + MODULE_TIMEOUT_MARGIN_MS;
+}
+
+/**
+ * The realtime-progress publisher's own Redis client — extracted so it is
+ * directly testable, mirroring `apps/api/src/middleware/ratelimit.middleware.ts`'s
+ * own `createClient`. Every sibling client in this codebase (that ratelimit
+ * client, `apps/api/src/services/queue/cancel-publisher.ts`, and this
+ * worker's own cancellation subscriber) attaches an `.on('error', ...)`
+ * handler with the same reasoning: ioredis emits `'error'` on every failed
+ * reconnection attempt, and an unhandled `'error'` on an EventEmitter throws
+ * synchronously. `installProcessGuards()` already contains that as a generic,
+ * unattributed incident — this handler attributes it correctly instead of
+ * leaving this one client as the odd one out.
+ */
+export function createPublisherRedisClient(url: string, extraOptions: RedisOptions = {}): Redis {
+  const client = new Redis(url, { maxRetriesPerRequest: null, ...extraOptions });
+  client.on('error', (err: Error) => {
+    logger.warn('publisher redis error', { message: err.message });
+  });
+  return client;
+}
+
 export interface WorkerServiceOptions {
   /** Omit to read `REDIS_URL`, which is required. */
   readonly connection?: ConnectionOptions;
@@ -123,8 +166,17 @@ export interface WorkerServiceOptions {
   readonly db?: PrismaClient;
   /** Where scan events are published. Omit for a real `ioredis` client on `connection`. */
   readonly publisher?: EventPublisher;
+  /**
+   * P0-CANCEL-1's cancellation-notification source. Omit for a real,
+   * Redis-backed subscriber on `connection` — pass an explicit fake (see
+   * `apps/worker/tests/helpers/fake-cancellation-source.ts`) for a suite that
+   * wants to trigger cancellation deterministically without Redis.
+   */
+  readonly cancellation?: CancellationSource;
   /** Omit to read `AI_MODE`/`AI_CHAIN` via `createExecutorFromEnv()`. */
   readonly executor?: AiExecutor;
+  /** Override only for focused tests or a deliberately reviewed deployment override. */
+  readonly moduleTimeoutMs?: number;
   readonly shutdownGraceMs?: number;
   /**
    * Defaults to true: the production path is the default path. A suite that
@@ -162,6 +214,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // a caller that wants the placeholders (or a fake) never pays for a real
   // database connection or AI executor it will not use.
   let publisherToClose: Redis | undefined;
+  let cancellationToClose: { close(): Promise<void> } | undefined;
   let uploadStorage: UploadStorage | undefined;
   let uninstallTerminalRefund: (() => void) | undefined;
   let uninstallTerminalTeardown: (() => void) | undefined;
@@ -183,17 +236,30 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           // codebase carry `url`, but `ConnectionOptions` is a wider union
           // that does not statically guarantee it.
           const url = (connection as { url?: string }).url ?? process.env['REDIS_URL'] ?? '';
-          const client = new Redis(url, { maxRetriesPerRequest: null });
+          const client = createPublisherRedisClient(url);
           publisherToClose = client;
           return client;
         })();
       const executor = options.executor ?? createExecutorFromEnv();
+      const masterReportExecutor = createMasterReportExecutorFromEnv(process.env, executor);
+      const moduleTimeoutMs = options.moduleTimeoutMs ?? moduleTimeoutForExecutor(executor);
+      const cancellation =
+        options.cancellation ??
+        (() => {
+          const url = (connection as { url?: string }).url ?? process.env['REDIS_URL'] ?? '';
+          const source = createRedisCancellationSource(url);
+          cancellationToClose = source;
+          return source;
+        })();
       return {
         phase: createPhaseHandler({
           db,
           queues,
           publisher,
           executor,
+          masterReportExecutor,
+          cancellation,
+          moduleTimeoutMs,
           // T174. `createUploadStorage` reads the R2 variables when it is
           // first called rather than now, so a deployment that only audits
           // URLs still boots without them — and one that is asked to audit an
@@ -217,6 +283,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // FR-038: the repeatable sweep that terminates stuck scans and refunds
         // their undelivered share. Registered as a repeatable job below.
         timeoutSweep: createTimeoutSweepHandler({ db, publisher }),
+        paymentExpirySweep: createPaymentExpirySweepHandler(db),
         // FR-059 (T150): the targeted re-verification runner. `apps/api`'s
         // assert-fixed route is its only producer.
         reverify: createReverifyHandler({ db, publisher }),
@@ -250,6 +317,11 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           'this is resolved',
         { error: error instanceof Error ? error.message : String(error) },
       );
+    });
+    void schedulePaymentExpirySweep(queues.maintenance).catch((error: unknown) => {
+      logger.error('could not schedule the payment-expiry sweep', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
     void scheduleBillingSweeps(queues.maintenance).catch((error: unknown) => {
       logger.error(
@@ -303,6 +375,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       // still finishing and needs to enqueue its successor.
       await queues.close();
       if (publisherToClose !== undefined) publisherToClose.disconnect();
+      if (cancellationToClose !== undefined) await cancellationToClose.close();
       uninstallTerminalRefund?.();
       uninstallTerminalTeardown?.();
       uninstallProcessGuards();

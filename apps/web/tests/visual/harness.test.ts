@@ -237,7 +237,13 @@ describe('apps/web vs. design-system/reference-pages/, at both viewports', () =>
  */
 describe('T128 auth pages vs. design-system/reference-pages/public-pages/, at both viewports', () => {
   const forEachAuthViewport = VIEWPORTS.map((v) => v.name).join(' and ');
-  const AUTH_PAGES = ['Sign in', 'Create account', 'Verify email', 'Forgot password', 'Reset password'];
+  const AUTH_PAGES = [
+    'Sign in',
+    'Create account',
+    'Verify email',
+    'Forgot password',
+    'Reset password',
+  ];
 
   for (const name of AUTH_PAGES) {
     it.todo(

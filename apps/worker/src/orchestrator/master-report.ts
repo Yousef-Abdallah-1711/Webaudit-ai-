@@ -20,6 +20,7 @@
 
 import { assemblePrompt } from '@webaudit/redaction';
 import type { AiExecutor } from '@webaudit/ai-executor';
+import { computePromptVersion } from '@webaudit/ai-executor';
 import { masterReportPrompt } from '../prompts/index.js';
 import { overallScore, type AreaScore } from '@webaudit/scoring';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
@@ -42,6 +43,7 @@ export async function runMasterSynthesis(
   db: PrismaClient,
   executor: AiExecutor,
   scanId: string,
+  isCancelled: () => boolean = () => false,
 ): Promise<MasterSynthesisResult> {
   const results = await db.moduleResult.findMany({
     where: { scanId },
@@ -66,20 +68,35 @@ export async function runMasterSynthesis(
 
   const assembled = assemblePrompt({
     instructions: masterReportPrompt.systemPrompt,
-    segments: [{ label: 'area-results', path: 'master/areas.txt', content: rendered || 'No areas were run.' }],
+    segments: [
+      {
+        label: 'area-results',
+        path: 'master/areas.txt',
+        content: rendered || 'No areas were run.',
+      },
+    ],
   });
 
   const result = await executor.run({
     task: masterReportPrompt.task,
     prompt: assembled.prompt,
     schema: masterReportPrompt.responseSchema,
+    promptVersion: computePromptVersion(masterReportPrompt.systemPrompt),
     scanId,
   });
 
   const summary = result.ok ? result.value.headline : fallbackSummary(areas);
 
-  await db.scan.update({
-    where: { id: scanId },
+  // The AI call above is the one real await between phase entry and this
+  // write — a cancellation discovered while it was in flight must not let a
+  // since-cancelled scan gain a computed overallScore/summary it was never
+  // meant to have, mirroring runAndPersistModule's own checkpoint discipline
+  // (P0-CANCEL-1). No credit/billing consequence here, unlike that fix — this
+  // is a data-consistency guard, not a refund one.
+  if (isCancelled()) return { overallScore: overall.score, summary };
+
+  await db.scan.updateMany({
+    where: { id: scanId, state: 'RUNNING_MASTER' },
     data: { overallScore: overall.score, summary },
   });
 

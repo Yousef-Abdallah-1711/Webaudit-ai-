@@ -63,6 +63,21 @@ import {
   purchaseCredits,
 } from '../services/billing/purchase.service.js';
 import { EntitlementError } from '../services/billing/entitlements.js';
+import {
+  CheckoutPriceNotConfiguredError,
+  createEnvBillingPriceCatalog,
+  type BillingPriceCatalog,
+} from '../services/billing/checkout-pricing.js';
+import {
+  initiateCreditPurchaseCheckout,
+  initiateSubscriptionCheckout,
+} from '../services/billing/checkout.service.js';
+import type { PaymentProvider } from '../services/billing/payment-provider.js';
+import {
+  CheckoutInProgressError,
+  createRedisCheckoutLock,
+  type CheckoutLock,
+} from '../services/billing/checkout-lock.js';
 
 const planIdBody = z.object({ planId: z.enum(['starter', 'pro', 'business']) });
 const purchaseBody = z.object({ credits: z.number().int().positive().max(1_000_000) });
@@ -83,6 +98,9 @@ export interface BillingRoutesDeps {
    * instead.
    */
   isProduction?: boolean;
+  paymentProvider?: PaymentProvider;
+  priceCatalog?: BillingPriceCatalog;
+  checkoutLock?: CheckoutLock;
 }
 
 /**
@@ -101,6 +119,9 @@ function makeDevTestOnlyGuard(isProduction: boolean): (res: Response) => boolean
 
 export function billingRoutes(db: PrismaClient, deps: BillingRoutesDeps = {}): Router {
   const devTestOnly = makeDevTestOnlyGuard(deps.isProduction ?? env.isProduction);
+  const paymentProvider = deps.paymentProvider;
+  const priceCatalog = deps.priceCatalog ?? createEnvBillingPriceCatalog(process.env);
+  const checkoutLock = deps.checkoutLock ?? createRedisCheckoutLock();
   const router = Router();
   router.use(requireAuth);
 
@@ -163,11 +184,86 @@ export function billingRoutes(db: PrismaClient, deps: BillingRoutesDeps = {}): R
     });
   });
 
+  router.get('/billing/usage', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+    const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [balance, scans, transactions] = await Promise.all([
+      balanceOf(db, userId),
+      db.scan.findMany({
+        where: { userId, createdAt: { gte: since } },
+        select: { id: true, kind: true, requestedModules: true },
+      }),
+      db.creditTransaction.findMany({
+        where: { userId, createdAt: { gte: since } },
+        orderBy: { createdAt: 'asc' },
+        select: { type: true, amount: true, reason: true, createdAt: true, scanId: true },
+      }),
+    ]);
+    const spentCredits = transactions
+      .filter((t) => t.type === 'DEBIT')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const byArea = new Map<string, number>();
+    const scansById = new Map(scans.map((scan) => [scan.id, scan]));
+    for (const transaction of transactions) {
+      if (transaction.type !== 'DEBIT') continue;
+      const areas = scansById.get(transaction.scanId ?? '')?.requestedModules ?? [];
+      for (const area of areas)
+        byArea.set(
+          area,
+          (byArea.get(area) ?? 0) + Math.round(transaction.amount / Math.max(areas.length, 1)),
+        );
+    }
+    const daily = new Map<string, number>();
+    for (const transaction of transactions) {
+      if (transaction.type === 'DEBIT') {
+        const day = transaction.createdAt.toISOString().slice(0, 10);
+        daily.set(day, (daily.get(day) ?? 0) + transaction.amount);
+      }
+    }
+    res.status(200).json({
+      balance,
+      spentCredits,
+      auditsRun: scans.filter((scan) => scan.kind === 'INITIAL').length,
+      rechecks: scans.filter((scan) => scan.kind === 'READINESS').length,
+      dailySpend: [...daily.entries()].map(([date, credits]) => ({ date, credits })),
+      byArea: [...byArea.entries()].map(([area, credits]) => ({ area, credits })),
+      refunds: transactions
+        .filter((t) => t.type === 'REFUND')
+        .map((t) => ({ date: t.createdAt, reason: t.reason, credits: t.amount })),
+    });
+  });
+
   router.post('/billing/subscribe', async (req: AuthedRequest, res: Response) => {
-    if (!devTestOnly(res)) return;
+    if (paymentProvider === undefined && !devTestOnly(res)) return;
     const parsed = planIdBody.safeParse(req.body);
     if (!parsed.success) {
       badRequest(res, 'subscribe requires planId: one of starter, pro, business.');
+      return;
+    }
+    if (paymentProvider !== undefined) {
+      try {
+        const checkout = await initiateSubscriptionCheckout(
+          db,
+          { userId: req.auth!.userId, planId: parsed.data.planId },
+          paymentProvider,
+          priceCatalog,
+          checkoutLock,
+        );
+        res.status(201).json({ checkout });
+      } catch (error) {
+        if (
+          error instanceof PlanNotSubscribableError ||
+          error instanceof CheckoutPriceNotConfiguredError
+        ) {
+          badRequest(res, error.message);
+          return;
+        }
+        if (error instanceof CheckoutInProgressError) {
+          res.status(409).json({ error: { code: 'CHECKOUT_IN_PROGRESS', message: error.message } });
+          return;
+        }
+        throw error;
+      }
       return;
     }
     try {
@@ -183,6 +279,7 @@ export function billingRoutes(db: PrismaClient, deps: BillingRoutesDeps = {}): R
   });
 
   router.post('/billing/change-plan', async (req: AuthedRequest, res: Response) => {
+    if (!devTestOnly(res)) return;
     const parsed = planIdBody.safeParse(req.body);
     if (!parsed.success) {
       badRequest(res, 'change-plan requires planId: one of starter, pro, business.');
@@ -227,10 +324,46 @@ export function billingRoutes(db: PrismaClient, deps: BillingRoutesDeps = {}): R
   });
 
   router.post('/billing/credits/purchase', async (req: AuthedRequest, res: Response) => {
-    if (!devTestOnly(res)) return;
+    if (paymentProvider === undefined && !devTestOnly(res)) return;
     const parsed = purchaseBody.safeParse(req.body);
     if (!parsed.success) {
       badRequest(res, 'purchase requires credits: a positive whole number.');
+      return;
+    }
+    if (paymentProvider !== undefined) {
+      try {
+        const checkout = await initiateCreditPurchaseCheckout(
+          db,
+          { userId: req.auth!.userId, credits: parsed.data.credits },
+          paymentProvider,
+          priceCatalog,
+          checkoutLock,
+        );
+        res.status(201).json({ checkout });
+      } catch (error) {
+        if (error instanceof EntitlementError) {
+          res.status(403).json({
+            error: {
+              code: 'PLAN_UPGRADE_REQUIRED',
+              message: error.message,
+              details: { current: error.currentTier, requiredTier: error.requiredTier },
+            },
+          });
+          return;
+        }
+        if (
+          error instanceof InvalidPurchaseAmountError ||
+          error instanceof CheckoutPriceNotConfiguredError
+        ) {
+          badRequest(res, error.message);
+          return;
+        }
+        if (error instanceof CheckoutInProgressError) {
+          res.status(409).json({ error: { code: 'CHECKOUT_IN_PROGRESS', message: error.message } });
+          return;
+        }
+        throw error;
+      }
       return;
     }
     try {

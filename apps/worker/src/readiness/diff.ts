@@ -139,8 +139,7 @@ export function diffAgainstBaseline(
 
     // Area regression: the score fell meaningfully, or the area's state carries
     // less confidence than it did before (e.g. COMPLETE → DEGRADED).
-    const stateDegraded =
-      before !== undefined && STATE_RANK[area.state] > STATE_RANK[before.state];
+    const stateDegraded = before !== undefined && STATE_RANK[area.state] > STATE_RANK[before.state];
     if (direction === 'down') {
       regressions.push({
         kind: 'area',

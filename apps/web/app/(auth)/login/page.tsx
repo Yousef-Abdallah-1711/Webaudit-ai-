@@ -6,21 +6,31 @@
  * login` (`lib/api.ts`) — the source's `href="../app/index.html"` becomes a
  * router push to `/scan` on success.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '../../../components/ui';
 import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
 import { useT } from '../../theme';
-import { ApiError, API_BASE, login } from '../../../lib/api';
+import { ApiError, API_BASE } from '../../../lib/api';
+import { useAuth } from '../../../components/auth/AuthProvider';
+import { safeNextDestination } from '../../../components/auth/RouteGuard';
 import styles from './page.module.css';
 
-export default function LoginPage(): React.ReactElement {
+export default function LoginPage(): React.ReactElement | null {
   const [t] = useT();
   const router = useRouter();
+  const { status, login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const next = safeNextDestination(
+    typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('next'),
+  );
+
+  useEffect(() => {
+    if (status === 'authenticated') router.replace(next);
+  }, [next, router, status]);
 
   async function onSubmit(): Promise<void> {
     setError(null);
@@ -28,7 +38,7 @@ export default function LoginPage(): React.ReactElement {
     setSubmitting(true);
     try {
       await login(email, password);
-      router.push('/scan');
+      router.replace(next);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED') {
         setError(t('auth_error_not_verified'));
@@ -42,14 +52,16 @@ export default function LoginPage(): React.ReactElement {
     }
   }
 
+  if (status === 'authenticated') return null;
+
   return (
     <AuthFrame
       title={t('auth_signin_title')}
       lead={t('auth_signin_lead')}
       foot={
         <span>
-          {t('auth_signin_foot_lead')}{' '}
-          <a href="/signup">{t('auth_signin_foot_link')}</a> {t('auth_signin_foot_tail')}
+          {t('auth_signin_foot_lead')} <a href="/signup">{t('auth_signin_foot_link')}</a>{' '}
+          {t('auth_signin_foot_tail')}
         </span>
       }
     >

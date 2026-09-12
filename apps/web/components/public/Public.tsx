@@ -26,6 +26,7 @@
 import type { ReactElement } from 'react';
 import { Button } from '../ui';
 import { LangToggle, ThemeToggle, useT } from '../../app/theme';
+import { useAuth } from '../auth/AuthProvider';
 import type { StringKey } from '../../lib/strings';
 import styles from './Public.module.css';
 
@@ -44,8 +45,8 @@ export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
 const NAV: readonly (readonly [href: string, key: StringKey])[] = [
   ['/', 'nav_product'],
   ['/pricing', 'nav_pricing'],
-  ['#', 'nav_docs'],
-  ['#', 'nav_changelog'],
+  ['/pricing', 'nav_docs'],
+  ['/pricing', 'nav_changelog'],
 ];
 
 export interface PublicHeaderProps {
@@ -54,6 +55,7 @@ export interface PublicHeaderProps {
 
 export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
   const [t] = useT();
+  const { status, isOperator } = useAuth();
 
   return (
     <header className={styles.header}>
@@ -77,26 +79,65 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
         <div className={styles.headerActions}>
           <LangToggle />
           <ThemeToggle />
-          <Button variant="ghost" size="sm" href="/login">
-            {t('signin')}
-          </Button>
-          <Button size="sm" href="/register">
-            {t('start_free')}
-          </Button>
+          {status === 'anonymous' && (
+            <>
+              <Button variant="ghost" size="sm" href="/login">
+                {t('signin')}
+              </Button>
+              <Button size="sm" href="/signup">
+                {t('start_free')}
+              </Button>
+            </>
+          )}
+          {status === 'authenticated' && (
+            <>
+              <Button variant="ghost" size="sm" href="/scan">
+                {t('foot_dashboard')}
+              </Button>
+              {isOperator && (
+                <Button size="sm" href="/admin">
+                  {t('foot_admin')}
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </header>
   );
 }
 
-const FOOTER_COLUMNS: readonly (readonly [StringKey, readonly StringKey[]])[] = [
-  ['foot_product', ['a_seo', 'loop_eyebrow', 'n_readiness']],
-  ['foot_pricing', ['foot_pricing', 'credits', 'top_up']],
-  ['foot_company', ['nav_docs', 'nav_changelog', 'foot_zero']],
-];
+const FOOTER_COLUMNS: readonly (readonly [StringKey, readonly (readonly [StringKey, string])[]])[] =
+  [
+    [
+      'foot_product',
+      [
+        ['a_seo', '/'],
+        ['loop_eyebrow', '/'],
+        ['n_readiness', '/readiness'],
+      ],
+    ],
+    [
+      'foot_pricing',
+      [
+        ['foot_pricing', '/pricing'],
+        ['credits', '/pricing'],
+        ['top_up', '/pricing'],
+      ],
+    ],
+    [
+      'foot_company',
+      [
+        ['nav_docs', '/pricing'],
+        ['nav_changelog', '/pricing'],
+        ['foot_zero', '/'],
+      ],
+    ],
+  ];
 
 export function PublicFooter(): ReactElement {
   const [t] = useT();
+  const { status, isOperator } = useAuth();
 
   return (
     <footer className={styles.footer}>
@@ -109,8 +150,8 @@ export function PublicFooter(): ReactElement {
           <div key={heading}>
             <div className={styles.footerColTitle}>{t(heading)}</div>
             <div className={styles.footerColLinks}>
-              {items.map((item) => (
-                <a key={item} href="#">
+              {items.map(([item, href]) => (
+                <a key={item} href={href}>
                   {t(item)}
                 </a>
               ))}
@@ -120,12 +161,16 @@ export function PublicFooter(): ReactElement {
       </div>
       <div className={styles.footerBottom}>
         <span className={styles.footerCopy}>© 2026 WebAudit AI</span>
-        <a href="#" className={styles.footerLink}>
-          {t('foot_dashboard')}
-        </a>
-        <a href="#" className={styles.footerLink}>
-          {t('foot_admin')}
-        </a>
+        {status === 'authenticated' && (
+          <a href="/scan" className={styles.footerLink}>
+            {t('foot_dashboard')}
+          </a>
+        )}
+        {status === 'authenticated' && isOperator && (
+          <a href="/admin" className={styles.footerLink}>
+            {t('foot_admin')}
+          </a>
+        )}
         <span dir="ltr" className={styles.footerZero}>
           {t('foot_zero')}
         </span>

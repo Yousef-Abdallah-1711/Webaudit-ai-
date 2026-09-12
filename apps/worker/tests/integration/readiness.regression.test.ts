@@ -13,7 +13,10 @@ import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db
 import { reconcileCapabilitiesAtBoot } from '@webaudit/api';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
 import type { ModuleState, ModuleType, ScanState } from '@webaudit/types';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';
@@ -83,9 +86,16 @@ describe('FR-069 — regressions are named, not merely a lower number', () => {
   afterAll(closeDb);
 
   it('names an area whose score fell and a fix that came back; verdict is no-go with those blockers', async () => {
-    const user = await db.user.create({ data: { email: 'reg@example.com', emailVerifiedAt: new Date() } });
+    const user = await db.user.create({
+      data: { email: 'reg@example.com', emailVerifiedAt: new Date() },
+    });
     const target = await db.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://reg.example.com', displayName: 'reg' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://reg.example.com',
+        displayName: 'reg',
+      },
     });
 
     const baselineId = await scanWithAreas(
@@ -96,7 +106,9 @@ describe('FR-069 — regressions are named, not merely a lower number', () => {
       { overallScore: 90 },
     );
     // A HIGH issue verified fixed in the baseline.
-    const baseMr = await db.moduleResult.findFirstOrThrow({ where: { scanId: baselineId, module: 'SECURITY' } });
+    const baseMr = await db.moduleResult.findFirstOrThrow({
+      where: { scanId: baselineId, module: 'SECURITY' },
+    });
     await db.issue.create({
       data: {
         scanId: baselineId,
@@ -169,9 +181,16 @@ describe('FR-069 — regressions are named, not merely a lower number', () => {
   });
 
   it('a COMPLETE → DEGRADED area is a named regression even at the same score', async () => {
-    const user = await db.user.create({ data: { email: 'deg@example.com', emailVerifiedAt: new Date() } });
+    const user = await db.user.create({
+      data: { email: 'deg@example.com', emailVerifiedAt: new Date() },
+    });
     const target = await db.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://deg.example.com', displayName: 'deg' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://deg.example.com',
+        displayName: 'deg',
+      },
     });
     const baselineId = await scanWithAreas(
       user.id,
@@ -188,7 +207,12 @@ describe('FR-069 — regressions are named, not merely a lower number', () => {
         { module: 'PERFORMANCE', state: 'COMPLETE', score: 90 },
         { module: 'SECURITY', state: 'COMPLETE', score: 90 },
         { module: 'UI', state: 'COMPLETE', score: 90 },
-        { module: 'TESTING', state: 'DEGRADED', score: 90, degradedReason: 'the AI provider chain was exhausted' },
+        {
+          module: 'TESTING',
+          state: 'DEGRADED',
+          score: 90,
+          degradedReason: 'the AI provider chain was exhausted',
+        },
         { module: 'SEO', state: 'COMPLETE', score: 90 },
       ],
       { baselineScanId: baselineId, state: 'RUNNING_MASTER' },
@@ -201,7 +225,9 @@ describe('FR-069 — regressions are named, not merely a lower number', () => {
 
     const verdict = await db.readinessVerdict.findUniqueOrThrow({ where: { scanId: readinessId } });
     const names = (verdict.regressions as { name: string }[]).map((r) => r.name);
-    expect(names.some((n) => n.startsWith('Testing regressed') && n.includes('exhausted'))).toBe(true);
+    expect(names.some((n) => n.startsWith('Testing regressed') && n.includes('exhausted'))).toBe(
+      true,
+    );
     expect(verdict.isReady).toBe(false);
   });
 });

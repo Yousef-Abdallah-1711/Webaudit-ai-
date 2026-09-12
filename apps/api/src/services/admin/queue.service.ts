@@ -91,9 +91,9 @@ export class JobNotCancelableError extends Error {
     super(
       reason === 'active'
         ? `Job ${jobId} is active — its queue record cannot be removed while it is running. ` +
-          'Cancel the scan itself instead; that path stops the work and tears down its workspace.'
+            'Cancel the scan itself instead; that path stops the work and tears down its workspace.'
         : `Job ${jobId} is a "${jobName}" job — a system-internal cleanup/deadline, not audit ` +
-          'work, and has no other mechanism guaranteeing it runs. It cannot be cancelled here.',
+            'work, and has no other mechanism guaranteeing it runs. It cannot be cancelled here.',
     );
   }
 }

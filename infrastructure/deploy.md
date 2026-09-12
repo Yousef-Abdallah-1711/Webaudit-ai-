@@ -156,6 +156,29 @@ on the real (expected Linux) deployment target. Not duplicated here — read tha
 
 ---
 
+## Phase 5 email rollout checklist
+
+The API selects `createResendMailerFromEnv()` only when `NODE_ENV=production`; development and
+tests retain `createConsoleMailer()` unless a mailer is injected. Resend uses the HTTPS
+`POST https://api.resend.com/emails` endpoint with `RESEND_API_KEY`, `EMAIL_FROM`, and `WEB_URL`.
+
+Before enabling production traffic:
+
+1. Create a Resend API key in the deployment secret manager. Never place it in `.env.example`, git,
+   logs, or a browser-exposed variable.
+2. Verify the sender domain in Resend and set `EMAIL_FROM` to an address on that domain.
+3. Set `RESEND_API_KEY`, `EMAIL_FROM`, and the public frontend `WEB_URL` in the API environment.
+4. Deploy to staging and exercise registration verification, password reset, readiness, renewal, and
+   retention warning emails with a controlled inbox.
+5. Confirm verification links use `/verify-email` and reset links use `/reset-password` on `WEB_URL`.
+6. Confirm a mocked provider failure leaves the error visible to the existing retry/error path; the
+   API process must remain alive.
+7. Record delivery, bounce, and rejection results from the Resend dashboard in the release evidence.
+
+Do not mark Phase 5 production-ready until all seven checks have dated evidence.
+
+---
+
 ## Summary table
 
 | Unit | Public port | Own DB/queue credentials | Own AI provider keys | Build step | Real runbook exists |

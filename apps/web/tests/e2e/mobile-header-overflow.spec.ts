@@ -14,10 +14,7 @@ import { execSync } from 'node:child_process';
 import { test, expect } from '@playwright/test';
 import { startServer, type ServerHandle } from '../visual/harness.js';
 
-const REPO_ROOT = new URL('../../../../', import.meta.url).pathname.replace(
-  /^\/([A-Za-z]:)/,
-  '$1',
-);
+const REPO_ROOT = new URL('../../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const WEB_DIR = `${REPO_ROOT}apps/web`;
 const PORT = 4181;
 

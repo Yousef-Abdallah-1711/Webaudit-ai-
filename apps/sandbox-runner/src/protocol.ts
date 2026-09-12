@@ -92,4 +92,8 @@ export interface ChildRequestMessage {
 export type ChildResponseMessage =
   | { readonly kind: 'result'; readonly response: SandboxResponse }
   /** A structured-cloneable log line, already redacted by the child before it is sent. */
-  | { readonly kind: 'log'; readonly level: 'debug' | 'info' | 'warn' | 'error'; readonly message: string };
+  | {
+      readonly kind: 'log';
+      readonly level: 'debug' | 'info' | 'warn' | 'error';
+      readonly message: string;
+    };

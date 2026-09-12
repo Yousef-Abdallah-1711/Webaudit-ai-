@@ -61,9 +61,7 @@ export interface TimeoutSweepHandlerDeps {
  * `Refunder` and `emitterFor` the sweep needs from the same primitives
  * `terminal-refund.ts` and the orchestrator already use.
  */
-export function createTimeoutSweepHandler(
-  deps: TimeoutSweepHandlerDeps,
-): () => Promise<void> {
+export function createTimeoutSweepHandler(deps: TimeoutSweepHandlerDeps): () => Promise<void> {
   const refund: SweepOptions['refund'] = async ({ scanId, credits, reason }) => {
     const debitTx = await deps.db.creditTransaction.findFirst({
       where: { scanId, type: 'DEBIT' },

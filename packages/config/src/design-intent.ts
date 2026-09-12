@@ -61,8 +61,7 @@ export const DESIGN_INTENT_QUESTIONS: readonly DesignIntentQuestion[] = [
   },
   {
     id: 'admiredReferences',
-    prompt:
-      'Are there other sites whose design you admire? List one or more, separated by commas.',
+    prompt: 'Are there other sites whose design you admire? List one or more, separated by commas.',
     kind: 'text',
   },
   {

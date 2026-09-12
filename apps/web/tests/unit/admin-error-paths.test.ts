@@ -56,9 +56,8 @@ describe('admin pages render the real refusal, not an empty or fabricated table'
 
   it('AdminCapabilitiesPage', async () => {
     vi.mocked(api.getAdminCapabilities).mockRejectedValueOnce(REFUSED);
-    const { default: AdminCapabilitiesPage } = await import(
-      '../../app/(admin)/admin/capabilities/page.js'
-    );
+    const { default: AdminCapabilitiesPage } =
+      await import('../../app/(admin)/admin/capabilities/page.js');
     mounted = await renderClient(createElement(AdminCapabilitiesPage));
     expect(mounted.html()).toContain('Operators only.');
   });

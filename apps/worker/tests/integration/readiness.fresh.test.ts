@@ -22,7 +22,10 @@ import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db
 import { reconcileCapabilitiesAtBoot } from '@webaudit/api';
 import { createExecutorFromEnv } from '@webaudit/ai-executor';
 import type { ScanState } from '@webaudit/types';
-import { createPhaseHandler, type OrchestratorOptions } from '../../src/orchestrator/orchestrator.js';
+import {
+  createPhaseHandler,
+  type OrchestratorOptions,
+} from '../../src/orchestrator/orchestrator.js';
 import type { JobRef } from '../../src/queue/workers.js';
 
 process.env['AI_MODE'] ??= 'fixtures';
@@ -95,12 +98,17 @@ describe('FR-067 — a readiness pass audits every area fresh', () => {
   });
   afterAll(closeDb);
 
-  it('computes the verdict from the readiness scan\'s own results and leaves the baseline untouched', async () => {
+  it("computes the verdict from the readiness scan's own results and leaves the baseline untouched", async () => {
     const user = await db.user.create({
       data: { email: 'fresh@example.com', emailVerifiedAt: new Date() },
     });
     const target = await db.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://fresh.example.com', displayName: 'fresh' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://fresh.example.com',
+        displayName: 'fresh',
+      },
     });
 
     // Baseline scored low; readiness scan (fresh) scored high.
@@ -125,7 +133,10 @@ describe('FR-067 — a readiness pass audits every area fresh', () => {
     );
 
     const handle = createPhaseHandler(makeOptions());
-    await handle({ scanId: readinessId, phase: 'RUNNING_DOCS', modules: [...ALL], attempt: 1 }, FAKE_JOB);
+    await handle(
+      { scanId: readinessId, phase: 'RUNNING_DOCS', modules: [...ALL], attempt: 1 },
+      FAKE_JOB,
+    );
 
     const readinessScan = await db.scan.findUniqueOrThrow({ where: { id: readinessId } });
     expect(readinessScan.state).toBe('COMPLETED');

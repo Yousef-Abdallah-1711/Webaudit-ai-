@@ -67,7 +67,9 @@ test('an already-used reset link is refused, not silently accepted twice', async
   await page.getByLabel('Confirm new password').fill(secondPassword);
   await page.getByRole('button', { name: 'Set password and sign in', exact: true }).click();
   // lib/strings.ts's real copy for a 410 (already-used/expired) token.
-  await expect(page.getByText('It has already been used, or it expired.')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText('It has already been used, or it expired.')).toBeVisible({
+    timeout: 5_000,
+  });
 });
 
 test('mismatched passwords are refused before submission', async ({ page }) => {
@@ -84,5 +86,7 @@ test('mismatched passwords are refused before submission', async ({ page }) => {
   await page.getByLabel('Confirm new password').fill('a-different-password-123');
   // lib/strings.ts's real copy: "Passwords do not match."
   await expect(page.getByText('Passwords do not match.')).toBeVisible({ timeout: 5_000 });
-  await expect(page.getByRole('button', { name: 'Set password and sign in', exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: 'Set password and sign in', exact: true }),
+  ).toBeDisabled();
 });

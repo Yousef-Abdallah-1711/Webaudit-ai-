@@ -62,7 +62,12 @@ import {
   type ReverifyRequest,
 } from '@webaudit/capability-sdk';
 import { buildSandboxedCanRunTrap, buildSandboxedContext } from './context.js';
-import { BundleInvalidError, cloneIntoContext, loadCapabilityFromBundle, type LoadedCapability } from './load.js';
+import {
+  BundleInvalidError,
+  cloneIntoContext,
+  loadCapabilityFromBundle,
+  type LoadedCapability,
+} from './load.js';
 import type {
   ChildRequestMessage,
   ChildResponseMessage,
@@ -113,8 +118,14 @@ function inChildTimeoutMs(wallClockMs: number): number {
   return Math.max(MIN_IN_CHILD_TIMEOUT_MS, wallClockMs - IN_CHILD_TIMEOUT_SLACK_MS);
 }
 
-function isReverifyRequestShaped(input: unknown): input is { readonly checkId: string; readonly location?: string } {
-  return typeof input === 'object' && input !== null && typeof (input as { checkId?: unknown }).checkId === 'string';
+function isReverifyRequestShaped(
+  input: unknown,
+): input is { readonly checkId: string; readonly location?: string } {
+  return (
+    typeof input === 'object' &&
+    input !== null &&
+    typeof (input as { checkId?: unknown }).checkId === 'string'
+  );
 }
 
 /**
@@ -178,8 +189,12 @@ async function runConformance(
         checkId: 'conformance',
         fingerprintParts: ['conformance', capability.id],
         severity: report.passed ? 'INFO' : 'HIGH',
-        title: report.passed ? `${capability.id}: conformance passed` : `${capability.id}: conformance failed`,
-        description: report.results.map((r) => `${r.check}: ${r.passed ? 'pass' : 'FAIL'} (${r.detail})`).join('; '),
+        title: report.passed
+          ? `${capability.id}: conformance passed`
+          : `${capability.id}: conformance failed`,
+        description: report.results
+          .map((r) => `${r.check}: ${r.passed ? 'pass' : 'FAIL'} (${r.detail})`)
+          .join('; '),
         evidence: { report },
         fixable: false,
       },
@@ -276,10 +291,20 @@ async function runReverifyOp(
 ): Promise<SandboxResponse> {
   const { capability, context } = loaded;
   if (typeof capability.reverify !== 'function') {
-    return { requestId: request.requestId, ok: false, reason: 'CONTRACT_VIOLATION', detail: 'capability has no reverify' };
+    return {
+      requestId: request.requestId,
+      ok: false,
+      reason: 'CONTRACT_VIOLATION',
+      detail: 'capability has no reverify',
+    };
   }
   if (!isReverifyRequestShaped(request.input)) {
-    return { requestId: request.requestId, ok: false, reason: 'CONTRACT_VIOLATION', detail: 'input is not a ReverifyRequest' };
+    return {
+      requestId: request.requestId,
+      ok: false,
+      reason: 'CONTRACT_VIOLATION',
+      detail: 'input is not a ReverifyRequest',
+    };
   }
   const checkId = request.input.checkId;
   const nativeInput = cloneIntoContext(context, request.input) as ReverifyRequest;
@@ -329,8 +354,12 @@ async function handleExecute(request: SandboxRequest): Promise<void> {
   try {
     loaded = loadCapabilityFromBundle(request.capabilityBundle);
   } catch (error) {
-    const reason: SandboxFailure = error instanceof BundleInvalidError ? 'BUNDLE_INVALID' : 'CRASHED';
-    send({ kind: 'result', response: { requestId: request.requestId, ok: false, reason, detail: describeThrown(error) } });
+    const reason: SandboxFailure =
+      error instanceof BundleInvalidError ? 'BUNDLE_INVALID' : 'CRASHED';
+    send({
+      kind: 'result',
+      response: { requestId: request.requestId, ok: false, reason, detail: describeThrown(error) },
+    });
     return;
   }
 

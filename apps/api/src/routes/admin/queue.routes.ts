@@ -78,7 +78,10 @@ export function adminQueueRoutes(db: PrismaClient, deps: AdminQueueRoutesDeps = 
 
   router.post('/queue/:jobId/retry', async (req: AuthedRequest, res: Response) => {
     try {
-      const job = await service.retryJob(db, { operatorId: req.auth!.userId, jobId: jobIdParam(req) });
+      const job = await service.retryJob(db, {
+        operatorId: req.auth!.userId,
+        jobId: jobIdParam(req),
+      });
       res.status(200).json({ job });
     } catch (error) {
       if (error instanceof JobNotFoundError) {

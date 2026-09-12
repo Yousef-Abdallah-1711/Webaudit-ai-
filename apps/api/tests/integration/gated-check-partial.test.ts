@@ -39,7 +39,7 @@ import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
 import { createApp } from '../../src/app.js';
 import { startApi, type ApiService } from '../../src/index.js';
-import { startWorker, type WorkerService } from '@webaudit/worker';
+import { startWorker, type WorkerService } from '../../../worker/src/index.js';
 
 const connection: ConnectionOptions = {
   url: process.env['REDIS_URL'] ?? 'redis://localhost:6389',

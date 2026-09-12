@@ -84,7 +84,12 @@ describe('FR-016 / FR-079 — entitlements name the permitting tier', () => {
     const token = (res.body as { accessToken: string }).accessToken;
 
     const target = await testDb.target.create({
-      data: { userId, inputType: 'URL', canonicalValue: 'https://t183.example.com', displayName: 't183' },
+      data: {
+        userId,
+        inputType: 'URL',
+        canonicalValue: 'https://t183.example.com',
+        displayName: 't183',
+      },
     });
     const baseline = await testDb.scan.create({
       data: {
@@ -127,13 +132,26 @@ describe('FR-016 / FR-079 — entitlements name the permitting tier', () => {
     const auth = { Authorization: `Bearer ${token}` };
 
     const targetA = await testDb.target.create({
-      data: { userId, inputType: 'URL', canonicalValue: 'https://concurrency-a.example.com', displayName: 'a' },
+      data: {
+        userId,
+        inputType: 'URL',
+        canonicalValue: 'https://concurrency-a.example.com',
+        displayName: 'a',
+      },
     });
     const targetB = await testDb.target.create({
-      data: { userId, inputType: 'URL', canonicalValue: 'https://concurrency-b.example.com', displayName: 'b' },
+      data: {
+        userId,
+        inputType: 'URL',
+        canonicalValue: 'https://concurrency-b.example.com',
+        displayName: 'b',
+      },
     });
     const quote = (
-      await request(app).post('/scans/quote').set(auth).send({ targetId: targetA.id, modules: ['SECURITY'] })
+      await request(app)
+        .post('/scans/quote')
+        .set(auth)
+        .send({ targetId: targetA.id, modules: ['SECURITY'] })
     ).body as { quote: { credits: number } };
 
     await request(app)
@@ -149,7 +167,9 @@ describe('FR-016 / FR-079 — entitlements name the permitting tier', () => {
       .set(auth)
       .send({ targetId: targetB.id, modules: ['SECURITY'], acceptedQuote: quote.quote.credits })
       .expect(403);
-    expect((second.body as { error: { code: string } }).error.code).toBe('CONCURRENT_LIMIT_REACHED');
+    expect((second.body as { error: { code: string } }).error.code).toBe(
+      'CONCURRENT_LIMIT_REACHED',
+    );
 
     const after = await testDb.creditTransaction.count({ where: { userId, type: 'DEBIT' } });
     expect(after).toBe(before);

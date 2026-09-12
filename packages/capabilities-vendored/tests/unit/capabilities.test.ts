@@ -37,7 +37,9 @@ import impeccable from '@webaudit/capability-impeccable';
 import playwrightRunner from '@webaudit/capability-playwright-runner';
 import contradictionDetector from '@webaudit/capability-contradiction-detector';
 
-function fakeResponse(overrides: Partial<SafeResponse> & { readonly body?: string } = {}): SafeResponse {
+function fakeResponse(
+  overrides: Partial<SafeResponse> & { readonly body?: string } = {},
+): SafeResponse {
   const body = overrides.body ?? '';
   return {
     url: overrides.url ?? 'https://example.com/',
@@ -71,7 +73,11 @@ function checkIds(findings: { readonly checkId: string }[]): string[] {
 function fakePage(
   options: {
     readonly evaluateResponses?: readonly unknown[];
-    readonly requests?: readonly { readonly url: string; readonly status: number; readonly sizeBytes: number }[];
+    readonly requests?: readonly {
+      readonly url: string;
+      readonly status: number;
+      readonly sizeBytes: number;
+    }[];
     readonly screenshotBytes?: number;
   } = {},
 ): AuditPage {
@@ -208,7 +214,11 @@ describe('owasp-checker', () => {
       fakeContext(fakeResponse({ headers: { 'set-cookie': 'session=abc123' } })),
     );
     expect(checkIds(findings)).toEqual(
-      ['owasp.cookie-missing-httponly', 'owasp.cookie-missing-samesite', 'owasp.cookie-missing-secure'].sort(),
+      [
+        'owasp.cookie-missing-httponly',
+        'owasp.cookie-missing-samesite',
+        'owasp.cookie-missing-secure',
+      ].sort(),
     );
   });
 
@@ -274,26 +284,37 @@ describe('content-checker', () => {
   it('flags a page missing H1, lang, alt text, and with thin content', async () => {
     const findings = await contentChecker.runCodeLayer!(
       input(),
-      fakeContext(fakeResponse({ body: '<html><body><img src="x.png"><p>short</p></body></html>' })),
+      fakeContext(
+        fakeResponse({ body: '<html><body><img src="x.png"><p>short</p></body></html>' }),
+      ),
     );
     expect(checkIds(findings)).toEqual(
-      ['content.h1-missing', 'content.images-missing-alt', 'content.lang-missing', 'content.thin-content'].sort(),
+      [
+        'content.h1-missing',
+        'content.images-missing-alt',
+        'content.lang-missing',
+        'content.thin-content',
+      ].sort(),
     );
   });
 
   it('flags multiple H1 tags', async () => {
     const findings = await contentChecker.runCodeLayer!(
       input(),
-      fakeContext(fakeResponse({ body: '<html lang="en"><body><h1>One</h1><h1>Two</h1></body></html>' })),
+      fakeContext(
+        fakeResponse({ body: '<html lang="en"><body><h1>One</h1><h1>Two</h1></body></html>' }),
+      ),
     );
     expect(checkIds(findings)).toContain('content.h1-multiple');
   });
 
   it('reports nothing for a well-structured, substantial page', async () => {
     const words = Array.from({ length: 250 }, (_v, i) => `word${String(i)}`).join(' ');
-    const body =
-      `<html lang="en"><body><h1>Title</h1><img src="x.png" alt="a picture"><p>${words}</p></body></html>`;
-    const findings = await contentChecker.runCodeLayer!(input(), fakeContext(fakeResponse({ body })));
+    const body = `<html lang="en"><body><h1>Title</h1><img src="x.png" alt="a picture"><p>${words}</p></body></html>`;
+    const findings = await contentChecker.runCodeLayer!(
+      input(),
+      fakeContext(fakeResponse({ body })),
+    );
     expect(findings).toHaveLength(0);
   });
 });
@@ -324,7 +345,9 @@ describe('lighthouse-analyzer', () => {
       }),
       () =>
         Promise.resolve(
-          fakeResponse({ headers: { 'content-encoding': 'gzip', 'cache-control': 'max-age=3600' } }),
+          fakeResponse({
+            headers: { 'content-encoding': 'gzip', 'cache-control': 'max-age=3600' },
+          }),
         ),
     );
     const findings = await lighthouseAnalyzer.runCodeLayer!(input(), ctx);
@@ -363,7 +386,12 @@ describe('network-inspector', () => {
       fakeResponse({
         url,
         body: '<html><body></body></html>',
-        redirects: ['https://example.com/1', 'https://example.com/2', 'https://example.com/3', 'https://example.com/4'],
+        redirects: [
+          'https://example.com/1',
+          'https://example.com/2',
+          'https://example.com/3',
+          'https://example.com/4',
+        ],
       }),
     );
     const findings = await networkInspector.runCodeLayer!(input(), ctx);
@@ -371,7 +399,9 @@ describe('network-inspector', () => {
   });
 
   it('reports nothing for a page with no broken, uncompressed, or duplicated resources', async () => {
-    const ctx = fakeMultiFetchContext((url) => fakeResponse({ url, body: '<html><body></body></html>' }));
+    const ctx = fakeMultiFetchContext((url) =>
+      fakeResponse({ url, body: '<html><body></body></html>' }),
+    );
     const findings = await networkInspector.runCodeLayer!(input(), ctx);
     expect(findings).toHaveLength(0);
   });
@@ -379,13 +409,17 @@ describe('network-inspector', () => {
 
 describe('cwv-analyzer', () => {
   it('flags poor LCP, FCP, and CLS when a browser page is available', async () => {
-    const ctx = fakeContextWithPage(fakePage({ evaluateResponses: [{ fcp: 3500, lcp: 3000, cls: 0.3 }] }));
+    const ctx = fakeContextWithPage(
+      fakePage({ evaluateResponses: [{ fcp: 3500, lcp: 3000, cls: 0.3 }] }),
+    );
     const findings = await cwvAnalyzer.runCodeLayer!(input(), ctx);
     expect(checkIds(findings)).toEqual(['cwv.cls-poor', 'cwv.fcp-poor', 'cwv.lcp-poor'].sort());
   });
 
   it('reports nothing for good vitals', async () => {
-    const ctx = fakeContextWithPage(fakePage({ evaluateResponses: [{ fcp: 500, lcp: 800, cls: 0.01 }] }));
+    const ctx = fakeContextWithPage(
+      fakePage({ evaluateResponses: [{ fcp: 500, lcp: 800, cls: 0.01 }] }),
+    );
     const findings = await cwvAnalyzer.runCodeLayer!(input(), ctx);
     expect(findings).toHaveLength(0);
   });
@@ -451,7 +485,11 @@ describe('impeccable', () => {
           fixable: true,
         },
       ],
-      { targetUrl: 'https://example.com/', priorModuleResults: {}, designIntent: { audience: 'small business owners', tone: 'friendly' } },
+      {
+        targetUrl: 'https://example.com/',
+        priorModuleResults: {},
+        designIntent: { audience: 'small business owners', tone: 'friendly' },
+      },
     );
     expect(context).toContain('Page content overflows the viewport horizontally');
     expect(context).toContain('audience: small business owners');

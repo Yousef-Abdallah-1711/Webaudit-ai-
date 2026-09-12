@@ -20,7 +20,11 @@
  */
 
 import { stat } from 'node:fs/promises';
-import { discoverManifestsInRoot, type DiscoveredManifest, type ManifestTrustClaim } from '@webaudit/capability-sdk';
+import {
+  discoverManifestsInRoot,
+  type DiscoveredManifest,
+  type ManifestTrustClaim,
+} from '@webaudit/capability-sdk';
 import type { CapabilityManifest } from '@webaudit/capability-sdk';
 import type { TrustLevel } from '@webaudit/types';
 

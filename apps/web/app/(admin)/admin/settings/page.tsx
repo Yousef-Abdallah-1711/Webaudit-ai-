@@ -1,26 +1,21 @@
-'use client';
-
 /**
- * Ported from design-system/ui_kits/admin/AdminScreens.jsx's `Settings`
- * (T244). The feature-flag toggles mutate local state only — no backend
- * wiring exists yet — so this needs `'use client'`, same reasoning as
- * `providers/page.tsx`.
+ * T244 — admin platform settings.
  *
- * Flag defaults, limits, and retention figures are the exact placeholder
- * values the vendored source shows.
+ * Persistence is not wired yet, so this is intentionally a read-only reference
+ * surface. It does not expose local switches or an inert Save action that could
+ * imply a successful platform mutation.
  */
-import { useState } from 'react';
-import { Button, Card } from '../../../../components/ui';
+import { Card } from '../../../../components/ui';
 import { AHead } from '../../../../components/admin';
 import styles from './page.module.css';
 
-const INITIAL_FLAGS = {
-  'Repository input': true,
-  'Archive upload': false,
-  'Load generation': true,
-  'Design questionnaire': true,
-  'Readiness certificates': true,
-};
+const FLAGS = [
+  'Repository input',
+  'Archive upload',
+  'Load generation',
+  'Design questionnaire',
+  'Readiness certificates',
+] as const;
 
 const LIMITS: readonly (readonly [string, string])[] = [
   ['Scan timeout', '20 min'],
@@ -38,41 +33,20 @@ const RETENTION: readonly (readonly [string, string])[] = [
 ];
 
 export default function AdminSettingsPage(): React.ReactElement {
-  const [flags, setFlags] = useState(INITIAL_FLAGS);
-
   return (
     <div>
-      <AHead
-        eyebrow="Governance"
-        title="Settings"
-        meta="platform-wide switches"
-        actions={<Button size="sm">Save</Button>}
-      />
+      <AHead eyebrow="Governance" title="Settings" meta="platform-wide switches" />
       <div className={styles.grid}>
         <Card padding={24} title="Feature switches">
-          {Object.entries(flags).map(([key, value]) => (
+          <p className={styles.note}>
+            Platform settings are read-only until a persistence endpoint is available.
+          </p>
+          {FLAGS.map((key) => (
             <div key={key} className={styles.flagRow}>
               <span className={styles.flagLabel}>{key}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setFlags((f) => ({ ...f, [key]: !value }));
-                }}
-                aria-label={key}
-                className={value ? `${styles.switch} ${styles.switchOn}` : styles.switch}
-              >
-                <span
-                  className={
-                    value ? `${styles.switchKnob} ${styles.switchKnobOn}` : styles.switchKnob
-                  }
-                />
-              </button>
+              <span className={styles.limitValue}>Unavailable</span>
             </div>
           ))}
-          <p className={styles.note}>
-            Archive upload stays off until the sandbox runner is deployed. It returns 503 rather
-            than falling back.
-          </p>
         </Card>
         <div className={styles.rightCol}>
           <Card padding={24} title="Limits">

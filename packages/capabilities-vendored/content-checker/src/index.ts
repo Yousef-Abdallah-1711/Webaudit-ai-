@@ -160,7 +160,10 @@ async function runCodeLayer(
 /** T153 — one check, re-run against the recorded URL's current markup. */
 async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<ReverifyResult> {
   if (issue.location === undefined) {
-    return { outcome: 'UNVERIFIABLE', reason: 'content-checker needs the recorded URL to re-check.' };
+    return {
+      outcome: 'UNVERIFIABLE',
+      reason: 'content-checker needs the recorded URL to re-check.',
+    };
   }
   const response = await ctx.fetch(issue.location, { signal: ctx.signal });
   const html = response.text();

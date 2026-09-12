@@ -47,7 +47,8 @@ function isUniqueConstraintViolation(error: unknown, columns: readonly string[])
   return columns.every((c) => asText.includes(c)) || asText === '';
 }
 import { assertConcurrencyHeadroom, cheapestActiveTierId } from '../billing/entitlements.js';
-import { debit, InsufficientCreditsError } from '../credits/debit.js';
+import { debit, InsufficientCreditsError, type DebitResult } from '../credits/debit.js';
+import { refund } from '../credits/refund.js';
 import { totalAvailable } from '../credits/balance.js';
 import { TargetNotAvailableError, type ControlProbe } from '../control-gate/verify.js';
 import { ControlLevelRequiredError, reconfirmControl } from '../control-gate/reconfirm.js';
@@ -277,9 +278,10 @@ export async function createScan(
     throw error;
   }
 
+  let debited: DebitResult | undefined;
   try {
     if (chargeCredits > 0) {
-      await debit(db, {
+      debited = await debit(db, {
         userId: input.userId,
         amount: chargeCredits,
         reason: 'scan:create',
@@ -296,14 +298,48 @@ export async function createScan(
 
   const charged = created;
 
-  // The first job carries only RUNNING_PHASE_1's own subset (everything but
-  // UI, per phase-modules.ts) — `PhaseJobData.modules`' own contract is
-  // "which areas this phase runs", not the whole scan's selection.
-  await deps.producer.enqueueFirstPhase({
-    scanId: created.id,
-    modules: modulesForPhase('RUNNING_PHASE_1', input.modules),
-    planQueuePriority: plan.queuePriority,
-  });
+  try {
+    // The first job carries only RUNNING_PHASE_1's own subset (everything but
+    // UI, per phase-modules.ts) — `PhaseJobData.modules`' own contract is
+    // "which areas this phase runs", not the whole scan's selection.
+    await deps.producer.enqueueFirstPhase({
+      scanId: created.id,
+      modules: modulesForPhase('RUNNING_PHASE_1', input.modules),
+      planQueuePriority: plan.queuePriority,
+    });
+  } catch (error) {
+    // Principle VI again, on the other side of a committed debit: a queue
+    // failure here (Redis unreachable, a rejected `add()`) must not leave a
+    // scan charged with no job ever created for a worker to run. `startedAt`
+    // is only ever written on the QUEUED -> RUNNING_PHASE_1 transition
+    // (apps/worker's state-machine.ts), so a scan stuck in QUEUED past this
+    // point is invisible to the timeout sweep's `startedAt < cutoff` filter
+    // forever — there is no other backstop that will ever refund it.
+    //
+    // Unlike the debit-failure branch above, this cannot just delete the
+    // row: `debit()` already committed real `CreditTransaction`/
+    // `CreditAllocation` rows that reference this scanId, and deleting the
+    // scan would orphan that ledger history. Instead, refund in full and
+    // transition straight to the same terminal `FAILED` state a platform
+    // fault reaches everywhere else in this codebase (matching
+    // terminal-refund.ts's pattern). `apps/api` cannot import
+    // `apps/worker`'s state-machine (only the reverse dependency is
+    // allowed), so this hand-writes the same guarded, conditional
+    // `updateMany` the questionnaire routes and the cancel route already
+    // use for the same reason.
+    if (debited !== undefined) {
+      await refund(db, debited.id, 'scan:enqueue-failed');
+    }
+    await db.scan.updateMany({
+      where: { id: created.id, state: 'QUEUED' },
+      data: {
+        state: 'FAILED',
+        completedAt: new Date(),
+        failureReason: 'Could not schedule this scan for execution. No charge was made.',
+      },
+    });
+    throw error;
+  }
 
   return charged;
 }

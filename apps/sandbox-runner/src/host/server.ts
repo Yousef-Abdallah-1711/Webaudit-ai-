@@ -93,7 +93,9 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
       // reading and let the caller finish writing a real response; Node's
       // own `http.Server` reclaims the now-unconsumed stream once the
       // response ends.
-      throw new RequestTooLargeError(`request body exceeds ${String(MAX_REQUEST_BODY_BYTES)} bytes`);
+      throw new RequestTooLargeError(
+        `request body exceeds ${String(MAX_REQUEST_BODY_BYTES)} bytes`,
+      );
     }
     chunks.push(buf);
   }
@@ -115,7 +117,9 @@ function isWireSandboxRequest(value: unknown): value is WireSandboxRequest {
   return (
     typeof v['requestId'] === 'string' &&
     typeof v['capabilityBundle'] === 'string' &&
-    (v['operation'] === 'CONFORMANCE' || v['operation'] === 'RUN_CODE_LAYER' || v['operation'] === 'REVERIFY') &&
+    (v['operation'] === 'CONFORMANCE' ||
+      v['operation'] === 'RUN_CODE_LAYER' ||
+      v['operation'] === 'REVERIFY') &&
     typeof v['input'] === 'object' &&
     v['input'] !== null &&
     typeof v['limits'] === 'object' &&
@@ -227,7 +231,9 @@ async function executeOne(
   });
 }
 
-export async function createSandboxHost(options: CreateSandboxHostOptions = {}): Promise<SandboxHost> {
+export async function createSandboxHost(
+  options: CreateSandboxHostOptions = {},
+): Promise<SandboxHost> {
   const bundlePath = await buildHarnessBundle();
   const bundleDir = path.dirname(bundlePath);
   // This file lives at apps/sandbox-runner/src/host/server.ts: two levels
@@ -238,7 +244,11 @@ export async function createSandboxHost(options: CreateSandboxHostOptions = {}):
   // *resolved* path, confirmed empirically, not the symlink's own).
   const packageDir = fileURLToPath(new URL('../../', import.meta.url));
   const repoRoot = fileURLToPath(new URL('../../../../', import.meta.url));
-  const readAllowlist = [bundleDir, path.join(packageDir, 'node_modules'), path.join(repoRoot, 'node_modules')];
+  const readAllowlist = [
+    bundleDir,
+    path.join(packageDir, 'node_modules'),
+    path.join(repoRoot, 'node_modules'),
+  ];
 
   const server: Server = createServer((req, res) => {
     // T225 — a plain liveness probe, ahead of the `/execute` check so it is

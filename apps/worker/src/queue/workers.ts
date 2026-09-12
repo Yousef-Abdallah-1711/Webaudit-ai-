@@ -41,10 +41,16 @@
  * job, which is the only time anybody is looking.
  */
 
-import { Worker, type ConnectionOptions, type Job } from 'bullmq';
+import { Worker, type ConnectionOptions, type Job, type WorkerOptions } from 'bullmq';
 import { z } from 'zod';
 import { MODULE_TYPES, SCAN_STATES } from '@webaudit/types';
-import { CONCURRENCY, QUEUE_NAMES } from './queues.js';
+import {
+  CONCURRENCY,
+  QUEUE_LOCK_DURATION_MS,
+  QUEUE_NAMES,
+  QUEUE_STALLED_INTERVAL_MS,
+  SCAN_PHASE_MAX_STALLED_COUNT,
+} from './queues.js';
 import type { PhaseJobData, QuestionnaireTimeoutJobData } from '../orchestrator/phases.js';
 import type { ReverifyJobData } from '../reverify/runner.js';
 
@@ -63,6 +69,7 @@ export const JOB_NAMES = {
   questionnaireDeadline: 'questionnaire-deadline',
   /** `timeout-scheduler.ts` → `maintenanceQueue.add('timeout-sweep', …, { repeat })`. */
   timeoutSweep: 'timeout-sweep',
+  paymentExpirySweep: 'payment-expiry-sweep',
   /** `apps/api`'s `reverify-producer.ts` → `reverifyQueue.add('reverify', …)` (T154). */
   reverify: 'reverify',
   /** `billing-sweeps.ts` → `maintenanceQueue.add('billing-sweep', …, { repeat })` (T188/T189). */
@@ -131,6 +138,9 @@ export const questionnaireTimeoutJobSchema = z
 
 /** The repeatable FR-038 sweep carries no per-run data. */
 export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep') }).strict();
+export const paymentExpirySweepJobSchema = z
+  .object({ kind: z.literal('payment-expiry-sweep') })
+  .strict();
 
 /** The repeatable billing sweep (renewals, renewal warnings, retention) carries no per-run data. */
 export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep') }).strict();
@@ -201,6 +211,7 @@ export interface JobHandlers {
   ) => Promise<void>;
   /** The repeatable FR-038 sweep. Carries no data. */
   readonly timeoutSweep?: () => Promise<void>;
+  readonly paymentExpirySweep?: () => Promise<void>;
   /** The repeatable billing sweep (T188/T189). Carries no data. */
   readonly billingSweep?: () => Promise<void>;
   /** A targeted re-verification (T150). */
@@ -273,6 +284,16 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       const handler = handlers.timeoutSweep;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T101', 'The FR-038 scan timeout sweep');
+      }
+      await handler();
+      return;
+    }
+
+    case JOB_NAMES.paymentExpirySweep: {
+      paymentExpirySweepJobSchema.parse(job.data);
+      const handler = handlers.paymentExpirySweep;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T003', 'The pending-payment expiry sweep');
       }
       await handler();
       return;
@@ -393,7 +414,11 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
       console.error(`[worker] worker error: ${error.message}`);
     });
 
-  const build = (queueName: string, concurrency: number): Worker => {
+  const build = (
+    queueName: string,
+    concurrency: number,
+    extra: Partial<WorkerOptions> = {},
+  ): Worker => {
     const worker = new Worker(
       queueName,
       (job: Job) =>
@@ -401,7 +426,13 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
           { id: job.id, name: job.name, queueName: job.queueName, data: job.data },
           handlers,
         ),
-      { connection: options.connection, concurrency },
+      {
+        connection: options.connection,
+        concurrency,
+        lockDuration: QUEUE_LOCK_DURATION_MS,
+        stalledInterval: QUEUE_STALLED_INTERVAL_MS,
+        ...extra,
+      },
     );
     worker.on('failed', (job, error) => reportFailed(job, error));
     // Required, not defensive: without a listener an EventEmitter rethrows the
@@ -410,7 +441,9 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
     return worker;
   };
 
-  const scanPhase = build(QUEUE_NAMES.scanPhase, CONCURRENCY.scanPhase);
+  const scanPhase = build(QUEUE_NAMES.scanPhase, CONCURRENCY.scanPhase, {
+    maxStalledCount: SCAN_PHASE_MAX_STALLED_COUNT,
+  });
   const reverify = build(QUEUE_NAMES.reverify, CONCURRENCY.reverify);
   const maintenance = build(QUEUE_NAMES.maintenance, CONCURRENCY.maintenance);
 

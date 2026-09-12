@@ -90,6 +90,24 @@ export const DEFAULT_JOB_OPTIONS: JobsOptions = {
 };
 
 /**
+ * T312 — closes the one gap `DEFAULT_JOB_OPTIONS.attempts: 1` did not cover.
+ * `attempts` governs an explicit job failure (a thrown error); it does not
+ * govern BullMQ's independent stalled-job recovery, which by default
+ * (`maxStalledCount: 1`) silently moves a stalled job back to `wait` and
+ * reprocesses it once, regardless of `attempts`. For `scanPhase` specifically
+ * — a job that may already have made a real, billed AI provider call before
+ * its worker died holding the lock — that reprocessing repeats the AI-layer
+ * spend and writes a duplicate CapabilityExecution/AiInvocation row. Setting
+ * this to 0 makes a stall fail immediately, exactly like a thrown error
+ * already does, consistent with this file's own stated philosophy: "recovery
+ * is a decision, not a default." Recovery after a stalled-then-failed
+ * scanPhase job depends on `sweepTimedOutScans` (apps/worker/src/orchestrator/
+ * timeout.ts, FR-038) noticing the scan stopped progressing and refunding it —
+ * confirm that dependency holds before relying on this constant in production.
+ */
+export const SCAN_PHASE_MAX_STALLED_COUNT = 0;
+
+/**
  * Re-verification may retry, unlike a phase — it is idempotent by
  * construction (R14), so a transient network failure is worth one more
  * attempt rather than an UNVERIFIABLE the user has to trigger again.
@@ -99,6 +117,10 @@ export const REVERIFY_JOB_OPTIONS: JobsOptions = {
   attempts: 3,
   backoff: { type: 'exponential', delay: 2_000 },
 };
+
+/** Explicit recovery bounds; do not rely on BullMQ package defaults. */
+export const QUEUE_LOCK_DURATION_MS = 5 * 60 * 1000;
+export const QUEUE_STALLED_INTERVAL_MS = 30 * 1000;
 
 export function redisConnection(url = process.env['REDIS_URL']): ConnectionOptions {
   if (url === undefined || url === '') {

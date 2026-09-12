@@ -152,6 +152,9 @@ const NOT_MIRRORED: Readonly<Record<string, string>> = {
   // No client renders it and no shared contract carries it, so there is nothing
   // for apps/web or sandbox-runner to name. Mirror it the day one of them does.
   VerificationMethod: 'API-internal; never crosses a package boundary',
+  // Billing lifecycle state is persisted and handled exclusively by the API;
+  // it is not part of the browser/sandbox domain contract.
+  PendingPaymentStatus: 'API-internal payment persistence state',
 };
 
 // ─── The tests ────────────────────────────────────────────────────────────────

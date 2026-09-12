@@ -39,7 +39,9 @@ test('a free-tier account cannot purchase credits — the real entitlement refus
   // The free plan's allowCreditPurchase is false — apps/api's purchase route
   // refuses with EntitlementError before any charge, per FR-078.
   await page.getByRole('button', { name: 'Buy credits', exact: true }).click();
-  await expect(page.getByText(/Purchasing additional credits requires the .+ plan or higher/)).toBeVisible({
+  await expect(
+    page.getByText(/Purchasing additional credits requires the .+ plan or higher/),
+  ).toBeVisible({
     timeout: 10_000,
   });
 });

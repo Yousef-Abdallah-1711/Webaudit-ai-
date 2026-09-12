@@ -130,21 +130,23 @@ function redactFields(fields: LogFields | undefined): Record<string, unknown> {
  * the stream rather than through `console.*` (see the module note).
  */
 export function createLogger(service: string): Logger {
-  const emit = (level: LogLevel) => (message: string, fields?: LogFields): void => {
-    const line: Record<string, unknown> = {
-      timestamp: new Date().toISOString(),
-      level,
-      service,
-      message: redactText(message),
-      ...redactFields(fields),
+  const emit =
+    (level: LogLevel) =>
+    (message: string, fields?: LogFields): void => {
+      const line: Record<string, unknown> = {
+        timestamp: new Date().toISOString(),
+        level,
+        service,
+        message: redactText(message),
+        ...redactFields(fields),
+      };
+      const serialised = `${JSON.stringify(line)}\n`;
+      if (level === 'warn' || level === 'error') {
+        process.stderr.write(serialised);
+      } else {
+        process.stdout.write(serialised);
+      }
     };
-    const serialised = `${JSON.stringify(line)}\n`;
-    if (level === 'warn' || level === 'error') {
-      process.stderr.write(serialised);
-    } else {
-      process.stdout.write(serialised);
-    }
-  };
 
   return {
     debug: emit('debug'),

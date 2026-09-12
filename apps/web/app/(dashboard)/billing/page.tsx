@@ -16,8 +16,9 @@
  * ("You are never charged for our failures") is always present.
  *
  * Real payment is external; `POST /billing/subscribe` /
- * `/billing/credits/purchase` apply the effect directly on this
- * dev/test path (see `billing.routes.ts`).
+ * `/billing/credits/purchase` now return a checkout URL when a payment
+ * provider is configured, so this page leaves the current balance unchanged
+ * until the provider webhook confirms the payment.
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Badge, Button, Card } from '../../../components/ui';
@@ -28,8 +29,10 @@ import {
   changePlan,
   getCredits,
   getPlans,
+  getReceipts,
   purchaseCredits,
   subscribe,
+  type BillingReceiptSummary,
   type CreditBalanceView,
   type CreditMovement,
   type Plan,
@@ -53,6 +56,10 @@ function retentionLine(days: number): string {
   return `${String(days)} days`;
 }
 
+function goToCheckout(url: string): void {
+  window.location.assign(url);
+}
+
 interface DrewFromProps {
   readonly drewFrom: Record<string, number>;
 }
@@ -72,6 +79,7 @@ function DrewFrom({ drewFrom }: DrewFromProps): React.ReactElement | null {
 export default function BillingPage(): React.ReactElement {
   const [balance, setBalance] = useState<CreditBalanceView | null>(null);
   const [movements, setMovements] = useState<readonly CreditMovement[]>([]);
+  const [receipts, setReceipts] = useState<readonly BillingReceiptSummary[]>([]);
   const [plans, setPlans] = useState<readonly Plan[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string>('free');
   const [renewsAt, setRenewsAt] = useState<string | null>(null);
@@ -83,9 +91,14 @@ export default function BillingPage(): React.ReactElement {
 
   const refresh = useCallback(async () => {
     try {
-      const [credits, planList] = await Promise.all([getCredits(), getPlans()]);
+      const [credits, planList, receiptList] = await Promise.all([
+        getCredits(),
+        getPlans(),
+        getReceipts(),
+      ]);
       setBalance(credits.balance);
       setMovements(credits.movements);
+      setReceipts(receiptList.receipts);
       setPlans(planList.plans);
       if (credits.subscription !== null) {
         setCurrentPlanId(credits.subscription.planId);
@@ -139,10 +152,14 @@ export default function BillingPage(): React.ReactElement {
     const id = planId as SubscribablePlanId;
     void run(`You are now on the ${planId} plan.`, async () => {
       if (currentPlanId === 'free') {
-        const { subscription } = await subscribe(id);
-        setCurrentPlanId(subscription.planId);
-        setRenewsAt(subscription.periodEnd);
-        setCancelAtPeriodEnd(subscription.cancelAtPeriodEnd);
+        const result = await subscribe(id);
+        if ('checkout' in result) {
+          goToCheckout(result.checkout.checkoutUrl);
+          return;
+        }
+        setCurrentPlanId(result.subscription.planId);
+        setRenewsAt(result.subscription.periodEnd);
+        setCancelAtPeriodEnd(result.subscription.cancelAtPeriodEnd);
       } else {
         const { subscription } = await changePlan(id);
         setCurrentPlanId(subscription.planId);
@@ -167,8 +184,11 @@ export default function BillingPage(): React.ReactElement {
       setError('Enter a whole number of credits.');
       return;
     }
-    void run(`${String(n)} purchased credits added.`, async () => {
-      await purchaseCredits(n);
+    void run('Continue to checkout to complete the credit purchase.', async () => {
+      const result = await purchaseCredits(n);
+      if ('checkout' in result) {
+        goToCheckout(result.checkout.checkoutUrl);
+      }
     });
   };
 
@@ -233,9 +253,31 @@ export default function BillingPage(): React.ReactElement {
               </div>
             ))}
             <p className={styles.balanceNote}>
-              You are never charged for our failures. Platform faults, provider outages and
-              internal errors refund automatically or never debit.
+              You are never charged for our failures. Platform faults, provider outages and internal
+              errors refund automatically or never debit.
             </p>
+          </Card>
+
+          <Card padding={22} title="Receipts">
+            {receipts.length === 0 && <p className={styles.balanceNote}>No receipts yet.</p>}
+            {receipts.map((receipt) => (
+              <a
+                key={receipt.id}
+                className={styles.receiptRow}
+                href={`/billing/receipts/${encodeURIComponent(receipt.id)}`}
+              >
+                <span>
+                  <span className={styles.receiptKind}>{receipt.kind}</span>
+                  <span className={styles.receiptMeta}>{formatDate(receipt.createdAt)}</span>
+                </span>
+                <span className={styles.receiptAmount}>
+                  {(receipt.amountMicros / 1_000_000).toLocaleString(undefined, {
+                    style: 'currency',
+                    currency: 'USD',
+                  })}
+                </span>
+              </a>
+            ))}
           </Card>
 
           <Card padding={22} title="Choose a plan">
@@ -243,7 +285,10 @@ export default function BillingPage(): React.ReactElement {
               {plans.map((p) => {
                 const isNow = p.id === currentPlanId;
                 return (
-                  <div key={p.id} className={isNow ? `${styles.tier} ${styles.tierNow}` : styles.tier}>
+                  <div
+                    key={p.id}
+                    className={isNow ? `${styles.tier} ${styles.tierNow}` : styles.tier}
+                  >
                     <div className={styles.tierHead}>
                       <span className={styles.tierName}>{p.name}</span>
                       {isNow && <Badge tone="accent">Current</Badge>}
@@ -282,26 +327,20 @@ export default function BillingPage(): React.ReactElement {
               {currentPlan === null
                 ? 'Credits granted once.'
                 : `${String(currentPlan.monthlyCredits)} credits a month${
-                    renewsAt === null ? '' : ` · ${cancelAtPeriodEnd ? 'ends' : 'renews'} ${formatDate(renewsAt)}`
+                    renewsAt === null
+                      ? ''
+                      : ` · ${cancelAtPeriodEnd ? 'ends' : 'renews'} ${formatDate(renewsAt)}`
                   }`}
             </div>
             {renewsAt !== null && !cancelAtPeriodEnd && (
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth
-                disabled={busy}
-                onClick={onCancel}
-              >
+              <Button variant="secondary" size="sm" fullWidth disabled={busy} onClick={onCancel}>
                 Cancel plan
               </Button>
             )}
           </Card>
 
           <Card padding={22} title="Top up">
-            <p className={styles.balanceNote}>
-              Purchased credits never expire. Paid plans only.
-            </p>
+            <p className={styles.balanceNote}>Purchased credits never expire. Paid plans only.</p>
             <input
               className={styles.topUpInput}
               inputMode="numeric"
@@ -318,8 +357,9 @@ export default function BillingPage(): React.ReactElement {
 
           <Card padding={22} title="Retention">
             <p className={styles.balanceNote}>
-              Reports are kept {currentPlan === null ? '7 days' : retentionLine(currentPlan.retentionDays)}.
-              We warn you before anything is removed, and an export is always self-contained.
+              Reports are kept{' '}
+              {currentPlan === null ? '7 days' : retentionLine(currentPlan.retentionDays)}. We warn
+              you before anything is removed, and an export is always self-contained.
             </p>
           </Card>
         </div>

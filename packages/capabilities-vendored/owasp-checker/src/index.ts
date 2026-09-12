@@ -174,7 +174,10 @@ async function reverify(issue: ReverifyRequest, ctx: CodeLayerContext): Promise<
     if (disclosing.length === 0) return { outcome: 'PASSED' };
     return {
       outcome: 'FAILED',
-      evidence: { url: response.url, headers: Object.fromEntries(disclosing.map((h) => [h.header, h.value])) },
+      evidence: {
+        url: response.url,
+        headers: Object.fromEntries(disclosing.map((h) => [h.header, h.value])),
+      },
     };
   }
 

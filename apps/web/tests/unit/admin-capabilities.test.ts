@@ -30,9 +30,8 @@ describe('AdminCapabilitiesPage', () => {
     expect(html).toContain('503 SANDBOX_UNAVAILABLE');
   });
 
-  it('renders the header actions as inert buttons with no wired functionality yet', () => {
+  it('renders the upload action while conformance remains unavailable', () => {
     const html = render(createElement(AdminCapabilitiesPage));
-    expect(html).toContain('Run conformance suite');
     expect(html).toContain('Upload capability');
   });
 

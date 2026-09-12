@@ -111,7 +111,11 @@ function FixesPageContent(): React.ReactElement {
   if (scanId === '') {
     return (
       <div>
-        <PageHead eyebrow="Fixes" title="No audit selected" meta="Open a report and choose Fixes." />
+        <PageHead
+          eyebrow="Fixes"
+          title="No audit selected"
+          meta="Open a report and choose Fixes."
+        />
       </div>
     );
   }

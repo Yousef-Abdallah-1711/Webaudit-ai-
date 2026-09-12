@@ -44,7 +44,12 @@ async function signInAndSeed(): Promise<{ token: string; issueId: string }> {
   const token = (res.body as { accessToken: string }).accessToken;
 
   const target = await testDb.target.create({
-    data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://fr061.example.com', displayName: 'fr061' },
+    data: {
+      userId: user.id,
+      inputType: 'URL',
+      canonicalValue: 'https://fr061.example.com',
+      displayName: 'fr061',
+    },
   });
   const scan = await testDb.scan.create({
     data: {

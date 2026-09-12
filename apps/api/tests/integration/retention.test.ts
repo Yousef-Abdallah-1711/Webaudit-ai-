@@ -15,7 +15,12 @@ const DAY = 86_400_000;
 async function completedScan(email: string, completedDaysAgo: number): Promise<string> {
   const user = await testDb.user.create({ data: { email, emailVerifiedAt: new Date() } });
   const target = await testDb.target.create({
-    data: { userId: user.id, inputType: 'URL', canonicalValue: `https://${email}`, displayName: 'ret' },
+    data: {
+      userId: user.id,
+      inputType: 'URL',
+      canonicalValue: `https://${email}`,
+      displayName: 'ret',
+    },
   });
   const scan = await testDb.scan.create({
     data: {
@@ -97,9 +102,16 @@ describe('enforceRetention', () => {
 
   it('does not remove a report at the exact expiry instant, only strictly after it', async () => {
     const completedAt = new Date('2026-08-01T00:00:00.000Z');
-    const user = await testDb.user.create({ data: { email: 'ret-boundary@example.com', emailVerifiedAt: new Date() } });
+    const user = await testDb.user.create({
+      data: { email: 'ret-boundary@example.com', emailVerifiedAt: new Date() },
+    });
     const target = await testDb.target.create({
-      data: { userId: user.id, inputType: 'URL', canonicalValue: 'https://ret-boundary.example.com', displayName: 'ret' },
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://ret-boundary.example.com',
+        displayName: 'ret',
+      },
     });
     await testDb.scan.create({
       data: {

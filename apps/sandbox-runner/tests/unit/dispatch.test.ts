@@ -30,7 +30,12 @@ describe('runCodeLayerCheck', () => {
   it('POSTs a RUN_CODE_LAYER request and unwraps a successful response', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response(
-        JSON.stringify({ ok: true, findings: [{ checkId: 'x' }], durationMs: 5, applicable: true }),
+        JSON.stringify({
+          ok: true,
+          findings: [{ checkId: 'x' }],
+          durationMs: 5,
+          applicable: true,
+        }),
         { status: 200 },
       ),
     ) as unknown as typeof fetch;
@@ -55,9 +60,13 @@ describe('runCodeLayerCheck', () => {
     // AFTER dispatch.ts has already captured its own reference. If
     // dispatch.ts read `globalThis.fetch` lazily instead of capturing it
     // at import time, this test would call the poison instead.
-    const poisoned = vi.fn().mockRejectedValue(new Error('poisoned fetch called — this is the bug'));
+    const poisoned = vi
+      .fn()
+      .mockRejectedValue(new Error('poisoned fetch called — this is the bug'));
     const real = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: true, findings: [], durationMs: 1, applicable: true }), { status: 200 }),
+      new Response(JSON.stringify({ ok: true, findings: [], durationMs: 1, applicable: true }), {
+        status: 200,
+      }),
     );
     globalThis.fetch = real as unknown as typeof fetch;
     const { runCodeLayerCheck } = await freshDispatch();
@@ -77,9 +86,11 @@ describe('runCodeLayerCheck', () => {
   });
 
   it('unwraps a failure response without throwing', async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ ok: false, reason: 'TIMEOUT' }), { status: 200 }),
-    ) as unknown as typeof fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ok: false, reason: 'TIMEOUT' }), { status: 200 }),
+      ) as unknown as typeof fetch;
     const { runCodeLayerCheck } = await freshDispatch();
 
     const outcome = await runCodeLayerCheck('http://sandbox.local', {

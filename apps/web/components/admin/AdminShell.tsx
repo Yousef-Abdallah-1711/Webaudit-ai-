@@ -36,6 +36,7 @@ import { useState, type ReactNode } from 'react';
 import { Badge, Card, Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { ThemeToggle } from '../../app/theme';
+import { useAuth } from '../auth/AuthProvider';
 import styles from './AdminShell.module.css';
 
 interface NavEntry {
@@ -209,16 +210,17 @@ export interface AdminShellProps {
 
 export function AdminShell({ children }: AdminShellProps): React.ReactElement {
   const [open, setOpen] = useState(true);
+  const { user } = useAuth();
 
   return (
     <div className={styles.shellRoot}>
       <AdminSidebar open={open} setOpen={setOpen} />
       <div className={styles.mainCol}>
         <div className={styles.topBar}>
-          <span className={styles.topBarOperator}>operator · khalid@webaudit.ai</span>
+          <span className={styles.topBarOperator}>operator · {user?.email ?? 'Unavailable'}</span>
           <span className={styles.topBarActions}>
-            <Badge tone="success">7 workers</Badge>
-            <Badge>3 queued</Badge>
+            <Badge>Workers unavailable</Badge>
+            <Badge>Queue unavailable</Badge>
             <ThemeToggle />
           </span>
         </div>

@@ -23,7 +23,8 @@ import { ALL_AREAS, READINESS_PASS_COST } from '@webaudit/config';
 import { SCAN_STATES_TERMINAL, SEVERITIES_BLOCKING } from '@webaudit/types';
 import { Prisma, type PrismaClient } from '../../../prisma/generated/client/index.js';
 import { assertConcurrencyHeadroom, cheapestActiveTierId } from '../billing/entitlements.js';
-import { debit, InsufficientCreditsError } from '../credits/debit.js';
+import { debit, InsufficientCreditsError, type DebitResult } from '../credits/debit.js';
+import { refund } from '../credits/refund.js';
 import { totalAvailable } from '../credits/balance.js';
 import { DuplicateScanError, QuoteMismatchError } from '../intake/create-scan.js';
 import { modulesForPhase } from '@webaudit/config';
@@ -193,8 +194,9 @@ export async function createReadinessScan(
     throw error;
   }
 
+  let debited: DebitResult;
   try {
-    await debit(db, {
+    debited = await debit(db, {
       userId: input.userId,
       amount: READINESS_PASS_COST,
       reason: 'scan:readiness',
@@ -205,11 +207,30 @@ export async function createReadinessScan(
     throw error;
   }
 
-  await deps.producer.enqueueFirstPhase({
-    scanId: created.id,
-    modules: modulesForPhase('RUNNING_PHASE_1', [...ALL_AREAS]),
-    planQueuePriority: plan.queuePriority,
-  });
+  try {
+    await deps.producer.enqueueFirstPhase({
+      scanId: created.id,
+      modules: modulesForPhase('RUNNING_PHASE_1', [...ALL_AREAS]),
+      planQueuePriority: plan.queuePriority,
+    });
+  } catch (error) {
+    // Same fix as create-scan.ts's identical race: a debit that already
+    // committed must not leave a scan charged with no job ever created for a
+    // worker to run, invisible forever to the timeout sweep (`startedAt`
+    // stays null). Refund in full and transition straight to FAILED rather
+    // than deleting the row, which would orphan the CreditTransaction the
+    // debit above just wrote.
+    await refund(db, debited.id, 'scan:enqueue-failed');
+    await db.scan.updateMany({
+      where: { id: created.id, state: 'QUEUED' },
+      data: {
+        state: 'FAILED',
+        completedAt: new Date(),
+        failureReason: 'Could not schedule this readiness pass for execution. No charge was made.',
+      },
+    });
+    throw error;
+  }
 
   return created;
 }

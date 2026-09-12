@@ -24,7 +24,10 @@ import { Queue, Worker, type ConnectionOptions } from 'bullmq';
 import { QUEUE_NAMES } from '@webaudit/config';
 import { env } from '../../src/config/env.js';
 import { adminQueueRoutes } from '../../src/routes/admin/queue.routes.js';
-import { createQueueAdminService, type QueueAdminService } from '../../src/services/admin/queue.service.js';
+import {
+  createQueueAdminService,
+  type QueueAdminService,
+} from '../../src/services/admin/queue.service.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 
 const connection: ConnectionOptions = {
@@ -101,7 +104,9 @@ describe('GET /queue', () => {
     );
 
     const res = await request(app).get('/queue').set(auth(token)).expect(200);
-    const body = res.body as { jobs: { queue: string; id: string; state: string; data: unknown }[] };
+    const body = res.body as {
+      jobs: { queue: string; id: string; state: string; data: unknown }[];
+    };
     const job = body.jobs.find((j) => j.id === 'scan_admin_1:RUNNING_PHASE_1:1');
     expect(job).toBeDefined();
     expect(job?.queue).toBe(QUEUE_NAMES.scanPhase);
@@ -211,7 +216,11 @@ describe('POST /queue/:jobId/cancel', () => {
   it('cancels a waiting job and audits the action', async () => {
     const { token, actorId } = await makeOperatorToken();
     const jobId = 'reverify:issue_admin_4:1';
-    await inspectionQueues[QUEUE_NAMES.reverify].add('reverify', { issueId: 'issue_admin_4' }, { jobId });
+    await inspectionQueues[QUEUE_NAMES.reverify].add(
+      'reverify',
+      { issueId: 'issue_admin_4' },
+      { jobId },
+    );
 
     const res = await request(app).post(`/queue/${jobId}/cancel`).set(auth(token)).expect(200);
     expect((res.body as { cancelled: string }).cancelled).toBe(jobId);
@@ -227,7 +236,7 @@ describe('POST /queue/:jobId/cancel', () => {
     expect(entries[0]?.subjectId).toBe(jobId);
   });
 
-  it('409s cancelling a system-internal workspace-teardown job, leaving it in place — the only mechanism destroying a cancelled scan\'s workspace', async () => {
+  it("409s cancelling a system-internal workspace-teardown job, leaving it in place — the only mechanism destroying a cancelled scan's workspace", async () => {
     const { token } = await makeOperatorToken();
     const jobId = 'workspace-teardown-scan_admin_9';
     await inspectionQueues[QUEUE_NAMES.maintenance].add(
@@ -251,7 +260,11 @@ describe('POST /queue/:jobId/cancel', () => {
     const jobId = 'questionnaire-deadline_scan_admin_10';
     await inspectionQueues[QUEUE_NAMES.maintenance].add(
       'questionnaire-deadline',
-      { scanId: 'scan_admin_10', kind: 'questionnaire-deadline', expectedState: 'AWAITING_QUESTIONNAIRE' },
+      {
+        scanId: 'scan_admin_10',
+        kind: 'questionnaire-deadline',
+        expectedState: 'AWAITING_QUESTIONNAIRE',
+      },
       { jobId, delay: 60_000 },
     );
 

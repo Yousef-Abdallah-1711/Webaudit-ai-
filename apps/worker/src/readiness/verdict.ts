@@ -53,14 +53,14 @@ export function computeVerdict(input: {
 }): ReadinessVerdictResult {
   const byModule = new Map(input.freshAreas.map((a) => [a.module, a]));
 
-  const moduleOutcomes: ModuleOutcome[] = (
-    Object.keys(READINESS_THRESHOLDS) as ModuleType[]
-  ).map((module) => {
-    const threshold = READINESS_THRESHOLDS[module];
-    const area = byModule.get(module);
-    const score = area?.score ?? null;
-    return { module, score, threshold, pass: score !== null && score >= threshold };
-  });
+  const moduleOutcomes: ModuleOutcome[] = (Object.keys(READINESS_THRESHOLDS) as ModuleType[]).map(
+    (module) => {
+      const threshold = READINESS_THRESHOLDS[module];
+      const area = byModule.get(module);
+      const score = area?.score ?? null;
+      return { module, score, threshold, pass: score !== null && score >= threshold };
+    },
+  );
 
   const blockers: string[] = [];
 
