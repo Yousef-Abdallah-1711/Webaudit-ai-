@@ -16,10 +16,22 @@ and applied that document is not acceptable under this initiative's own standard
 from the cross-cutting `T00x` space used in `docs/reviews/` (which reached T312 as of this
 initiative's AI-engineering work). Do not confuse the two numbering spaces.
 
-**Status:** Phase 2 is partial; T005/T007/T009 have focused verification, T008 lacks its DB
-authorization gate, T010 remains open, and T006 is externally blocked. Phase 3 T011 is implemented
-and type/lint checked, but its DB race test and T012 matrix remain open. This document is a plan; do
-not mark either phase complete without the recorded gates and evidence below.
+**Status (updated 2026-09-13, independent review + fix pass):** Phase 1 (T001-T003) DONE, verified
+by direct code re-read plus a real-test re-run. Phase 2: T005/T007/T009 DONE; **T008 DONE** (a
+real gap — `refund()` had no caller and no DB-backed authorization anywhere — was found and fixed:
+`refund-payment.ts`, 6 new passing tests); T010 PARTIALLY DONE (forged-signature, amount-tampering,
+and duplicate-delivery rows now covered against the *real* provider, in
+`apps/api/tests/integration/paymob-webhook-and-redirect.test.ts`; currency/wrong-user/wrong-product/
+direct-bypass rows remain open — see T010's own section); T006 remains externally blocked. Phase 3:
+**T011 DONE** — a real bug was found (the redirect route bypassed the `BillingEvent` audit gate
+entirely) and fixed by extracting a shared `applyVerifiedPaymentEvent` function now used by both
+the webhook and redirect routes, proven by a new regression test plus a real concurrent
+webhook-vs-redirect race test (both passing); T012's full E2E matrix remains open. This document is
+a plan; do not mark a task complete without the recorded gates and evidence below. Phase 4 update
+(2026-09-13): T013 is resolved to Hostinger SMTP using the provisioned `ai-audit` mailbox; T014
+SMTP mailer and T015 send-attempt persistence are implemented with mocked-transport unit coverage,
+but migration application and real staging inbox verification remain open. T016-T017 are still
+operational tasks requiring DNS/credential/inbox evidence.
 implemented. Tasks marked **[DECISION]** are not code tasks — they are the point where an external
 or product decision must be obtained before the code tasks that depend on them can start; they
 have no Definition of Done because there is no code to hold to one.
@@ -256,8 +268,22 @@ Rollback / Production considerations.
 - **Production considerations**: log every call's outcome (status, latency, no secret material)
   for the monitoring dashboards in Phase 7.
 
-### T008 — Build `PaymobPaymentProvider.verifyWebhook` and `.refund`
+### T008 — Build `PaymobPaymentProvider.verifyWebhook` and `.refund` — **DONE** (2026-09-13, review pass)
 
+- **Status:** `verifyWebhook` and `refund` were both already implemented in
+  `paymob-payment-provider.ts`. The independent review that landed this status found the real gap
+  the earlier status report flagged ("database-backed refund authorization is missing") was
+  literal: `provider.refund()` had **zero callers anywhere in the codebase** (confirmed by a
+  repo-wide grep), so nothing ever checked that a refund request corresponded to a payment this
+  system actually recorded as `SUCCEEDED` before calling Paymob. Fixed by adding
+  `apps/api/src/services/billing/refund-payment.ts` (`refundPayment`,
+  `RefundNotAuthorizedError`): looks up the `PendingPayment` by `providerReference`, refuses unless
+  `status === SUCCEEDED`, refuses if the requested amount exceeds what was actually charged, and
+  only then calls `provider.refund(...)`. Deliberately does **not** wire an admin HTTP endpoint or
+  decide the credit-clawback question (see the module's own note) — that remains explicitly
+  deferred, not silently assumed. New test: `apps/api/tests/unit/refund-payment.test.ts` (6 tests,
+  all passing — authorized refund, refused for PENDING/FAILED status, refused for no matching
+  payment, refused for over-amount, refused for non-positive amount before touching the DB).
 - **Objective**: real webhook verification (using T005's `paymob-hmac.ts`) mapping Paymob's event
   shape into this system's `PaymentEvent`, and a real refund call.
 - **Why**: FR-P04, FR-P08.
@@ -294,8 +320,24 @@ Rollback / Production considerations.
   T006 resolves.
 - **Verification**: full existing billing test suite passes unmodified.
 
-### T010 — Adversarial HMAC and webhook-security test suite for the real Paymob provider
+### T010 — Adversarial HMAC and webhook-security test suite for the real Paymob provider — **PARTIALLY DONE** (2026-09-13, review pass)
 
+- **Status:** the originally-planned dedicated file (`apps/api/tests/adverse/
+  paymob-webhook-security.test.ts`) was not created; instead, the equivalent coverage landed in
+  `apps/api/tests/integration/paymob-webhook-and-redirect.test.ts` (created during the same review
+  pass, alongside the T011 bug fix below — the two were built together because the race/regression
+  test needed the same real-provider signing harness this matrix needed). **Confirmed covered**,
+  against the real `paymob-payment-provider.ts`/`paymob-hmac.ts` (not a stand-in — verified by
+  reading the test file directly): forged/tampered signature rejection (matrix row 12), duplicate
+  webhook delivery idempotency (row 13), amount-tampering rejection via a *validly-signed* payload
+  for a wrong amount (row 14). **Still open, not yet covered**: currency-mismatch (row 15 — this
+  system has no currency field on `PendingPayment`/`PaymentEvent` at all yet, see `research.md`
+  A.1's flagged gap; needs that gap resolved first), wrong-user/wrong-product rejection (rows
+  16-17 — `eventMatchesPending` already checks these generically and is exercised by the existing
+  generic-path tests, but not yet with a *real, validly-signed Paymob payload* specifically),
+  duplicate-`PendingPayment`-for-same-intent (row 18), and direct-bypass-attempt (row 19). A future
+  session should extend the existing `paymob-webhook-and-redirect.test.ts` file with these
+  remaining rows rather than starting a second, separate file.
 - **Objective**: implement every row of `quickstart.md`'s payment security matrix (rows 12-19)
   against the real `paymob-payment-provider.ts` and `paymob-hmac.ts`.
 - **Why**: FR-P04/FR-P06's binding requirement, and the explicit EduFlow lesson (must import the
@@ -314,8 +356,32 @@ Rollback / Production considerations.
 
 ## Phase 3 — Payment → Billing → Credits Fulfillment
 
-### T011 — Build the redirect-completion fallback (`GET /billing/payment-return`)
+### T011 — Build the redirect-completion fallback (`GET /billing/payment-return`) — **DONE** (2026-09-13, review pass — one real bug found and fixed)
 
+- **Status:** the route existed and correctly reused `applyProviderPaymentEvent` for HMAC
+  verification and effect application — **but that shared function was never wrapped in the
+  `BillingEvent` idempotency gate that `webhooks.routes.ts`'s POST route applied around it**. A
+  payment completed *only* through this redirect fallback (the exact scenario T011 exists to
+  handle — the webhook never arrives) landed no `BillingEvent` audit row at all, breaking
+  reconciliation (FR-P09) for exactly that case. Concretely: `payment-return.routes.ts` called
+  `applyProviderPaymentEvent` directly; `webhooks.routes.ts`'s POST route called
+  `createOrRetryBillingEvent` → `applyProviderPaymentEvent` → `billingEvent.update({appliedAt})`
+  around it, and the redirect route skipped all three of the surrounding steps. **Fixed** by
+  extracting the whole sequence into one new shared function,
+  `apps/api/src/services/billing/apply-payment-event.ts`'s `applyVerifiedPaymentEvent`, and
+  updating both routes to call it instead of duplicating the sequence. Real double-application of
+  the underlying *credit grant* was never actually possible even with the old bug (the deeper
+  `CreditTransaction.billingEventId` uniqueness in `grant.ts` already caught that), but the missing
+  audit trail was real. Also added error handling around the redirect route's call (previously an
+  unhandled throw would have hit Express's default handler as an unstructured error, violating
+  `ENGINEERING-STANDARDS.md` §2's structured-error requirement).
+- **New coverage added and passing** (`apps/api/tests/integration/
+  paymob-webhook-and-redirect.test.ts`, 5/5 passing): a regression test proving a redirect-only
+  completion now creates a real `BillingEvent` row (the exact bug above, proven fixed — this test
+  would have failed against the old code); a real concurrency test firing the POST webhook and the
+  GET redirect simultaneously (`Promise.all`) for the same transaction, proving the grant applies
+  exactly once regardless of which path wins the race — this is the DB race/manual proof this
+  task's Definition of Done required and the earlier status report flagged as pending.
 - **Objective**: independently verify Paymob's signed browser-return querystring and, if valid,
   invoke the same webhook-application logic the POST webhook uses.
 - **Why**: `plan.md`'s dual-path decision, informed by `research.md` B.2 item 4.

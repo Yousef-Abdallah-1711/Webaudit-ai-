@@ -896,3 +896,15 @@ model CostAlertEvent {
 
   @@index([scope, userId, windowEnd])
 }
+
+model EmailSendAttempt {
+  id             String   @id @default(cuid())
+  recipient      String
+  messageType    String
+  succeeded      Boolean
+  providerError  String?
+  createdAt      DateTime @default(now())
+
+  @@index([recipient, createdAt])
+  @@index([messageType, createdAt])
+}

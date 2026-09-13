@@ -31,13 +31,13 @@
     "@webaudit/ai-executor": "workspace:*",
     "@webaudit/capability-sdk": "workspace:*",
     "@webaudit/config": "workspace:*",
-    "@webaudit/scoring": "workspace:*",
-    "@webaudit/safe-net": "workspace:*",
     "@webaudit/safe-archive": "workspace:*",
+    "@webaudit/safe-net": "workspace:*",
     "@webaudit/sandbox-runner": "workspace:*",
-    "busboy": "1.6.0",
+    "@webaudit/scoring": "workspace:*",
     "@webaudit/types": "workspace:*",
     "bullmq": "6.2.0",
+    "busboy": "1.6.0",
     "cookie-parser": "1.4.7",
     "cors": "2.8.5",
     "express": "5.1.0",
@@ -45,6 +45,7 @@
     "helmet": "8.0.0",
     "ioredis": "5.4.1",
     "jose": "5.9.6",
+    "nodemailer": "^6.9.16",
     "rate-limit-redis": "4.2.0",
     "ws": "8.21.3",
     "zod": "3.25.76"
@@ -53,9 +54,10 @@
     "@types/busboy": "1.5.4",
     "@types/cookie-parser": "1.4.8",
     "@types/cors": "2.8.17",
-    "@types/ws": "8.18.1",
     "@types/express": "5.0.0",
+    "@types/nodemailer": "^6.4.16",
     "@types/supertest": "6.0.2",
+    "@types/ws": "8.18.1",
     "supertest": "7.0.0"
   }
 }

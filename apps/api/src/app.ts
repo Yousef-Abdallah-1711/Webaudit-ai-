@@ -23,6 +23,7 @@ import type { PrismaClient } from '../prisma/generated/client/index.js';
 import type { Mailer } from './services/services-types.js';
 import { createConsoleMailer } from './services/email/mailer.js';
 import { createResendMailerFromEnv } from './services/email/resend-mailer.js';
+import { createSmtpMailerFromEnv, createSmtpMailer } from './services/email/smtp-mailer.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { oauthRoutes } from './routes/oauth.routes.js';
 import { targetsRoutes, type TargetRoutesDeps } from './routes/targets.routes.js';
@@ -104,8 +105,26 @@ export interface AppDeps {
   billing?: BillingRoutesDeps;
 }
 
-function createDefaultMailer(): Mailer {
-  return env.isProduction ? createResendMailerFromEnv() : createConsoleMailer();
+function createDefaultMailer(db: PrismaClient): Mailer {
+  if (process.env['EMAIL_TRANSPORT']?.toUpperCase() === 'SMTP') {
+    // Rebuild with the audit callback so every SMTP attempt is queryable.
+    createSmtpMailerFromEnv();
+    return createSmtpMailer({
+      host: process.env['SMTP_HOST'] ?? 'smtp.hostinger.com',
+      port: Number(process.env['SMTP_PORT'] ?? '465'),
+      user: process.env['SMTP_USER'] ?? '',
+      password: process.env['SMTP_PASSWORD'] ?? '',
+      from: process.env['EMAIL_FROM'] ?? '',
+      recordAttempt: async (attempt) => {
+        await db.$executeRaw`
+          INSERT INTO "EmailSendAttempt" ("id", "recipient", "messageType", "succeeded", "providerError")
+          VALUES (gen_random_uuid()::text, ${attempt.recipient}, ${attempt.messageType}, ${attempt.succeeded}, ${attempt.providerError ?? null})
+        `;
+      },
+    });
+  }
+  if (env.isProduction) return createResendMailerFromEnv();
+  return createConsoleMailer();
 }
 
 /**
@@ -306,7 +325,7 @@ const CREDENTIAL_PATHS = [
 
 export function createApp(deps: AppDeps): Express {
   const app = express();
-  const mailer = deps.mailer ?? createDefaultMailer();
+  const mailer = deps.mailer ?? createDefaultMailer(deps.db);
 
   const limiters =
     deps.rateLimiters === undefined
