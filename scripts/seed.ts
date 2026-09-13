@@ -49,6 +49,21 @@ async function main(): Promise<void> {
   await ensurePlatformCapabilities(prisma);
   console.log('Ensured module-ai platform capability rows.');
 
+  // T026: placeholder spend ceilings. Finance/product must replace these
+  // values before launch (T027); keeping them in the database makes the
+  // alerting mechanism editable without a deploy.
+  for (const threshold of [
+    { scope: 'PER_USER', windowMinutes: 60, thresholdMicros: 1_000_000_000 },
+    { scope: 'GLOBAL', windowMinutes: 60, thresholdMicros: 10_000_000_000 },
+  ]) {
+    await prisma.costAlertThreshold.upsert({
+      where: { scope: threshold.scope },
+      create: threshold,
+      update: threshold,
+    });
+  }
+  console.log('Seeded placeholder cost-alert thresholds (T027 requires final values).');
+
   // Sanity check the conversion gate is intact. If the free allocation ever
   // covers a full audit, the funnel silently changes shape.
   const free = await prisma.plan.findUnique({ where: { id: 'free' } });

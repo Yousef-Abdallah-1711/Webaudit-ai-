@@ -871,3 +871,28 @@ model BillingEvent {
 
   @@index([type, receivedAt])
 }
+
+/// Configurable spend ceilings used by the cost-alert worker (T026).
+model CostAlertThreshold {
+  id              String   @id @default(cuid())
+  scope           String   @unique
+  windowMinutes   Int
+  thresholdMicros Int
+  isEnabled       Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+/// Idempotent record of a spend breach notification (T026).
+model CostAlertEvent {
+  id              String   @id @default(cuid())
+  scope           String
+  userId          String?
+  windowStart     DateTime
+  windowEnd       DateTime
+  observedMicros  Int
+  thresholdMicros Int
+  notifiedAt      DateTime @default(now())
+
+  @@index([scope, userId, windowEnd])
+}
