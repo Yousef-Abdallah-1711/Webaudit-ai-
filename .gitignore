@@ -47,6 +47,7 @@ var/
 
 # Tooling scratch
 .playwright-mcp/
+.worktrees/
 .eslintcache
 .oxlintcache
 
