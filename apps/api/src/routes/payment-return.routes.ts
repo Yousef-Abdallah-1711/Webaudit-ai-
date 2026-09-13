@@ -1,7 +1,8 @@
 import { Router, type Request, type Response } from 'express';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import type { PaymentProvider } from '../services/billing/payment-provider.js';
-import { applyProviderPaymentEvent } from './webhooks.routes.js';
+import { applyVerifiedPaymentEvent } from '../services/billing/apply-payment-event.js';
+import type { Mailer } from '../services/email/mailer.js';
 
 function one(value: unknown): string | undefined {
   return typeof value === 'string' ? value : Array.isArray(value) ? one(value[0]) : undefined;
@@ -56,7 +57,7 @@ function redirectTarget(success: boolean): string {
 /** Paymob's signed browser return is a completion fallback, never an auth bypass. */
 export function paymentReturnRoutes(
   db: PrismaClient,
-  deps: { readonly paymentProvider?: PaymentProvider } = {},
+  deps: { readonly paymentProvider?: PaymentProvider; readonly mailer?: Mailer } = {},
 ): Router {
   const router = Router();
   router.get('/billing/payment-return', async (req: Request, res: Response) => {
@@ -122,7 +123,19 @@ export function paymentReturnRoutes(
       return;
     }
     const event = verification.events[0]!;
-    await applyProviderPaymentEvent(db, event);
+    try {
+      await applyVerifiedPaymentEvent(
+        db,
+        event,
+        deps.mailer === undefined ? {} : { mailer: deps.mailer },
+      );
+    } catch (error) {
+      console.error('[payment-return] failed to apply verified payment event:', error);
+      res.status(500).json({
+        error: { code: 'PAYMENT_APPLY_FAILED', message: 'Failed to apply payment event.' },
+      });
+      return;
+    }
     res.redirect(303, redirectTarget(event.type === 'payment.succeeded'));
   });
   return router;

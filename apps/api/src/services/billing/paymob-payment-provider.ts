@@ -254,6 +254,7 @@ export function createPaymobPaymentProvider(
         amountMicros === undefined ||
         (typeof transaction['id'] !== 'string' && typeof transaction['id'] !== 'number') ||
         (typeof order['id'] !== 'string' && typeof order['id'] !== 'number') ||
+        transaction['currency'] !== 'EGP' ||
         String(transaction['integration_id']) !== integrationId ||
         typeof transaction['success'] !== 'boolean'
       ) {

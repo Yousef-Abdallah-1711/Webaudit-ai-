@@ -92,6 +92,18 @@ export function createSmtpMailer(options: SmtpMailerOptions): Mailer {
       });
       return send(email, 'password-reset', 'Reset your WebAudit AI password', content);
     },
+    sendPaymentConfirmation(email) {
+      const content = renderEmail({
+        title: 'Your WebAudit AI payment was successful',
+        bodyHtml: '<p>Your payment was successful and your account has been updated.</p>',
+      });
+      return send(
+        email,
+        'payment-confirmation',
+        'Your WebAudit AI payment was successful',
+        content,
+      );
+    },
     sendReadinessAchieved(email, mail: ReadinessAchievedMail) {
       const content = renderEmail({
         title: `${mail.targetName} is ready to ship`,

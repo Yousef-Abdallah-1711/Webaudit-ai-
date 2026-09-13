@@ -344,7 +344,7 @@ export function createApp(deps: AppDeps): Express {
   // *raw* request body, and the provider sends `application/json` — so the JSON
   // parser would consume the stream before the signature could be checked. The
   // router installs its own `express.raw` on that one path (T187).
-  app.use(webhooksRoutes(deps.db, deps.webhooks ?? {}));
+  app.use(webhooksRoutes(deps.db, { ...(deps.webhooks ?? {}), mailer }));
 
   app.use(express.json({ limit: '1mb' }));
   // `express.json()` reports a malformed body or one over the 1mb limit by
@@ -367,7 +367,7 @@ export function createApp(deps: AppDeps): Express {
       deps.db,
       deps.webhooks?.paymentProvider === undefined
         ? {}
-        : { paymentProvider: deps.webhooks.paymentProvider },
+        : { paymentProvider: deps.webhooks.paymentProvider, mailer },
     ),
   );
 

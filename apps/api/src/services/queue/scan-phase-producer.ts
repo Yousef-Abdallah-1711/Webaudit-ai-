@@ -22,6 +22,8 @@ import { DEFAULT_JOB_OPTIONS, QUEUE_NAMES, priorityForPlan } from '@webaudit/con
 import type { ModuleType } from '@webaudit/types';
 
 export interface ScanPhaseProducer {
+  getWaitingCount?(): Promise<number>;
+  getQueuePosition?(scanId: string): Promise<number | null>;
   enqueueFirstPhase(input: {
     readonly scanId: string;
     readonly modules: readonly ModuleType[];
@@ -71,6 +73,14 @@ export function createScanPhaseProducer(
   });
 
   return {
+    async getWaitingCount(): Promise<number> {
+      return queue.getWaitingCount();
+    },
+    async getQueuePosition(scanId: string): Promise<number | null> {
+      const jobs = await queue.getJobs(['waiting']);
+      const index = jobs.findIndex((job) => job.id?.startsWith(`${scanId}:`));
+      return index < 0 ? null : index + 1;
+    },
     async enqueueFirstPhase(input): Promise<{ readonly jobId: string }> {
       const jobId = `${input.scanId}:RUNNING_PHASE_1:1`;
       await queue.add(

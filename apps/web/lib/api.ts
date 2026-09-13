@@ -332,6 +332,8 @@ export interface ScanSummary {
   readonly state: string;
   readonly quotedCredits: number;
   readonly chargedCredits: number;
+  /** One-based position in the waiting queue, or null once running/finished. */
+  readonly queuePosition?: number | null;
   readonly requestedModules: readonly string[];
   /** ISO 8601, or null before the first phase starts. */
   readonly startedAt: string | null;

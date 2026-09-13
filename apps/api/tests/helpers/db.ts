@@ -50,6 +50,8 @@ const TABLES_TO_CLEAR = [
   'User',
   'AuditLogEntry',
   'ProviderChainEntry',
+  'CostAlertEvent',
+  'CostAlertThreshold',
 ] as const;
 
 export async function resetDb(): Promise<void> {

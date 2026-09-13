@@ -28,17 +28,23 @@
  *   subscription.expired    → renewSubscription(userId)      (lapses a cancelled sub)
  *   credits.purchased       → purchaseCredits(userId, credits)
  * Anything else is acknowledged and ignored.
+ *
+ * **The real `PaymentProvider` (Paymob) branch** delegates the entire
+ * gate/apply/finalize sequence described above to
+ * `services/billing/apply-payment-event.ts`'s `applyVerifiedPaymentEvent` —
+ * `GET /billing/payment-return` (T011's signed-redirect completion fallback)
+ * calls the exact same function, so a payment completed via either path gets
+ * the identical idempotency guarantee and the identical `BillingEvent` audit
+ * row. Do not re-inline this sequence here; a prior version of this route did
+ * exactly that and diverged from the redirect route, which then skipped the
+ * `BillingEvent` gate entirely.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import express from 'express';
 import { z } from 'zod';
-import {
-  PendingPaymentStatus,
-  Prisma,
-  type PrismaClient,
-} from '../../prisma/generated/client/index.js';
+import { Prisma, type PrismaClient } from '../../prisma/generated/client/index.js';
 import {
   cancelSubscription,
   changePlan,
@@ -46,9 +52,9 @@ import {
   subscribe,
 } from '../services/billing/subscription.service.js';
 import { purchaseCredits } from '../services/billing/purchase.service.js';
-import type { PaymentEvent, PaymentProvider } from '../services/billing/payment-provider.js';
-import { createReceiptForPaymentEvent } from '../services/billing/receipt.js';
-import { transitionPendingPayment } from '../services/billing/pending-payment.js';
+import type { PaymentProvider } from '../services/billing/payment-provider.js';
+import { applyVerifiedPaymentEvent } from '../services/billing/apply-payment-event.js';
+import type { Mailer } from '../services/email/mailer.js';
 
 const eventSchema = z.object({
   id: z.string().min(1).max(200),
@@ -71,6 +77,7 @@ export interface WebhookRoutesDeps {
   /** Header the provider puts the signature in. */
   signatureHeader?: string;
   paymentProvider?: PaymentProvider;
+  mailer?: Mailer;
 }
 
 function verify(rawBody: Buffer, signature: string | undefined, secret: string): boolean {
@@ -81,131 +88,12 @@ function verify(rawBody: Buffer, signature: string | undefined, secret: string):
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-interface PendingPaymentRow {
-  readonly id: string;
-  readonly userId: string;
-  readonly kind: string;
-  readonly amountMicros: number;
-  readonly status: string;
-  readonly metadata: unknown;
-}
-
 function requestHeaders(req: Request): Readonly<Record<string, string | undefined>> {
   const headers: Record<string, string | undefined> = {};
   for (const [key, value] of Object.entries(req.headers)) {
     headers[key.toLowerCase()] = Array.isArray(value) ? value.join(',') : value;
   }
   return headers;
-}
-
-function metadataValue(metadata: unknown, key: string): string | undefined {
-  if (typeof metadata !== 'object' || metadata === null || Array.isArray(metadata))
-    return undefined;
-  const value = (metadata as Record<string, unknown>)[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-async function findPendingPayment(
-  db: PrismaClient,
-  providerReference: string,
-): Promise<PendingPaymentRow | null> {
-  const rows = await db.$queryRaw<readonly PendingPaymentRow[]>`
-    SELECT "id", "userId", "kind", "amountMicros", "status", "metadata"
-    FROM "PendingPayment"
-    WHERE "providerReference" = ${providerReference}
-    LIMIT 1
-  `;
-  return rows[0] ?? null;
-}
-
-function eventMatchesPending(event: PaymentEvent, pending: PendingPaymentRow): boolean {
-  if (event.userId !== pending.userId) return false;
-  if (event.amountMicros !== pending.amountMicros) return false;
-  if (event.metadata.kind !== pending.kind) return false;
-  if (metadataValue(pending.metadata, 'kind') !== event.metadata.kind) return false;
-
-  if (event.metadata.kind === 'subscription') {
-    return (
-      event.metadata.planId !== undefined &&
-      event.metadata.planId === metadataValue(pending.metadata, 'planId')
-    );
-  }
-  if (event.metadata.kind === 'credits') {
-    return (
-      event.metadata.credits !== undefined &&
-      event.metadata.credits === metadataValue(pending.metadata, 'credits')
-    );
-  }
-  return false;
-}
-
-async function createOrRetryBillingEvent(
-  db: PrismaClient,
-  event: PaymentEvent,
-): Promise<'apply' | 'duplicate'> {
-  const inserted = await db.$queryRaw<readonly { id: string }[]>(
-    Prisma.sql`
-      INSERT INTO "BillingEvent" ("id", "type", "payload")
-      VALUES (${event.id}, ${event.type}, ${JSON.stringify(event)}::jsonb)
-      ON CONFLICT ("id") DO NOTHING
-      RETURNING "id"
-    `,
-  );
-  if (inserted.length > 0) {
-    return 'apply';
-  }
-  const existing = await db.billingEvent.findUniqueOrThrow({ where: { id: event.id } });
-  return existing.appliedAt === null ? 'apply' : 'duplicate';
-}
-
-export async function applyProviderPaymentEvent(
-  db: PrismaClient,
-  event: PaymentEvent,
-): Promise<void> {
-  // All terminal provider outcomes close the pending row.  Only a successful
-  // payment grants entitlements; failed/cancelled/refunded events are still
-  // recorded so the expiry worker cannot later misclassify them as pending.
-  const terminalStatus =
-    event.type === 'payment.succeeded'
-      ? PendingPaymentStatus.SUCCEEDED
-      : event.type === 'payment.failed'
-        ? PendingPaymentStatus.FAILED
-        : event.type === 'subscription.cancelled'
-          ? PendingPaymentStatus.CANCELLED
-          : undefined;
-  if (terminalStatus === undefined) return;
-
-  const pending = await findPendingPayment(db, event.providerReference);
-  if (pending === null) {
-    throw new Error(`No pending payment for provider reference ${event.providerReference}.`);
-  }
-  if (pending.status !== PendingPaymentStatus.PENDING) return;
-  if (!eventMatchesPending(event, pending)) {
-    throw new Error(`Payment event ${event.id} does not match its pending payment.`);
-  }
-
-  if (event.type === 'payment.succeeded' && event.metadata.kind === 'subscription') {
-    await subscribe(db, {
-      userId: event.userId,
-      planId: event.metadata.planId!,
-      billingEventId: event.id,
-    });
-  } else if (event.type === 'payment.succeeded' && event.metadata.kind === 'credits') {
-    await purchaseCredits(db, {
-      userId: event.userId,
-      credits: Number(event.metadata.credits),
-      billingEventId: event.id,
-    });
-  }
-
-  if (event.type === 'payment.succeeded') {
-    await createReceiptForPaymentEvent(db, event);
-  }
-
-  await transitionPendingPayment(db, {
-    pendingPaymentId: pending.id,
-    status: terminalStatus,
-  });
 }
 
 export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): Router {
@@ -231,13 +119,11 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
 
         try {
           for (const event of verified.events) {
-            const action = await createOrRetryBillingEvent(db, event);
-            if (action === 'duplicate') continue;
-            await applyProviderPaymentEvent(db, event);
-            await db.billingEvent.update({
-              where: { id: event.id },
-              data: { appliedAt: new Date() },
-            });
+            await applyVerifiedPaymentEvent(
+              db,
+              event,
+              deps.mailer === undefined ? {} : { mailer: deps.mailer },
+            );
           }
         } catch (error) {
           console.error('[webhook] provider payment event failed to apply:', error);

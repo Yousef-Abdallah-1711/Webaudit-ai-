@@ -820,5 +820,47 @@
       "UI is DEGRADED in the pipeline because the fixture AI executor returns a canned response that does not satisfy the impeccable schema — an artifact of running with AI_MODE=fixtures rather than a real model, not a measurement difference. Score is unaffected (AI never moves a score).",
       "Every MEASURED finding and every per-area score is identical across the two engines."
     ]
+  },
+  "readiness": {
+    "verdict": "no-go",
+    "areas": [
+      {
+        "name": "Security",
+        "score": 67,
+        "threshold": 80,
+        "pass": false
+      },
+      {
+        "name": "Search visibility",
+        "score": 79,
+        "threshold": 80,
+        "pass": false
+      },
+      {
+        "name": "Performance",
+        "score": 91,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Testing",
+        "score": 100,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Design",
+        "score": 100,
+        "threshold": 80,
+        "pass": true
+      }
+    ],
+    "blockers": [
+      "Security scores 67/100 on the homepage — below the 80 bar.",
+      "HIGH — \"Missing Content-Security-Policy header\" found on the homepage (Security).",
+      "Search visibility scores 79/100 on the homepage — below the 80 bar.",
+      "HIGH — \"Missing H1 heading\" found on the homepage (Search visibility)."
+    ],
+    "basis": "single-page (homepage only) — app.esaalnybot.tech was unreachable from this environment when a full multi-page crawl was attempted; re-run src/crawl.ts once the site responds for the full site-wide verdict."
   }
 }

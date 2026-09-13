@@ -324,6 +324,38 @@ describe('token supersession on resend (M4)', () => {
       .send({ token: second, password: 'another-correct-horse-staple' })
       .expect(200);
   });
+
+  it('sends a reset email only for a registered account while preserving the enumeration-safe response', async () => {
+    const known = await request(app).post('/auth/forgot-password').send({ email: CREDS.email });
+    const unknown = await request(app)
+      .post('/auth/forgot-password')
+      .send({ email: 'not-registered@example.com' });
+
+    expect(known.status).toBe(202);
+    expect(unknown).toMatchObject({ status: known.status, body: known.body });
+    expect(mailer.sent().filter((mail) => mail.kind === 'reset')).toEqual([
+      { kind: 'reset', email: CREDS.email, token: expect.any(String) },
+    ]);
+  });
+
+  it('refuses both an expired and an already-used reset token without another password change', async () => {
+    await request(app).post('/auth/forgot-password').send({ email: CREDS.email }).expect(202);
+    const expired = mailer.lastResetToken();
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'reset' },
+      data: { expiresAt: new Date(Date.now() - 1) },
+    });
+    await request(app)
+      .post('/auth/reset-password')
+      .send({ token: expired, password: 'another-correct-horse-staple' })
+      .expect(410);
+
+    await request(app).post('/auth/forgot-password').send({ email: CREDS.email }).expect(202);
+    const usable = mailer.lastResetToken();
+    const body = { token: usable, password: 'another-correct-horse-staple' };
+    await request(app).post('/auth/reset-password').send(body).expect(200);
+    await request(app).post('/auth/reset-password').send(body).expect(410);
+  });
 });
 
 describe('expired auth token cleanup (M5)', () => {

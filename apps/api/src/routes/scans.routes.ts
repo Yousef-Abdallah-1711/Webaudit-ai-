@@ -51,6 +51,7 @@ import {
 } from '../services/control-gate/verify.js';
 import {
   DuplicateScanError,
+  QueueAtCapacityError,
   PlanUpgradeRequiredError,
   QuoteMismatchError,
   createScan,
@@ -176,6 +177,9 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
           ...(deps.checkRepositoryConnection === undefined
             ? {}
             : { checkRepositoryConnection: deps.checkRepositoryConnection }),
+          ...(producer.getWaitingCount === undefined
+            ? {}
+            : { getQueueDepth: () => producer.getWaitingCount!() }),
         },
       );
       res.status(201).json({ scan });
@@ -190,6 +194,16 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
             code: 'DUPLICATE_SCAN',
             message: error.message,
             details: { scanId: error.scanId },
+          },
+        });
+        return;
+      }
+      if (error instanceof QueueAtCapacityError) {
+        res.status(503).json({
+          error: {
+            code: 'QUEUE_AT_CAPACITY',
+            message: error.message,
+            details: { depth: error.depth, capacity: error.capacity },
           },
         });
         return;
@@ -295,7 +309,11 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       res.status(404).json(NOT_FOUND);
       return;
     }
-    res.status(200).json({ scan });
+    const queuePosition =
+      scan.state === 'QUEUED' && producer.getQueuePosition !== undefined
+        ? await producer.getQueuePosition(scan.id)
+        : null;
+    res.status(200).json({ scan: { ...scan, queuePosition } });
   });
 
   router.post('/:id/cancel', async (req: AuthedRequest, res: Response) => {

@@ -758,11 +758,20 @@ function ReadinessView() {
         eyebrow="Production readiness — go / no-go"
         title={go ? 'Ready to ship' : 'Not ready to ship'}
         meta={
-          'Computed from the worst score any single crawled page recorded per area, plus any HIGH/CRITICAL ' +
-          'finding repeating across every page — an average score hides exactly the outlier this decision needs to see.'
+          r.basis
+            ? 'Computed from the homepage audit only — ' + r.basis
+            : 'Computed from the worst score any single crawled page recorded per area, plus any HIGH/CRITICAL ' +
+              'finding repeating across every page — an average score hides exactly the outlier this decision needs to see.'
         }
         actions={null}
       />
+      {r.basis && (
+        <Card padding={16} style={{ marginBottom: '20px', borderLeft: '3px solid var(--sev-medium, #b98900)' }}>
+          <p style={{ font: 'var(--type-small)', color: 'var(--text-secondary)', margin: 0 }}>
+            <strong style={{ color: 'var(--text-primary)' }}>Partial basis, disclosed.</strong> {r.basis}
+          </p>
+        </Card>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: compact ? '1fr' : '300px 1fr', gap: '24px', alignItems: 'start' }}>
         <Card padding={28} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
           <ScoreArc score={A.overall.score ?? 0} delta={null} size={240} label="Site health score" />

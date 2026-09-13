@@ -26,12 +26,17 @@ direct-bypass rows remain open — see T010's own section); T006 remains externa
 **T011 DONE** — a real bug was found (the redirect route bypassed the `BillingEvent` audit gate
 entirely) and fixed by extracting a shared `applyVerifiedPaymentEvent` function now used by both
 the webhook and redirect routes, proven by a new regression test plus a real concurrent
-webhook-vs-redirect race test (both passing); T012's full E2E matrix remains open. This document is
+webhook-vs-redirect race test (both passing); **T012 DONE** — rows 1-11 and 21 are covered by
+`apps/api/tests/integration/paymob-checkout-flow.test.ts`, with row 20 covered by the dedicated
+adverse checkout-lock suite. The suite passes against the real Paymob adapter with a high-fidelity
+deterministic transport; real sandbox credentials remain blocked by T006. This document is
 a plan; do not mark a task complete without the recorded gates and evidence below. Phase 4 update
 (2026-09-13): T013 is resolved to Hostinger SMTP using the provisioned `ai-audit` mailbox; T014
-SMTP mailer and T015 send-attempt persistence are implemented with mocked-transport unit coverage,
-but migration application and real staging inbox verification remain open. T016-T017 are still
-operational tasks requiring DNS/credential/inbox evidence.
+T014 SMTP mailer and T015 send-attempt persistence are DONE: mocked-transport unit coverage passes,
+and the migration is applied to both local development and test databases. Real staging inbox
+verification remains open because SMTP credentials are not configured in the local environment.
+T016 is not applicable for the SMTP decision; T017 remains an operational task requiring
+credential and inbox evidence.
 implemented. Tasks marked **[DECISION]** are not code tasks — they are the point where an external
 or product decision must be obtained before the code tasks that depend on them can start; they
 have no Definition of Done because there is no code to hold to one.
@@ -789,6 +794,12 @@ Rollback / Production considerations.
   passing, non-tautological test (re-applying the same "does this test actually exercise the real
   code" discipline this initiative's own T311/T309 work already established).
 - **Dependencies**: Phases 2, 3, 4-6 complete.
+- **Current state (local automated)**: the real Paymob, checkout-lock, production-gate, auth, and
+  payment-email suites cover the in-scope payment and email rows. On 2026-09-13, deliberately
+  bypassing HMAC verification, amount binding, and duplicate confirmation suppression each made
+  its corresponding focused test fail; restoring the controls made each test pass. Real transport
+  and sandbox evidence remains a T042/T043 staging requirement, and T013/T019 remain product/ops
+  decisions rather than assumptions this task may close.
 - **Acceptance criteria**: **Security Gate** passes.
 - **Definition of Done**: `DoD-A` across every test file touched. For a sample of at least three
   matrix rows spanning different mechanisms (e.g. one HMAC-forgery row, one idempotency row, one
@@ -848,7 +859,7 @@ Rollback / Production considerations.
 | Task range | Phase | Blocked/Conditional on |
 | --- | --- | --- |
 | T001-T004 | Foundations | T004 is a decision task |
-| T005-T012 | Paymob | T005/T007/T009 implementation and focused unit checks completed; T008 lacks its DB-backed refund-authorisation gate; T010 remains open; T011 implementation is mounted but its DB race test is pending; T012 remains open; T006 blocks real-world exercise (not unit/adverse testing). |
+| T005-T012 | Paymob | T005/T007/T009/T012 automated implementation and focused checks completed; T006 blocks real-world exercise (not unit/adverse testing). |
 | T013-T017 | Email transport | T013 is a decision task gating T014-T017 |
 | T018-T019 | Payment emails | T019 is a decision task |
 | T020-T025 | Monitoring | none blocking |

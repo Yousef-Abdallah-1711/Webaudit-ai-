@@ -83,6 +83,16 @@ export class DuplicateScanError extends Error {
   }
 }
 
+export class QueueAtCapacityError extends Error {
+  override readonly name = 'QueueAtCapacityError';
+  constructor(
+    readonly depth: number,
+    readonly capacity: number,
+  ) {
+    super('The scan queue is currently at capacity. Please retry shortly.');
+  }
+}
+
 export interface CreateScanInput {
   readonly userId: string;
   readonly targetId: string;
@@ -103,6 +113,8 @@ export interface CreateScanDeps {
    * Consulted only for a REPOSITORY target.
    */
   readonly checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
+  /** Optional queue introspection seam; production producer supplies it. */
+  readonly getQueueDepth?: () => Promise<number>;
 }
 
 export interface CreatedScan {
@@ -166,6 +178,14 @@ export async function createScan(
       allowedInputTypes: { has: target.inputType },
     });
     throw new PlanUpgradeRequiredError(target.inputType, requiredTier);
+  }
+
+  // Resolve the effective plan priority before checking capacity. This keeps
+  // admission independent of the order in which lower-tier requests arrived.
+  const queueCapacity = Number(process.env['SCAN_QUEUE_MAX_WAITING'] ?? 1000);
+  const queueDepth = await deps.getQueueDepth?.();
+  if (queueDepth !== undefined && queueDepth >= queueCapacity) {
+    throw new QueueAtCapacityError(queueDepth, queueCapacity);
   }
 
   // FR-079: refuse before any debit once the plan's concurrent-scan limit is

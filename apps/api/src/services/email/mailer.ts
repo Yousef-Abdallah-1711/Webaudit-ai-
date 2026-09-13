@@ -32,6 +32,7 @@ export interface RetentionWarningMail {
 export interface Mailer {
   sendVerification(email: string, token: string): Promise<void>;
   sendPasswordReset(email: string, token: string): Promise<void>;
+  sendPaymentConfirmation(email: string): Promise<void>;
   /** FR-072 / SC-014 — the "you reached a go verdict" email. */
   sendReadinessAchieved(email: string, mail: ReadinessAchievedMail): Promise<void>;
   /** FR-078 — the pre-renewal "you are about to lose N plan credits" warning. */
@@ -49,6 +50,10 @@ export function createConsoleMailer(): Mailer {
     },
     sendPasswordReset(email, token) {
       console.warn(`[mail] reset ${email}: /reset-password?token=${token}`);
+      return Promise.resolve();
+    },
+    sendPaymentConfirmation(email) {
+      console.warn(`[mail] payment confirmation sent to ${email}`);
       return Promise.resolve();
     },
     sendReadinessAchieved(email, mail) {

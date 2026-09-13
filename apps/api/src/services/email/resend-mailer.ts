@@ -98,6 +98,17 @@ export function createResendMailer(options: ResendMailerOptions): Mailer {
         ...content,
       });
     },
+    sendPaymentConfirmation(email) {
+      const content = renderEmail({
+        title: 'Your WebAudit AI payment was successful',
+        bodyHtml: '<p>Your payment was successful and your account has been updated.</p>',
+      });
+      return sendEmail({
+        to: email,
+        subject: 'Your WebAudit AI payment was successful',
+        ...content,
+      });
+    },
     sendReadinessAchieved(email, mail: ReadinessAchievedMail) {
       const content = renderEmail({
         title: `${mail.targetName} is ready to ship`,

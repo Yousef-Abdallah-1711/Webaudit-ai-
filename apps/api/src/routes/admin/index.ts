@@ -28,6 +28,7 @@ import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { requireAuth, requireOperator } from '../../middleware/auth.middleware.js';
 import { adminAuditLogRoutes } from './audit-log.routes.js';
 import { adminCapabilitiesRoutes } from './capabilities.routes.js';
+import { adminCostAlertsRoutes } from './cost-alerts.routes.js';
 import { adminMarginRoutes } from './margin.routes.js';
 import { adminPlansRoutes } from './plans.routes.js';
 import { adminProvidersRoutes } from './providers.routes.js';
@@ -48,6 +49,7 @@ export function adminRoutes(db: PrismaClient, deps: AdminRoutesDeps = {}): Route
   router.use(adminPlansRoutes(db));
   router.use(adminMarginRoutes(db));
   router.use(adminCapabilitiesRoutes(db));
+  router.use(adminCostAlertsRoutes(db));
   router.use(adminProvidersRoutes(db));
   router.use(adminQueueRoutes(db, deps.queue ?? {}));
   router.use(adminScansRoutes(db));

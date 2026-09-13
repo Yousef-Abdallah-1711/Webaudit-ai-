@@ -102,6 +102,7 @@ export function ScanProgress({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const [scanState, setScanState] = useState<ScanState>('QUEUED');
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
 
   // Authoritative baseline (FR-047): fetched once on mount, and again after
   // every realtime resubscribe — a client that missed events while
@@ -119,6 +120,7 @@ export function ScanProgress({
         setModules(scan.requestedModules as ModuleType[]);
         setStartedAt(scan.startedAt === null ? null : new Date(scan.startedAt).getTime());
         setScanState(scan.state as ScanState);
+        setQueuePosition(scan.queuePosition ?? null);
         if (scan.moduleResults !== undefined) {
           setModuleStates((current) => {
             const next = { ...current };
@@ -208,6 +210,9 @@ export function ScanProgress({
             done={done}
             total={modules.length || 1}
           />
+          {scanState === 'QUEUED' && queuePosition !== null && (
+            <p aria-live="polite">Position in queue: {queuePosition}</p>
+          )}
           {modules.map((module) => (
             <ModuleStatus
               key={module}

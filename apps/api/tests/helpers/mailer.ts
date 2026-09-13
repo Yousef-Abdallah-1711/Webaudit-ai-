@@ -13,6 +13,8 @@ export interface CapturingMailer extends Mailer {
   readinessMails(): ReadonlyArray<{ email: string; mail: ReadinessAchievedMail }>;
   renewalWarnings(): ReadonlyArray<{ email: string; mail: RenewalWarningMail }>;
   retentionWarnings(): ReadonlyArray<{ email: string; mail: RetentionWarningMail }>;
+  paymentConfirmations(): ReadonlyArray<{ email: string }>;
+  failPaymentConfirmation(error: Error | null): void;
 }
 
 /**
@@ -24,6 +26,8 @@ export function createCapturingMailer(): CapturingMailer {
   const readiness: { email: string; mail: ReadinessAchievedMail }[] = [];
   const renewal: { email: string; mail: RenewalWarningMail }[] = [];
   const retention: { email: string; mail: RetentionWarningMail }[] = [];
+  const confirmations: { email: string }[] = [];
+  let confirmationFailure: Error | null = null;
   const lastOf = (kind: string): string => {
     const hit = [...log].reverse().find((e) => e.kind === kind);
     if (!hit) throw new Error(`no ${kind} email was sent`);
@@ -50,11 +54,18 @@ export function createCapturingMailer(): CapturingMailer {
       retention.push({ email, mail });
       return Promise.resolve();
     },
+    sendPaymentConfirmation: (email: string) => {
+      if (confirmationFailure !== null) return Promise.reject(confirmationFailure);
+      confirmations.push({ email });
+      return Promise.resolve();
+    },
     clear: () => {
       log.length = 0;
       readiness.length = 0;
       renewal.length = 0;
       retention.length = 0;
+      confirmations.length = 0;
+      confirmationFailure = null;
     },
     lastVerificationToken: () => lastOf('verify'),
     lastResetToken: () => lastOf('reset'),
@@ -62,5 +73,9 @@ export function createCapturingMailer(): CapturingMailer {
     readinessMails: () => readiness,
     renewalWarnings: () => renewal,
     retentionWarnings: () => retention,
+    paymentConfirmations: () => confirmations,
+    failPaymentConfirmation: (error) => {
+      confirmationFailure = error;
+    },
   };
 }
