@@ -37,6 +37,11 @@ and the migration is applied to both local development and test databases. Real 
 verification remains open because SMTP credentials are not configured in the local environment.
 T016 is not applicable for the SMTP decision; T017 remains an operational task requiring
 credential and inbox evidence.
+Phase 6 update (2026-09-13): T018 is DONE. `sendPaymentConfirmation` is implemented in the
+console, SMTP, and Resend mailers, wired only after a newly applied successful payment, and the
+payment integration suite covers exactly-once delivery plus non-fatal send failure. T019 remains
+an explicit product decision; no payment-failure notification task is added until that decision is
+made.
 implemented. Tasks marked **[DECISION]** are not code tasks — they are the point where an external
 or product decision must be obtained before the code tasks that depend on them can start; they
 have no Definition of Done because there is no code to hold to one.
