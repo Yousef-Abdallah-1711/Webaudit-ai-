@@ -51,4 +51,31 @@ describe('createSmtpMailer', () => {
       },
     ]);
   });
+
+  it('T019 — sends a payment-failure notice, recorded as its own message type', async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: 'm2' });
+    const attempts: unknown[] = [];
+    const mailer = createSmtpMailer({
+      host: 'smtp.hostinger.com',
+      port: 465,
+      user: 'ai-audit@example.com',
+      password: 'test-only',
+      from: 'ai-audit@example.com',
+      transporter: { sendMail },
+      recordAttempt: async (attempt) => {
+        attempts.push(attempt);
+      },
+    });
+
+    await mailer.sendPaymentFailure('user@example.com');
+
+    expect(sendMail).toHaveBeenCalledOnce();
+    expect(sendMail.mock.calls[0]![0]).toMatchObject({
+      to: 'user@example.com',
+      subject: 'Your WebAudit AI payment did not go through',
+    });
+    expect(attempts).toEqual([
+      { recipient: 'user@example.com', messageType: 'payment-failure', succeeded: true },
+    ]);
+  });
 });

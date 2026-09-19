@@ -1,4 +1,5 @@
 import { Prisma, type PrismaClient } from '../../../prisma/generated/client/index.js';
+import { captureAlert } from '../../config/monitoring.js';
 
 export interface CostAlertResult {
   readonly fired: number;
@@ -79,6 +80,12 @@ export async function evaluateCostAlerts(
           observedMicros,
           thresholdMicros: threshold.thresholdMicros,
         });
+        captureAlert('cost_runaway', 'Global AI spend crossed the configured threshold', {
+          scope: threshold.scope,
+          observedMicros,
+          thresholdMicros: threshold.thresholdMicros,
+          windowMinutes: threshold.windowMinutes,
+        });
       }
       continue;
     }
@@ -107,6 +114,13 @@ export async function evaluateCostAlerts(
           userId: row.userId,
           observedMicros: Number(row.observedMicros),
           thresholdMicros: threshold.thresholdMicros,
+        });
+        captureAlert('cost_runaway', "One user's AI spend crossed the configured threshold", {
+          scope: threshold.scope,
+          userId: row.userId,
+          observedMicros: Number(row.observedMicros),
+          thresholdMicros: threshold.thresholdMicros,
+          windowMinutes: threshold.windowMinutes,
         });
       }
     }

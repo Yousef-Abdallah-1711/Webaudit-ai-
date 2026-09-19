@@ -63,6 +63,14 @@ import {
   createPaymentExpirySweepHandler,
   schedulePaymentExpirySweep,
 } from './orchestrator/payment-expiry-scheduler.js';
+import {
+  createTelemetryArchiveHandler,
+  scheduleTelemetryArchive,
+} from './orchestrator/telemetry-archive-scheduler.js';
+import {
+  createCostAlertsSweepHandler,
+  scheduleCostAlertsSweep,
+} from './orchestrator/cost-alerts-scheduler.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
 import {
   installTerminalTeardown,
@@ -74,6 +82,8 @@ import {
   createRedisCancellationSource,
   type CancellationSource,
 } from './orchestrator/cancellation.js';
+import { initMonitoring } from './config/monitoring.js';
+import { writeHeartbeat } from './orchestrator/heartbeat.js';
 
 export const SERVICE_NAME = '@webaudit/worker' as const;
 
@@ -214,6 +224,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // a caller that wants the placeholders (or a fake) never pays for a real
   // database connection or AI executor it will not use.
   let publisherToClose: Redis | undefined;
+  let heartbeatRedisToClose: Redis | undefined;
+  let heartbeatTimer: NodeJS.Timeout | undefined;
   let cancellationToClose: { close(): Promise<void> } | undefined;
   let uploadStorage: UploadStorage | undefined;
   let uninstallTerminalRefund: (() => void) | undefined;
@@ -289,6 +301,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         reverify: createReverifyHandler({ db, publisher }),
         // FR-078 / FR-092 (T188/T189): renewals, renewal warnings, retention.
         billingSweep: createBillingSweepHandler({ db }),
+        // T032: the repeatable telemetry-partition archive sweep, defaulting
+        // to dry-run (TELEMETRY_ARCHIVE_DRY_RUN must be "false" for a real
+        // detach+drop). Registered as a repeatable job below.
+        telemetryArchive: createTelemetryArchiveHandler(db),
+        // FR-C01-C04 (T028): the repeatable cost-alert computation sweep.
+        // Registered as a repeatable job below.
+        costAlertsSweep: createCostAlertsSweepHandler(db),
         // T104 gap fix (Finding 10): apps/api's /scans/:id/cancel writes
         // CANCELLED directly and never reaches this process's transition(),
         // so the terminal-teardown observer above never fires for it. This
@@ -305,6 +324,23 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       };
     })();
   const workers = createWorkers({ connection, handlers });
+
+  if (options.handlers === undefined && process.env['REDIS_URL'] !== undefined) {
+    const workerId = process.env['WORKER_ID'] ?? `${process.pid}`;
+    const intervalMs = positiveIntFromEnv('WORKER_HEARTBEAT_INTERVAL_MS', 15_000);
+    const ttlMs = positiveIntFromEnv('WORKER_HEARTBEAT_TTL_MS', intervalMs * 3);
+    heartbeatRedisToClose = createPublisherRedisClient(process.env['REDIS_URL']);
+    const beat = (): void => {
+      void writeHeartbeat(heartbeatRedisToClose!, workerId, ttlMs).catch((error: unknown) => {
+        logger.warn('worker heartbeat write failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    };
+    beat();
+    heartbeatTimer = setInterval(beat, intervalMs);
+    heartbeatTimer.unref();
+  }
 
   // The repeatable maintenance job. Idempotent — a stable jobId means a
   // redeploy replaces the schedule rather than stacking a second one. Only
@@ -327,6 +363,21 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       logger.error(
         'could not schedule the billing sweep; renewals, renewal warnings and report ' +
           'retention will not run until this is resolved',
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    });
+    void scheduleTelemetryArchive(queues.maintenance).catch((error: unknown) => {
+      logger.error(
+        'could not schedule the telemetry-archive sweep; old AiInvocation/CapabilityExecution ' +
+          'partitions will not be archived and future-month partitions will not be pre-created ' +
+          'until this is resolved',
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    });
+    void scheduleCostAlertsSweep(queues.maintenance).catch((error: unknown) => {
+      logger.error(
+        'could not schedule the cost-alert sweep; FR-C01-C04 spend-runaway detection will not ' +
+          'run until this is resolved',
         { error: error instanceof Error ? error.message : String(error) },
       );
     });
@@ -374,6 +425,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       // After the workers: a producer closed first would break a job that is
       // still finishing and needs to enqueue its successor.
       await queues.close();
+      if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
+      if (heartbeatRedisToClose !== undefined) heartbeatRedisToClose.disconnect();
       if (publisherToClose !== undefined) publisherToClose.disconnect();
       if (cancellationToClose !== undefined) await cancellationToClose.close();
       uninstallTerminalRefund?.();
@@ -419,6 +472,7 @@ function isEntrypoint(): boolean {
 
 if (isEntrypoint()) {
   try {
+    initMonitoring();
     startWorker();
     logger.info(
       `${SERVICE_NAME} consuming — phase orchestrator, re-verification, and the ` +

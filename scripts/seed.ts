@@ -49,12 +49,27 @@ async function main(): Promise<void> {
   await ensurePlatformCapabilities(prisma);
   console.log('Ensured module-ai platform capability rows.');
 
-  // T026: placeholder spend ceilings. Finance/product must replace these
-  // values before launch (T027); keeping them in the database makes the
-  // alerting mechanism editable without a deploy.
+  // T027: an operational starting default, not a confirmed business figure —
+  // finance/product should still replace these before launch. Reasoned from
+  // the system's own known unit economics rather than an arbitrary round
+  // number: a full audit costs 80 credits, and at 100,000 micros/credit
+  // (matching FULL_AUDIT_COST_MICROS in cost-alerts.test.ts) that is
+  // 8,000,000 micros of AI spend per audit. FR-C04 requires the window not to
+  // fire on one large *legitimate* scan, so both ceilings sit at a multiple of
+  // that per-audit cost chosen to clear ordinary heavy usage with headroom:
+  //   PER_USER: 5 audits' worth in 60 minutes — a genuine power user rarely
+  //   runs that many full audits inside one hour; a sustained pattern at or
+  //   above this is the credential-stuffing/scripted-abuse shape FR-C01
+  //   exists to catch, not a busy customer.
+  //   GLOBAL: 100 audits' worth in 60 minutes — 20x the per-user ceiling, i.e.
+  //   the platform-wide equivalent of 20 power users each independently
+  //   hitting their own ceiling at once. Both keep the mechanism proportional
+  //   to a number this codebase actually defines, rather than an invented
+  //   dollar figure.
+  const FULL_AUDIT_COST_MICROS = 8_000_000;
   for (const threshold of [
-    { scope: 'PER_USER', windowMinutes: 60, thresholdMicros: 1_000_000_000 },
-    { scope: 'GLOBAL', windowMinutes: 60, thresholdMicros: 10_000_000_000 },
+    { scope: 'PER_USER', windowMinutes: 60, thresholdMicros: FULL_AUDIT_COST_MICROS * 5 },
+    { scope: 'GLOBAL', windowMinutes: 60, thresholdMicros: FULL_AUDIT_COST_MICROS * 100 },
   ]) {
     await prisma.costAlertThreshold.upsert({
       where: { scope: threshold.scope },
@@ -62,7 +77,10 @@ async function main(): Promise<void> {
       update: threshold,
     });
   }
-  console.log('Seeded placeholder cost-alert thresholds (T027 requires final values).');
+  console.log(
+    'Seeded cost-alert thresholds reasoned from FULL_AUDIT_COST_MICROS (T027 — operational ' +
+      'starting default, finance/product should confirm the real figures before launch).',
+  );
 
   // Sanity check the conversion gate is intact. If the free allocation ever
   // covers a full audit, the funnel silently changes shape.

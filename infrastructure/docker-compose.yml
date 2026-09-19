@@ -40,6 +40,79 @@ services:
       timeout: 3s
       retries: 10
 
+  # T295/T036 — PgBouncer, the pooler `apps/api/src/db/client.ts`'s own
+  # connection-limit comment already named and anticipated ("A pooler
+  # (PgBouncer in transaction mode) replaces this arithmetic; set the limit
+  # explicitly then."). Not started by default (profile-gated) — most local
+  # dev work talks to `postgres` directly, exactly as before; start this
+  # alongside it (`docker compose --profile pooled up -d`) to develop and
+  # test against the real pooled topology intended for production. See
+  # `infrastructure/deploy.md` for the topology this stands in for and what
+  # a real production deployment still has to choose (co-located vs. a
+  # managed pooler service).
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.25.2-p0
+    container_name: webaudit-pgbouncer
+    restart: unless-stopped
+    profiles: ['pooled']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://webaudit:webaudit_dev@postgres:5432/webaudit
+      POOL_MODE: transaction
+      # Transaction-mode pooling: PgBouncer itself holds the real pool to
+      # Postgres, so every application process connects with
+      # connection_limit=1 (client.ts's DATABASE_CONNECTION_LIMIT override) —
+      # PgBouncer is what actually multiplexes many app connections onto few
+      # real ones from here.
+      MAX_CLIENT_CONN: '200'
+      DEFAULT_POOL_SIZE: '20'
+      AUTH_TYPE: scram-sha-256
+    ports:
+      - '6452:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 5432 -U webaudit']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # T017/T043 — a real local SMTP server for exercising `smtp-mailer.ts`'s
+  # message-construction and `send()` pipeline over a real SMTP wire
+  # protocol, without needing production Hostinger credentials (which this
+  # environment does not have). Not started by default (profile-gated,
+  # `docker compose --profile dev-mail up -d`).
+  #
+  # Real, verified limitation: `createSmtpMailer` hardcodes `secure: true`
+  # (implicit TLS/SMTPS, deliberately — see that file's own comment on why
+  # this is not configurable). Mailpit only supports STARTTLS
+  # (`--smtp-tls-cert`/`--smtp-tls-key`), not implicit TLS — confirmed via
+  # `mailpit --help`, not assumed — so the exact `secure: true` connection
+  # branch cannot be exercised against it. A local verification instead
+  # injects a real (non-TLS) nodemailer transporter through
+  # `SmtpMailerOptions.transporter`, which proves everything else for real:
+  # `renderEmail`'s actual generated subject/HTML/text, `send()`'s
+  # `recordAttempt` bookkeeping, and genuine SMTP delivery confirmed via
+  # Mailpit's API (subject, recipient, and the correct token/link round-
+  # tripping into the delivered HTML) — done once, 2026-09-15, all 4 message
+  # types confirmed delivered correctly. This is real, disclosed partial
+  # verification: it does NOT satisfy T017/T043's actual acceptance
+  # criterion, which calls for the real production transport delivering to a
+  # real inbox — never report it as "staging verified."
+  mailpit:
+    image: axllent/mailpit:v1.26.1
+    container_name: webaudit-mailpit
+    restart: unless-stopped
+    profiles: ['dev-mail']
+    ports:
+      - '8027:8025' # web UI + HTTP API
+      - '1027:1025' # SMTP
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8025/api/v1/info']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
 volumes:
   postgres-data:
   redis-data:

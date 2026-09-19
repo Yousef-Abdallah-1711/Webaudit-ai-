@@ -56,6 +56,7 @@ import type { WebhookRoutesDeps } from './routes/webhooks.routes.js';
 import { createPaymentProviderFromEnv } from './services/billing/from-env.js';
 import { createEnvBillingPriceCatalog } from './services/billing/checkout-pricing.js';
 import type { PaymentProvider } from './services/billing/payment-provider.js';
+import { initMonitoring } from './config/monitoring.js';
 
 export { reconcileCapabilitiesAtBoot } from './services/registry/boot.js';
 export {
@@ -435,6 +436,7 @@ function isEntrypoint(): boolean {
 }
 
 if (isEntrypoint()) {
+  initMonitoring();
   startApi()
     .then((service) => {
       logger.info(`${SERVICE_NAME} listening`, { port: service.port });

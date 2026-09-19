@@ -27,6 +27,16 @@ describe('Resend mailer', () => {
         mailer.sendPasswordReset('user@example.com', 'reset-token'),
     ],
     [
+      'sendPaymentConfirmation',
+      (mailer: ReturnType<typeof createResendMailer>) =>
+        mailer.sendPaymentConfirmation('user@example.com'),
+    ],
+    [
+      'sendPaymentFailure',
+      (mailer: ReturnType<typeof createResendMailer>) =>
+        mailer.sendPaymentFailure('user@example.com'),
+    ],
+    [
       'sendReadinessAchieved',
       (mailer: ReturnType<typeof createResendMailer>) =>
         mailer.sendReadinessAchieved('user@example.com', {

@@ -14,7 +14,10 @@ export interface CapturingMailer extends Mailer {
   renewalWarnings(): ReadonlyArray<{ email: string; mail: RenewalWarningMail }>;
   retentionWarnings(): ReadonlyArray<{ email: string; mail: RetentionWarningMail }>;
   paymentConfirmations(): ReadonlyArray<{ email: string }>;
+  paymentFailures(): ReadonlyArray<{ email: string }>;
   failPaymentConfirmation(error: Error | null): void;
+  failVerification(error: Error | null): void;
+  failPasswordReset(error: Error | null): void;
 }
 
 /**
@@ -27,7 +30,10 @@ export function createCapturingMailer(): CapturingMailer {
   const renewal: { email: string; mail: RenewalWarningMail }[] = [];
   const retention: { email: string; mail: RetentionWarningMail }[] = [];
   const confirmations: { email: string }[] = [];
+  const failures: { email: string }[] = [];
   let confirmationFailure: Error | null = null;
+  let verificationFailure: Error | null = null;
+  let passwordResetFailure: Error | null = null;
   const lastOf = (kind: string): string => {
     const hit = [...log].reverse().find((e) => e.kind === kind);
     if (!hit) throw new Error(`no ${kind} email was sent`);
@@ -35,10 +41,12 @@ export function createCapturingMailer(): CapturingMailer {
   };
   return {
     sendVerification: (email, token) => {
+      if (verificationFailure !== null) return Promise.reject(verificationFailure);
       log.push({ kind: 'verify', email, token });
       return Promise.resolve();
     },
     sendPasswordReset: (email, token) => {
+      if (passwordResetFailure !== null) return Promise.reject(passwordResetFailure);
       log.push({ kind: 'reset', email, token });
       return Promise.resolve();
     },
@@ -59,13 +67,20 @@ export function createCapturingMailer(): CapturingMailer {
       confirmations.push({ email });
       return Promise.resolve();
     },
+    sendPaymentFailure: (email: string) => {
+      failures.push({ email });
+      return Promise.resolve();
+    },
     clear: () => {
       log.length = 0;
       readiness.length = 0;
       renewal.length = 0;
       retention.length = 0;
       confirmations.length = 0;
+      failures.length = 0;
       confirmationFailure = null;
+      verificationFailure = null;
+      passwordResetFailure = null;
     },
     lastVerificationToken: () => lastOf('verify'),
     lastResetToken: () => lastOf('reset'),
@@ -74,8 +89,15 @@ export function createCapturingMailer(): CapturingMailer {
     renewalWarnings: () => renewal,
     retentionWarnings: () => retention,
     paymentConfirmations: () => confirmations,
+    paymentFailures: () => failures,
     failPaymentConfirmation: (error) => {
       confirmationFailure = error;
+    },
+    failVerification: (error) => {
+      verificationFailure = error;
+    },
+    failPasswordReset: (error) => {
+      passwordResetFailure = error;
     },
   };
 }

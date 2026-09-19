@@ -26,6 +26,7 @@ import type { PaymentEvent } from './payment-provider.js';
 import { createReceiptForPaymentEvent } from './receipt.js';
 import { transitionPendingPayment } from './pending-payment.js';
 import type { Mailer } from '../email/mailer.js';
+import { captureAlert } from '../../config/monitoring.js';
 
 interface PendingPaymentRow {
   readonly id: string;
@@ -160,6 +161,41 @@ async function sendPaymentConfirmation(
     await mailer.sendPaymentConfirmation(user.email);
   } catch (error) {
     console.error('[payment] confirmation email failed after payment was applied:', error);
+    captureAlert('email_send_failure', 'Payment-confirmation email failed to send', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
+ * T019 — the payment-failure counterpart. Same non-blocking, logged-and-
+ * swallowed shape as `sendPaymentConfirmation`: the `PendingPayment` has
+ * already transitioned to FAILED (no credits/plan change occurred) by the
+ * time this runs, so a mail-send failure here must never surface as if the
+ * payment-failure handling itself failed.
+ */
+async function sendPaymentFailureNotice(
+  db: PrismaClient,
+  event: PaymentEvent,
+  mailer: Mailer | undefined,
+): Promise<void> {
+  if (mailer === undefined || event.type !== 'payment.failed') return;
+
+  try {
+    const user = await db.user.findUnique({
+      where: { id: event.userId },
+      select: { email: true },
+    });
+    if (user === null) {
+      console.error(`[payment] cannot send failure notice: user ${event.userId} was not found`);
+      return;
+    }
+    await mailer.sendPaymentFailure(user.email);
+  } catch (error) {
+    console.error('[payment] failure-notice email failed after payment was marked FAILED:', error);
+    captureAlert('email_send_failure', 'Payment-failure notice email failed to send', {
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 
@@ -200,6 +236,9 @@ export async function applyVerifiedPaymentEvent(
     where: { id: event.id, appliedAt: null },
     data: { appliedAt: new Date() },
   });
-  if (finalized.count === 1) await sendPaymentConfirmation(db, event, options.mailer);
+  if (finalized.count === 1) {
+    await sendPaymentConfirmation(db, event, options.mailer);
+    await sendPaymentFailureNotice(db, event, options.mailer);
+  }
   return { applied: finalized.count === 1 };
 }

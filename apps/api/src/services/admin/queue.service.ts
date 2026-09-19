@@ -98,7 +98,24 @@ export class JobNotCancelableError extends Error {
   }
 }
 
-export type InspectableState = 'waiting' | 'active' | 'delayed' | 'failed' | 'completed';
+/**
+ * T029/T030 gap fix: `'prioritized'` added alongside `'waiting'`, not in
+ * place of it. Every real job this platform enqueues on the scanPhase/
+ * reverify queues carries an explicit BullMQ `priority`
+ * (`priorityForPlan`), which BullMQ 6.x places in this separate state, never
+ * `waiting` — confirmed directly against a real local queue, not assumed:
+ * `queue.getJobs(['waiting'])` returned nothing for a real priority-bearing
+ * job. `'waiting'` is kept because a job added with no priority at all (not
+ * something this codebase's producers currently do, but not impossible for
+ * a future one) still lands there.
+ */
+export type InspectableState =
+  | 'waiting'
+  | 'prioritized'
+  | 'active'
+  | 'delayed'
+  | 'failed'
+  | 'completed';
 
 export interface AdminJobSummary {
   readonly queue: QueueName;
@@ -112,7 +129,12 @@ export interface AdminJobSummary {
 }
 
 export interface ListJobsInput {
-  /** Defaults to every inspectable state except `completed` — FR-088 names waiting, running, failed. */
+  /**
+   * Defaults to every inspectable state except `completed` — FR-088 names
+   * waiting, running, failed. `'prioritized'` is included in that default:
+   * for these queues, it is what "waiting" actually looks like for the
+   * overwhelming majority of real jobs (see `InspectableState`'s own note).
+   */
   readonly states?: readonly InspectableState[];
   /** Per queue, per state. Bounds response size; defaults to 50. */
   readonly limit?: number;
@@ -168,7 +190,8 @@ export function createQueueAdminService(
 
   return {
     async listJobs(input = {}): Promise<{ readonly jobs: readonly AdminJobSummary[] }> {
-      const states = input.states ?? (['waiting', 'active', 'delayed', 'failed'] as const);
+      const states =
+        input.states ?? (['waiting', 'prioritized', 'active', 'delayed', 'failed'] as const);
       const limit = input.limit ?? 50;
 
       const jobs: AdminJobSummary[] = [];

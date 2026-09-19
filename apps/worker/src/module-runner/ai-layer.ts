@@ -37,6 +37,7 @@ import { containCapabilityCall } from '@webaudit/capability-sdk';
 import type { CapabilityInput } from '@webaudit/capability-sdk';
 import { MODULE_PROMPTS, type ModuleInsight } from '../prompts/index.js';
 import type { ResolvedCapability } from './resolve.js';
+import { captureAlert } from '../config/monitoring.js';
 
 export interface AiLayerOptions {
   readonly module: ModuleType;
@@ -219,6 +220,11 @@ export async function runAiLayer(options: AiLayerOptions): Promise<AiLayerOutcom
   });
 
   if (!result.ok) {
+    captureAlert('ai_chain_exhaustion', 'Every AI provider in the chain was exhausted', {
+      task: prompt.task,
+      scanId: options.scanId,
+      attempts: result.invocations.length,
+    });
     return {
       ran: false,
       reason: 'CHAIN_EXHAUSTED',

@@ -2,6 +2,13 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
+import { AuthProvider } from '../../components/auth/AuthProvider.js';
+
+// SettingsPage calls useRouter() directly -- see dashboard-shell.test.ts for
+// the established pattern this matches.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: () => undefined, push: () => undefined }),
+}));
 
 const { changePassword, disconnectGithub, getMe, updateProfile } = vi.hoisted(() => ({
   getMe: vi.fn().mockResolvedValue({
@@ -32,7 +39,7 @@ afterEach(() => {
 
 describe('settings profile', () => {
   it('loads the authenticated profile and saves the display name', async () => {
-    const mounted = await renderClient(createElement(SettingsPage));
+    const mounted = await renderClient(createElement(AuthProvider, null, createElement(SettingsPage)));
     expect(mounted.html()).toContain('value="Ada Lovelace"');
     expect(mounted.html()).toContain('ada@example.com');
 
@@ -54,7 +61,7 @@ describe('settings profile', () => {
   });
 
   it('submits a logged-in password change through the settings control', async () => {
-    const mounted = await renderClient(createElement(SettingsPage));
+    const mounted = await renderClient(createElement(AuthProvider, null, createElement(SettingsPage)));
     const changeButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent === 'Change password',
     ) as HTMLButtonElement;
@@ -68,7 +75,7 @@ describe('settings profile', () => {
   });
 
   it('renders live plan and GitHub state and disconnects the connected account', async () => {
-    const mounted = await renderClient(createElement(SettingsPage));
+    const mounted = await renderClient(createElement(AuthProvider, null, createElement(SettingsPage)));
     expect(mounted.html()).toContain('ada@example.com · Free plan');
     expect(mounted.html()).toContain('ada-lovelace');
     expect(mounted.html()).not.toContain('khalid-a');

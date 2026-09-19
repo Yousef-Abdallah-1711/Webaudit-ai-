@@ -5,16 +5,19 @@
  * jsdom. `BillingPage`'s `useEffect` fetch never fires under static render,
  * so this asserts the pre-data shell — which is exactly where FR-078's two
  * distinct credit lifetimes and the always-present refund line have to be
- * legible.
+ * legible. `PricingPage` renders `PublicHeader`, which calls `useAuth()`
+ * directly (added after this file was first written) -- wrapped in
+ * `AuthProvider` the same way `dashboard-shell.test.ts` established.
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import BillingPage from '../../app/(dashboard)/billing/page';
 import PricingPage, { TierGrid, CostTable } from '../../app/(public)/pricing/page';
+import { AuthProvider } from '../../components/auth/AuthProvider';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(AuthProvider, null, element));
 }
 
 describe('BillingPage', () => {

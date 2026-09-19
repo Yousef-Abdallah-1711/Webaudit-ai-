@@ -19,7 +19,8 @@ import express, { type Express, type NextFunction, type Request, type Response }
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors, { type CorsOptions } from 'cors';
-import type { PrismaClient } from '../prisma/generated/client/index.js';
+import { Prisma, type PrismaClient } from '../prisma/generated/client/index.js';
+import { captureAlert } from './config/monitoring.js';
 import type { Mailer } from './services/services-types.js';
 import { createConsoleMailer } from './services/email/mailer.js';
 import { createResendMailerFromEnv } from './services/email/resend-mailer.js';
@@ -443,8 +444,27 @@ export function createApp(deps: AppDeps): Express {
 
   // A stack trace in a response body is exactly the kind of finding this
   // product reports on its customers. Never leak internals.
-  app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     console.error('[api] unhandled', err);
+    // T023 — every unhandled route error is `api_error_rate`; a Prisma
+    // connection-layer failure specifically (not just any query error) is
+    // additionally tagged `db_connectivity_failure` so the two conditions
+    // are separately alertable/dashboardable, matching FR-M03's own split.
+    const dbConnectivityCodes = new Set(['P1001', 'P1002', 'P1008', 'P1017']);
+    const isDbConnectivityError =
+      err instanceof Prisma.PrismaClientInitializationError ||
+      (err instanceof Prisma.PrismaClientKnownRequestError && dbConnectivityCodes.has(err.code));
+    if (isDbConnectivityError) {
+      captureAlert('db_connectivity_failure', 'Database connection failed', {
+        path: req.path,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    } else {
+      captureAlert('api_error_rate', 'An unhandled API route error occurred', {
+        path: req.path,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
     res.status(500).json({ error: { code: 'INTERNAL', message: 'Something went wrong.' } });
   });
 

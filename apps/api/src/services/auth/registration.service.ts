@@ -6,6 +6,7 @@ import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import type { Mailer } from '../services-types.js';
 import { generateToken, hashPassword, hashToken } from './crypto.js';
 import { grantFreeAllocation } from '../credits/grant.js';
+import { captureAlert } from '../../config/monitoring.js';
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -35,6 +36,28 @@ export async function supersedeEmailTokens(
 /** Emails are matched case-insensitively; the stored form is lowercase. */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/**
+ * FR-E02/quickstart row 9: a mail transport outage must never fail the
+ * operation it is attached to -- the account (or the resend) already exists
+ * by the time this runs, so a thrown/rejected send here must be logged, not
+ * propagated, exactly like `apply-payment-event.ts`'s established pattern
+ * for payment-confirmation email.
+ */
+async function sendVerificationBestEffort(
+  mailer: Mailer,
+  email: string,
+  token: string,
+): Promise<void> {
+  try {
+    await mailer.sendVerification(email, token);
+  } catch (error) {
+    console.error(`[auth] verification email to ${email} failed to send:`, error);
+    captureAlert('email_send_failure', 'Verification email failed to send', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 export async function register(
@@ -69,7 +92,7 @@ export async function register(
     return created;
   });
 
-  await mailer.sendVerification(email, raw);
+  await sendVerificationBestEffort(mailer, email, raw);
   return { userId: user.id };
 }
 
@@ -116,5 +139,5 @@ export async function resendVerification(
     });
   });
 
-  await mailer.sendVerification(email, raw);
+  await sendVerificationBestEffort(mailer, email, raw);
 }

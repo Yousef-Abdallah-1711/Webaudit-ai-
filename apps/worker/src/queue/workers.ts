@@ -53,6 +53,7 @@ import {
 } from './queues.js';
 import type { PhaseJobData, QuestionnaireTimeoutJobData } from '../orchestrator/phases.js';
 import type { ReverifyJobData } from '../reverify/runner.js';
+import { captureAlert } from '../config/monitoring.js';
 
 /**
  * The job names the producers in this repository actually use.
@@ -76,6 +77,10 @@ export const JOB_NAMES = {
   billingSweep: 'billing-sweep',
   /** `apps/api`'s `teardown-producer.ts` -> `maintenanceQueue.add('workspace-teardown', ...)`. */
   workspaceTeardown: 'workspace-teardown',
+  /** `telemetry-archive-scheduler.ts` → `maintenanceQueue.add('telemetry-archive', …, { repeat })` (T032). */
+  telemetryArchive: 'telemetry-archive',
+  /** `cost-alerts-scheduler.ts` → `maintenanceQueue.add('cost-alerts-sweep', …, { repeat })` (T028). */
+  costAlertsSweep: 'cost-alerts-sweep',
 } as const;
 
 export type KnownJobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -144,6 +149,10 @@ export const paymentExpirySweepJobSchema = z
 
 /** The repeatable billing sweep (renewals, renewal warnings, retention) carries no per-run data. */
 export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep') }).strict();
+/** The repeatable FR-C01-C04 cost-alert sweep carries no per-run data. */
+export const costAlertsSweepJobSchema = z
+  .object({ kind: z.literal('cost-alerts-sweep') })
+  .strict();
 
 /**
  * A cancelled scan's workspace, torn down out-of-band from `apps/api` (T104 gap
@@ -218,6 +227,10 @@ export interface JobHandlers {
   readonly reverify?: (data: ReverifyJobData, job: JobRef) => Promise<void>;
   /** A cancelled scan's workspace, torn down out-of-band from apps/api (T104 gap fix). */
   readonly workspaceTeardown?: (data: { scanId: string }, job: JobRef) => Promise<void>;
+  /** The repeatable telemetry-partition archive sweep (T032). Carries no data. */
+  readonly telemetryArchive?: () => Promise<void>;
+  /** The repeatable FR-C01-C04 cost-alert sweep (T028). Carries no data. */
+  readonly costAlertsSweep?: () => Promise<void>;
 }
 
 /**
@@ -313,6 +326,25 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       return;
     }
 
+    case JOB_NAMES.telemetryArchive: {
+      const handler = handlers.telemetryArchive;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T032', 'The telemetry-partition archive sweep');
+      }
+      await handler();
+      return;
+    }
+
+    case JOB_NAMES.costAlertsSweep: {
+      costAlertsSweepJobSchema.parse(job.data);
+      const handler = handlers.costAlertsSweep;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T028', 'The FR-C01-C04 cost-alert sweep');
+      }
+      await handler();
+      return;
+    }
+
     case JOB_NAMES.reverify: {
       const data = reverifyJobSchema.parse(job.data) as ReverifyJobData;
       const handler = handlers.reverify;
@@ -403,6 +435,12 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
         `[worker] job failed: ${job?.queueName ?? 'unknown'}/${job?.name ?? 'unknown'} ` +
           `id=${job?.id ?? '-'}: ${error.message}`,
       );
+      captureAlert('queue_processing_failure', 'A queued job failed permanently', {
+        queueName: job?.queueName,
+        jobName: job?.name,
+        jobId: job?.id,
+        error: error.message,
+      });
     });
 
   const reportError =
@@ -412,6 +450,9 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
       // trouble (usually the Redis connection), not one job failing, and the two
       // want different alerts.
       console.error(`[worker] worker error: ${error.message}`);
+      captureAlert('redis_connectivity_failure', 'A BullMQ worker reported a connection error', {
+        error: error.message,
+      });
     });
 
   const build = (

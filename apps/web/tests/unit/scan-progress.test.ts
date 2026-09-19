@@ -29,6 +29,8 @@ vi.mock('../../lib/api.js', () => ({
         { module: 'SECURITY', state: 'COMPLETE' },
         { module: 'SEO', state: 'DEGRADED' },
       ],
+      quotedCredits: 80,
+      chargedCredits: 80,
     },
   }),
 }));
@@ -40,6 +42,31 @@ vi.mock('../../lib/realtime.js', () => ({
 }));
 
 describe('ScanProgress', () => {
+  it('shows the queue position for a queued scan', async () => {
+    const api = await import('../../lib/api.js');
+    vi.mocked(api.getScan).mockResolvedValueOnce({
+      scan: {
+        id: 'scan-1',
+        state: 'QUEUED',
+        requestedModules: ['SECURITY'],
+        startedAt: null,
+        moduleResults: [],
+        queuePosition: 3,
+        quotedCredits: 80,
+        chargedCredits: 80,
+      },
+    });
+    const { ScanProgress } = await import('../../components/scan/ScanProgress.js');
+    const mounted = await renderClient(
+      createElement(ScanProgress, { scanId: 'scan-1', hostname: 'example.com' }),
+    );
+    try {
+      expect(mounted.html()).toContain('Position in queue: 3');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
   it("shows each area's real state from the REST resync, even when no realtime event ever arrives", async () => {
     const { ScanProgress } = await import('../../components/scan/ScanProgress.js');
     const mounted = await renderClient(

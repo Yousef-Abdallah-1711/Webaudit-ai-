@@ -344,6 +344,57 @@ describe('real Paymob provider: webhook/redirect security and concurrency', () =
     expect(mailer.paymentConfirmations()).toEqual([{ email: CREDS.email }]);
   });
 
+  it('email matrix row 8: a duplicate delivery of the same failed payment sends the failure notice exactly once', async () => {
+    // T019 decided the failure-notice email is in scope, which puts
+    // quickstart.md's row 8 ("sent exactly once per failed payment") back in
+    // play -- T041 had previously marked it correctly N/A pending that
+    // decision. `applyVerifiedPaymentEvent`'s BillingEvent-id finalization
+    // gate is the same mechanism the confirmation test right above already
+    // proves for `payment.succeeded`; this is that same proof for
+    // `payment.failed`, not assumed from the shared code path.
+    const { token, userId } = await signIn();
+    const orderId = await startCreditCheckout(token, userId, 10);
+    const { payload, hmac } = signedTransaction(orderId, { amountCents: 100, success: false });
+
+    await request(app).post('/webhooks/billing').set('hmac', hmac).send(payload).expect(200);
+    await request(app).post('/webhooks/billing').set('hmac', hmac).send(payload).expect(200);
+
+    expect(mailer.paymentFailures()).toEqual([{ email: CREDS.email }]);
+    expect(mailer.paymentConfirmations()).toHaveLength(0);
+    expect(await testDb.creditLot.count({ where: { userId, source: 'PURCHASE' } })).toBe(0);
+  });
+
+  it('row 19: calling /billing/credits/purchase with a real provider wired only starts a checkout, never grants credits directly', async () => {
+    // `billing-production-gate.test.ts` already proves the dev-only direct-
+    // grant path 404s in production when NO real provider is configured.
+    // This complements it for the case this whole file exercises: a real
+    // provider IS configured, so the route takes the
+    // initiateCreditPurchaseCheckout branch -- proving that branch itself
+    // never mints credits is the other half of "no route grants credits
+    // without a verified BillingEvent."
+    const { token, userId } = await signIn();
+    await testDb.subscription.upsert({
+      where: { userId },
+      create: {
+        userId,
+        planId: 'pro',
+        status: 'ACTIVE',
+        periodStart: new Date(),
+        periodEnd: new Date(Date.now() + 30 * 86_400_000),
+      },
+      update: {},
+    });
+
+    const res = await request(app)
+      .post('/billing/credits/purchase')
+      .set(auth(token))
+      .send({ credits: 10 });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('checkout.checkoutUrl');
+    expect(await testDb.creditLot.count({ where: { userId, source: 'PURCHASE' } })).toBe(0);
+  });
+
   it('preserves the payment result when its confirmation email cannot be sent', async () => {
     const { token, userId } = await signIn();
     const orderId = await startCreditCheckout(token, userId, 10);

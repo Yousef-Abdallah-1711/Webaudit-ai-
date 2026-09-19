@@ -39,6 +39,7 @@ import {
 import { RedisStore, type RedisReply } from 'rate-limit-redis';
 import { Redis } from 'ioredis';
 import type { NextFunction, Request, Response } from 'express';
+import { captureAlert } from '../config/monitoring.js';
 
 // ─── Tunables ─────────────────────────────────────────────────────────────────
 
@@ -336,6 +337,17 @@ function limitExceeded(label: string) {
     // which endpoint was hit. Deliberately not warnOnce — repeated 429s on a
     // credential path are the signal an operator needs.
     console.warn(`[ratelimit] ${label}: refused ${req.method} ${req.originalUrl}`);
+    if (label === 'strict') {
+      // T023 — the strict limiter guards credential endpoints (login,
+      // register, reset, resend); repeatedly hitting it is exactly
+      // FR-M03's "authentication-failure spikes (possible credential-
+      // stuffing)" signal. The general limiter's own refusals are not this
+      // condition -- they are ordinary traffic shaping, not a security signal.
+      captureAlert('auth_failure_spike', 'Strict rate limit exceeded on a credential endpoint', {
+        method: req.method,
+        path: req.originalUrl,
+      });
+    }
   };
 }
 

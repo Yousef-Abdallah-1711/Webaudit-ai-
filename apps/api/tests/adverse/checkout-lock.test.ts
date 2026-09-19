@@ -104,6 +104,12 @@ describe('checkout initiation lock', () => {
       });
     releaseProvider();
     expect((await first).status).toBe(201);
+
+    // quickstart.md row 18: a double-click "Buy" must not create two
+    // PendingPayment rows for the same intent -- the lock is the decided
+    // mechanism (plan.md), so prove it holds at the DB layer (exactly one
+    // row), not just that the HTTP layer returned 409 for the second request.
+    expect(await testDb.pendingPayment.count()).toBe(1);
   });
 
   it('releases the lock after checkout initialization fails', async () => {

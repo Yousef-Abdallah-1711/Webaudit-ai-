@@ -179,4 +179,28 @@ describe('GET /auth/verify/:token', () => {
     const res = await request(app).get(`/auth/verify/${token}`);
     expect(res.status).toBe(410);
   });
+
+  it('quickstart row 9: registration succeeds even when the verification email fails to send', async () => {
+    mailer.failVerification(new Error('SMTP unavailable'));
+
+    const res = await request(app).post('/auth/register').send(VALID);
+
+    expect(res.status).toBe(201);
+    const user = await testDb.user.findUnique({ where: { email: VALID.email } });
+    expect(user).not.toBeNull();
+    // The account, its free allocation, and the verify token all still exist --
+    // only the send itself failed, which is exactly what row 9 requires.
+    expect(mailer.sent()).toHaveLength(0);
+  });
+
+  it('quickstart row 9: resending verification succeeds even when the email fails to send', async () => {
+    await request(app).post('/auth/register').send(VALID).expect(201);
+    mailer.clear();
+    mailer.failVerification(new Error('SMTP unavailable'));
+
+    const res = await request(app).post('/auth/verify/resend').send({ email: VALID.email });
+
+    expect(res.status).toBe(202);
+    expect(mailer.sent()).toHaveLength(0);
+  });
 });

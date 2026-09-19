@@ -95,3 +95,86 @@ describe('ScanPhaseProducer — the payloads apps/api puts on the phase queue', 
     });
   });
 });
+
+/**
+ * A real bug, found directly against real Redis, not assumed from the code:
+ * every real job this producer enqueues carries an explicit `priority`
+ * (`priorityForPlan` is called at both call sites above), so BullMQ 6.x
+ * always places it in the separate `prioritized` state, never `wait`.
+ * `getWaitingCount()`/`getQueuePosition()` originally queried only `wait`
+ * (`queue.getWaitingCount()`, `queue.getJobs(['waiting'])`) — meaning, for
+ * every job this producer has ever actually enqueued, both always behaved as
+ * if the queue were empty. FR-B01/B02's capacity refusal could never trigger
+ * in production, and T030's queue-position display could never show a real
+ * number. `readiness.premature.test.ts`/`questionnaire.test.ts` never caught
+ * this because both substitute a fake producer for these two methods (the
+ * same gap this file's own header note already flagged for the payload
+ * shape), and `queue-backpressure.test.ts` also uses a fully fake producer
+ * (`getWaitingCount: async () => 1`) rather than a real queue.
+ */
+describe('ScanPhaseProducer — getWaitingCount/getQueuePosition against real prioritized jobs', () => {
+  it('getWaitingCount counts real prioritized jobs, not just the (always-empty, for this producer) plain wait list', async () => {
+    const scanId = `producer-count-${String(Date.now())}`;
+    const before = await producer.getWaitingCount!();
+    const { jobId } = await producer.enqueueFirstPhase({
+      scanId,
+      modules: ['SECURITY'],
+      planQueuePriority: 40,
+    });
+    try {
+      const after = await producer.getWaitingCount!();
+      expect(after).toBe(before + 1);
+    } finally {
+      await (await queue.getJob(jobId))?.remove();
+    }
+  });
+
+  it('getQueuePosition ranks a higher-priority job ahead of one enqueued earlier at a lower priority', async () => {
+    const stamp = String(Date.now());
+    const freeScanId = `producer-pos-free-${stamp}`;
+    const businessScanId = `producer-pos-business-${stamp}`;
+    const jobIds: string[] = [];
+    try {
+      // FREE (lower priority number wins) enqueued first...
+      jobIds.push(
+        (
+          await producer.enqueueFirstPhase({
+            scanId: freeScanId,
+            modules: ['SECURITY'],
+            planQueuePriority: 40,
+          })
+        ).jobId,
+      );
+      // ...BUSINESS enqueued after it must still be reported ahead of it.
+      jobIds.push(
+        (
+          await producer.enqueueFirstPhase({
+            scanId: businessScanId,
+            modules: ['SECURITY'],
+            planQueuePriority: 10,
+          })
+        ).jobId,
+      );
+
+      const freePos = await producer.getQueuePosition!(freeScanId);
+      const businessPos = await producer.getQueuePosition!(businessScanId);
+      expect(freePos).not.toBeNull();
+      expect(businessPos).not.toBeNull();
+      // The exact relationship this task's manual step names: a priority-tier
+      // request submitted mid-burst still lands ahead of an already-queued
+      // free-tier one — proven against a real BullMQ ordering call, not
+      // asserted from the code alone (a naive `getJobs(['waiting'])` /
+      // `getJobs(['prioritized'])` without `asc: true` reports the opposite
+      // of real processing order — confirmed directly before this fix).
+      expect(businessPos!).toBeLessThan(freePos!);
+    } finally {
+      for (const jobId of jobIds) {
+        await (await queue.getJob(jobId))?.remove();
+      }
+    }
+  });
+
+  it('getQueuePosition returns null for a scan with no matching job on the queue', async () => {
+    await expect(producer.getQueuePosition!('no-such-scan-anywhere')).resolves.toBeNull();
+  });
+});

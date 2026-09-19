@@ -54,6 +54,7 @@ import {
 import { purchaseCredits } from '../services/billing/purchase.service.js';
 import type { PaymentProvider } from '../services/billing/payment-provider.js';
 import { applyVerifiedPaymentEvent } from '../services/billing/apply-payment-event.js';
+import { captureAlert } from '../config/monitoring.js';
 import type { Mailer } from '../services/email/mailer.js';
 
 const eventSchema = z.object({
@@ -127,6 +128,9 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
           }
         } catch (error) {
           console.error('[webhook] provider payment event failed to apply:', error);
+          captureAlert('payment_webhook_failure', 'Real-provider webhook failed to apply', {
+            error: error instanceof Error ? error.message : String(error),
+          });
           res.status(500).json({
             error: { code: 'WEBHOOK_APPLY_FAILED', message: 'Failed to apply webhook effect.' },
           });
@@ -241,6 +245,10 @@ export function webhooksRoutes(db: PrismaClient, deps: WebhookRoutesDeps = {}): 
         // than re-throwing. BillingEvent.payload still allows manual
         // reconciliation for anything this doesn't cover.
         console.error(`[webhook] ${event.type} (${event.id}) failed to apply:`, error);
+        captureAlert('payment_webhook_failure', 'Generic webhook effect failed to apply', {
+          eventType: event.type,
+          error: error instanceof Error ? error.message : String(error),
+        });
         res.status(500).json({
           error: { code: 'WEBHOOK_APPLY_FAILED', message: 'Failed to apply webhook effect.' },
         });

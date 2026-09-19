@@ -8,8 +8,30 @@ import { generateToken, hashPassword, hashToken } from './crypto.js';
 import { normalizeEmail, supersedeEmailTokens } from './registration.service.js';
 import { TokenInvalidError } from './registration.service.js';
 import { revokeAllSessions } from './session.service.js';
+import { captureAlert } from '../../config/monitoring.js';
 
 const RESET_TTL_MS = 60 * 60 * 1000; // 1 hour — shorter than verification
+
+/**
+ * FR-E02/quickstart row 9: the reset token already exists by the time this
+ * runs, so a mail transport outage must be logged, never propagated -- the
+ * same established pattern as `apply-payment-event.ts`'s payment-confirmation
+ * send and `registration.service.ts`'s verification send.
+ */
+async function sendPasswordResetBestEffort(
+  mailer: Mailer,
+  email: string,
+  token: string,
+): Promise<void> {
+  try {
+    await mailer.sendPasswordReset(email, token);
+  } catch (error) {
+    console.error(`[auth] password-reset email to ${email} failed to send:`, error);
+    captureAlert('email_send_failure', 'Password-reset email failed to send', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
 
 /** Always resolves. The caller must not learn whether an address is registered. */
 export async function requestReset(
@@ -37,7 +59,7 @@ export async function requestReset(
     });
   });
 
-  await mailer.sendPasswordReset(email, raw);
+  await sendPasswordResetBestEffort(mailer, email, raw);
 }
 
 export async function completeReset(

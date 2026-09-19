@@ -3,6 +3,7 @@ import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import type { PaymentProvider } from '../services/billing/payment-provider.js';
 import { applyVerifiedPaymentEvent } from '../services/billing/apply-payment-event.js';
 import type { Mailer } from '../services/email/mailer.js';
+import { captureAlert } from '../config/monitoring.js';
 
 function one(value: unknown): string | undefined {
   return typeof value === 'string' ? value : Array.isArray(value) ? one(value[0]) : undefined;
@@ -131,6 +132,9 @@ export function paymentReturnRoutes(
       );
     } catch (error) {
       console.error('[payment-return] failed to apply verified payment event:', error);
+      captureAlert('payment_webhook_failure', 'Redirect-path payment event failed to apply', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       res.status(500).json({
         error: { code: 'PAYMENT_APPLY_FAILED', message: 'Failed to apply payment event.' },
       });

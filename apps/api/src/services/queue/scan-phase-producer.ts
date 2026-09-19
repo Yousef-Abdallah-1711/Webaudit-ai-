@@ -73,11 +73,38 @@ export function createScanPhaseProducer(
   });
 
   return {
+    /**
+     * Found and fixed as a real bug, not assumed correct from the original
+     * implementation: every real job this producer enqueues carries an
+     * explicit `priority` (`priorityForPlan`, below), so BullMQ (6.x) always
+     * places it in the separate `prioritized` state, never `waiting` — a
+     * job with a priority is never counted by `getWaitingCount()`, which
+     * only counts the plain `wait` list. Confirmed directly against a real
+     * local Redis/BullMQ queue: `getWaitingCount()` returned 0 with real
+     * prioritized jobs actually queued. Left as originally written, this
+     * would mean FR-B01/B02's capacity refusal (`create-scan.ts`'s
+     * `queueDepth >= queueCapacity`) could never trigger in production
+     * regardless of real queue depth.
+     */
     async getWaitingCount(): Promise<number> {
-      return queue.getWaitingCount();
+      return queue.getJobCountByTypes('waiting', 'prioritized');
     },
+    /**
+     * Same root cause as `getWaitingCount` above, plus a second, independent
+     * bug in the original `getJobs(['waiting'])` approach: even filtered to
+     * the right state(s), `getJobs()`'s default ordering does not reflect
+     * true dequeue order for prioritized jobs — confirmed directly (not
+     * assumed) against a real queue that a lower-`priority`-number job
+     * enqueued *after* several higher-number ones was listed *last* by a
+     * default `getJobs(['prioritized'])` call, while a real `Worker`
+     * draining the same queue correctly processed it *first*. The `asc:
+     * true` fourth argument is what makes `getJobs()`'s own ordering match
+     * real processing order — verified the same way. Real `scanPhase` jobs
+     * are never enqueued without a priority (both call sites below always
+     * pass one), so only the `prioritized` state is queried.
+     */
     async getQueuePosition(scanId: string): Promise<number | null> {
-      const jobs = await queue.getJobs(['waiting']);
+      const jobs = await queue.getJobs(['prioritized'], 0, -1, true);
       const index = jobs.findIndex((job) => job.id?.startsWith(`${scanId}:`));
       return index < 0 ? null : index + 1;
     },

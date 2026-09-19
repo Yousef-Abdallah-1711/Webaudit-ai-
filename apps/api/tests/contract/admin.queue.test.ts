@@ -114,6 +114,28 @@ describe('GET /queue', () => {
     expect(job?.data).toMatchObject({ scanId: 'scan_admin_1' });
   });
 
+  it('lists a real, priority-bearing scan job by default — a real bug until this fix (found this session)', async () => {
+    // Every scan job `apps/api` actually enqueues carries an explicit
+    // `priority` (`priorityForPlan`, scan-phase-producer.ts), which BullMQ
+    // 6.x places in a separate `prioritized` state, never `waiting` — unlike
+    // the test right above, which (like the original bug) adds a job with
+    // no priority at all and so was never representative of a real one.
+    // Before `queue.routes.ts`/`queue.service.ts` added `'prioritized'`,
+    // this exact case returned zero jobs — confirmed directly, not assumed.
+    const { token } = await makeOperatorToken();
+    await inspectionQueues[QUEUE_NAMES.scanPhase].add(
+      'phase',
+      { scanId: 'scan_admin_priority', phase: 'RUNNING_PHASE_1', modules: ['SECURITY'], attempt: 1 },
+      { jobId: 'scan_admin_priority:RUNNING_PHASE_1:1', priority: 40 },
+    );
+
+    const res = await request(app).get('/queue').set(auth(token)).expect(200);
+    const body = res.body as { jobs: { id: string; state: string }[] };
+    const job = body.jobs.find((j) => j.id === 'scan_admin_priority:RUNNING_PHASE_1:1');
+    expect(job).toBeDefined();
+    expect(job?.state).toBe('prioritized');
+  });
+
   it('filters to only the requested states', async () => {
     const { token } = await makeOperatorToken();
     await inspectionQueues[QUEUE_NAMES.reverify].add(

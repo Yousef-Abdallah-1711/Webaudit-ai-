@@ -104,6 +104,20 @@ export function createSmtpMailer(options: SmtpMailerOptions): Mailer {
         content,
       );
     },
+    sendPaymentFailure(email) {
+      const content = renderEmail({
+        title: 'Your WebAudit AI payment did not go through',
+        bodyHtml:
+          '<p>Your payment could not be completed, so no credits or plan change were applied. ' +
+          'No charge was made. You can try again from your billing page.</p>',
+      });
+      return send(
+        email,
+        'payment-failure',
+        'Your WebAudit AI payment did not go through',
+        content,
+      );
+    },
     sendReadinessAchieved(email, mail: ReadinessAchievedMail) {
       const content = renderEmail({
         title: `${mail.targetName} is ready to ship`,

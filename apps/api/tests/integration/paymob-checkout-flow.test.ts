@@ -170,8 +170,11 @@ describe('Paymob checkout fulfillment matrix (T012)', () => {
     expect(mailer.paymentConfirmations()).toHaveLength(1);
   });
 
-  it('row 7: a declined payment closes as FAILED without credits or email', async () => {
-    const { token, userId } = await signIn();
+  it('row 7: a declined payment closes as FAILED without credits, and sends a failure notice, not a confirmation', async () => {
+    // T019 (decided): a failed payment gets a failure-notice email, never a
+    // confirmation -- the two are mutually exclusive by event type
+    // (apply-payment-event.ts's sendPaymentConfirmation/sendPaymentFailureNotice).
+    const { token, userId, email } = await signIn();
     const orderId = await startCredits(token, userId);
     const { payload, hmac } = signed(orderId, { success: false });
     await request(app).post('/webhooks/billing').set('hmac', hmac).send(payload).expect(200);
@@ -181,6 +184,7 @@ describe('Paymob checkout fulfillment matrix (T012)', () => {
     ).toBe('FAILED');
     expect(await testDb.creditLot.count({ where: { userId, source: 'PURCHASE' } })).toBe(0);
     expect(mailer.paymentConfirmations()).toHaveLength(0);
+    expect(mailer.paymentFailures()).toEqual([{ email }]);
   });
 
   it('row 8: a cancellation transition is terminal and grants nothing', async () => {

@@ -17,6 +17,7 @@
 import { act, createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
+import { AuthProvider } from '../../components/auth/AuthProvider.js';
 import type * as ApiModule from '../../lib/api.js';
 
 const push = vi.fn();
@@ -24,11 +25,19 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push }),
 }));
 
+// `RegisterPage` renders inside `AuthProvider` (it redirects away if already
+// signed in), so every export `AuthProvider` itself calls must be mocked too
+// -- not just `register` -- matching `auth-route-protection.test.ts`'s
+// established full-mock pattern for any test mounting a component under it.
 vi.mock('../../lib/api.js', async (importOriginal) => {
   const actual = await importOriginal<typeof ApiModule>();
   return {
     ...actual,
     register: vi.fn().mockResolvedValue({ message: 'Check your email to confirm your address.' }),
+    getMe: vi.fn().mockRejectedValue(new Error('no session')),
+    refreshAccessToken: vi.fn().mockRejectedValue(new Error('no session')),
+    setAccessToken: vi.fn(),
+    subscribeToUnauthorized: vi.fn(() => () => undefined),
   };
 });
 
@@ -41,7 +50,7 @@ describe('RegisterPage', () => {
   it('never sends an empty-string name — omits it entirely when the optional Name field is left blank', async () => {
     const api = await import('../../lib/api.js');
     const { default: RegisterPage } = await import('../../app/(auth)/signup/page.js');
-    const mounted = await renderClient(createElement(RegisterPage));
+    const mounted = await renderClient(createElement(AuthProvider, null, createElement(RegisterPage)));
     try {
       const emailInput = document.querySelector('input[type="email"]');
       const passwordInput = document.querySelector('input[type="password"]');
@@ -78,7 +87,7 @@ describe('RegisterPage', () => {
   it('still sends a real, filled-in name', async () => {
     const api = await import('../../lib/api.js');
     const { default: RegisterPage } = await import('../../app/(auth)/signup/page.js');
-    const mounted = await renderClient(createElement(RegisterPage));
+    const mounted = await renderClient(createElement(AuthProvider, null, createElement(RegisterPage)));
     try {
       const nameInput = document.querySelector('input[type="text"]');
       const emailInput = document.querySelector('input[type="email"]');

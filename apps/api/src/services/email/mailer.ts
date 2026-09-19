@@ -33,6 +33,8 @@ export interface Mailer {
   sendVerification(email: string, token: string): Promise<void>;
   sendPasswordReset(email: string, token: string): Promise<void>;
   sendPaymentConfirmation(email: string): Promise<void>;
+  /** T019 — "your payment did not go through; no credits/plan change was made." */
+  sendPaymentFailure(email: string): Promise<void>;
   /** FR-072 / SC-014 — the "you reached a go verdict" email. */
   sendReadinessAchieved(email: string, mail: ReadinessAchievedMail): Promise<void>;
   /** FR-078 — the pre-renewal "you are about to lose N plan credits" warning. */
@@ -54,6 +56,10 @@ export function createConsoleMailer(): Mailer {
     },
     sendPaymentConfirmation(email) {
       console.warn(`[mail] payment confirmation sent to ${email}`);
+      return Promise.resolve();
+    },
+    sendPaymentFailure(email) {
+      console.warn(`[mail] payment failure notice sent to ${email}`);
       return Promise.resolve();
     },
     sendReadinessAchieved(email, mail) {

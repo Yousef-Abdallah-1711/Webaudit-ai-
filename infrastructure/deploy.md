@@ -58,6 +58,33 @@ route is enough to confirm the process is up; there is no dedicated `/health` ro
 
 ---
 
+## Connection pooling (PgBouncer) — T295/T036
+
+`apps/api/src/db/client.ts`'s own connection-limit comment named the intended shape before this was
+built ("A pooler (PgBouncer in transaction mode) replaces this arithmetic; set the limit explicitly
+then."). That design is now real, not just anticipated:
+
+**What's built and verified** (`infrastructure/docker-compose.yml`'s `pgbouncer` service,
+profile-gated so it never starts by accident — `docker compose --profile pooled up -d`):
+PgBouncer 1.25, `pool_mode = transaction`, sitting in front of the same `postgres` service, on host
+port `6452`. Verified for real, not assumed: a live Prisma client, and separately a full `apps/api`
+process booted with `DATABASE_URL` pointed at `postgresql://webaudit:webaudit_dev@localhost:6452/webaudit?connection_limit=1&pgbouncer=true`,
+both ran real queries through it successfully (`SELECT`, a real `user.count()`, and a live `GET
+/health` returning `200`) before being torn down.
+
+**The one thing this does not decide** — matching T295's own "the design is buildable now;
+deploying it needs real infrastructure provisioning" framing — is the real *production* topology:
+self-hosted PgBouncer co-located with `apps/api`/`apps/worker` (what the docker-compose service
+above stands in for), vs. a managed pooler (RDS Proxy, Neon's/Supabase's built-in pooler, a
+cloud-provider equivalent). That choice depends on which managed Postgres this deployment actually
+uses, which is not decided in this repository. Whichever is chosen, the application-side contract is
+the same: point `DATABASE_URL` at the pooler's host/port instead of Postgres directly, and set
+`DATABASE_CONNECTION_LIMIT=1` (transaction-mode pooling means the pooler — not Prisma — is what
+multiplexes many app connections onto few real Postgres ones; `client.ts`'s `withPoolSettings`
+already honors an explicit `connection_limit` in the URL over its own un-pooled default).
+
+---
+
 ## `apps/worker` — BullMQ consumer, same database, no public port
 
 **What it is.** Runs the scan orchestrator: dequeues phase jobs, executes capabilities, writes results,

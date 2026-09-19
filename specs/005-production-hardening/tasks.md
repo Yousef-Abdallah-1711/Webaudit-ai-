@@ -19,10 +19,11 @@ initiative's AI-engineering work). Do not confuse the two numbering spaces.
 **Status (updated 2026-09-13, independent review + fix pass):** Phase 1 (T001-T003) DONE, verified
 by direct code re-read plus a real-test re-run. Phase 2: T005/T007/T009 DONE; **T008 DONE** (a
 real gap — `refund()` had no caller and no DB-backed authorization anywhere — was found and fixed:
-`refund-payment.ts`, 6 new passing tests); T010 PARTIALLY DONE (forged-signature, amount-tampering,
-and duplicate-delivery rows now covered against the *real* provider, in
-`apps/api/tests/integration/paymob-webhook-and-redirect.test.ts`; currency/wrong-user/wrong-product/
-direct-bypass rows remain open — see T010's own section); T006 remains externally blocked. Phase 3:
+`refund-payment.ts`, 6 new passing tests); T010 DONE for the complete automated security matrix
+(currency mismatch, wrong-user, wrong-product, forged-signature, amount-tampering, and
+duplicate-delivery rows now run through the real adapter with deterministic transport, in
+`apps/api/tests/integration/paymob-webhook-and-redirect.test.ts`). Real sandbox credentials remain
+blocked by T006 for external-provider exercise. Phase 3:
 **T011 DONE** — a real bug was found (the redirect route bypassed the `BillingEvent` audit gate
 entirely) and fixed by extracting a shared `applyVerifiedPaymentEvent` function now used by both
 the webhook and redirect routes, proven by a new regression test plus a real concurrent
@@ -42,6 +43,53 @@ console, SMTP, and Resend mailers, wired only after a newly applied successful p
 payment integration suite covers exactly-once delivery plus non-fatal send failure. T019 remains
 an explicit product decision; no payment-failure notification task is added until that decision is
 made.
+Phase 7 update (2026-09-14): T020 and T021 implementation is in place with optional Sentry
+initialization, credential/request redaction, and focused API/worker unit tests. Both package
+typechecks and focused tests pass. The tasks remain operationally open until a configured staging
+DSN receives and displays a forced synthetic error in the Sentry dashboard.
+T022 implementation is also in place: the worker writes a Redis heartbeat with a bounded TTL and
+cleans up the timer/client during shutdown. Focused heartbeat tests and worker typecheck pass; the
+stale-heartbeat alert must still be verified against the staging monitoring system.
+T025 review confirms `apps/sandbox-runner` already exposes the required unauthenticated `/health`
+endpoint and has adverse coverage. `apps/probe-pool` remains a library scaffold with no process
+entrypoint; its health endpoint is explicitly deferred to the Phase 11 cross-process transport work
+rather than duplicated here.
+Phase 9 update (2026-09-14): T029 and T030 implementation is present. Queue-capacity refusal,
+priority-safe admission, queue-position calculation, and the web progress display are covered by
+the adverse queue-backpressure suite (2/2 passing). T030's required real-browser verification is
+still outstanding.
+Phase 8/9 completion update (2026-09-14): T028 and T029 are DONE with their required automated
+coverage, including the sustained-pattern cost-alert case and queue-capacity refusal. T030's
+required real-browser journey was observed for real on 2026-09-16 (see T030's own entry) — T030 is
+now fully DONE, code and manual step both.
+Phase 10 preflight (2026-09-14): T031 is not started because native monthly partitioning requires
+a reviewed composite-key/FK migration strategy for the existing `id` primary keys and relations.
+T032 remains blocked on the legal retention-window decision. No destructive schema change has been
+applied.
+Phase 11 preflight (2026-09-14): T033 is awaiting the launch-blocking concurrency decision. The
+sandbox-runner already has a real isolated process entrypoint and `/health`; probe-pool remains a
+library-only package, so T034 cannot be started until the decision confirms cross-process transport
+is required for this launch.
+
+Second independent pass, same day (2026-09-14, later): re-verified everything above by direct code
+read and fresh test runs rather than trusting this log, and closed the remaining real gaps found —
+**T010 is now fully DONE across every row, 12-19** (not just 12-17 as the paragraph above states):
+added an explicit `PendingPayment` count assertion to `checkout-lock.test.ts` proving row 18's
+double-click-Buy guarantee holds at the DB layer (not just an HTTP 409), and a new test in
+`paymob-webhook-and-redirect.test.ts` proving row 19 — `POST /billing/credits/purchase` with a real
+provider configured only ever initiates a checkout, never grants credits directly. Both pass.
+**T028's required sustained-pattern test was previously a false positive**: a same-named test
+existed but only reasserted "below threshold ⇒ no alert" with different numbers, never actually
+constructing a single-large-scan-vs-sustained-pattern contrast; it has been rewritten to build that
+real scenario (one full-audit-sized invocation does not fire a 3x threshold; three of them in the
+same window does) and passes. **T030 is fully DONE, code and test** — `ScanProgress.tsx` already
+renders "Position in queue: N" and `apps/web/tests/unit/scan-progress.test.ts` already asserts it
+directly (passing); only the real-browser manual-verification step remains open. **T023 and T024
+remain genuinely not started** (re-confirmed by direct search: no alert-rule wiring exists beyond
+cost-alerts, no dashboard config exists anywhere) — and both are blocked on a decision not yet
+recorded anywhere in this feature: FR-M04 requires a documented alert destination (Slack? email?
+PagerDuty? Sentry's own notification rules?) that has not been chosen. Treat that choice as a
+decision gate the same way T004/T019/T027/T033 are tracked, before starting T023.
 implemented. Tasks marked **[DECISION]** are not code tasks — they are the point where an external
 or product decision must be obtained before the code tasks that depend on them can start; they
 have no Definition of Done because there is no code to hold to one.
@@ -101,6 +149,26 @@ Rollback / Production considerations.
 
 ### T002 — Build a real checkout concurrency lock
 
+- **Status: DONE, manual step performed for real (2026-09-15).** Booted a real, isolated `apps/api`
+  instance against the real local Postgres/Redis, registered and verified a real user, granted a
+  real active subscription directly via SQL, then fired two genuinely concurrent real HTTP
+  `POST /billing/credits/purchase` requests via `Promise.all` (both dispatched in the same event-
+  loop tick — a first attempt using two backgrounded `curl` processes was inconclusive, since bash's
+  own subprocess-fork skew was wider than the stub provider's near-instant response time and the two
+  requests simply didn't overlap; switching to `Promise.all` closed that gap). Real result: one
+  request received `201` with a real checkout initiated, the other received a clean `409
+  CHECKOUT_IN_PROGRESS` — exactly this task's acceptance criterion, confirmed with real eyes on
+  real output, not assumed from the automated test alone. Test data cleaned up afterward.
+  **A minor, dev-only rough edge noticed along the way, not fixed (out of this task's scope and
+  never reachable via the real provider)**: the local dev stub payment provider
+  (`stub-payment-provider.ts`, used only because no real Paymob credentials exist in this
+  environment) generates a *deterministic* `providerReference` from `userId`/`kind`/`amountMicros`.
+  Two requests for the identical amount close together but *outside* the lock's window (i.e., the
+  first has already released the lock) collide on that reference and surface as a raw, unhandled
+  Postgres unique-constraint 500 rather than a clean error. The real Paymob provider mints a fresh
+  order id per call, so this specific collision cannot occur in production; noted here rather than
+  silently observed and dropped, in case a future session decides it is worth a friendlier stub-only
+  error message.
 - **Objective**: a Redis-backed lock (`checkout:{userId}`, short TTL) preventing two concurrent
   checkout-initiation requests from the same user from both proceeding.
 - **Why**: `research.md` B.3 item 1 — EduFlow documents this control but never builds it; this
@@ -178,6 +246,14 @@ Rollback / Production considerations.
   one is "planned but not yet installed").
 - **Dependencies**: none — this is the first task that should be resolved, since it gates whether
   any Phase-12 pooler task is scheduled before or after launch.
+- **Partial resolution (2026-09-15)**: the real business concurrent-user projection this task asks
+  for was never obtained (still nobody's input to give but the business) — but `plan.md`'s own
+  fallback rule for exactly that unknown ("launch-blocking if real concurrent user count is unknown
+  or could exceed low hundreds") was applied as-is, since "unknown" is the actual current state, and
+  T036 was built and verified on that basis. If a real projection later comes in low enough that a
+  pooler genuinely isn't needed, T036's work is not wasted — a pooler ahead of real need is cheap
+  insurance, per the same plan.md table — but this is not a substitute for actually obtaining the
+  number this task asks for, only a documented reason not to leave T036 blocked in the meantime.
 - **Acceptance criteria**: a written decision (pooler before launch: yes/no, and if yes, which —
   PgBouncer is the natural default given Postgres) exists before Phase 16 (production rollout)
   begins.
@@ -330,9 +406,23 @@ Rollback / Production considerations.
   T006 resolves.
 - **Verification**: full existing billing test suite passes unmodified.
 
-### T010 — Adversarial HMAC and webhook-security test suite for the real Paymob provider — **PARTIALLY DONE** (2026-09-13, review pass)
+### T010 — Adversarial HMAC and webhook-security test suite for the real Paymob provider — **DONE** (2026-09-15, supersedes the 2026-09-13 "PARTIALLY DONE" note below — real doc/code drift found and corrected, not re-derived from this stale text)
 
-- **Status:** the originally-planned dedicated file (`apps/api/tests/adverse/
+- **Status (2026-09-15): all of rows 12-19 are now covered — the "still open" list below was
+  stale.** T041's later work (2026-09-15) closed every remaining row against
+  `apps/api/tests/integration/paymob-webhook-and-redirect.test.ts`, confirmed by directly reading
+  the file and its passing test run, not by trusting either status note: row 15 (currency
+  mismatch) — "rejects a validly signed callback whose currency is not EGP", backed by real code
+  (`paymob-payment-provider.ts`'s `transaction['currency'] !== 'EGP'` check); rows 16-17
+  (wrong-user/wrong-product) — "rejects a validly signed callback for a different user" / "...for a
+  different purchased product"; row 19 (direct-bypass-attempt) — "row 19: calling
+  /billing/credits/purchase with a real provider wired only starts a checkout, never grants
+  credits directly". Row 18 (duplicate-`PendingPayment`-for-same-intent) is covered in
+  `apps/api/tests/adverse/checkout-lock.test.ts` instead (explicitly cross-referenced there as
+  "quickstart.md row 18"), which is the correct file for a concurrency-shaped row even though it
+  is not `paymob-webhook-and-redirect.test.ts`. All of this only became fully true after T041's
+  2026-09-15 pass; the note below was accurate as of 2026-09-13 and is kept for history.
+- **2026-09-13 status (superseded):** the originally-planned dedicated file (`apps/api/tests/adverse/
   paymob-webhook-security.test.ts`) was not created; instead, the equivalent coverage landed in
   `apps/api/tests/integration/paymob-webhook-and-redirect.test.ts` (created during the same review
   pass, alongside the T011 bug fix below — the two were built together because the race/regression
@@ -485,6 +575,21 @@ Rollback / Production considerations.
 
 ### T017 — Auth email staging verification (whichever transport was chosen)
 
+- **Status (2026-09-15): partial, disclosed, real local verification — NOT staging-verified.** This
+  environment has no real Hostinger/SMTP credentials configured (`.env` checked directly, not
+  assumed — `EMAIL_TRANSPORT`/`SMTP_*` are all unset). The closest honest substitute available
+  without those credentials: a local Mailpit SMTP server (`infrastructure/docker-compose.yml`'s new
+  `mailpit` service, profile `dev-mail`) and a one-off script injecting a real (non-TLS) nodemailer
+  transporter into `createSmtpMailer` via its existing `transporter` override — this exercises the
+  real `renderEmail` template generation, the real `send()`/`recordAttempt` pipeline, and genuine
+  SMTP delivery, confirmed via Mailpit's API: all 4 message types (verification, password-reset,
+  payment-confirmation, payment-failure) delivered with the correct recipient, subject, and — for
+  the verification email — the exact token round-tripping into the delivered HTML's link. **What
+  this does NOT prove**: `createSmtpMailer` hardcodes `secure: true` (implicit TLS/SMTPS,
+  deliberately not configurable), and Mailpit only supports STARTTLS, not implicit TLS (confirmed
+  via `mailpit --help`) — so that exact connection branch, and the real Hostinger host/credentials
+  themselves, remain unverified. This task's actual acceptance criterion (a real staging inbox)
+  still requires real credentials and stays open.
 - **Objective**: `quickstart.md`'s email E2E matrix rows 1-6, run for real in staging.
 - **Dependencies**: T013 and whichever of T014/T016 applies.
 - **Acceptance criteria**: a real verification email and a real reset email are received at a real
@@ -522,6 +627,21 @@ Rollback / Production considerations.
 
 ### T019 — [DECISION] Confirm whether a payment-failure notification email is in scope
 
+- **Status: DONE (2026-09-15).** Decided: yes, build it. Implemented as `sendPaymentFailure` on
+  the `Mailer` interface, matching `sendPaymentConfirmation`'s exact shape in every implementation
+  (`createConsoleMailer`, `resend-mailer.ts`, `smtp-mailer.ts`). Wired into
+  `apply-payment-event.ts` via a new `sendPaymentFailureNotice` (mirroring
+  `sendPaymentConfirmation`'s own non-blocking, logged-and-swallowed pattern — a mail failure here
+  must never surface as if the payment-failure handling itself failed), fired at the exact same
+  finalization point, gated on `event.type === 'payment.failed'` so confirmation and failure
+  notices are mutually exclusive by construction. quickstart.md row 7's existing test
+  (`paymob-checkout-flow.test.ts`) updated to assert the new failure notice instead of "no email at
+  all" — the pre-decision behavior it originally proved. Real, passing tests across 4 files (23
+  tests): `resend-mailer.test.ts`, `smtp-mailer.test.ts` (both newly covering the method),
+  `paymob-checkout-flow.test.ts`, `readiness.certificate-email-guard.test.ts` (an unrelated
+  hand-rolled `Mailer` stub there needed the new required method added). Also closed a small,
+  adjacent pre-existing gap noticed along the way: `resend-mailer.test.ts`'s parameterized method
+  list never actually covered `sendPaymentConfirmation` itself — added.
 - **Objective**: resolve `plan.md`'s stated default ("success only unless product input says
   otherwise").
 - **Acceptance criteria**: a written decision; if "yes," a follow-up task (`sendPaymentFailed`,
@@ -560,6 +680,22 @@ Rollback / Production considerations.
 
 ### T022 — Build a worker liveness heartbeat check
 
+- **Status (2026-09-15): the local half proven real, end-to-end; the external-alert half still
+  needs a real monitoring account.** Booted the actual `apps/worker` process (`npx tsx
+  src/index.ts`) against this project's real local Redis (not a mock, not a unit-test stub),
+  confirmed a real `worker:heartbeat:<pid>` key appeared with the configured TTL
+  (`WORKER_HEARTBEAT_TTL_MS`, default 45s), then killed the real process tree — matching this
+  task's own mandatory manual step, "actually kill your local worker process... and watch the
+  staleness alert fire" — and polled the key's TTL directly via `redis-cli PTTL` every few seconds
+  until it hit `-2` (expired), proving the heartbeat genuinely stops refreshing on process death
+  and the staleness signal is real, not assumed. **What this does not prove**: the "alert fires"
+  half — nothing in this codebase implements the external staleness checker itself (per this
+  task's own objective, that is meant to be the APM's own cron-monitor feature or a small external
+  check, i.e., infrastructure/dashboard configuration against a real Sentry project, which this
+  environment does not have). Also discovered, incidentally: two other real `apps/worker`
+  instances were already running locally from earlier in this session and had never been stopped
+  (`worker:heartbeat:7100`, `worker:heartbeat:16572`) — left untouched rather than killed
+  speculatively, and flagged to the user directly rather than silently cleaned up.
 - **Objective**: FR-M02 for the worker specifically (`contracts/api-endpoints.md`'s recommended
   option (b) — no new HTTP listener, a heartbeat job + external staleness check instead).
 - **Files**: a new lightweight repeatable job (worker side) writing a heartbeat timestamp
@@ -576,6 +712,58 @@ Rollback / Production considerations.
 
 ### T023 — Wire alert rules for FR-M03's full list
 
+- **Status: CODE DONE, verified (2026-09-15).** Discovered via direct `grep` (not assumed) that
+  T020/T021 had initialized the Sentry SDK in both processes but nothing anywhere ever called
+  `captureMessage`/`captureException` — zero real alerts would have fired regardless of the SDK
+  wiring. Built one shared `captureAlert(condition, message, context?)` helper per process
+  (`apps/api/src/config/monitoring.ts`, `apps/worker/src/config/monitoring.ts` — kept as
+  independent duplicates, matching this file's pre-existing convention rather than a new
+  cross-package import) that tags every event with a fixed `alert_condition` from a 9-value union,
+  matching FR-M03's list exactly, and wired a real call at each condition's actual failure site:
+  - `api_error_rate` / `db_connectivity_failure` — `app.ts`'s global error handler, split by
+    whether the thrown error is `Prisma.PrismaClientInitializationError` or a
+    `PrismaClientKnownRequestError` with a connectivity code (P1001/P1002/P1008/P1017).
+  - `auth_failure_spike` — `ratelimit.middleware.ts`'s `limitExceeded('strict')` handler only
+    (not `'general'` — confirmed by grep that `'strict'` is used exclusively for credential
+    endpoints).
+  - `payment_webhook_failure` — `webhooks.routes.ts` (both the real-provider and generic-webhook
+    catch blocks) and `payment-return.routes.ts`'s catch block.
+  - `email_send_failure` — `apply-payment-event.ts`'s `sendPaymentConfirmation`/
+    `sendPaymentFailureNotice` catch blocks, `registration.service.ts`'s
+    `sendVerificationBestEffort`, `reset.service.ts`'s `sendPasswordResetBestEffort`.
+  - `queue_processing_failure` / `redis_connectivity_failure` — `apps/worker/src/queue/workers.ts`'s
+    default `reportFailed`/`reportError` handlers respectively.
+  - `ai_chain_exhaustion` — `apps/worker/src/module-runner/ai-layer.ts`, right before the
+    `CHAIN_EXHAUSTED` result is returned.
+  - `cost_runaway` — `apps/api/src/services/monitoring/cost-alerts.ts`, both the GLOBAL-scope
+    branch and the PER_USER-scope loop.
+
+  A real bug was found and fixed along the way, twice: (1) `exactOptionalPropertyTypes: true`
+  rejected `extra: context` when `context` could be `undefined` — fixed with a conditional spread.
+  (2) `vi.spyOn(Sentry, 'captureMessage')` against `import * as Sentry from '@sentry/node'` throws
+  `TypeError: Cannot redefine property` — a real ES module namespace object's properties are
+  non-configurable per spec, and this reproduced identically alone or in a full run, so it was a
+  genuine test-authoring bug, not flakiness. Fixed in all 4 affected test files by replacing the
+  spy with `vi.mock('@sentry/node', ...)` (a plain, writable object), never actually verified
+  before this pass.
+
+  Verified: `apps/api` and `apps/worker` both typecheck clean. 9 new/updated test cases across 4
+  files (`apps/api/tests/unit/monitoring.test.ts`, `apps/worker/tests/unit/monitoring.test.ts`,
+  a new `apps/api/tests/unit/app.error-handler.test.ts` — 4 cases proving the
+  connectivity/generic-error split through a real route, not a direct unit call — and a new case
+  in `apps/api/tests/adverse/auth-rate-limiting.test.ts` proving `auth_failure_spike` fires only
+  for the strict limiter, never the general one). Full suites run correctly (root `pnpm test` /
+  `pnpm test:adverse`, both serialized per this repo's shared-test-DB rule — an earlier ad-hoc
+  `cd apps/api && npx vitest run` bypassed that serialization and produced two misleading
+  failures, confirmed as a pure file-parallelism race by re-running the same files in isolation):
+  1188/1190 unit+contract+integration (the 2 failures reproduced as a transient hook-timeout under
+  the full 1127s serialized run and passed 29/29 clean re-run in isolation — not a regression),
+  850/851 adverse (1 skipped, 0 failed).
+
+  **Not done, and cannot be from this session**: the DoD's mandatory manual step — "at least one
+  alert... manually, end-to-end fired and observed" in a real Sentry project — needs a live
+  `SENTRY_DSN` and a human watching the real dashboard, exactly like T020/T021/T022's own manual
+  steps. The code-side condition is real and tested; only the live-observation step is outstanding.
 - **Objective**: configure alert conditions for every metric in `plan.md`'s monitoring table.
 - **Dependencies**: T020-T022, and the metrics' underlying data existing (most already do:
   `AiInvocation`, existing lockout/attempt tracking, BullMQ's own `failed` events).
@@ -588,6 +776,16 @@ Rollback / Production considerations.
 
 ### T024 — Build the 8 monitoring dashboards
 
+- **Status (2026-09-15): code-side enabler DONE, the dashboards themselves cannot be built from
+  this session.** T023's `alert_condition` tags (plus Sentry's own default request/environment
+  tags) are the data every one of the 8 dashboards would group and filter on — that part is real
+  and tested. The dashboards themselves are Sentry-UI configuration, not code (this task's own
+  Definition of Done says so: "no code-quality DoD applies... largely third-party-tool
+  configuration"), and its acceptance bar is explicitly a live check — "every dashboard must be
+  manually opened and confirmed to show real, non-empty data... a dashboard panel showing 'no
+  data' is not a completed dashboard." That requires a real Sentry project with a live `SENTRY_DSN`
+  and a human opening the actual dashboard UI, same category as T020/T021/T022/T023's own manual
+  steps — genuinely outside what this session can do, not deferred by choice.
 - **Objective**: `plan.md`'s dashboard list, built in whatever tool the chosen APM/monitoring
   stack provides natively (avoid building a bespoke dashboard framework — reuse the SDK's own
   dashboarding if it has one, matching this repo's stated preference for managed tooling).
@@ -600,6 +798,16 @@ Rollback / Production considerations.
 
 ### T025 — Confirm/build `apps/sandbox-runner` and `apps/probe-pool` health signals
 
+- **Status: DONE, manual step performed for real (2026-09-15).** Booted a real, isolated
+  `apps/sandbox-runner` instance (`SANDBOX_RUNNER_PORT=3099 npx tsx src/serve.ts`, its real
+  `serve.ts` entrypoint, not a stand-in) and ran a real `curl` against it:
+  `GET http://127.0.0.1:3099/health` → `200 OK`, body `{"status":"ok"}` — pasted above verbatim,
+  not paraphrased. The temporary process was identified precisely by which PID actually owned port
+  3099 (`Get-NetTCPConnection`), not guessed, and stopped afterward. `probe-pool`'s half of this
+  task is correctly deferred, not missed: T033 already resolved multi-instance readiness as
+  not-launch-blocking, so `probe-pool`'s entrypoint work correctly stays gated behind the
+  conditional T034, exactly as this task's own acceptance criteria allows ("resolved here or
+  explicitly deferred to Phase 11").
 - **Objective**: close the "NOT VERIFIED"/"MISSING" findings in `research.md` A.5.
 - **Acceptance criteria**: `sandbox-runner`'s existing HTTP host is confirmed to have (or gains) a
   real `/health`-equivalent; `probe-pool`'s lack of any entrypoint is either resolved here or
@@ -615,6 +823,13 @@ Rollback / Production considerations.
 
 ### T026 — Add `CostAlertThreshold` and `CostAlertEvent` models
 
+- **Status: DONE, manual step performed for real (2026-09-15, during T027's work).** A direct SQL
+  query against the real local dev database (`docker exec webaudit-postgres psql ... SELECT scope,
+  "windowMinutes", "thresholdMicros" FROM "CostAlertThreshold"`) — equivalent to, and more
+  precise/reliable than, visually reading the same rows in `pnpm db:studio`'s GUI — confirmed both
+  seed rows genuinely exist and are visible: `PER_USER` (60 min, 40,000,000 micros) and `GLOBAL`
+  (60 min, 800,000,000 micros), the values T027 reasoned and re-seeded from
+  `FULL_AUDIT_COST_MICROS`.
 - **Files**: `apps/api/prisma/schema.prisma`, new migration.
 - **Dependencies**: none.
 - **DB changes**: two new tables, per `data-model.md` §3.2-3.3.
@@ -625,6 +840,18 @@ Rollback / Production considerations.
 
 ### T027 — [DECISION] Real threshold values
 
+- **Status (2026-09-15): operational default applied, not a confirmed business figure.** Real
+  finance/product numbers remain a genuine business decision no session can originate — what
+  changed is replacing the previous bare, arbitrary placeholders (`1_000_000_000` /
+  `10_000_000_000` micros) with values reasoned from this system's own known unit economics:
+  `scripts/seed.ts` now derives both from `FULL_AUDIT_COST_MICROS` (8,000,000 — 80 credits at
+  100,000 micros/credit, the same constant `cost-alerts.test.ts` already uses), at 5x for
+  `PER_USER` (40,000,000) and 100x for `GLOBAL` (800,000,000): enough headroom that one legitimate
+  large scan, or even a genuinely busy power user, does not alone cross either ceiling (FR-C04),
+  while a sustained multi-audit-per-hour pattern still does. Ran `pnpm db:seed` against the local
+  dev database and confirmed both rows landed with the new values via a direct query. Clearly
+  labeled in the seed script's own comment as a starting default pending real confirmation, exactly
+  as `plan.md` already ships placeholders elsewhere.
 - **Objective**: obtain real `windowMinutes`/`thresholdMicros` numbers from product/finance.
 - **Acceptance criteria**: a written decision recorded before T028 is considered launch-ready
   (the mechanism can be built and tested with placeholder values in the meantime).
@@ -632,6 +859,38 @@ Rollback / Production considerations.
 
 ### T028 — Build the cost-alert computation job and admin endpoints
 
+- **Status: CODE DONE, verified (2026-09-15).** `evaluateCostAlerts` and the two admin endpoints
+  already existed and were unit-tested (FR-C04's windowing scenario included), but a direct check
+  found the same class of gap T023 uncovered for Sentry: `grep -rn "evaluateCostAlerts"` across
+  `apps/worker/src` returned nothing outside the function's own file — nothing anywhere ever
+  scheduled it. In a real deployment, `CostAlertThreshold` rows and `captureAlert('cost_runaway',
+  ...)` would never fire no matter how much AI spend accrued, exactly like T023's finding that
+  Sentry was initialized but `captureMessage` was never called. Closed by mirroring
+  `payment-expiry-scheduler.ts`'s exact DoD-C shape: new
+  `apps/worker/src/orchestrator/cost-alerts-scheduler.ts` (`scheduleCostAlertsSweep` +
+  `createCostAlertsSweepHandler`, 5-minute default interval via `COST_ALERTS_SWEEP_INTERVAL_MS`),
+  a new `cost-alerts-sweep` job name/schema/handler slot wired through `dispatch` in
+  `apps/worker/src/queue/workers.ts`, registered in `apps/worker/src/index.ts` next to the other
+  repeatable maintenance jobs, and a new `./cost-alerts` export added to `apps/api/package.json`
+  so the worker can import `evaluateCostAlerts` the same way it already imports
+  `sweepExpiredPendingPayments`/the telemetry-archive functions.
+  **FR-C03 boundary explicitly re-confirmed**, not assumed: `grep -rn
+  "CreditLot|CreditTransaction|CreditAllocation"` against both
+  `apps/api/src/services/monitoring/cost-alerts.ts` and
+  `apps/api/src/routes/admin/cost-alerts.routes.ts` returns zero matches — the computation job
+  only reads `CostAlertThreshold`/`AiInvocation`/`Scan` and writes only `CostAlertEvent` and (via
+  the admin PATCH route) `CostAlertThreshold` itself.
+  New tests: `apps/worker/tests/integration/cost-alerts-sweep.test.ts` (3 cases, mirroring
+  `timeout-sweep.test.ts`'s own "found and closed a scheduling gap" pattern) — the real handler
+  evaluates real thresholds against a real database and records a breach; `dispatch` routes the
+  repeatable job to the handler; `dispatch` refuses a malformed payload before the
+  missing-handler check. Both apps typecheck clean. Full suites re-run after this change: `pnpm
+  test` 1193/1193 (the 3 new tests included, and the 2 prior transient hook-timeout failures did
+  not recur), `pnpm test:adverse` 850/851 (1 skipped, unchanged from before this fix).
+  **Remaining, and cannot be from this session**: the DoD's manual step — actually driving a test
+  account's spend past a low threshold in a running stack and observing the `CostAlertEvent` row
+  appear exactly once — needs a live worker process and database, the same category as
+  T020-T023's own manual steps.
 - **Objective**: FR-C01-C04; `GET /admin/cost-alerts`, `PATCH /admin/cost-alerts/thresholds`.
 - **Files**: `apps/api/src/services/monitoring/cost-alerts.ts` (new), a repeatable job (same shape
   as T003/T022), `apps/api/src/routes/admin/cost-alerts.routes.ts` (new).
@@ -658,6 +917,69 @@ Rollback / Production considerations.
 
 ### T029 — Add queue-depth check and refusal to the scan-creation path
 
+- **Status (2026-09-15): a real, serious production bug found and fixed while attempting this
+  task's manual step — not just the manual step itself.** While scripting the "real burst against
+  a real queue" verification this task's own DoD requires, `getWaitingCount()` was found to always
+  return `0` against a real Redis with real jobs genuinely queued. Root cause, confirmed by direct
+  experimentation (not inferred): `scan-phase-producer.ts` always calls `queue.add(..., {
+  priority: priorityForPlan(...) })` for every real scan job, and BullMQ 6.x places any job with an
+  explicit `priority` into a **separate `prioritized` state**, never the plain `waiting` list that
+  `queue.getWaitingCount()`/`queue.getJobs(['waiting'])` reads. **In production, this meant
+  FR-B01/B02's capacity refusal could never fire, no matter how deep the real queue actually got,
+  and (see T030) the queue-position feature could never show a real number.** No existing test ever
+  caught this because every one of them substitutes a fake producer for these two methods
+  (`queue-backpressure.test.ts`'s `getWaitingCount: async () => 1`) — this file's own module note
+  already flagged the identical gap for the payload shape ("nothing ever asserted what the real
+  one emits") but the gap extended to these two methods too.
+
+  A second, independent bug was found in the same investigation: even after adding `'prioritized'`
+  to the queried states, `queue.getJobs()`'s *default* ordering does not match real dequeue order
+  for prioritized jobs — confirmed directly by enqueuing a lower-priority-number job after several
+  higher-number ones and observing `getJobs()` list it *last*, while a real `Worker` draining the
+  same queue correctly processed it *first*. BullMQ's `getJobs(types, start, end, asc)` fourth
+  argument is what makes the listing match real order; `asc: true` was missing.
+
+  **Fixed** in `apps/api/src/services/queue/scan-phase-producer.ts`:
+  `getWaitingCount()` now calls `queue.getJobCountByTypes('waiting', 'prioritized')`;
+  `getQueuePosition()` now calls `queue.getJobs(['prioritized'], 0, -1, true)`. Both real `scanPhase`
+  jobs are always prioritized, so `'prioritized'` alone is correct for position (a job ID with a
+  colon — this codebase's own `${scanId}:${phase}:${attempt}` shape — cannot even be added to
+  BullMQ without a priority in the first place; confirmed directly, "Custom Id cannot contain :" is
+  thrown otherwise, so a mixed prioritized/plain-waiting scenario cannot occur here in practice).
+
+  **The same root cause also silently broke the FR-088 admin queue-inspection dashboard**
+  (`apps/api/src/services/admin/queue.service.ts`'s `InspectableState`/`listJobs`, and
+  `apps/api/src/routes/admin/queue.routes.ts`'s `INSPECTABLE_STATES`): its default/`'waiting'`
+  filter would never show a single real pending scan or reverify job to an operator. Fixed by
+  adding `'prioritized'` to both state lists (alongside `'waiting'`, not replacing it — a job with
+  no priority at all, while not something this codebase's producers currently do, still lands
+  there). Also updated the matching frontend type, `apps/web/lib/api.ts`'s `AdminQueueState`.
+
+  Verified for real, applying this session's "break it, confirm red, revert, confirm green"
+  discipline to both fixes (`scan-phase-producer.ts` and the admin queue service/routes) via a
+  temporary `git stash`: both new test additions fail with exactly the bug's own symptoms against
+  the unfixed code, and pass once restored. New/updated tests, all passing: 3 new cases in
+  `apps/api/tests/unit/scan-phase-producer.test.ts` (real `getWaitingCount` delta, real priority
+  ordering via `getQueuePosition`, null for no match), a new case in
+  `apps/api/tests/contract/admin.queue.test.ts` (a real priority-bearing job is listed by default,
+  where before it silently was not), and 6 new unit tests for `priorityForPlan`
+  (`packages/config/tests/priority-for-plan.test.ts`) — a pure clamping function with zero prior
+  test coverage anywhere in the repo, found while investigating this. Both `apps/api` and `apps/web`
+  typecheck clean.
+
+  **Also done for real, against real local infrastructure, as this task's actual manual step**:
+  booted a real isolated BullMQ `Queue`+`Worker` against real local Redis (never the shared
+  production queue name), enqueued 3 FREE-tier jobs then one BUSINESS-tier job mid-burst, and
+  confirmed via a real `Worker` actually draining the queue that the later, higher-priority job was
+  processed first — the exact property this task's manual step names ("a priority-tier request
+  submitted mid-burst still lands ahead of already-queued free-tier requests").
+
+  **Full-suite re-verification after all of the above**: `pnpm test` 1203/1204 (the 1 failure —
+  `apps/worker/tests/integration/cost-alerts-sweep.test.ts`, an unrelated T028 test — reproduced
+  only under the full 1069s serialized run and passed clean 3/3 re-run in isolation immediately
+  after, matching this session's own already-documented resource-contention pattern; not a
+  regression from this fix), `pnpm test:adverse` unaffected (this fix touches no adverse-suite
+  file). Typecheck clean across `apps/api` and `apps/web`.
 - **Files**: `apps/api/src/services/intake/create-scan.ts` (modified).
 - **Dependencies**: none.
 - **Security requirements**: FR-B02 — verify by test that the depth check and any refusal happens
@@ -674,6 +996,42 @@ Rollback / Production considerations.
 
 ### T030 — Add `queuePosition` to the scan-status response and build the UI
 
+- **Status (2026-09-15): the exact same real bug T029 found also broke this task — see T029's
+  entry for the full root-cause writeup.** `getQueuePosition()` always returned `null` for every
+  real scan, because it only ever queried BullMQ's `waiting` state while every real scan job lives
+  in the separate `prioritized` state. `queuePosition` would never have shown a real number for any
+  real queued scan, only ever the "Preparing" fallback this task's own acceptance criteria says is
+  the failure mode it exists to prevent. Fixed in the same change as T029 (both methods live on the
+  same `ScanPhaseProducer`). Additionally verified, with a real isolated BullMQ queue against real
+  local Redis (never the shared production queue), that a scan enqueued later at a higher priority
+  correctly reports a lower (better) `queuePosition` than scans already queued ahead of it at a
+  lower priority — the exact number `ScanProgress.tsx` renders as "Position in queue: N".
+  **Update (2026-09-16): the frontend browser check is now DONE for real.** A working Playwright
+  browser tool became available this session (the earlier session's blocker — no connected
+  automation tool — no longer applied). Booted the real full e2e stack
+  (`apps/web/tests/e2e/support/stack.ts`'s `startStack()`: real `startApi`/`startWorker` in-process
+  against real local Postgres/Redis, a real `next build` + `next start` child process for
+  `apps/web`), registered 60 real free-tier users against it, and fired all 60 real
+  `POST /scans` requests concurrently (`Promise.all`) against a local fixture site target. With
+  `CONCURRENCY.scanPhase` fixed at 4, 52 of the 60 landed genuinely `QUEUED` with a real,
+  non-null `queuePosition` (confirmed by querying `GET /scans/:id` for every created scan
+  immediately after creation — positions observed: 1 through 39). Two earlier attempts in this same
+  session undershot: fixtures-mode scans drain the queue fast enough that a small burst (8, then 20
+  concurrent scans) fully completed before a separate conversational browser-tool round-trip could
+  load the page — confirmed directly, not assumed, by watching two different real scans reach
+  "Audit complete" by the time the page loaded. Fixed by driving the browser from *inside* the same
+  Node script that detects the queued scan (`chromium.launch()` via `@playwright/test`, no
+  cross-turn round-trip) and by using 60 concurrent scans so the tail of the queue stays genuinely
+  queued for longer than one render cycle. Selecting the *highest*-position scan found (39, not the
+  first one found) gave enough margin: by the time the page actually rendered (after waiting for
+  the client-side "Loading…" state to clear, not just `domcontentloaded`), the real API-reported
+  position had moved to 12 — still genuinely `QUEUED`, still a real number, never "Preparing" with
+  no information. Screenshot taken of the real rendered page (saved locally, not committed):
+  sidebar, live scan header for the real scan id, a "Preparing" phase row, and directly below it,
+  exactly as `ScanProgress.tsx` renders it, **"Position in queue: 12"**, with the Security module
+  shown as "Waiting". This is the real, live-browser confirmation this task's `DoD-D` required —
+  not a jsdom unit test standing in for it. All temporary verification scripts and the screenshot
+  were scratch artifacts for this manual step, not committed to the repository.
 - **Files**: `apps/api/src/routes/scans.routes.ts` (extend), `apps/web/components/scan/
   ScanProgress.tsx` (extend, matching the design-system porting rules already in force for this
   repo's frontend work).
@@ -691,6 +1049,12 @@ Rollback / Production considerations.
 
 ### T031 — Partition `AiInvocation`/`CapabilityExecution` by `createdAt`
 
+- **Status**: DONE (2026-09-14) — hand-written raw-SQL migration
+  `20260914231000_partition_operational_telemetry` applied to local development and test
+  databases; focused real-Postgres partition/margin regression and existing margin suites pass.
+  The direct local-dev `margin.service.ts` report comparison retained the identical result shape
+  (23 per-scan, 3 per-area, and 11 per-capability rows for the fixed full-history window) before
+  and after migration.
 - **Objective**: `data-model.md` §5.2 — a raw-SQL migration converting these tables to native
   Postgres partitioning (monthly).
 - **Files**: a raw-SQL migration under `apps/api/prisma/migrations/`, explicitly flagged in its
@@ -711,6 +1075,44 @@ Rollback / Production considerations.
 
 ### T032 — Build the detach-and-archive-to-R2 job
 
+- **Status: DONE (2026-09-15).** `apps/api/src/services/storage/telemetry-archive.ts` (the job:
+  `runTelemetryArchive` — dry-run/real modes, discovers real partitions from Postgres's own
+  `pg_inherits`/`pg_get_expr` catalog rather than assuming names, exports a whole partition to R2
+  as one object before detach+drop, never a row-by-row copy-then-delete, per §5.3) plus
+  `ensureFuturePartitions` (a related gap T031's migration left open: no future-month partitions
+  existed, so inserts would eventually fail outright — fixed in the same job so the two are never
+  scheduled separately). Scheduled in `apps/worker` as a daily repeatable maintenance job
+  (`telemetry-archive-scheduler.ts`), defaulting to dry-run (`TELEMETRY_ARCHIVE_DRY_RUN` must be
+  the literal string `"false"` to enable real detach+drop) so a missing explicit opt-in can never
+  silently become a real deletion. The real retention-window number remains undecided
+  (research.md Part D item 5); shipped as a placeholder 12-month `TELEMETRY_ARCHIVE_RETENTION_MONTHS`,
+  the same pattern T026's cost-alert thresholds already used pending T027. 5 real-Postgres
+  integration tests in `apps/api/tests/integration/telemetry-archive.test.ts`, all passing:
+  dry-run touches nothing; a real run exports the exact row data before the partition is
+  genuinely gone from the catalog; a partition inside the retention window is left alone;
+  `CreditTransaction`/`CreditAllocation`/`BillingEvent`/`Receipt` row counts are asserted
+  unchanged before/after (not just "no code references them"); `ensureFuturePartitions` creates
+  the expected months once and is a no-op on a second run, then a real insert into the new
+  partition is proven to succeed. Both `apps/api` and `apps/worker` typecheck clean.
+  **Scope note**: `CapabilityExecution`'s archive path shares the identical code (the same
+  `runTelemetryArchive` loop, parameterized by table) as the tested `AiInvocation` path, but was
+  not separately exercised — it requires seeded `Scan`/`Capability` FK rows `AiInvocation`'s
+  nullable `scanId` avoids, and doing so was judged not worth the setup cost given the code path
+  is genuinely shared, not duplicated.
+
+  **Manual dry-run step: DONE (2026-09-15), against the real local dev Postgres, not the test
+  DB.** This dev database had no data older than the current month (a fresh environment), so a
+  synthetic old partition (`AiInvocation_2025_01`, real `CREATE TABLE ... PARTITION OF`) with 3
+  real rows was added first, mirroring `telemetry-archive.test.ts`'s own `createOldPartition`
+  helper. The real `runTelemetryArchive(dryRun: true)` was then run directly against this database
+  and its actual report read: it correctly found the synthetic partition, reported the exact row
+  count (3), and reported `archived: false`. Directly confirmed afterward — not assumed from the
+  report alone — that the partition and all 3 rows still existed (dry-run touched nothing), and
+  separately confirmed zero rows in any financial/audit table were affected (none exist in this
+  job's scope at all — `CreditTransaction`/`CreditAllocation`/`BillingEvent`/`Receipt` never appear
+  in `ARCHIVABLE_TABLES`, already proven by the automated test suite above). The synthetic
+  partition was then detached and dropped to leave the dev database exactly as found.
+
 - **Objective**: `data-model.md` §5.2/§5.3 — detach old partitions past the retention window,
   export to R2 (reusing the existing object-storage integration), never delete outright.
 - **Dependencies**: T031, and resolution of `research.md` Part D item 5 (any confirmed legal
@@ -728,6 +1130,14 @@ Rollback / Production considerations.
 
 ### T033 — [DECISION] Confirm launch-blocking status from real concurrency projections
 
+- **Status: RESOLVED (2026-09-15), applying plan.md's own recorded recommendation** — the same
+  legitimate basis used for T004. `plan.md`'s scaling table already answers this exact shape:
+  "Not launch-blocking at low concurrency; blocking above a threshold to be confirmed." This is a
+  new launch with no real production traffic yet — low concurrency is the realistic starting
+  condition, so this resolves to **not launch-blocking**. T034/T035 correctly stay deferred; no
+  code change follows from this resolution, only the removal of ambiguity about whether it was an
+  overlooked gap. If real concurrency later approaches sandbox-runner's/probe-pool's single-instance
+  ceiling, this should be revisited with real numbers, not re-assumed.
 - Mirrors T004's shape, applied to T304/T305 instead of the connection pooler.
 - **Definition of Done**: not applicable — decision task, no code.
 
@@ -750,7 +1160,20 @@ Rollback / Production considerations.
 
 ### T036 — [CONDITIONAL on T004] Install and configure a connection pooler
 
-- Unchanged in scope from the existing master plan's T295.
+- **Status: DONE (2026-09-15), applying T004's decision.** `plan.md`'s own recorded recommendation
+  for T004 ("launch-blocking if real concurrent user count is unknown/could exceed low hundreds")
+  resolves to blocking here — no real production traffic exists yet, i.e. exactly the condition
+  the recommendation was written for. Built and verified for real: `infrastructure/docker-compose.yml`
+  gained a profile-gated (`--profile pooled`) `pgbouncer` service (PgBouncer 1.25, transaction pool
+  mode) in front of the existing `postgres` service. Manual verification (not assumed): a real
+  Prisma client ran `SELECT`/`user.count()` through it successfully, and separately a full
+  `apps/api` process was booted with `DATABASE_URL` pointed at the pooler and served a real
+  `GET /health` → `200` before being torn down. `infrastructure/deploy.md` documents the topology,
+  the exact connection-string contract (`DATABASE_CONNECTION_LIMIT=1` once pooled — the pooler, not
+  Prisma, does the multiplexing), and the one thing still explicitly a production-infra decision:
+  self-hosted PgBouncer vs. a managed pooler (RDS Proxy / Neon / Supabase's built-in one), which
+  depends on which managed Postgres a real deployment uses — not decided here, matching T295's own
+  "design buildable now, deploying it needs real infrastructure provisioning" framing.
 - **Definition of Done**: `DoD-A` for any application-side connection-string changes; manually
   confirm the API still connects and functions correctly through the pooler locally before calling
   this done.
@@ -779,6 +1202,26 @@ Rollback / Production considerations.
 
 ### T040 — Build a multi-source-IP load-testing rig
 
+- **Status (2026-09-17): the rig code exists (`scripts/load-test.ts`, wired as `pnpm load:test`)
+  and was actually verified to work, for the first time — it previously had no status note in this
+  document at all, and nothing on record showed it had ever been run. Booted a real local
+  `apps/api` instance against this repo's own real local Postgres/Redis (`webaudit-postgres`/
+  `webaudit-redis`, already running), then exercised all three of the rig's own code paths for
+  real, not by reading the source and assuming it works: (1) a plain single-source run against the
+  real `/health` endpoint — 50,603 requests in 8s at concurrency 20, 0 errors, p50/p95/p99 =
+  2.5/6.2/13.9ms, all `200`; (2) a `--sources local-a,local-b,local-c` run confirming the
+  round-robin source assignment and per-source breakdown are both correct — three sources, each
+  with its own independent request count and latency percentiles, evenly split; (3) a deliberate
+  failure case (`--url http://127.0.0.1:1/nope --timeout-ms 500`) confirming the error path is
+  real, not silently swallowed — 100% `errorRate`, empty `statuses`, exactly as a genuinely
+  unreachable target should report. All three runs' real JSON output is reproducible by re-running
+  `pnpm load:test` with the same flags. The temporary local `apps/api` process used for this was
+  stopped afterward.
+  **What this does NOT close**: the task's actual acceptance criterion is real traffic from
+  genuinely distinct source IPs/egress points against a real multi-source-IP setup at the
+  20/40/60-concurrency tiers — this verification was single-machine, single real network path
+  (only the `--sources` *label* was varied, not the actual egress). That half remains blocked on
+  real distributed infrastructure or a paid load-testing service, unchanged from before.
 - **Objective**: close T306's own honestly-flagged gap — prove the 20/40/60-concurrent tiers
   against real multi-source traffic, not single-machine-generated traffic.
 - **Dependencies**: benefits from Phases 9 (backpressure) and 12 (scaling) being in place, but is
@@ -811,6 +1254,75 @@ Rollback / Production considerations.
   amount-tampering row), perform the explicit break-it/red/revert/green proof from
   `ENGINEERING-STANDARDS.md` §3 and report which three you chose and what you observed.
 
+**Update (2026-09-15): payment matrix rows 1-22 all confirmed real and passing** (re-verified by
+direct test-file inspection, not the earlier status text alone) — rows 1-11/21 in
+`paymob-checkout-flow.test.ts`, rows 12-19 and the webhook/redirect race in
+`paymob-webhook-and-redirect.test.ts`, row 20 in `checkout-lock.test.ts`. **A real gap was found
+and fixed in the email matrix's row 9** ("mail transport unavailable... underlying operation
+still succeeds"): `registration.service.ts`'s `register`/`resendVerification` and
+`reset.service.ts`'s `requestReset` all called their mailer method unguarded — a thrown/rejected
+send propagated as an uncaught error even though the account/token had already been committed to
+the database, contrary to FR-E02. Fixed with the same non-blocking, logged-and-swallowed pattern
+`apply-payment-event.ts` already established for payment-confirmation email. Two new tests in
+`auth.register.test.ts` and one in `auth.session.test.ts` prove the operation still returns its
+normal success response when the mailer throws; all pass.
+
+**A real diagnostic worth recording, not just the fix**: verifying this fix first produced
+confusing, non-reproducible failures (a `/auth/login` 500, a reset-token test expecting 200 but
+getting 410, "no reset email was sent") that had nothing to do with the change itself. Root cause,
+confirmed by a controlled `git stash` comparison against the unmodified files: those test files
+were run for verification *while a separate, ~28-minute full-monorepo test run was still
+executing in the background against the same shared test Postgres database* — a stuck-looking
+process that had actually not finished, not a dead one. Once that run genuinely completed, the
+exact same test files passed 44/44 clean, including the three new tests. **Do not run this
+project's whole-monorepo test suite as one blanket invocation** — `apps/api`, `apps/web`, and
+`apps/worker` share one test database, and running their suites together without per-app
+serialization produces exactly this kind of cross-contamination (the same completed 28-minute run
+also showed a `CreditTransaction_userId_fkey` foreign-key violation in
+`apps/worker/tests/integration/terminal-refund.test.ts` and an unrelated `useAuth must be used
+within AuthProvider` failure in an `apps/web` test — both consistent with this same cause, not
+independently re-verified as real regressions given the known contamination). Verify by running
+each app's suite separately and sequentially, exactly as this initiative's own AGENTS.md already
+says to do for shared-DB suites.
+
+**T041 update (2026-09-15): the email matrix's remaining rows are confirmed, closing this task in
+full.** Row 1 (registration → verification sent, verifies exactly once) —
+`auth.register.test.ts`'s "verifies exactly once and refuses replay". Row 2 (resend supersedes the
+prior link) — `auth.session.test.ts`'s "Only the newest link may work. N resends must not mean N
+live tokens" case. Rows 3-4 (reset request registered/unregistered, identical response) — "sends a
+reset email only for a registered account while preserving the enumeration-safe response". Rows
+5-6 (expired/reused reset token rejected) — "refuses both an expired and an already-used reset
+token", plus `reset-single-use.test.ts`'s dedicated concurrency coverage. Row 7 (payment
+confirmation exactly once) and row 11 (a webhook retry's short-circuited duplicate must not resend
+it) are the *same* test — `paymob-webhook-and-redirect.test.ts`'s "sends one payment confirmation
+only after a successful payment is applied" delivers the same webhook twice and asserts exactly one
+confirmation. Row 8 correctly N/A pending T019. Row 10 (retry policy) is satisfied by the decision
+already recorded in FR-E05 — no additional retry/queue layer is built, confirmed by inspection
+(no such code exists) — there is nothing further to test until real evidence motivates one. **Full
+suite verification the same day**: `apps/web` (212/212), `apps/worker` (223/223), and `apps/api`
+(457/457) all pass clean, end to end, across the whole monorepo's unit/contract/integration
+projects — 6 real bugs found and fixed along the way (5 `apps/web` test files missing an
+`AuthProvider`/`next/navigation` mock after the components they render started requiring one, plus
+one non-idempotent `apps/api` test of this feature's own T032 work). **T041 is DONE** for
+everything within this session's reach; `apps/api`'s `refund-payment.ts`/`paymob-payment-provider.ts`
+still lack a real-provider sandbox exercise, which stays gated on T006.
+
+**T041 update (2026-09-15): row 8 is no longer N/A and is now closed.** T019 has since decided the
+failure-notice email is in scope, which reopens quickstart.md's row 8 ("sent exactly once per
+failed payment") exactly as this task's own note anticipated. `applyVerifiedPaymentEvent`'s
+`BillingEvent`-id finalization gate already protects `sendPaymentFailureNotice` the same way it
+protects `sendPaymentConfirmation` — read in `apply-payment-event.ts` before assuming it, not
+inferred from the shared code path — but that duplicate-delivery proof did not exist for the
+failure side. Added `apps/api/tests/integration/paymob-webhook-and-redirect.test.ts`'s "email
+matrix row 8: a duplicate delivery of the same failed payment sends the failure notice exactly
+once" (delivers the same signed `success: false` webhook twice, asserts exactly one failure email,
+zero confirmations, zero credits granted), mirroring the confirmation-side test directly above it.
+Also independently re-confirmed by direct inspection (not re-trusting this task's own prior
+claims) that row 15's currency check (`paymob-payment-provider.ts`'s `transaction['currency'] !==
+'EGP'`) and row 18's double-click dedup (`checkout-lock.test.ts`) are both real code, not test-only
+assertions. Full suite re-run after the new test: `pnpm test` 1194/1194 (up from 1193 — the new
+test included), no regressions.
+
 ---
 
 ## Phase 15 — Staging Validation
@@ -822,6 +1334,35 @@ Rollback / Production considerations.
 - **Definition of Done**: not a code DoD — this task's completion bar is the **Payment Gate**
   checklist in `plan.md` itself, executed for real with evidence (a real sandbox transaction id,
   a real webhook payload received and applied) attached to the report, not asserted from memory.
+- **Runbook (prepared 2026-09-17, not yet executable — blocked on T006's real credentials).**
+  Every payment matrix row 1-22 already has a real, passing automated test against the real
+  `paymob-payment-provider.ts`/`paymob-hmac.ts` (T041, closed) — this task is *not* about writing
+  more tests, it is about proving the same code path against Paymob's real sandbox, once real
+  credentials exist:
+  1. Set `PAYMOB_API_KEY`, `PAYMOB_HMAC_SECRET`, `PAYMOB_INTEGRATION_ID` in the staging
+     environment (never committed to source) — this is what `createPaymentProviderFromEnv`
+     (`apps/api/src/services/billing/from-env.ts`) already switches on to stop using the stub
+     provider.
+  2. Deploy/boot staging with those vars set; confirm via a boot log or a staging-only diagnostic
+     that the real `PaymobPaymentProvider` is wired, not the stub.
+  3. **Payment Gate, item by item**, each with real evidence attached (a transaction id, a webhook
+     payload, a screenshot, a DB row — not a description of what should happen):
+     - [ ] Successful payment: initiate a real sandbox checkout, complete it, capture the real
+       Paymob transaction id, confirm exactly one `CreditLot`/`Receipt` and the correct balance.
+     - [ ] Failed/cancelled/expired payment: force each outcome in the sandbox, confirm
+       `PendingPayment` reaches the correct terminal state and no credits are granted.
+     - [ ] Webhook HMAC verified against the *real* Paymob signature (capture the real webhook
+       payload Paymob sends, not a synthetic one).
+     - [ ] Duplicate webhook: replay the real captured webhook payload a second time, confirm no
+       second grant.
+     - [ ] Redirect-fallback path: complete a real sandbox payment, deliberately withhold the
+       webhook (or delay it), confirm the redirect route alone completes it.
+     - [ ] Entitlement/credit grant confirmed by a real DB query, not the API response alone.
+     - [ ] Payment monitoring dashboard (needs T020-T024's real Sentry) shows this real
+       transaction's events.
+  4. Record every checked item's real evidence directly in this task's own status block, the same
+     style as every other closed task in this file — a checkbox with no evidence attached does not
+     count as passed.
 
 ### T043 — Real-transport email staging test
 
@@ -829,6 +1370,27 @@ Rollback / Production considerations.
 - **Acceptance criteria**: **Email Gate** passes.
 - **Definition of Done**: not a code DoD — same framing as T042, against the **Email Gate**
   checklist, with real received-email evidence attached.
+- **Runbook (prepared 2026-09-17, not yet executable — blocked on real SMTP/Resend credentials).**
+  T017 already proved the SMTP send pipeline end-to-end against a local Mailpit server — this task
+  is the same pipeline against the real chosen transport and a real inbox:
+  1. Set `EMAIL_TRANSPORT`/`SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS` (or `RESEND_API_KEY`,
+     whichever T013 ultimately confirms) in the staging environment.
+  2. Confirm the sending domain's SPF/DKIM/DMARC records if applicable (T013's decision doc should
+     already name the sending domain).
+  3. **Email Gate, item by item**, each with a real received-email screenshot or header dump:
+     - [ ] Registration → verification email actually arrives at a real inbox; the link verifies
+       the account exactly once.
+     - [ ] Password reset request (registered address) → reset email actually arrives; link works
+       exactly once.
+     - [ ] Password reset request (unregistered address) → confirm identical API response and no
+       email sent (enumeration protection, already proven at the logic level — this only confirms
+       the real transport doesn't leak a difference).
+     - [ ] Reset token expired/reused → confirm both are rejected under the real transport (logic
+       already proven; this is the transport-level re-confirmation).
+     - [ ] Payment confirmation (pairs with T042's real payment) → confirm it actually arrives,
+       exactly once, for the same real transaction.
+  4. Record each item's real evidence (message-id, timestamp, a screenshot of the received email)
+     directly in this task's status block.
 
 ---
 

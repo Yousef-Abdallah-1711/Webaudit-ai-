@@ -338,6 +338,20 @@ describe('token supersession on resend (M4)', () => {
     ]);
   });
 
+  it('quickstart row 9: the reset request still succeeds (enumeration-safe response) even when the email fails to send', async () => {
+    mailer.failPasswordReset(new Error('SMTP unavailable'));
+
+    const res = await request(app).post('/auth/forgot-password').send({ email: CREDS.email });
+
+    expect(res.status).toBe(202);
+    // The reset token was still created server-side -- only the send failed --
+    // but the mailer never recorded a successful "sent" entry for it.
+    expect(mailer.sent().filter((mail) => mail.kind === 'reset')).toEqual([]);
+    await expect(
+      testDb.emailToken.count({ where: { purpose: 'reset', usedAt: null } }),
+    ).resolves.toBeGreaterThan(0);
+  });
+
   it('refuses both an expired and an already-used reset token without another password change', async () => {
     await request(app).post('/auth/forgot-password').send({ email: CREDS.email }).expect(202);
     const expired = mailer.lastResetToken();

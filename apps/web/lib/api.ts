@@ -1019,7 +1019,16 @@ export function getAdminAuditLog(
 
 // ─── Admin: queue (US7, T209) ───────────────────────────────────────────────
 
-export type AdminQueueState = 'waiting' | 'active' | 'delayed' | 'failed' | 'completed';
+// T029/T030 gap fix (apps/api's `InspectableState`): `'prioritized'` added to
+// match what the backend can now actually report — every real scan/reverify
+// job carries a BullMQ priority, which puts it in this state, not `waiting`.
+export type AdminQueueState =
+  | 'waiting'
+  | 'prioritized'
+  | 'active'
+  | 'delayed'
+  | 'failed'
+  | 'completed';
 
 export interface AdminJobSummary {
   readonly queue: string;

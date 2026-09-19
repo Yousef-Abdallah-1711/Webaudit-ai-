@@ -13,7 +13,8 @@
  * verified. This file boots the limiter for real — in-memory store, no Redis
  * dependency — against the actual `/auth/*` routes.
  */
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import * as Sentry from '@sentry/node';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import {
@@ -22,6 +23,15 @@ import {
 } from '../../src/middleware/ratelimit.middleware.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
+
+// `import * as Sentry` is a real ES module namespace object, whose properties
+// are non-configurable per spec — `vi.spyOn` throws "Cannot redefine
+// property" against it. Mocking the whole module replaces it with a plain,
+// writable object instead (see apps/api/tests/unit/monitoring.test.ts).
+vi.mock('@sentry/node', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@sentry/node')>();
+  return { ...actual, captureMessage: vi.fn(() => 'event-id') };
+});
 
 const mailer = createCapturingMailer();
 let limiters: RateLimiters;
@@ -231,5 +241,37 @@ describe('the general limiter covers everything else, including authenticated ro
     for (let i = 0; i < 20; i += 1) {
       await request(app).get('/health').expect(200);
     }
+  });
+});
+
+describe('T023 — auth_failure_spike is scoped to the strict limiter only', () => {
+  it('a credential-endpoint refusal raises the alert; a general-endpoint refusal does not', async () => {
+    vi.mocked(Sentry.captureMessage).mockClear();
+    const app = createApp({ db: testDb, mailer, rateLimiters: limiters });
+
+    // Exhaust the general limiter (5) on a non-credential route first, from
+    // its own client address — this must NOT be tagged auth_failure_spike, it
+    // is ordinary traffic shaping. A distinct address keeps this from also
+    // spending the *credential* client's general-limiter budget below, which
+    // would otherwise refuse every /auth/login attempt before the strict
+    // limiter is ever reached (the general limiter runs ahead of it in
+    // app.ts) and mask the condition this test exists to prove.
+    for (let i = 0; i < 6; i += 1) {
+      await request(app).get('/auth/me').set('X-Forwarded-For', '203.0.113.9');
+    }
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+
+    // Now exhaust the strict limiter (3) on a credential route, from the
+    // default (different) client address.
+    for (let i = 0; i < 4; i += 1) {
+      await request(app).post('/auth/login').send({ email: CREDS.email, password: 'x' });
+    }
+
+    expect(Sentry.captureMessage).toHaveBeenCalledWith(
+      'Strict rate limit exceeded on a credential endpoint',
+      expect.objectContaining({ tags: { alert_condition: 'auth_failure_spike' } }),
+    );
+    // Exactly one refusal happened on the strict limiter (the 4th attempt).
+    expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
   });
 });

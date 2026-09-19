@@ -36,7 +36,20 @@ export interface AdminQueueRoutesDeps {
   readonly service?: QueueAdminService;
 }
 
-const INSPECTABLE_STATES = ['waiting', 'active', 'delayed', 'failed', 'completed'] as const;
+// T029/T030 gap fix: every real job this platform enqueues on the scanPhase/
+// reverify queues carries an explicit BullMQ `priority` (`priorityForPlan`),
+// which puts it in the separate `prioritized` state, never `waiting` —
+// confirmed directly against a real queue. Without `prioritized` here, an
+// operator filtering to `waiting` (or taking the default) would never see a
+// single real pending scan, no matter how many were genuinely queued.
+const INSPECTABLE_STATES = [
+  'waiting',
+  'prioritized',
+  'active',
+  'delayed',
+  'failed',
+  'completed',
+] as const;
 
 const listQuery = z.object({
   states: z

@@ -2,20 +2,27 @@
  * T242 — the usage and profile (settings) screens.
  *
  * Same discipline as core-components.test.ts: `renderToStaticMarkup`, no
- * jsdom. Unlike `dashboard-shell.test.ts`, neither page needs
- * `next/navigation` mocked — `UsagePage` has no hooks at all, and
- * `SettingsPage`'s `useTheme()` (from `app/theme.tsx`) already degrades
- * safely with no `window` present, the same guarantee `theme.test.ts`
- * covers directly.
+ * jsdom. `UsagePage` has no hooks at all. `SettingsPage`'s `useTheme()`
+ * (from `app/theme.tsx`) already degrades safely with no `window` present,
+ * the same guarantee `theme.test.ts` covers directly -- but `SettingsPage`
+ * now also calls `useRouter()` and `useAuth()` directly (added after this
+ * file was first written), so it needs the same `next/navigation` mock and
+ * `AuthProvider` wrapper `dashboard-shell.test.ts` already established for
+ * exactly this "expected router to be mounted" invariant.
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import UsagePage from '../../app/(dashboard)/usage/page';
 import SettingsPage from '../../app/(dashboard)/settings/page';
+import { AuthProvider } from '../../components/auth/AuthProvider';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: () => undefined, push: () => undefined }),
+}));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(AuthProvider, null, element));
 }
 
 describe('UsagePage', () => {
