@@ -4,6 +4,13 @@
 **Scope:** Registration, login, password reset, account settings, email infrastructure, input/injection safety, and readiness to serve ~1,000,000 users/month.
 **Method:** Direct code inspection (file:line citations throughout — nothing in this report is assumed or guessed).
 
+> **SUPERSEDED (2026-09-20, per `reports/auth-security-review.md` §Q):** the codebase has moved on
+> since this snapshot. Specific claims below that no longer hold: a `name` field now exists on `User`
+> (`schema.prisma`); `PATCH /auth/me` performs a real profile update; `POST /auth/change-password` is
+> real and wired; real email delivery exists via SMTP (Hostinger) and Resend, selected by
+> `EMAIL_TRANSPORT`, not console-only. Kept below unmodified for its historical record — re-verify any
+> specific claim against current source before relying on it.
+
 ---
 
 ## 1. Bottom line, up front

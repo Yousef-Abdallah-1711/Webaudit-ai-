@@ -36,6 +36,7 @@ import {
 import {
   DESIGN_INTENT_QUESTIONS,
   DESIGN_INTENT_WAIT_MS,
+  QUEUE_NAMES,
   refundForUndelivered,
 } from '@webaudit/config';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
@@ -65,6 +66,7 @@ import {
   createScanPhaseProducer,
   type ScanPhaseProducer,
 } from '../services/queue/scan-phase-producer.js';
+import { createRedisAdmissionGate, type AdmissionGate } from '../services/queue/admission-gate.js';
 import {
   createTeardownProducer,
   type TeardownProducer,
@@ -88,6 +90,8 @@ export interface ScanRoutesDeps {
   resolveRequiredControlLevel?: (moduleType: string) => ControlLevel | Promise<ControlLevel>;
   /** T171's seam — see `CreateScanDeps.checkRepositoryConnection`. */
   checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
+  /** T040-closure seam — see `CreateScanDeps.admissionGate`. */
+  admissionGate?: AdmissionGate;
 }
 
 const quoteBody = z.object({
@@ -146,6 +150,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
   const teardownProducer = deps.teardownProducer ?? createTeardownProducer();
   const cancelPublisher = deps.cancelPublisher ?? createCancelPublisher();
   const resolveRequiredControlLevel = deps.resolveRequiredControlLevel ?? (() => 'NONE' as const);
+  const admissionGate = deps.admissionGate ?? createRedisAdmissionGate(QUEUE_NAMES.scanPhase);
 
   router.use(requireAuth);
 
@@ -174,6 +179,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
           probe,
           producer,
           resolveRequiredControlLevel,
+          admissionGate,
           ...(deps.checkRepositoryConnection === undefined
             ? {}
             : { checkRepositoryConnection: deps.checkRepositoryConnection }),

@@ -1222,6 +1222,33 @@ Rollback / Production considerations.
   20/40/60-concurrency tiers — this verification was single-machine, single real network path
   (only the `--sources` *label* was varied, not the actual egress). That half remains blocked on
   real distributed infrastructure or a paid load-testing service, unchanged from before.
+- **Status (2026-09-20): broader full-system capacity/bottleneck pass completed** (full report:
+  `load-testing/REPORT-2026-09-20-capacity.md`), still **not closing this task's own real
+  multi-source-IP acceptance criterion** — that remains BLOCKED exactly as above. What this pass
+  added: fresh k6 golden-path re-runs at stages 1/5/10 (all clean, post-T029-fix, superseding the
+  stale 2026-09-11 `REPORT.md` numbers for those stages); a new post-authentication capacity probe
+  (`load-testing/scripts/post-auth-capacity.mjs`) that measures scan-intake/queue/worker/WebSocket
+  behavior beyond the login-limiter ceiling by minting valid tokens directly rather than
+  re-authenticating per VU — confirmed clean at 20/30 concurrent audits (worker `scanPhase`
+  concurrency is hardcoded to 4, `apps/worker/src/queue/queues.ts:107-111`; no strain observed up to
+  30 concurrent fixture-mode SECURITY-only audits); and confirmation that the **general** API rate
+  limiter (120 req/60s/IP, not just the login-specific strict limiter) imposes its own real ceiling
+  of ~30 full scan-intake flows/60s from one source IP — the same structural reason 20/40/60 needs
+  genuine multi-source-IP traffic, now demonstrated for general API traffic as well as login.
+  **One real, reproducible concurrency defect found and NOT yet fixed**: `create-scan.ts`'s
+  `QUEUE_AT_CAPACITY` admission check (`queueDepth >= queueCapacity`, lines ~185-189) has a TOCTOU
+  race — concurrent requests can all read the same pre-enqueue queue depth and all pass the check,
+  letting the real queue exceed its configured capacity under a genuine concurrent burst (reproduced
+  live: 10 concurrent requests against a capacity of 3 all succeeded, final depth 10). The existing
+  `queue-backpressure.test.ts` only covers the sequential case (still passes, 2/2) and does not catch
+  this — it is a coverage gap, not a regression. Not fixed in this pass: the check runs before the
+  credit debit by deliberate design (Principle VI, "never charge for our failures"), so narrowing the
+  race by moving the check later would require adding a refund path; the alternative (an atomic,
+  self-expiring Redis-based reservation) is a real, known-correct pattern but needs proper test-first
+  design, not a rushed fix under load-testing time pressure. See the capacity report for full
+  reproduction steps and the recommended fix approach. Practical severity: MEDIUM — default
+  `SCAN_QUEUE_MAX_WAITING` is 1000, so organic traffic is very unlikely to produce enough
+  near-simultaneous requests to matter; a deliberate concurrent burst could exploit it meaningfully.
 - **Objective**: close T306's own honestly-flagged gap — prove the 20/40/60-concurrent tiers
   against real multi-source traffic, not single-machine-generated traffic.
 - **Dependencies**: benefits from Phases 9 (backpressure) and 12 (scaling) being in place, but is

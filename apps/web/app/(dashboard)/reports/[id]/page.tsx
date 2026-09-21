@@ -26,7 +26,13 @@ import {
   IssueCard,
   type ModuleStatusProps,
 } from '../../../../components/report';
-import { getReport, getReportExport, type Report, type ReportIssue } from '../../../../lib/api';
+import {
+  ApiError,
+  getReport,
+  getReportExport,
+  type Report,
+  type ReportIssue,
+} from '../../../../lib/api';
 import styles from './page.module.css';
 
 const MODULE_LABEL: Readonly<Record<string, string>> = {
@@ -69,15 +75,21 @@ export default function ReportPage(): React.ReactElement {
   const params = useParams<{ id: string }>();
   const scanId = params.id;
   const [report, setReport] = useState<Report | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [area, setArea] = useState('All');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void getReport(scanId).then(({ report: r }) => {
-      if (!cancelled) setReport(r);
-    });
+    void getReport(scanId)
+      .then(({ report: r }) => {
+        if (!cancelled) setReport(r);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setLoadError(err instanceof ApiError ? err.message : 'This report could not be loaded.');
+      });
     return () => {
       cancelled = true;
     };
@@ -100,6 +112,15 @@ export default function ReportPage(): React.ReactElement {
       setExporting(false);
     }
   };
+
+  if (loadError !== null) {
+    return (
+      <div>
+        <PageHead eyebrow="Report" title="Not found" />
+        <p className={styles.empty}>{loadError}</p>
+      </div>
+    );
+  }
 
   if (report === null) {
     return (

@@ -55,6 +55,7 @@ import { ControlLevelRequiredError, reconfirmControl } from '../control-gate/rec
 import { quoteFor } from './quote.js';
 import { assertRepositoryConnectionLive } from './repos.js';
 import type { ScanPhaseProducer } from '../queue/scan-phase-producer.js';
+import type { AdmissionGate } from '../queue/admission-gate.js';
 
 export class PlanUpgradeRequiredError extends Error {
   override readonly name = 'PlanUpgradeRequiredError';
@@ -115,6 +116,13 @@ export interface CreateScanDeps {
   readonly checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
   /** Optional queue introspection seam; production producer supplies it. */
   readonly getQueueDepth?: () => Promise<number>;
+  /**
+   * Optional atomic check-and-reserve seam for `SCAN_QUEUE_MAX_WAITING`
+   * (T040-closure). Without it, admission falls back to the prior plain
+   * `queueDepth >= queueCapacity` comparison — correct only against
+   * sequential requests, not concurrent ones. See `admission-gate.ts`.
+   */
+  readonly admissionGate?: AdmissionGate;
 }
 
 export interface CreatedScan {
@@ -182,184 +190,225 @@ export async function createScan(
 
   // Resolve the effective plan priority before checking capacity. This keeps
   // admission independent of the order in which lower-tier requests arrived.
+  //
+  // T040-closure: a plain "read depth, then compare" here raced under real
+  // concurrent load — many requests observed the same pre-enqueue depth and
+  // all passed (reproduced live: 10 concurrent requests past a capacity of
+  // 3). When an atomic gate is wired, check-and-reserve happen in one Redis
+  // round trip (`admission-gate.ts`), closing that window; the reservation
+  // is released in the `finally` below on every exit (success or error) so
+  // it never double-counts against the real BullMQ depth for longer than it
+  // has to, and self-expires even if release is never reached (a crashed
+  // process). No atomic gate wired falls back to the prior sequential-only
+  // check, unchanged, for callers that do not supply one (e.g. some tests).
   const queueCapacity = Number(process.env['SCAN_QUEUE_MAX_WAITING'] ?? 1000);
   const queueDepth = await deps.getQueueDepth?.();
-  if (queueDepth !== undefined && queueDepth >= queueCapacity) {
-    throw new QueueAtCapacityError(queueDepth, queueCapacity);
+  let admissionReservationId: string | null = null;
+  if (queueDepth !== undefined) {
+    if (deps.admissionGate === undefined) {
+      if (queueDepth >= queueCapacity) {
+        throw new QueueAtCapacityError(queueDepth, queueCapacity);
+      }
+    } else {
+      let admission: Awaited<ReturnType<AdmissionGate['reserve']>>;
+      try {
+        admission = await deps.admissionGate.reserve(queueDepth, queueCapacity);
+      } catch {
+        // Fail closed: a hard capacity safety mechanism that cannot prove
+        // itself must refuse new work rather than silently accept it
+        // unbounded (ENGINEERING-STANDARDS's own preference here). The
+        // caller sees the same QUEUE_AT_CAPACITY shape either way, never
+        // an internal Redis error.
+        throw new QueueAtCapacityError(queueDepth, queueCapacity);
+      }
+      if (!admission.admitted) {
+        throw new QueueAtCapacityError(admission.effectiveDepth, queueCapacity);
+      }
+      admissionReservationId = admission.reservationId;
+    }
   }
 
-  // FR-079: refuse before any debit once the plan's concurrent-scan limit is
-  // already reached. `assertConcurrencyHeadroom` re-resolves the effective
-  // plan itself (a fresh, small query) rather than reusing the narrower
-  // `plan` shape fetched above, which only selected the fields FR-016 needs.
-  await assertConcurrencyHeadroom(db, input.userId);
+  try {
+    // FR-079: refuse before any debit once the plan's concurrent-scan limit is
+    // already reached. `assertConcurrencyHeadroom` re-resolves the effective
+    // plan itself (a fresh, small query) rather than reusing the narrower
+    // `plan` shape fetched above, which only selected the fields FR-016 needs.
+    await assertConcurrencyHeadroom(db, input.userId);
 
-  // T171 / FR-007: a REPOSITORY audit cannot be delivered without a working
-  // GitHub credential, and whether the credential still works is only knowable
-  // by using it. Checked here — one cheap request, ahead of the debit — so a
-  // revoked connection is a refusal rather than a refund. Both outcomes leave
-  // the user unbilled (Principle VI), but only the refusal leaves them without
-  // a failed scan in their history for something they did nothing wrong to
-  // cause. The refund path still exists behind this, for the revocation that
-  // happens in the seconds after this check passes.
-  if (target.inputType === 'REPOSITORY') {
-    await (deps.checkRepositoryConnection ?? assertRepositoryConnectionLive)(db, input.userId);
-  }
+    // T171 / FR-007: a REPOSITORY audit cannot be delivered without a working
+    // GitHub credential, and whether the credential still works is only knowable
+    // by using it. Checked here — one cheap request, ahead of the debit — so a
+    // revoked connection is a refusal rather than a refund. Both outcomes leave
+    // the user unbilled (Principle VI), but only the refusal leaves them without
+    // a failed scan in their history for something they did nothing wrong to
+    // cause. The refund path still exists behind this, for the revocation that
+    // happens in the seconds after this check passes.
+    if (target.inputType === 'REPOSITORY') {
+      await (deps.checkRepositoryConnection ?? assertRepositoryConnectionLive)(db, input.userId);
+    }
 
-  // FR-017: refuse the whole scan only when every requested module is gated
-  // out for the target's *current* level — re-confirmed live, never read
-  // from the cached column (reconfirm.ts's own module note). A selection
-  // that mixes gated and ungated modules starts; the gated ones are filtered
-  // per-module later, inside module-runner's resolveApplicable.
-  const gated = await Promise.all(
-    input.modules.map(async (moduleType) => ({
-      moduleType,
-      required: await deps.resolveRequiredControlLevel(moduleType),
-    })),
-  );
-  // The live re-confirmation is a DNS/HTTP probe of the target. Skip it when
-  // nothing in the selection needs more than NONE — the common URL scan — so
-  // scan creation is not gated on a needless network round trip (review
-  // finding M6). The orchestrator's own per-phase check already does this.
-  const anyGate = gated.some((g) => controlLevelRank(g.required) > 0);
-  const reconfirmed = anyGate
-    ? await reconfirmControl(db, { targetId: target.id, userId: input.userId }, deps.probe)
-    : { level: 'NONE' as const };
-  const allGated = gated.every(
-    (g) => controlLevelRank(g.required) > controlLevelRank(reconfirmed.level),
-  );
-  if (allGated) {
-    const strictest = gated.reduce((max, g) =>
-      controlLevelRank(g.required) > controlLevelRank(max.required) ? g : max,
+    // FR-017: refuse the whole scan only when every requested module is gated
+    // out for the target's *current* level — re-confirmed live, never read
+    // from the cached column (reconfirm.ts's own module note). A selection
+    // that mixes gated and ungated modules starts; the gated ones are filtered
+    // per-module later, inside module-runner's resolveApplicable.
+    const gated = await Promise.all(
+      input.modules.map(async (moduleType) => ({
+        moduleType,
+        required: await deps.resolveRequiredControlLevel(moduleType),
+      })),
     );
-    throw new ControlLevelRequiredError(target.id, strictest.required, reconfirmed.level);
-  }
+    // The live re-confirmation is a DNS/HTTP probe of the target. Skip it when
+    // nothing in the selection needs more than NONE — the common URL scan — so
+    // scan creation is not gated on a needless network round trip (review
+    // finding M6). The orchestrator's own per-phase check already does this.
+    const anyGate = gated.some((g) => controlLevelRank(g.required) > 0);
+    const reconfirmed = anyGate
+      ? await reconfirmControl(db, { targetId: target.id, userId: input.userId }, deps.probe)
+      : { level: 'NONE' as const };
+    const allGated = gated.every(
+      (g) => controlLevelRank(g.required) > controlLevelRank(reconfirmed.level),
+    );
+    if (allGated) {
+      const strictest = gated.reduce((max, g) =>
+        controlLevelRank(g.required) > controlLevelRank(max.required) ? g : max,
+      );
+      throw new ControlLevelRequiredError(target.id, strictest.required, reconfirmed.level);
+    }
 
-  // FR-012: no silent reprice between quote and accept. The accepted quote is
-  // for the whole selection the user saw priced.
-  const currentQuote = quoteFor(input.modules).credits;
-  if (currentQuote !== input.acceptedQuote) {
-    throw new QuoteMismatchError(currentQuote, input.acceptedQuote);
-  }
+    // FR-012: no silent reprice between quote and accept. The accepted quote is
+    // for the whole selection the user saw priced.
+    const currentQuote = quoteFor(input.modules).credits;
+    if (currentQuote !== input.acceptedQuote) {
+      throw new QuoteMismatchError(currentQuote, input.acceptedQuote);
+    }
 
-  // US1 scenario 8 / FR-017 (review finding: T108's second assertion): a module
-  // whose required control level exceeds the target's current level will be
-  // skipped at execution and reported unavailable-pending-verification — so it
-  // must not be charged for. Charge only the modules whose gate is met.
-  const chargeableModules = gated
-    .filter((g) => controlLevelRank(g.required) <= controlLevelRank(reconfirmed.level))
-    .map((g) => g.moduleType);
-  const chargeCredits = quoteFor(chargeableModules).credits;
+    // US1 scenario 8 / FR-017 (review finding: T108's second assertion): a module
+    // whose required control level exceeds the target's current level will be
+    // skipped at execution and reported unavailable-pending-verification — so it
+    // must not be charged for. Charge only the modules whose gate is met.
+    const chargeableModules = gated
+      .filter((g) => controlLevelRank(g.required) <= controlLevelRank(reconfirmed.level))
+      .map((g) => g.moduleType);
+    const chargeCredits = quoteFor(chargeableModules).credits;
 
-  // Pre-flight only — cheap, and avoids writing a Scan row for the ordinary
-  // "cannot afford it" case. `debit()` below is the authoritative, race-safe
-  // check; a race that slips past this still fails there, and the row it
-  // wrote is removed. The pre-flight compares against the amount actually
-  // debited, not the full quote.
-  const available = await totalAvailable(db, input.userId);
-  if (available < chargeCredits) {
-    throw new InsufficientCreditsError(chargeCredits, available);
-  }
+    // Pre-flight only — cheap, and avoids writing a Scan row for the ordinary
+    // "cannot afford it" case. `debit()` below is the authoritative, race-safe
+    // check; a race that slips past this still fails there, and the row it
+    // wrote is removed. The pre-flight compares against the amount actually
+    // debited, not the full quote.
+    const available = await totalAvailable(db, input.userId);
+    if (available < chargeCredits) {
+      throw new InsufficientCreditsError(chargeCredits, available);
+    }
 
-  // `chargedCredits` is written here, not in a later update: a crash between
-  // `debit` succeeding and a separate `update` would otherwise leave a real
-  // charge with `chargedCredits: 0`, and the refund path reads that column
-  // (review finding M5). The row is deleted below if `debit` never succeeds.
-  let created: { id: string; state: string; quotedCredits: number; chargedCredits: number };
-  try {
-    created = await db.scan.create({
-      data: {
-        userId: input.userId,
-        targetId: target.id,
-        requestedModules: [...input.modules],
-        capabilitySnapshot: {},
-        // The full selection was quoted; only the gate-met modules are charged.
-        quotedCredits: input.acceptedQuote,
-        chargedCredits: chargeCredits,
-      },
-      select: { id: true, state: true, quotedCredits: true, chargedCredits: true },
-    });
-  } catch (error) {
-    // The partial unique index `Scan_one_active_per_target` rejected this row:
-    // a concurrent request won the FR-018 race between the findFirst above and
-    // here (review finding H4). This request never debited — refuse cleanly.
-    if (isUniqueConstraintViolation(error, ['userId', 'targetId'])) {
-      const winner = await db.scan.findFirst({
-        where: {
+    // `chargedCredits` is written here, not in a later update: a crash between
+    // `debit` succeeding and a separate `update` would otherwise leave a real
+    // charge with `chargedCredits: 0`, and the refund path reads that column
+    // (review finding M5). The row is deleted below if `debit` never succeeds.
+    let created: { id: string; state: string; quotedCredits: number; chargedCredits: number };
+    try {
+      created = await db.scan.create({
+        data: {
           userId: input.userId,
-          targetId: input.targetId,
-          state: { notIn: [...SCAN_STATES_TERMINAL] },
+          targetId: target.id,
+          requestedModules: [...input.modules],
+          capabilitySnapshot: {},
+          // The full selection was quoted; only the gate-met modules are charged.
+          quotedCredits: input.acceptedQuote,
+          chargedCredits: chargeCredits,
         },
-        select: { id: true },
-        orderBy: { createdAt: 'desc' },
+        select: { id: true, state: true, quotedCredits: true, chargedCredits: true },
       });
-      throw new DuplicateScanError(winner?.id ?? input.targetId);
+    } catch (error) {
+      // The partial unique index `Scan_one_active_per_target` rejected this row:
+      // a concurrent request won the FR-018 race between the findFirst above and
+      // here (review finding H4). This request never debited — refuse cleanly.
+      if (isUniqueConstraintViolation(error, ['userId', 'targetId'])) {
+        const winner = await db.scan.findFirst({
+          where: {
+            userId: input.userId,
+            targetId: input.targetId,
+            state: { notIn: [...SCAN_STATES_TERMINAL] },
+          },
+          select: { id: true },
+          orderBy: { createdAt: 'desc' },
+        });
+        throw new DuplicateScanError(winner?.id ?? input.targetId);
+      }
+      throw error;
     }
-    throw error;
-  }
 
-  let debited: DebitResult | undefined;
-  try {
-    if (chargeCredits > 0) {
-      debited = await debit(db, {
-        userId: input.userId,
-        amount: chargeCredits,
-        reason: 'scan:create',
+    let debited: DebitResult | undefined;
+    try {
+      if (chargeCredits > 0) {
+        debited = await debit(db, {
+          userId: input.userId,
+          amount: chargeCredits,
+          reason: 'scan:create',
+          scanId: created.id,
+        });
+      }
+    } catch (error) {
+      // Principle VI: never a paid-for row with nothing charged, and never a
+      // charge with no row. `debit` throws before writing anything, so the
+      // fix here is symmetric — remove the row this function just wrote.
+      await db.scan.delete({ where: { id: created.id } });
+      throw error;
+    }
+
+    const charged = created;
+
+    try {
+      // The first job carries only RUNNING_PHASE_1's own subset (everything but
+      // UI, per phase-modules.ts) — `PhaseJobData.modules`' own contract is
+      // "which areas this phase runs", not the whole scan's selection.
+      await deps.producer.enqueueFirstPhase({
         scanId: created.id,
+        modules: modulesForPhase('RUNNING_PHASE_1', input.modules),
+        planQueuePriority: plan.queuePriority,
       });
+    } catch (error) {
+      // Principle VI again, on the other side of a committed debit: a queue
+      // failure here (Redis unreachable, a rejected `add()`) must not leave a
+      // scan charged with no job ever created for a worker to run. `startedAt`
+      // is only ever written on the QUEUED -> RUNNING_PHASE_1 transition
+      // (apps/worker's state-machine.ts), so a scan stuck in QUEUED past this
+      // point is invisible to the timeout sweep's `startedAt < cutoff` filter
+      // forever — there is no other backstop that will ever refund it.
+      //
+      // Unlike the debit-failure branch above, this cannot just delete the
+      // row: `debit()` already committed real `CreditTransaction`/
+      // `CreditAllocation` rows that reference this scanId, and deleting the
+      // scan would orphan that ledger history. Instead, refund in full and
+      // transition straight to the same terminal `FAILED` state a platform
+      // fault reaches everywhere else in this codebase (matching
+      // terminal-refund.ts's pattern). `apps/api` cannot import
+      // `apps/worker`'s state-machine (only the reverse dependency is
+      // allowed), so this hand-writes the same guarded, conditional
+      // `updateMany` the questionnaire routes and the cancel route already
+      // use for the same reason.
+      if (debited !== undefined) {
+        await refund(db, debited.id, 'scan:enqueue-failed');
+      }
+      await db.scan.updateMany({
+        where: { id: created.id, state: 'QUEUED' },
+        data: {
+          state: 'FAILED',
+          completedAt: new Date(),
+          failureReason: 'Could not schedule this scan for execution. No charge was made.',
+        },
+      });
+      throw error;
     }
-  } catch (error) {
-    // Principle VI: never a paid-for row with nothing charged, and never a
-    // charge with no row. `debit` throws before writing anything, so the
-    // fix here is symmetric — remove the row this function just wrote.
-    await db.scan.delete({ where: { id: created.id } });
-    throw error;
-  }
 
-  const charged = created;
-
-  try {
-    // The first job carries only RUNNING_PHASE_1's own subset (everything but
-    // UI, per phase-modules.ts) — `PhaseJobData.modules`' own contract is
-    // "which areas this phase runs", not the whole scan's selection.
-    await deps.producer.enqueueFirstPhase({
-      scanId: created.id,
-      modules: modulesForPhase('RUNNING_PHASE_1', input.modules),
-      planQueuePriority: plan.queuePriority,
-    });
-  } catch (error) {
-    // Principle VI again, on the other side of a committed debit: a queue
-    // failure here (Redis unreachable, a rejected `add()`) must not leave a
-    // scan charged with no job ever created for a worker to run. `startedAt`
-    // is only ever written on the QUEUED -> RUNNING_PHASE_1 transition
-    // (apps/worker's state-machine.ts), so a scan stuck in QUEUED past this
-    // point is invisible to the timeout sweep's `startedAt < cutoff` filter
-    // forever — there is no other backstop that will ever refund it.
-    //
-    // Unlike the debit-failure branch above, this cannot just delete the
-    // row: `debit()` already committed real `CreditTransaction`/
-    // `CreditAllocation` rows that reference this scanId, and deleting the
-    // scan would orphan that ledger history. Instead, refund in full and
-    // transition straight to the same terminal `FAILED` state a platform
-    // fault reaches everywhere else in this codebase (matching
-    // terminal-refund.ts's pattern). `apps/api` cannot import
-    // `apps/worker`'s state-machine (only the reverse dependency is
-    // allowed), so this hand-writes the same guarded, conditional
-    // `updateMany` the questionnaire routes and the cancel route already
-    // use for the same reason.
-    if (debited !== undefined) {
-      await refund(db, debited.id, 'scan:enqueue-failed');
+    return charged;
+  } finally {
+    // Runs on every exit — success or any throw above — so the reservation
+    // never outlives the real BullMQ job it stood in for. TTL expiry is the
+    // backstop if this itself never runs (a process crash mid-request).
+    if (admissionReservationId !== null) {
+      await deps.admissionGate!.release(admissionReservationId);
     }
-    await db.scan.updateMany({
-      where: { id: created.id, state: 'QUEUED' },
-      data: {
-        state: 'FAILED',
-        completedAt: new Date(),
-        failureReason: 'Could not schedule this scan for execution. No charge was made.',
-      },
-    });
-    throw error;
   }
-
-  return charged;
 }

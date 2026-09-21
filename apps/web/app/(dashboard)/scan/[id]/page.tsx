@@ -12,23 +12,38 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { PageHead } from '../../../../components/dashboard';
 import { ScanProgress } from '../../../../components/scan/ScanProgress';
-import { cancelScan, getScan } from '../../../../lib/api';
+import { ApiError, cancelScan, getScan } from '../../../../lib/api';
 
 export default function ScanProgressPage(): React.ReactElement {
   const params = useParams<{ id: string }>();
   const scanId = params.id;
   const router = useRouter();
   const [hostname, setHostname] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    void getScan(scanId).then(({ scan }) => {
-      if (!cancelled) setHostname(scan.target?.displayName ?? scanId);
-    });
+    void getScan(scanId)
+      .then(({ scan }) => {
+        if (!cancelled) setHostname(scan.target?.displayName ?? scanId);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof ApiError ? err.message : 'This scan could not be loaded.');
+      });
     return () => {
       cancelled = true;
     };
   }, [scanId]);
+
+  if (error !== null) {
+    return (
+      <div>
+        <PageHead eyebrow="Live scan" title="Not found" />
+        <p>{error}</p>
+      </div>
+    );
+  }
 
   if (hostname === null) {
     return (

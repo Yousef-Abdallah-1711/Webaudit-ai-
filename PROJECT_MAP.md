@@ -149,7 +149,13 @@ real-provider latency, higher concurrency or production capacity.
   archival, and remaining scaling items: `specs/005-production-hardening/` (spec.md, research.md —
   includes a full EduFlow-LMS payment/email reference audit and mapping, data-model.md, plan.md,
   contracts/, quickstart.md, tasks.md T001-T045, ENGINEERING-STANDARDS.md, PHASE-PROMPTS.md).
-  Planning only as of 2026-09-12; nothing under it is implemented yet.
+  Originally "planning only as of 2026-09-12; nothing under it is implemented yet" — **that snapshot
+  is now superseded (per `reports/auth-security-review.md` §Q, 2026-09-20): the large majority of the
+  45-task plan is implemented**, per `tasks.md`'s own status table and commits landed after
+  2026-09-12 (`947f498 feat: complete production hardening phases`,
+  `ae9537c feat: close remaining production-hardening gaps`). Genuinely open items are narrower: real
+  Paymob sandbox credentials (T006), load testing (T040), and a final security-hardening/rollout pass
+  (T041-T045).
   **`ENGINEERING-STANDARDS.md` is mandatory reading before any task under this initiative** — it
   is the concrete code-structure/security/testing rulebook and the Definition-of-Done templates
   every task in `tasks.md` references; skipping it is what produces the "cheaper model wrote it,
