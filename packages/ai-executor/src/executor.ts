@@ -66,7 +66,16 @@ export type AiResult<T> =
   | { readonly ok: true; readonly value: T; readonly invocations: readonly AiInvocationRecord[] }
   | {
       readonly ok: false;
-      readonly reason: 'CHAIN_EXHAUSTED';
+      /**
+       * `CHAIN_EXHAUSTED` — every configured provider was tried and none served;
+       * an outage, worth an operator alert. `DISABLED` — no provider was ever
+       * tried, because `AI_MODE=disabled` intentionally runs no AI layer; not an
+       * outage, and must never be reported as one (see `createDisabledExecutor`
+       * in `from-env.ts`). Kept as a distinct literal rather than reusing
+       * `CHAIN_EXHAUSTED` so a caller cannot conflate "the chain is broken" with
+       * "there was deliberately no chain to try".
+       */
+      readonly reason: 'CHAIN_EXHAUSTED' | 'DISABLED';
       readonly invocations: readonly AiInvocationRecord[];
     };
 

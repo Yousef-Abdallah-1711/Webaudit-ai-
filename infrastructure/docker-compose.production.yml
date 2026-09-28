@@ -1,0 +1,321 @@
+# WebAudit AI — production topology.
+# Phase 8 (production-without-Paymob-or-AI master plan).
+#
+# Minimal topology this master plan's discovery/Phase 8 arrived at:
+# reverse proxy, apps/web, apps/api, apps/worker, Postgres, Redis. PgBouncer
+# is optional (already proven working end-to-end in a prior session's own
+# testing — infrastructure/docker-compose.yml's own `pgbouncer` service and
+# infrastructure/deploy.md's "Connection pooling" section) and included here,
+# profile-gated exactly as the dev compose file already does, so enabling it
+# is a deliberate `--profile pooled` choice, not a silent default.
+#
+# NOT deployed, deliberately (master plan §5, Out of scope this release):
+#   - apps/probe-pool — not a deployable unit at all (no server entrypoint,
+#     confirmed in discovery; it is a library apps/worker links against).
+#   - apps/sandbox-runner — only needed for admin-uploaded custom
+#     capabilities, out of scope for this release.
+#
+# This is the FIRST Dockerfile/compose set this repository has ever had
+# (infrastructure/deploy.md's own text: "None of these five units has a
+# Dockerfile in this repo today" — discovery, confirmed again at the start
+# of Phase 8).
+#
+# Frozen decisions this file enforces by construction, not by convention:
+#   - AI_MODE=disabled (never fixtures, never a real provider chain) —
+#     Phase 1.
+#   - No PAYMOB_* variables anywhere in this file or its env files — Phase 5.
+#   - Real SMTP/Resend email required — Phase 2 (the API refuses to boot
+#     without one of them in production; this is enforced by application
+#     code, not by this file, but this file supplies the real values).
+#
+# Usage:
+#   docker compose -f infrastructure/docker-compose.production.yml \
+#     --env-file .env.production up -d
+#
+# Migrations run once, before api/worker start accepting traffic — see the
+# `migrate` service below and P8-T6's own notes in the master plan.
+
+name: webaudit-ai-production
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-webaudit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-webaudit}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-webaudit} -d ${POSTGRES_DB:-webaudit}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2g
+    networks: [backend]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy noeviction
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 768m
+    networks: [backend]
+
+  # Optional connection pooler — infrastructure/deploy.md's own "Connection
+  # pooling (PgBouncer)" section: proven working, not a speculative addition.
+  # Point DATABASE_URL at this service (host `pgbouncer`, port 5432) instead
+  # of `postgres` directly, and set DATABASE_CONNECTION_LIMIT=1, to use it.
+  pgbouncer:
+    image: edoburu/pgbouncer:v1.25.2-p0
+    restart: unless-stopped
+    profiles: ['pooled']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-webaudit}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-webaudit}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: '200'
+      DEFAULT_POOL_SIZE: '20'
+      AUTH_TYPE: scram-sha-256
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-webaudit}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [backend]
+
+  # Runs `prisma migrate deploy` once, then exits 0 — api/worker both
+  # `depends_on: migrate: condition: service_completed_successfully`, so
+  # neither starts accepting traffic/jobs against a schema that is not yet
+  # current (P8-T6's own requirement).
+  migrate:
+    image: webaudit-api:latest
+    restart: 'no'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    entrypoint: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy', '--schema', 'prisma/schema.prisma']
+    working_dir: /app/apps/api
+    networks: [backend]
+
+  api:
+    image: webaudit-api:latest
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      # Phase 1 (master plan): the worker is the process that actually
+      # constructs an AI executor at boot — apps/api never does — but this
+      # is set here too for symmetry/documentation and because a future
+      # AI-enabled deployment flips both from the same env file.
+      AI_MODE: disabled
+      PORT: '3001'
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-10}
+      DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-20}
+      REDIS_URL: redis://redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      # Email — Phase 2: the API refuses to boot in production without one
+      # of these two transports configured. No PAYMOB_* variable is set
+      # anywhere in this file, by design (Phase 5) — those routes 404
+      # automatically in production with nothing configured.
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:?EMAIL_FROM is required}
+      API_URL: ${API_URL:?API_URL is required}
+      WEB_URL: ${WEB_URL:?WEB_URL is required}
+      # Hop count must match this exact topology (one reverse proxy in
+      # front) — P8-T5's own requirement; the rate limiter's client-IP
+      # derivation depends on this being accurate.
+      TRUST_PROXY_HOPS: '1'
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: production
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1g
+    networks: [backend, frontend]
+
+  worker:
+    image: webaudit-worker:latest
+    build:
+      context: ..
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      # The load-bearing setting for this whole temporary product (Phase 1):
+      # the worker is the process that actually constructs an AI executor at
+      # boot, and without this it refuses to start at all — this is not a
+      # cosmetic default.
+      AI_MODE: disabled
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-10}
+      REDIS_URL: redis://redis:6379
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
+      # The worker never issues JWTs itself, but it imports @webaudit/api's
+      # shared config module (apps/api/src/config/env.ts), which validates
+      # these at import time regardless of which process loads it — without
+      # them the worker crash-loops on boot. Verified directly via a real
+      # `docker compose up` smoke test (ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL /
+      # "JWT_ACCESS_SECRET is not set" before this fix).
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      WORKSPACE_BASE_DIR: /app/.workspaces
+      MAX_ARCHIVE_BYTES: ${MAX_ARCHIVE_BYTES:-52428800}
+      MAX_ARCHIVE_RATIO: ${MAX_ARCHIVE_RATIO:-100}
+      SCAN_TIMEOUT_MS: ${SCAN_TIMEOUT_MS:-900000}
+      QUESTIONNAIRE_TIMEOUT_MS: ${QUESTIONNAIRE_TIMEOUT_MS:-600000}
+      # Distinct per replica if this is ever scaled beyond one — required by
+      # the worker's own Redis heartbeat and by this file's own healthcheck,
+      # which reads exactly this key.
+      WORKER_ID: worker-1
+      WORKER_HEARTBEAT_INTERVAL_MS: ${WORKER_HEARTBEAT_INTERVAL_MS:-15000}
+      WORKER_HEARTBEAT_TTL_MS: ${WORKER_HEARTBEAT_TTL_MS:-45000}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: production
+    volumes:
+      - worker-workspaces:/app/.workspaces
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2g
+    # `backend` alone is NOT enough here, unlike every other service on it —
+    # `backend` is `internal: true` (no route out of the Docker network at
+    # all), and the worker is the one process whose entire job is fetching
+    # *real, arbitrary internet* scan targets (packages/safe-net's guarded
+    # fetch, apps/probe-pool's browser pool). Without `egress` the worker
+    # cannot resolve ANY public hostname, `api` can (it also joins the
+    # non-internal `frontend` network), and this asymmetry is invisible from
+    # `docker compose config` or a build — it only shows up as a real DNS
+    # failure at runtime. Caught by a real Phase 9 SSRF-topology check
+    # (`docker exec ... node -e "dns.lookup('example.com', ...)"` returned
+    # `EAI_AGAIN` from `worker`, resolved a real address from `api`) — see the
+    # master plan's own Phase 9 P9-T1 notes.
+    networks: [backend, egress]
+
+  web:
+    image: webaudit-web:latest
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      HOSTNAME: '0.0.0.0'
+      API_URL: ${API_URL:?API_URL is required}
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512m
+    networks: [frontend]
+
+  # P8-T5 — reverse proxy: TLS termination, WebSocket-upgrade proxying for
+  # the realtime scan-progress connection, and the single hop
+  # apps/api's TRUST_PROXY_HOPS=1 above assumes. Config in
+  # infrastructure/nginx/nginx.conf; certs are the operator's own (this file
+  # mounts a host path, it does not provision or renew one — see that
+  # config's own header for the ACME/certbot pointer).
+  proxy:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ../infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - proxy-certs:/etc/nginx/certs:ro
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:80/healthz']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks: [frontend]
+
+volumes:
+  postgres-data:
+  redis-data:
+  worker-workspaces:
+  proxy-certs:
+
+networks:
+  # api/worker/postgres/redis/pgbouncer — never reachable from outside the
+  # docker network directly; only `proxy` and (for api) nothing else has a
+  # published host port.
+  backend:
+    internal: true
+  # proxy/web/api — api needs to be reachable from `proxy` too (direct
+  # browser calls, per infrastructure/deploy.md's own network note), so it
+  # joins both networks rather than backend alone.
+  frontend:
+  # Outbound-internet-only. Not internal, but nothing else joins it and no
+  # service publishes a port here — it exists purely so `worker` (real,
+  # arbitrary internet fetches against scan targets) has a route out while
+  # staying off `frontend` (which would make it directly proxy-routable, a
+  # surface it has no reason to expose since it has no inbound port at all).
+  egress:

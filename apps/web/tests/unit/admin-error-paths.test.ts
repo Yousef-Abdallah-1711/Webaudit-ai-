@@ -28,7 +28,14 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
     getAdminCapabilities: vi.fn(),
     getMarginReport: vi.fn(),
     getAdminQueueJobs: vi.fn(),
-    getAdminPlans: vi.fn(),
+    // Phase 4 (production-without-Paymob-or-AI master plan): AdminUsersPage
+    // now also fetches the plan catalog for its plan-assignment select, on
+    // mount, independent of the page's own primary `getAdminUsers` call this
+    // suite exercises. Defaulted to an empty, resolved list here so pages
+    // that do not specifically test this call (every one except a future
+    // AdminUsersPage-specific plans-failure test) do not crash on an
+    // unconfigured `vi.fn()`'s `undefined` return having no `.then`.
+    getAdminPlans: vi.fn().mockResolvedValue({ plans: [] }),
     getAdminScans: vi.fn(),
     getAdminAuditLog: vi.fn(),
   };

@@ -141,6 +141,36 @@ describe('GET /users', () => {
       expect(found?.balance).toEqual({ plan: 0, purchased: 100 * (i + 1) });
     }
   });
+
+  it('P4-T1 (master plan): filters by a case-insensitive email substring', async () => {
+    const actor = await makeUser('operator@example.com');
+    await makeUser('alice@example.com');
+    await makeUser('bob@example.com');
+    const token = await tokenFor(actor.id);
+
+    const res = await request(app)
+      .get('/users')
+      .query({ search: 'ALICE' })
+      .set(auth(token))
+      .expect(200);
+    const body = res.body as { users: { email: string }[]; total: number };
+    expect(body.total).toBe(1);
+    expect(body.users[0]?.email).toBe('alice@example.com');
+  });
+
+  it('P4-T1: an empty result for a search matching nobody is not an error', async () => {
+    const actor = await makeUser('operator@example.com');
+    const token = await tokenFor(actor.id);
+
+    const res = await request(app)
+      .get('/users')
+      .query({ search: 'nobody-matches-this' })
+      .set(auth(token))
+      .expect(200);
+    const body = res.body as { users: unknown[]; total: number };
+    expect(body.total).toBe(0);
+    expect(body.users).toHaveLength(0);
+  });
 });
 
 describe('GET /users/:id', () => {

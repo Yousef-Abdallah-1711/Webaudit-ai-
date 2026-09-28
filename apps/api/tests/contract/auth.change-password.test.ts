@@ -65,7 +65,11 @@ describe('POST /auth/change-password', () => {
       .set('Authorization', `Bearer ${await bearerFor(user.id)}`)
       .send({ currentPassword: 'wrong-password', newPassword: 'new-correct-password' });
 
-    expect(response.status).toBe(401);
+    // 403, not 401 — the bearer token is genuinely valid (this request passed
+    // requireAuth); only the current-password check failed. A 401 here would
+    // be indistinguishable from an expired session to `lib/api.ts`'s global
+    // handler, which force-logs the browser out on any 401 from anywhere.
+    expect(response.status).toBe(403);
     expect((await testDb.user.findUniqueOrThrow({ where: { id: user.id } })).passwordHash).toBe(
       passwordHash,
     );

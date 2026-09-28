@@ -14,9 +14,17 @@ claim false regardless of how careful the code inside it is.
 
 Every unit needs Node ≥22 — the sandbox depends on the `--permission` model (research.md R1), and this
 repo's root `package.json` already states `engines.node >= 22` for the whole workspace, not just
-`sandbox-runner`. None of these five units has a Dockerfile in this repo today; every section below
-documents the real, currently-runnable process-level command (`pnpm --filter <pkg> start`), which is
-what this environment can actually verify, not an unverified container spec.
+`sandbox-runner`. Every section below documents the real, currently-runnable process-level command
+(`pnpm --filter <pkg> start`), which is what this environment can actually verify, not an unverified
+container spec.
+
+As of Phase 8 (production-without-Paymob-or-AI master plan), `apps/api`, `apps/worker`, and `apps/web`
+each have a real, build-and-run-verified Dockerfile (`apps/{api,worker,web}/Dockerfile`), and there is a
+real production compose topology (`infrastructure/docker-compose.production.yml`) covering all three
+plus Postgres/Redis/an optional PgBouncer/an nginx reverse proxy — see "Docker Compose (production)"
+below. `apps/probe-pool` and `apps/sandbox-runner` are still not part of that compose topology,
+deliberately (the master plan's own §5 Out of scope for this release) — their sections below remain the
+process-level runbook.
 
 ---
 
@@ -205,6 +213,142 @@ Before enabling production traffic:
 Do not mark Phase 5 production-ready until all seven checks have dated evidence.
 
 ---
+
+## Docker Compose (production)
+
+Phase 8 (production-without-Paymob-or-AI master plan) built and verified — via real `docker build` and
+`docker compose up` runs against throwaway Postgres/Redis, not just by authoring the files —
+`infrastructure/docker-compose.production.yml`, the three `apps/*` Dockerfiles, and
+`infrastructure/nginx/nginx.conf`. This section is the exact command sequence that smoke test used;
+follow it for a real deployment, substituting `.env.production` (a real, filled-in copy of
+`.env.production.example`, never committed) for the throwaway secrets a smoke test would use.
+
+1. **Build the images** (from the repository root):
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production build
+   ```
+2. **Bring the stack up**:
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production up -d
+   ```
+   Startup ordering is enforced by `depends_on` conditions, not by hoping: `postgres`/`redis` must
+   report `healthy` before `migrate` runs; `migrate` (`prisma migrate deploy`, one-shot) must exit 0
+   before `api`/`worker` are even created; `api` must report `healthy` before `web`; `api` and `web`
+   must both report `healthy` before `proxy` starts routing to them.
+3. **Confirm migrations actually ran before anything else started** — do not assume this from the
+   compose file alone:
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production ps -a
+   ```
+   `migrate` should show `Exited (0)`; `postgres`, `redis`, `api`, `worker`, `web`, `proxy` should all
+   show `healthy` (`pgbouncer` only appears if started with `--profile pooled`).
+4. **Spot-check the real routes through the reverse proxy** (matches what the Phase 8 smoke test
+   actually ran):
+   ```
+   curl -i http://<host>/healthz    # nginx itself
+   curl -i http://<host>/health     # proxied to apps/api's real health route
+   curl -i http://<host>/           # proxied to apps/web
+   ```
+   The `/realtime` WebSocket upgrade (the live scan-progress feed) is proxied by the same nginx config
+   — verify it with a real WebSocket client rather than plain `curl` once TLS is live.
+5. **Tear down** (smoke test / non-production only — this removes volumes, i.e. all data):
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production down -v
+   ```
+
+TLS is not yet live — the HTTP-only server block in `infrastructure/nginx/nginx.conf` is what actually
+runs; a commented-out HTTPS block with identical routing is included, ready to uncomment once a real
+certificate is provisioned (ACME/certbot or a managed load balancer's own TLS — a genuine operational
+decision this repository's source cannot make for you). `TRUST_PROXY_HOPS=1` in the compose file assumes
+exactly this one-nginx-hop topology; changing the number of proxies in front of `apps/api` requires
+updating that value to match, or the rate limiter's client-IP derivation silently breaks.
+
+### First-time bootstrap (a genuinely fresh database)
+
+Two real, one-time steps a fresh deployment needs beyond `up -d` — both found missing by Phase 12's
+own real end-to-end smoke test, not assumed from reading the code:
+
+1. **Seed the plan tiers.** A freshly migrated database has zero `Plan` rows at all — not even
+   `free` — so every credit/entitlement operation fails until this runs once:
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production \
+     run --rm --entrypoint "" api node --import tsx scripts/seed.ts
+   ```
+   Idempotent — safe to re-run.
+2. **Bootstrap the first admin**, once a real account has registered and verified:
+   ```
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production \
+     run --rm --entrypoint "" api node --import tsx scripts/bootstrap-admin.ts <email>
+   ```
+   Neither `scripts/` (root-level operational tooling) nor `packages/capabilities-vendored/`
+   (`apps/api`'s own boot-time capability reconciliation reads it, but `apps/api`'s own `package.json`
+   has no dependency on any individual capability package, so `turbo prune` never included it) survive
+   `turbo prune @webaudit/api --docker` on their own — both are now copied into `apps/api/Dockerfile`'s
+   image explicitly. Without the second of these two, a real deployment's every scan module silently
+   resolves to `NOT_APPLICABLE` forever, because nothing else in this topology ever populates the
+   `Capability` table — confirmed by running a real scan against an unpatched image and getting exactly
+   that empty, broken result before the fix.
+3. **Postgres has no published port in this topology** (`backend` is `internal: true`, by design) — the
+   two commands above, and any other one-off admin script, run *through* the `api` service's own image
+   (which already has `DATABASE_URL` and reaches the network `backend` is on), never from an operator's
+   own machine directly. There is no supported way to run `prisma studio`/`psql` against a real
+   deployment's database without either temporarily publishing a port (weakens the isolation P8-T4
+   deliberately built) or `docker compose exec`-ing into a container already on that network.
+
+### Other operational tooling
+
+`scripts/` is copied into the `apps/api` image wholesale (see the note above), so every root-level
+operator script runs the same way, not just the two above — for example, the credit-ledger integrity
+diagnostic (VERIFY-001), safe to run at any time (read-only, exits non-zero only if it finds a real
+inconsistency):
+```
+docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production \
+  run --rm --entrypoint "" api node --import tsx scripts/credits-integrity-check.ts
+```
+
+### Rollback procedure
+
+Every service in `infrastructure/docker-compose.production.yml` is a real, tagged Docker image
+(`webaudit-api`, `webaudit-worker`, `webaudit-web`) — rolling back is retagging and restarting, not a
+code revert:
+
+1. **Before deploying a new version**, tag the current, known-good images with a real version marker
+   (a git SHA or release tag), not just `:latest`:
+   ```
+   docker tag webaudit-api:latest webaudit-api:<previous-version>
+   docker tag webaudit-worker:latest webaudit-worker:<previous-version>
+   docker tag webaudit-web:latest webaudit-web:<previous-version>
+   ```
+2. **If the new version's migration is additive/backward-compatible** (this master plan's own standing
+   rule — never a destructive migration), rolling back the application containers alone is enough:
+   ```
+   docker tag webaudit-api:<previous-version> webaudit-api:latest
+   docker tag webaudit-worker:<previous-version> webaudit-worker:latest
+   docker tag webaudit-web:<previous-version> webaudit-web:latest
+   docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production \
+     up -d api worker web
+   ```
+   `postgres`/`redis`/`proxy` are untouched; `migrate` is not re-run (a rollback never reverses a
+   migration — the additive-only rule is what makes the old code safe to run against the new schema).
+3. **Confirm recovery** the same way P8-T4's own smoke test did: `docker compose ... ps -a` shows every
+   service `healthy` again, and a real request through the proxy (`curl http://<host>/health`) succeeds.
+4. **Real dry-run performed** (Phase 12, this session), using a real regression this same session found
+   and fixed as the "bad version": tagged the fixed, known-good `webaudit-api` image aside
+   (`:known-good`), built and redeployed the pre-fix image in its place (missing
+   `packages/capabilities-vendored`, this file's own "First-time bootstrap" note above) against the
+   *already-initialized* Phase 12 database. Real, useful finding from this specific dry-run: the broken
+   image's own boot log showed `reconciled 0 new, 0 updated, 21 absent capabilities` (reproducing the
+   underlying defect exactly), yet a real scan through it still came back `COMPLETED` with a real score
+   — because `reconcile.ts`'s own design deliberately never deletes or disables an "absent" `Capability`
+   row (its own module note: "a capability row is never deleted... reconciliation must never write
+   `isEnabled`"), so the 16 rows an earlier, correct boot had already reconciled stayed fully usable.
+   **The blast radius of this class of bug is therefore scoped to a genuinely first-ever bootstrap of a
+   database that has never been successfully reconciled before** — a redeploy of a broken image onto an
+   already-initialized system is safe by the registry's own existing design, not by luck. Rolled back by
+   re-tagging `:known-good` to `:latest` and re-running `up -d api` regardless (the correct action
+   either way): the service returned to `healthy`, boot logged a real `reconciled 16 new` again, and a
+   fresh scan continued to complete normally. No data loss at any step (Postgres/Redis were never
+   touched).
 
 ## Summary table
 

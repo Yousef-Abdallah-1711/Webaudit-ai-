@@ -1,0 +1,27 @@
+:root{
+/* Brand — one accent for the whole product */
+--accent:#fe5a01;--accent-hover:#fe4a00;--accent-ring:#fa7014;
+/* Text */
+--text-primary:#1f2937;--text-secondary:#6b7280;--text-zinc:#3f3f46;--text-muted:#737373;--text-strong:#111827;--text-on-accent:#fafafa;
+/* Surfaces */
+--surface-page:#ffffff;--surface-raised:#fafafa;--surface-sunken:#f9fafb;--surface-inverse:#1f2937;
+/* Borders — hairline, sub-pixel */
+--border-subtle:#e5e5e5;--border-default:#e5e7eb;--border-width:0.667px;
+/* Promo bar */
+--promo-bg:#10b981;--promo-bg-dark:#047857;
+/* Gradients — the only decorative fills in the system */
+--gradient-cta:linear-gradient(to right,#f97316,#ef4444); /* @kind color */
+--wash-br:linear-gradient(to bottom right,rgba(234,88,12,.4),transparent,transparent); /* @kind color */
+--wash-tl:linear-gradient(to left top,rgba(234,88,12,.5),transparent,transparent); /* @kind color */
+/* Severity — never #fe5a01; accent means "clickable", not "severe" */
+--sev-critical:#b91c1c;--sev-critical-bg:#fef2f2;
+--sev-high:#c2410c;--sev-high-bg:#fff7ed;
+--sev-medium:#a16207;--sev-medium-bg:#fefce8;
+--sev-low:#4d7c0f;--sev-low-bg:#f7fee7;
+--sev-info:#52525b;--sev-info-bg:#fafafa;
+--sev-resolved:#047857;--sev-resolved-bg:#ecfdf5;
+/* Semantic aliases */
+--text-body:var(--text-primary);--text-meta:var(--text-secondary);--text-code:var(--text-zinc);
+--surface-card:var(--surface-page);--surface-section:var(--surface-raised);--surface-field:var(--surface-page);
+--border-card:var(--border-default);--border-control:var(--border-subtle);
+--focus-ring:var(--accent-ring)}

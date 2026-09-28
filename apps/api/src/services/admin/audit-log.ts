@@ -98,6 +98,14 @@ export async function listAuditLog(
     readonly offset?: number | undefined;
     readonly action?: string | undefined;
     readonly actorId?: string | undefined;
+    /**
+     * Exact match on the subject a mutation targeted (e.g. a user id) —
+     * distinct from `search`, which does a case-insensitive substring match
+     * across `action`/`subjectType`/`subjectId` and can over-match. P4-T5
+     * (master plan): lets the admin UI show exactly this user's own audit
+     * trail, not "anything mentioning this id".
+     */
+    readonly subjectId?: string | undefined;
     readonly search?: string | undefined;
     readonly from?: Date | undefined;
     readonly to?: Date | undefined;
@@ -111,6 +119,7 @@ export async function listAuditLog(
       where: {
         ...(opts.action === undefined ? {} : { action: opts.action }),
         ...(opts.actorId === undefined ? {} : { actorId: opts.actorId }),
+        ...(opts.subjectId === undefined ? {} : { subjectId: opts.subjectId }),
         ...(opts.search === undefined
           ? {}
           : {
@@ -137,6 +146,7 @@ export async function listAuditLog(
       where: {
         ...(opts.action === undefined ? {} : { action: opts.action }),
         ...(opts.actorId === undefined ? {} : { actorId: opts.actorId }),
+        ...(opts.subjectId === undefined ? {} : { subjectId: opts.subjectId }),
         ...(opts.search === undefined
           ? {}
           : {

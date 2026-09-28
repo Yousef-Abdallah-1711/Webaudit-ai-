@@ -87,7 +87,12 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/(admin)/admin/scans/page.module.css': { hex: 0, px: 4 },
   'app/(admin)/admin/settings/page.module.css': { hex: 1, px: 14 },
   // px 2 -> 10: user action panel and detail output.
-  'app/(admin)/admin/users/page.module.css': { hex: 0, px: 10 },
+  // px 10 -> 18: Phase 3/4 (production-without-Paymob-or-AI master plan) —
+  // the plan-assignment sub-form, the designed detail summary, and the
+  // grant/assignment confirmation panel.
+  // px 18 -> 23: Phase 4 (same master plan) — the email search row and the
+  // recent-ledger/audit-trail lists on the detail view.
+  'app/(admin)/admin/users/page.module.css': { hex: 0, px: 23 },
   'app/(auth)/forgot-password/page.module.css': { hex: 0, px: 1 },
   'app/(auth)/login/page.module.css': { hex: 0, px: 2 },
   'app/(auth)/reset-password/page.module.css': { hex: 0, px: 2 },

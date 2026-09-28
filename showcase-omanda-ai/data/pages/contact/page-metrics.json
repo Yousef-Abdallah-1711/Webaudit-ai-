@@ -1,0 +1,28 @@
+{
+  "target": "https://omanda-ai.com/contact",
+  "capturedAt": "2026-09-14T09:56:47.546Z",
+  "timings": {
+    "ttfbMs": 68,
+    "domContentLoadedMs": 393,
+    "loadMs": 448,
+    "firstContentfulPaintMs": 632,
+    "domInteractiveMs": 285
+  },
+  "transferKb": 1133,
+  "resourceCount": 28,
+  "domNodes": 216,
+  "scripts": 5,
+  "stylesheets": 3,
+  "images": 1,
+  "title": "تواصل معنا — قنوات الدعم والمبيعات المباشرة | Omanda",
+  "textLength": 2766,
+  "headings": {
+    "h1": 1,
+    "h2": 3,
+    "h3": 5
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

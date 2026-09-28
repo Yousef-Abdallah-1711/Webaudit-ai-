@@ -20,6 +20,7 @@
 
 import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import { balanceOf, balancesOf } from '../credits/balance.js';
+import { subscriptionOwnsPeriod } from '../billing/entitlements.js';
 import { recordAuditLog } from './audit-log.js';
 
 export class UserNotFoundError extends Error {
@@ -39,6 +40,15 @@ export interface AdminUserSummary {
   readonly balance: { readonly plan: number; readonly purchased: number };
 }
 
+export interface AdminLedgerEntry {
+  readonly id: string;
+  readonly type: string;
+  readonly amount: number;
+  readonly reason: string;
+  readonly scanId: string | null;
+  readonly createdAt: Date;
+}
+
 export interface AdminUserDetail extends AdminUserSummary {
   readonly emailVerifiedAt: Date | null;
   readonly githubLogin: string | null;
@@ -51,7 +61,11 @@ export interface AdminUserDetail extends AdminUserSummary {
     readonly cancelAtPeriodEnd: boolean;
   } | null;
   readonly balance: AdminUserSummary['balance'] & { readonly planExpiresAt: Date | null };
+  /** P4-T2 (master plan): the target user's own most recent ledger entries, newest first. */
+  readonly recentLedger: readonly AdminLedgerEntry[];
 }
+
+const RECENT_LEDGER_LIMIT = 20;
 
 export interface ListUsersResult {
   readonly users: readonly AdminUserSummary[];
@@ -66,19 +80,46 @@ const MAX_LIST_LIMIT = 200;
 /** Users are on the `free` tier by implication when there is no `Subscription` row. */
 const FREE_PLAN_ID = 'free';
 
+/**
+ * PLAN-FOLLOWUP-1 (Phase 3/4, master plan): the effective plan, not the raw
+ * `Subscription.planId` — a lapsed/expired/admin-reverted subscription must
+ * never display its old plan as if it were still current. Uses
+ * `subscriptionOwnsPeriod` (the exact same rule `resolveEffectivePlan`
+ * enforces) against fields already selected for display, so this costs no
+ * extra query per row.
+ */
+function effectivePlanId(
+  subscription: { readonly planId: string; readonly status: string; readonly periodEnd: Date } | null,
+): string {
+  if (subscription === null) return FREE_PLAN_ID;
+  return subscriptionOwnsPeriod(subscription.status, subscription.periodEnd)
+    ? subscription.planId
+    : FREE_PLAN_ID;
+}
+
 export async function listUsers(
   db: PrismaClient,
   // Each field explicitly unioned with `undefined`, not bare `?:` — this
   // repo runs with `exactOptionalPropertyTypes`, and the Zod-parsed query
   // object the route hands in carries the key with value `undefined` when a
   // param is omitted, which a bare `?:` does not accept.
-  opts: { readonly limit?: number | undefined; readonly offset?: number | undefined } = {},
+  opts: {
+    readonly limit?: number | undefined;
+    readonly offset?: number | undefined;
+    /** P4-T1 (master plan): case-insensitive substring match on email. */
+    readonly search?: string | undefined;
+  } = {},
 ): Promise<ListUsersResult> {
   const limit = Math.min(Math.max(opts.limit ?? DEFAULT_LIST_LIMIT, 1), MAX_LIST_LIMIT);
   const offset = Math.max(opts.offset ?? 0, 0);
+  const where =
+    opts.search === undefined || opts.search.trim() === ''
+      ? {}
+      : { email: { contains: opts.search.trim(), mode: 'insensitive' as const } };
 
   const [rows, total] = await Promise.all([
     db.user.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
       skip: offset,
       take: limit,
@@ -87,10 +128,10 @@ export async function listUsers(
         email: true,
         isOperator: true,
         createdAt: true,
-        subscription: { select: { planId: true, status: true } },
+        subscription: { select: { planId: true, status: true, periodEnd: true } },
       },
     }),
-    db.user.count(),
+    db.user.count({ where }),
   ]);
 
   const balances = await balancesOf(
@@ -105,7 +146,7 @@ export async function listUsers(
       email: row.email,
       isOperator: row.isOperator,
       createdAt: row.createdAt,
-      planId: row.subscription?.planId ?? FREE_PLAN_ID,
+      planId: effectivePlanId(row.subscription),
       subscriptionStatus: row.subscription?.status ?? null,
       balance: { plan: balance?.plan ?? 0, purchased: balance?.purchased ?? 0 },
     };
@@ -115,7 +156,7 @@ export async function listUsers(
 }
 
 /** Structural, not `PrismaClient` — so a `$transaction` callback's `tx` works here too. */
-type UserAndLotReader = Pick<PrismaClient, 'user' | 'creditLot'>;
+type UserAndLotReader = Pick<PrismaClient, 'user' | 'creditLot' | 'creditTransaction'>;
 
 export async function getUser(db: UserAndLotReader, userId: string): Promise<AdminUserDetail> {
   const row = await db.user.findUnique({
@@ -143,6 +184,16 @@ export async function getUser(db: UserAndLotReader, userId: string): Promise<Adm
 
   const balance = await balanceOf(db, userId);
 
+  // Scoped to this exact userId — never a broader query a caller could widen
+  // into another user's ledger (the same IDOR discipline every other query
+  // in this file already follows).
+  const ledgerRows = await db.creditTransaction.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: RECENT_LEDGER_LIMIT,
+    select: { id: true, type: true, amount: true, reason: true, scanId: true, createdAt: true },
+  });
+
   return {
     id: row.id,
     email: row.email,
@@ -151,9 +202,10 @@ export async function getUser(db: UserAndLotReader, userId: string): Promise<Adm
     updatedAt: row.updatedAt,
     emailVerifiedAt: row.emailVerifiedAt,
     githubLogin: row.githubLogin,
-    planId: row.subscription?.planId ?? FREE_PLAN_ID,
+    planId: effectivePlanId(row.subscription),
     subscriptionStatus: row.subscription?.status ?? null,
     subscription: row.subscription ?? null,
+    recentLedger: ledgerRows,
     balance: {
       plan: balance.plan,
       purchased: balance.purchased,

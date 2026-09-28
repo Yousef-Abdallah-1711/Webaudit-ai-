@@ -11,7 +11,7 @@
  * by accident.
  */
 
-import { createExecutor, type AiExecutor } from './executor.js';
+import { createExecutor, type AiExecutor, type AiResult } from './executor.js';
 import { pricingFrom } from './pricing.js';
 import type { Provider } from './provider.js';
 import { claudeProvider } from './providers/claude.provider.js';
@@ -129,7 +129,52 @@ export class FixtureModeInProductionError extends Error {
   }
 }
 
+/**
+ * `AI_MODE=disabled` — production-safe "no AI layer at all", distinct from
+ * `AI_MODE=fixtures` in the one way that matters: this is legitimate in
+ * production, and `fixtures` never is (see `FixtureModeInProductionError`
+ * above).
+ *
+ * **Constructs zero providers and calls `buildChain` zero times.** This is not
+ * a zero-length real chain — `buildChain([])` deliberately throws
+ * (`ChainConfigurationError`, Principle IV's two-vendor minimum), and that
+ * throw exists to catch a *misconfigured* real deployment, not to express
+ * "AI was never meant to run here". Reusing it would mean the only way to
+ * intentionally disable AI is to trip a safety check meant for accidents, and
+ * the next engineer who tightens that check would break this on purpose.
+ * `disabled` is a third, explicit mode, never a chain.
+ *
+ * **`.run()` resolves to `{ ok: false, reason: 'DISABLED', invocations: [] }`
+ * immediately** — no network call, no timer, no provider object ever
+ * constructed. `invocations: []` (as opposed to a fabricated attempt record)
+ * is deliberate: nothing was attempted, so nothing is recorded as attempted,
+ * which keeps cost/attempt accounting (`totalCostMicros`, `AiInvocation` rows)
+ * honestly at zero rather than inventing a call that never happened.
+ *
+ * `reason: 'DISABLED'` (not `'CHAIN_EXHAUSTED'`) is what lets
+ * `runAiLayer` (`apps/worker/src/module-runner/ai-layer.ts`) skip the
+ * `ai_chain_exhaustion` operator alert for this mode — an intentionally
+ * disabled AI layer is not an outage, and alerting on every scan as if it
+ * were would train an operator to ignore the alert that means something.
+ */
+function createDisabledExecutor(): AiExecutor {
+  return {
+    chain: [],
+    run<T>(): Promise<AiResult<T>> {
+      return Promise.resolve({ ok: false, reason: 'DISABLED', invocations: [] });
+    },
+  };
+}
+
 export function createExecutorFromEnv(env: Env = process.env): AiExecutor {
+  if (env['AI_MODE'] === 'disabled') {
+    // No fixture guard needed here — unlike `fixtures`, `disabled` is meant
+    // for production and carries no misleading-zero-cost risk: it never
+    // reports a fabricated SUCCESS, only the same "nothing to interpret"
+    // shape a real chain exhaustion already produces, just correctly labelled.
+    return createDisabledExecutor();
+  }
+
   if (isFixtureMode() || env['AI_MODE'] === 'fixtures') {
     // Fixture mode is a test affordance and it had no guard, which made it the
     // one setting that could turn the two-vendor check into a formality. The
@@ -170,6 +215,13 @@ export function createMasterReportExecutorFromEnv(
 ): AiExecutor {
   const override = env['AI_CHAIN_MASTER_REPORT'];
   if (override === undefined || override.trim() === '') return fallback;
+
+  // Disabled mode overrides nothing: `fallback` here is already the disabled
+  // no-op executor `createExecutorFromEnv` returned, and a separately
+  // configured override chain would be the one way this mode could still end
+  // up constructing a real provider. `AI_MODE=disabled` wins over any
+  // `AI_CHAIN_MASTER_REPORT` value for the same reason it wins over `AI_CHAIN`.
+  if (env['AI_MODE'] === 'disabled') return fallback;
 
   if (isFixtureMode() || env['AI_MODE'] === 'fixtures') return fallback;
 

@@ -13,7 +13,7 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { testDb as db, resetDb, closeDb } from '@webaudit/api/test-db';
 import { createCostAlertsSweepHandler } from '../../src/orchestrator/cost-alerts-scheduler.js';
-import { dispatch, JOB_NAMES } from '../../src/queue/workers.js';
+import { dispatch, JOB_NAMES, JobNotImplementedError } from '../../src/queue/workers.js';
 
 describe('FR-C01-C04 cost-alert sweep — scheduled and wired', () => {
   beforeEach(resetDb);
@@ -57,11 +57,18 @@ describe('FR-C01-C04 cost-alert sweep — scheduled and wired', () => {
   });
 
   it('dispatch refuses an unrecognised cost-alerts-sweep payload before the missing-handler check', async () => {
-    await expect(
-      dispatch(
-        { name: JOB_NAMES.costAlertsSweep, queueName: 'maintenance', data: { kind: 'wrong' } },
-        {},
-      ),
-    ).rejects.toThrow();
+    // A real handler is supplied so the only possible rejection is the
+    // schema check — `.rejects.toThrow()` alone against an empty `{}`
+    // handlers object cannot tell a schema failure apart from
+    // `JobNotImplementedError` for a missing handler, since both reject
+    // (found live building an analogous test elsewhere: with no schema
+    // check at all, this exact shape of assertion still passed, because the
+    // missing-handler throw satisfied it just as well).
+    const error = await dispatch(
+      { name: JOB_NAMES.costAlertsSweep, queueName: 'maintenance', data: { kind: 'wrong' } },
+      { costAlertsSweep: () => Promise.resolve() },
+    ).catch((e: unknown) => e);
+    expect(error).not.toBeInstanceOf(JobNotImplementedError);
+    expect(String(error)).toContain('kind');
   });
 });

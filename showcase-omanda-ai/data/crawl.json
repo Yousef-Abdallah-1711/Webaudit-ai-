@@ -1,0 +1,672 @@
+{
+  "crawledAt": "2026-09-14T09:58:13.638Z",
+  "pages": [
+    {
+      "path": "/",
+      "url": "https://omanda-ai.com/",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/pricing",
+      "url": "https://omanda-ai.com/pricing",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/contact",
+      "url": "https://omanda-ai.com/contact",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/help",
+      "url": "https://omanda-ai.com/help",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/data-deletion",
+      "url": "https://omanda-ai.com/data-deletion",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/privacy",
+      "url": "https://omanda-ai.com/privacy",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/terms",
+      "url": "https://omanda-ai.com/terms",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/refund-policy",
+      "url": "https://omanda-ai.com/refund-policy",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/signin",
+      "url": "https://omanda-ai.com/signin",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/reset-password",
+      "url": "https://omanda-ai.com/reset-password",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    },
+    {
+      "path": "/accept-invite",
+      "url": "https://omanda-ai.com/accept-invite",
+      "score": 90,
+      "counts": {
+        "CRITICAL": 0,
+        "HIGH": 2,
+        "MEDIUM": 4,
+        "LOW": 4,
+        "INFO": 0
+      },
+      "worstSeverity": "HIGH",
+      "topFindings": [
+        {
+          "title": "Missing Content-Security-Policy header",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "severity": "HIGH",
+          "area": "Security"
+        },
+        {
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "severity": "MEDIUM",
+          "area": "Security"
+        }
+      ],
+      "areas": [
+        {
+          "module": "SECURITY",
+          "label": "Security",
+          "score": 61
+        },
+        {
+          "module": "SEO",
+          "label": "Search visibility",
+          "score": 96
+        },
+        {
+          "module": "PERFORMANCE",
+          "label": "Performance",
+          "score": 91
+        },
+        {
+          "module": "TESTING",
+          "label": "Testing",
+          "score": 100
+        },
+        {
+          "module": "UI",
+          "label": "Design",
+          "score": 100
+        }
+      ]
+    }
+  ],
+  "readiness": {
+    "verdict": "no-go",
+    "areas": [
+      {
+        "name": "Security",
+        "score": 61,
+        "threshold": 80,
+        "pass": false
+      },
+      {
+        "name": "Search visibility",
+        "score": 96,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Performance",
+        "score": 91,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Testing",
+        "score": 100,
+        "threshold": 80,
+        "pass": true
+      },
+      {
+        "name": "Design",
+        "score": 100,
+        "threshold": 80,
+        "pass": true
+      }
+    ],
+    "blockers": [
+      "Security scores 61/100 on the homepage — below the 80 bar.",
+      "HIGH — \"Missing Content-Security-Policy header\" found on all 11 crawled pages (Security) — points at shared code, not one page.",
+      "HIGH — \"Credential in source: a value assigned to a credential-shaped name\" found on all 11 crawled pages (Security) — points at shared code, not one page."
+    ]
+  }
+}

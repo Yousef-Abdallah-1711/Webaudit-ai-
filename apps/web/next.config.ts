@@ -1,3 +1,4 @@
+import path from 'node:path';
 import type { NextConfig } from 'next';
 
 /**
@@ -12,6 +13,38 @@ import type { NextConfig } from 'next';
  * worse failure to debug.
  */
 const nextConfig: NextConfig = {
+  /**
+   * Phase 8 (production-without-Paymob-or-AI master plan): a self-contained
+   * `.next/standalone` output — a minimal `server.js` plus only the
+   * `node_modules` the built app actually traces as used — is Next.js's own
+   * documented shape for a Docker production image, replacing "copy the
+   * whole `node_modules` and run `next start`" with a much smaller final
+   * layer. Affects only `next build`'s output layout; `next dev` is
+   * unchanged.
+   *
+   * Gated behind `DOCKER_BUILD` (set only by `apps/web/Dockerfile`), not
+   * unconditional — the key is omitted entirely rather than set to
+   * `undefined` (`exactOptionalPropertyTypes` in tsconfig.base.json rejects
+   * an explicit `undefined` for a non-optional-undefined property). Tracing
+   * the standalone bundle copies files by creating real symlinks, which
+   * Windows refuses without Developer Mode or admin elevation (`EPERM:
+   * operation not permitted, symlink ...`) — a real, reproducible failure
+   * hit running `next build` locally for `apps/web/tests/e2e`/`tests/visual`
+   * on an unprivileged Windows checkout (Linux containers have no such
+   * restriction, which is why the Docker build itself was never affected).
+   * Those harnesses only need an ordinary `next build` + `next start`, never
+   * the standalone bundle, so there is no reason to pay this cost outside
+   * the one build that actually uses it.
+   */
+  ...(process.env['DOCKER_BUILD'] === '1' ? { output: 'standalone' as const } : {}),
+  /**
+   * Points Next's file tracer at the monorepo root rather than
+   * `apps/web` alone, so a `pnpm`-hoisted workspace package (symlinked from
+   * the root `node_modules`) is correctly traced into `.next/standalone`
+   * instead of silently missing from it — a real, commonly-hit gap in
+   * monorepos that Vercel's own standalone-output docs name explicitly.
+   */
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   transpilePackages: ['@webaudit/types', '@webaudit/config'],
   /**
    * The other half of `transpilePackages`, and without it the build fails.

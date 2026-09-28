@@ -146,12 +146,40 @@ export async function startStack(): Promise<Stack> {
   // limiter's own behaviour has its own dedicated suite; this fixture proves
   // the auth *flow*, so it opts out via `createApp`'s documented escape
   // hatch rather than fighting the limiter's real state.
+  //
+  // `intake.storage`: a real R2 bucket has no credentials in this fixture's
+  // environment — `createUploadStorage` throws `R2_ACCOUNT_ID, ... must all
+  // be set` the moment a spec hits `POST /scans/upload` otherwise (found
+  // live writing `admin/plan-and-credit-journey.spec.ts`, which needs a real
+  // archive upload to prove an entitlement actually changed). An in-memory
+  // map is enough: no spec here reads the object back through a worker scan,
+  // only through the route's own response and this same process's memory.
+  const uploads = new Map<string, Uint8Array>();
   const api: ApiService = await startApi({
     db,
     port: API_PORT,
     installSignalHandlers: false,
     mailer,
     rateLimiters: null,
+    intake: {
+      storage: {
+        put(userId, sha256, body) {
+          const key = `uploads/${userId}/${sha256}.zip`;
+          uploads.set(key, body);
+          return Promise.resolve(key);
+        },
+        get(key) {
+          const found = uploads.get(key);
+          return found === undefined
+            ? Promise.reject(new Error(`no object at ${key}`))
+            : Promise.resolve(found);
+        },
+        remove(key) {
+          uploads.delete(key);
+          return Promise.resolve();
+        },
+      },
+    },
   });
   const apiBaseUrl = `http://127.0.0.1:${String(api.port)}`;
 

@@ -153,6 +153,18 @@ export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep')
 export const costAlertsSweepJobSchema = z
   .object({ kind: z.literal('cost-alerts-sweep') })
   .strict();
+/**
+ * The repeatable T032 telemetry-partition archive sweep carries no per-run
+ * data — added for consistency with every sibling maintenance job above,
+ * none of which skip this validation step at the dispatch boundary the way
+ * this one previously did (found during a code-quality pass; this queue is
+ * only ever fed by this repo's own `scheduleTelemetryArchive`, never by
+ * external input, so the practical exposure was low, but the inconsistency
+ * itself was real).
+ */
+export const telemetryArchiveJobSchema = z
+  .object({ kind: z.literal('telemetry-archive') })
+  .strict();
 
 /**
  * A cancelled scan's workspace, torn down out-of-band from `apps/api` (T104 gap
@@ -327,6 +339,7 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
     }
 
     case JOB_NAMES.telemetryArchive: {
+      telemetryArchiveJobSchema.parse(job.data);
       const handler = handlers.telemetryArchive;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T032', 'The telemetry-partition archive sweep');

@@ -58,4 +58,30 @@ describe('GET /audit-log filters', () => {
     expect(response.body.total).toBe(1);
     expect(response.body.entries[0].action).toBe('plan.create');
   });
+
+  it(
+    'filters by exact subjectId — P4-T5 (master plan): a user-scoped audit trail, not a ' +
+      'substring match that could over-match another subject entirely',
+    async () => {
+      const actor = await testDb.user.create({ data: { email: 'audit-subject@example.com' } });
+      await testDb.auditLogEntry.createMany({
+        data: [
+          { actorId: actor.id, action: 'plan.assign', subjectType: 'User', subjectId: 'user-1' },
+          { actorId: actor.id, action: 'credits.adjust', subjectType: 'User', subjectId: 'user-1' },
+          // Same action, different subject — must not appear in a subjectId=user-1 query,
+          // and a naive substring `search` for "user-1" would also wrongly match "user-10".
+          { actorId: actor.id, action: 'plan.assign', subjectType: 'User', subjectId: 'user-10' },
+        ],
+      });
+      const auth = { Authorization: `Bearer ${await token(actor.id)}` };
+      const response = await request(app)
+        .get('/audit-log')
+        .query({ subjectId: 'user-1' })
+        .set(auth)
+        .expect(200);
+      expect(response.body.total).toBe(2);
+      const subjectIds = (response.body.entries as { subjectId: string }[]).map((e) => e.subjectId);
+      expect(subjectIds.every((id) => id === 'user-1')).toBe(true);
+    },
+  );
 });

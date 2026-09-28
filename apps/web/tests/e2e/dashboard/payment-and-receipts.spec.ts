@@ -113,6 +113,26 @@ test('subscribing redirects to a real checkout, a signed webhook confirms it, an
   const receiptId = page.url().split('/billing/receipts/')[1]!;
 
   // Ownership check: a different, unrelated user cannot view this receipt.
+  // `owner`'s session is still live in this same browser context — a real
+  // user would sign out first, and without doing the same here
+  // `AuthProvider`'s own mount-time bootstrap silently re-authenticates as
+  // `owner` before the login form can even be filled (`getByLabel('Email')`
+  // finds the input, then the page unmounts it underneath the fill —
+  // "element was detached from the DOM, retrying" until the test times
+  // out). Two things have to be cleared, not one: `context.clearCookies()`
+  // for the httpOnly refresh cookie, AND `localStorage` for the access
+  // token `lib/api.ts` mirrors there (its own module note: "mirrored to
+  // localStorage so a reload does not sign the user out") — a real
+  // navigation resets in-memory JS state but not `localStorage`, so
+  // `getMe()` still succeeds with `owner`'s still-valid bearer token even
+  // on a freshly-loaded `/login` page. `localStorage.clear()` must run
+  // while still on this origin, before navigating away. Found live running
+  // this file for real (Phase 10) — every other spec in this directory
+  // either uses one identity per `page` or gets a fresh `page`/context per
+  // `test()` block, so this is the first place two identities ever shared
+  // one.
+  await context.clearCookies();
+  await page.evaluate(() => localStorage.clear());
   await loginViaUi(page, stack.webBaseUrl, other);
   await page.goto(`${stack.webBaseUrl}/billing/receipts/${receiptId}`);
   await expect(page.getByText('No such receipt.')).toBeVisible();

@@ -81,6 +81,7 @@ export default function BillingPage(): React.ReactElement {
   const [movements, setMovements] = useState<readonly CreditMovement[]>([]);
   const [receipts, setReceipts] = useState<readonly BillingReceiptSummary[]>([]);
   const [plans, setPlans] = useState<readonly Plan[]>([]);
+  const [paymentsEnabled, setPaymentsEnabled] = useState(true);
   const [currentPlanId, setCurrentPlanId] = useState<string>('free');
   const [renewsAt, setRenewsAt] = useState<string | null>(null);
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
@@ -100,6 +101,7 @@ export default function BillingPage(): React.ReactElement {
       setMovements(credits.movements);
       setReceipts(receiptList.receipts);
       setPlans(planList.plans);
+      setPaymentsEnabled(planList.paymentsEnabled);
       if (credits.subscription !== null) {
         setCurrentPlanId(credits.subscription.planId);
         setRenewsAt(credits.subscription.periodEnd);
@@ -281,6 +283,12 @@ export default function BillingPage(): React.ReactElement {
           </Card>
 
           <Card padding={22} title="Choose a plan">
+            {!paymentsEnabled && (
+              <p className={styles.balanceNote}>
+                Plan changes are managed by an administrator in this deployment — contact yours to
+                move to a different plan.
+              </p>
+            )}
             <div className={styles.tierGrid}>
               {plans.map((p) => {
                 const isNow = p.id === currentPlanId;
@@ -302,17 +310,23 @@ export default function BillingPage(): React.ReactElement {
                       {p.allowCreditPurchase && <div>Top-ups</div>}
                       {p.allowLoadGeneration && <div>Load generation</div>}
                     </div>
-                    <Button
-                      variant={isNow ? 'secondary' : 'primary'}
-                      size="sm"
-                      fullWidth
-                      disabled={isNow || busy || !SUBSCRIBABLE.has(p.id)}
-                      onClick={() => {
-                        onPickPlan(p.id);
-                      }}
-                    >
-                      {isNow ? 'Current plan' : p.id === 'free' ? 'Free' : `Choose ${p.name}`}
-                    </Button>
+                    {paymentsEnabled ? (
+                      <Button
+                        variant={isNow ? 'secondary' : 'primary'}
+                        size="sm"
+                        fullWidth
+                        disabled={isNow || busy || !SUBSCRIBABLE.has(p.id)}
+                        onClick={() => {
+                          onPickPlan(p.id);
+                        }}
+                      >
+                        {isNow ? 'Current plan' : p.id === 'free' ? 'Free' : `Choose ${p.name}`}
+                      </Button>
+                    ) : (
+                      <Button variant="secondary" size="sm" fullWidth disabled>
+                        {isNow ? 'Current plan' : 'Contact administrator'}
+                      </Button>
+                    )}
                   </div>
                 );
               })}
@@ -340,19 +354,30 @@ export default function BillingPage(): React.ReactElement {
           </Card>
 
           <Card padding={22} title="Top up">
-            <p className={styles.balanceNote}>Purchased credits never expire. Paid plans only.</p>
-            <input
-              className={styles.topUpInput}
-              inputMode="numeric"
-              value={topUp}
-              onChange={(e) => {
-                setTopUp(e.target.value);
-              }}
-              aria-label="Credits to purchase"
-            />
-            <Button variant="primary" size="sm" fullWidth disabled={busy} onClick={onBuy}>
-              Buy credits
-            </Button>
+            {paymentsEnabled ? (
+              <>
+                <p className={styles.balanceNote}>
+                  Purchased credits never expire. Paid plans only.
+                </p>
+                <input
+                  className={styles.topUpInput}
+                  inputMode="numeric"
+                  value={topUp}
+                  onChange={(e) => {
+                    setTopUp(e.target.value);
+                  }}
+                  aria-label="Credits to purchase"
+                />
+                <Button variant="primary" size="sm" fullWidth disabled={busy} onClick={onBuy}>
+                  Buy credits
+                </Button>
+              </>
+            ) : (
+              <p className={styles.balanceNote}>
+                Credit purchases are managed by an administrator in this deployment — contact
+                yours for additional credits.
+              </p>
+            )}
           </Card>
 
           <Card padding={22} title="Retention">

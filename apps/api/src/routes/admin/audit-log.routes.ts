@@ -21,6 +21,7 @@ const listQuery = z.object({
   offset: z.coerce.number().int().min(0).optional(),
   action: z.string().trim().min(1).optional(),
   actorId: z.string().trim().min(1).optional(),
+  subjectId: z.string().trim().min(1).optional(),
   search: z.string().trim().min(1).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),

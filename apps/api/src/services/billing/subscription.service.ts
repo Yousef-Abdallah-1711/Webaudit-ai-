@@ -119,6 +119,11 @@ export async function subscribe(
         renewalWarningSentAt: null,
         externalCustomerId: input.external?.customerId ?? null,
         externalSubscriptionId: input.external?.subscriptionId ?? null,
+        // A real (or dev-stubbed) subscribe always clears an earlier admin
+        // assignment on this same row — see billing/index.ts's
+        // renewDueSubscriptions for why this flag must not survive a real
+        // subscribe.
+        adminAssigned: false,
       };
       const sub = await tx.subscription.upsert({
         where: { userId: input.userId },

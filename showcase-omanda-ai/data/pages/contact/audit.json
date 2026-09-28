@@ -1,0 +1,448 @@
+{
+  "meta": {
+    "target": "https://omanda-ai.com/contact",
+    "startedAt": "2026-09-14T09:56:38.208Z",
+    "completedAt": "2026-09-14T09:56:40.853Z",
+    "durationMs": 2645,
+    "engine": "showcase-omanda-ai standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 90,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 2,
+    "MEDIUM": 4,
+    "LOW": 4,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 61,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 169,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 163,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 4,
+          "durationMs": 190,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 175,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "headers.csp-missing",
+          "fingerprint": "09c1b78fc874563667815a58ef2000202e12f922744fe8d96f703dfadcf22ff6",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Missing Content-Security-Policy header",
+          "explanation": "The response carried no Content-Security-Policy header.",
+          "consequence": "Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": null,
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Missing Content-Security-Policy header\nWhat was measured: The response carried no Content-Security-Policy header.\nWhere: https://omanda-ai.com/contact\nWhy it matters: Without a CSP, the browser applies no restriction on which scripts, styles, or resources a page may load, which widens the impact of any injection vulnerability.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "13fe2b687ea74fcb3bcc72f3f444c27edb766e1edd9dce993093bd7e696e27a9",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 209, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/contact",
+            "segment": "fetched-page",
+            "line": 209,
+            "column": 49,
+            "length": 35,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:4]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 209, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/contact\",\"segment\":\"fetched-page\",\"line\":209,\"column\":49,\"length\":35,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:4]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "7e473c3d3f2dba155f36700a4648e74b03e87e552dff02ab05469f81738c0d91",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 210, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/contact",
+            "segment": "fetched-page",
+            "line": 210,
+            "column": 49,
+            "length": 35,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 210, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/contact\",\"segment\":\"fetched-page\",\"line\":210,\"column\":49,\"length\":35,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "37fbbf6c8808a32b4f36fe1124b5f5def051f281d8e5bc72d5ff155525009846",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 211, column 49 (36 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/contact",
+            "segment": "fetched-page",
+            "line": 211,
+            "column": 49,
+            "length": 36,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:2]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/contact at line 211, column 49 (36 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com/contact\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/contact\",\"segment\":\"fetched-page\",\"line\":211,\"column\":49,\"length\":36,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:2]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "98ee10961de4844761ca8f69453a26212ddb437c92e8a391dfab3ef54667e947",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "explanation": "A value assigned to a credential-shaped name appears in https://omanda-ai.com/contact at line 233, column 286 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.",
+          "consequence": "If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "kind": "GENERIC_SECRET_ASSIGNMENT",
+            "path": "https://omanda-ai.com/contact",
+            "segment": "fetched-page",
+            "line": 233,
+            "column": 286,
+            "length": 32,
+            "placeholder": "[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a value assigned to a credential-shaped name\nWhat was measured: A value assigned to a credential-shaped name appears in https://omanda-ai.com/contact at line 233, column 286 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com/contact\nWhy it matters: If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.\nEvidence: {\"kind\":\"GENERIC_SECRET_ASSIGNMENT\",\"path\":\"https://omanda-ai.com/contact\",\"segment\":\"fetched-page\",\"line\":233,\"column\":286,\"length\":32,\"placeholder\":\"[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 96,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "LOW",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 173,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 182,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.h1-multiple",
+          "fingerprint": "52f21056a1e44e2b8f2f1eb72884cc19b66e14041f4557f519fdf35c66d30a66",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Multiple H1 headings",
+          "explanation": "2 <h1> tags were found in the page.",
+          "consequence": "More than one H1 dilutes the single clear topic signal an H1 is meant to provide.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "count": 2
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Multiple H1 headings\nWhat was measured: 2 <h1> tags were found in the page.\nWhere: https://omanda-ai.com/contact\nWhy it matters: More than one H1 dilutes the single clear topic signal an H1 is meant to provide.\nEvidence: {\"count\":2}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.thin-content",
+          "fingerprint": "0001328ae879ba9e95ef34eb4278d921c32d2ab94d4f013393185c9101136af4",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Thin content",
+          "explanation": "The page’s visible text is approximately 81 words, below the commonly cited 200-word threshold for substantive content.",
+          "consequence": "Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "wordCount": 81
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 81 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://omanda-ai.com/contact\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":81}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 91,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 792,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 650,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 839,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "a29ba6f2681cce77cd746f3ff532d82288a1541f56cb4140bea512eaad2f9838",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://omanda-ai.com/contact\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "bf9d30da77ad1d67c57f188b5fd280a38d33e6082704a0a8cc3b56d60ec1f0aa",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "4 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "count": 4,
+            "sample": [
+              "https://omanda-ai.com/assets/entry-BQ3HuxNN.js",
+              "https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495",
+              "https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap",
+              "https://omanda-ai.com/assets/index-CH41C6zG.css"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 4 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://omanda-ai.com/contact\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":4,\"sample\":[\"https://omanda-ai.com/assets/entry-BQ3HuxNN.js\",\"https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495\",\"https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap\",\"https://omanda-ai.com/assets/index-CH41C6zG.css\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.duplicate-subresource-reference",
+          "fingerprint": "e623029033ebd48ea94855c5cb2f55f835ed74fd29816745b5d7fa1980d9e074",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Same resource referenced more than once",
+          "explanation": "1 resource URL(s) are referenced by more than one tag on the page.",
+          "consequence": "Referencing the same script, stylesheet, or image more than once cannot make the browser request it twice, but it is a sign of markup that has drifted from what the page actually needs.",
+          "location": "https://omanda-ai.com/contact",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Same resource referenced more than once\nWhat was measured: 1 resource URL(s) are referenced by more than one tag on the page.\nWhere: https://omanda-ai.com/contact\nWhy it matters: Referencing the same script, stylesheet, or image more than once cannot make the browser request it twice, but it is a sign of markup that has drifted from what the page actually needs.\nEvidence: {\"count\":1,\"sample\":[\"https://fonts.googleapis.com/css2?family=Cairo:wght@700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 173,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": []
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 646,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: No automated rendering issues were measured for this page.",
+      "findings": []
+    }
+  ],
+  "aiNarrative": null
+}

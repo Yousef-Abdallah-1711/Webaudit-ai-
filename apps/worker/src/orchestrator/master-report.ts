@@ -30,13 +30,25 @@ export interface MasterSynthesisResult {
   readonly summary: string;
 }
 
-function fallbackSummary(areas: readonly AreaScore[]): string {
+/**
+ * Phase 6 (production-without-Paymob-or-AI master plan): distinguishes an
+ * intentionally disabled AI layer (`AI_MODE=disabled`) from a real chain
+ * exhaustion in the fallback text itself — the same distinction
+ * `ai-layer.ts` already makes for its per-module `degradedReason`, extended
+ * here so the scan-level executive summary never reads like an outage when
+ * nothing is actually wrong.
+ */
+function fallbackSummary(areas: readonly AreaScore[], reason: 'CHAIN_EXHAUSTED' | 'DISABLED'): string {
   const scored = areas.filter((a) => a.score !== null);
+  const prefix =
+    reason === 'DISABLED'
+      ? 'AI interpretation is intentionally disabled for this deployment'
+      : 'AI interpretation unavailable';
   if (scored.length === 0) {
     return 'No area of this audit produced a measurement to summarise.';
   }
   const parts = scored.map((a) => `${a.module} scored ${String(a.score)}`);
-  return `Summary (AI interpretation unavailable): ${parts.join(', ')}.`;
+  return `Summary (${prefix}): ${parts.join(', ')}.`;
 }
 
 export async function runMasterSynthesis(
@@ -85,7 +97,7 @@ export async function runMasterSynthesis(
     scanId,
   });
 
-  const summary = result.ok ? result.value.headline : fallbackSummary(areas);
+  const summary = result.ok ? result.value.headline : fallbackSummary(areas, result.reason);
 
   // The AI call above is the one real await between phase entry and this
   // write — a cancellation discovered while it was in flight must not let a

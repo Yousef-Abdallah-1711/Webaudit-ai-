@@ -12,10 +12,11 @@ out/
 # apps/sandbox-runner's own compiled child-harness bundle (host/build-harness.ts) — rebuilt on demand.
 .sandbox-build/
 
-# Environment — .env.example IS tracked
+# Environment — .env.example and .env.production.example ARE tracked
 .env
 .env.*
 !.env.example
+!.env.production.example
 
 # Test output
 coverage/

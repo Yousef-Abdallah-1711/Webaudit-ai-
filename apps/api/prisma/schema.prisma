@@ -290,6 +290,15 @@ model Subscription {
   externalCustomerId     String?
   externalSubscriptionId String?
 
+  /// Phase 3 (production-without-Paymob-or-AI master plan): true only for a
+  /// subscription an operator assigned manually, with no payment behind it
+  /// (admin/plan-assignment.service.ts). `subscribe()`/`renewSubscription()`
+  /// always write `false` — a real (or dev-stubbed) payment always clears
+  /// this flag. `renewDueSubscriptions` excludes `adminAssigned: true` rows
+  /// so the automatic billing sweep never re-grants plan credits for a
+  /// subscription nothing was ever paid for.
+  adminAssigned Boolean @default(false)
+
   /// FR-078: set when the pre-renewal "you are about to lose N plan credits"
   /// warning has been sent for the current period, so the sweep does not
   /// re-send it. Cleared on renewal.
@@ -569,6 +578,18 @@ model Issue {
   attribution Attribution
 
   fixPrompt String
+
+  /// Phase 6 (production-without-Paymob-or-AI master plan): carried through
+  /// from the capability's own `CapabilityFinding.fixable` (packages/types),
+  /// which was already computed in-memory (`module-runner/attribute.ts`) but
+  /// never persisted before this column existed — a gap this phase found
+  /// while wiring the "hide the fix CTA on a non-fixable finding" UI rule.
+  /// `@default(true)` matches every existing capability's own default
+  /// (`code-layer.ts`'s `candidate.fixable === true` — "absent means not
+  /// fixable" for a raw candidate, but every one of the 54 deterministic
+  /// rules that does not explicitly declare `fixable: false` already means
+  /// true).
+  fixable Boolean @default(true)
 
   state                IssueState   @default(OPEN)
   requiredControlLevel ControlLevel @default(NONE)

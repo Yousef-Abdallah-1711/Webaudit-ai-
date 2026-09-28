@@ -1,0 +1,16 @@
+:root{
+/* Desktop scale — size / line / weight / tracking, measured at 1440px */
+--type-display:700 48px/48px var(--font-sans);--track-display:-1.2px;
+--type-h2:700 36px/40px var(--font-sans);--track-h2:-0.9px;
+--type-h3:700 30px/36px var(--font-sans);
+--type-card-title:600 24px/32px var(--font-sans);
+--type-lead:400 20px/28px var(--font-sans);
+--type-body-lg:500 18px/28px var(--font-sans);
+--type-body:400 16px/24px var(--font-sans);
+--type-body-bold:700 16px/20px var(--font-sans);
+--type-small:400 14px/20px var(--font-sans);
+--type-eyebrow:700 15.2px/20px var(--font-sans);--track-eyebrow:1.52px;
+/* Mobile overrides, measured at 390px */
+--type-display-mobile:700 24px/32px var(--font-sans);--track-display-mobile:-0.6px;
+--type-h2-mobile:700 30px/32px var(--font-sans);--track-h2-mobile:-0.75px;
+--type-body-mobile:500 14px/20px var(--font-sans);--track-body-mobile:0.35px}

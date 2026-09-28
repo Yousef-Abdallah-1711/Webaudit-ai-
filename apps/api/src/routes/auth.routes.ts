@@ -53,11 +53,27 @@ const TOKEN_GONE = {
  * Exported so `oauth.routes.ts` sets an identical cookie after a social
  * sign-in. One definition: a social session that differed in `httpOnly`,
  * `sameSite`, or `path` from a password session would be a silent downgrade.
+ *
+ * `secure` is `env.isProduction && req.secure`, not `env.isProduction` alone.
+ * A browser refuses to store a `Secure` cookie received over plain HTTP — so
+ * `env.isProduction` on its own is correct once TLS is live, but actively
+ * breaks every login during the genuine interim window this deployment
+ * documents (P8-T5: the reverse proxy ships HTTP-only until a real
+ * certificate exists). Verified directly: a real login through the current
+ * HTTP-only compose stack returned `Set-Cookie: ...; Secure` before this fix,
+ * which no browser would have stored. `req.secure` reads `X-Forwarded-Proto`
+ * once `trust proxy` is set (app.ts), so this becomes accurate the moment the
+ * proxy actually terminates TLS, with no further code change.
  */
-export function setRefreshCookie(res: ExResponse, token: string, expires: Date): void {
+export function setRefreshCookie(
+  req: AuthedRequest,
+  res: ExResponse,
+  token: string,
+  expires: Date,
+): void {
   res.cookie(REFRESH_COOKIE, token, {
     httpOnly: true, // the page must never be able to read it
-    secure: env.isProduction,
+    secure: env.isProduction && req.secure,
     sameSite: 'lax',
     path: '/',
     expires,
@@ -128,7 +144,7 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
     }
     try {
       const session = await login(db, parsed.data);
-      setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+      setRefreshCookie(req, res, session.refreshToken, session.refreshExpiresAt);
       res.status(200).json({ accessToken: session.accessToken });
     } catch (e) {
       if (e instanceof EmailNotVerifiedError) {
@@ -148,7 +164,7 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
   r.post('/refresh', async (req: AuthedRequest, res) => {
     try {
       const session = await refresh(db, cookieToken(req));
-      setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+      setRefreshCookie(req, res, session.refreshToken, session.refreshExpiresAt);
       res.status(200).json({ accessToken: session.accessToken });
     } catch (e) {
       if (e instanceof InvalidRefreshTokenError) {
@@ -218,7 +234,16 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
       res.status(200).json({ message: 'Password changed. All sessions were signed out.' });
     } catch (e) {
       if (e instanceof InvalidCurrentPasswordError) {
-        res.status(401).json(BAD_CREDENTIALS);
+        // 403, not 401: `requireAuth` already established this bearer token
+        // is genuinely valid — this failure is about a second credential
+        // (the current password), not the session itself. `lib/api.ts`'s
+        // `request()` treats every 401 from anywhere as "the session is
+        // gone" and force-logs the browser out (`notifyUnauthorized()`) —
+        // a real bug this status code caused, found by
+        // `settings-account.spec.ts`'s real-browser Phase 10 run: typing a
+        // wrong current password silently logged the user out instead of
+        // showing the inline error the page already renders correctly.
+        res.status(403).json(BAD_CREDENTIALS);
         return;
       }
       throw e;

@@ -67,6 +67,8 @@ interface IssueRow {
   evidence: unknown;
   attribution: Attribution;
   fixPrompt: string;
+  /** Phase 6 (master plan): carried from the capability's own CapabilityFinding.fixable. */
+  fixable: boolean;
   requiredControlLevel: 'NONE' | 'ATTESTED' | 'VERIFIED';
 }
 
@@ -184,6 +186,7 @@ export async function persistModuleResult(
         // From the runner. The whole point of the type above.
         attribution: finding.attribution,
         fixPrompt: finding.fixPrompt,
+        fixable: finding.fixable,
         requiredControlLevel: 'NONE' as const,
       })),
       // (scanId, fingerprint) is unique — one row per problem per scan. A

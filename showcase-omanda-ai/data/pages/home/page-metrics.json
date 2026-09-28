@@ -1,0 +1,28 @@
+{
+  "target": "https://omanda-ai.com/",
+  "capturedAt": "2026-09-14T09:56:26.991Z",
+  "timings": {
+    "ttfbMs": 77,
+    "domContentLoadedMs": 400,
+    "loadMs": 441,
+    "firstContentfulPaintMs": 1284,
+    "domInteractiveMs": 311
+  },
+  "transferKb": 2396.1,
+  "resourceCount": 61,
+  "domNodes": 1422,
+  "scripts": 5,
+  "stylesheets": 6,
+  "images": 22,
+  "title": "Omanda — أول موظف مبيعات ذكاء اصطناعي لمتجرك الإلكتروني | Omanda",
+  "textLength": 6456,
+  "headings": {
+    "h1": 1,
+    "h2": 11,
+    "h3": 24
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 10
+  }
+}

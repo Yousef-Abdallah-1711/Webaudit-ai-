@@ -225,7 +225,7 @@ export default function ReportPage(): React.ReactElement {
                 {...(issue.location !== null ? { location: issue.location } : {})}
                 description={issue.explanation}
                 attribution={ATTRIBUTION_CASE[issue.attribution] ?? 'measured'}
-                prompt={issue.fixPrompt}
+                {...(issue.fixable ? { prompt: issue.fixPrompt } : {})}
               />
             ))}
             {list.length === 0 && <div className={styles.empty}>No issues in this area.</div>}

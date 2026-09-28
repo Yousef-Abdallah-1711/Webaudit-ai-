@@ -1,0 +1,28 @@
+{
+  "target": "https://omanda-ai.com/data-deletion",
+  "capturedAt": "2026-09-14T09:57:07.133Z",
+  "timings": {
+    "ttfbMs": 65,
+    "domContentLoadedMs": 445,
+    "loadMs": 487,
+    "firstContentfulPaintMs": 600,
+    "domInteractiveMs": 387
+  },
+  "transferKb": 1115.7,
+  "resourceCount": 27,
+  "domNodes": 142,
+  "scripts": 5,
+  "stylesheets": 3,
+  "images": 1,
+  "title": "حذف البيانات | Omanda",
+  "textLength": 1431,
+  "headings": {
+    "h1": 1,
+    "h2": 5,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

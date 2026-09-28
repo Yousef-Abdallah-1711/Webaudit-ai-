@@ -182,8 +182,11 @@ export async function runModule(options: RunModuleOptions): Promise<ModuleRunRes
 
   const findings = [...measuredFindings, ...secretFindings, ...judged];
 
-  // 6. State.
-  const aiDegraded = !ai.ran && ai.reason === 'CHAIN_EXHAUSTED';
+  // 6. State. `DISABLED` (AI_MODE=disabled) is treated the same as a real
+  // chain exhaustion here: both mean "an AI-layer capability existed and no
+  // interpretation happened", which is exactly what DEGRADED means. Only
+  // `ai-layer.ts`'s alerting distinguishes them (see its own note).
+  const aiDegraded = !ai.ran && (ai.reason === 'CHAIN_EXHAUSTED' || ai.reason === 'DISABLED');
   const state = resolveModuleState({
     applicableCount: applicable.length,
     outcomes,

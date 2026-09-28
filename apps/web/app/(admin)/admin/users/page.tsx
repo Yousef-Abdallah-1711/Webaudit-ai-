@@ -27,13 +27,28 @@ import {
   getAdminUsers,
   getAdminUserDetail,
   adjustUserCredits,
+  assignUserPlan,
+  getAdminPlans,
+  getAdminAuditLog,
   setUserOperator,
   type AdminUserSummary,
   type AdminUserDetail,
+  type AdminPlanRecord,
+  type AdminAuditLogEntry,
 } from '../../../../lib/api';
 import styles from './page.module.css';
 
 const PAGE_SIZE = 50;
+
+/**
+ * Phase 4 (production-without-Paymob-or-AI master plan) — a grant/assignment
+ * is a real financial/entitlement mutation, so it requires an explicit
+ * confirming click rather than firing on the first submit (discovery §11's
+ * "confirmation dialog before granting" gap).
+ */
+type PendingAction =
+  | { readonly kind: 'grant'; readonly amount: number; readonly creditKind: 'PLAN' | 'PURCHASED'; readonly expiresAt: string | null; readonly reason: string }
+  | { readonly kind: 'assign-plan'; readonly planId: string; readonly periodEnd: string | null; readonly reason: string };
 
 export default function AdminUsersPage(): React.ReactElement {
   const [users, setUsers] = useState<readonly AdminUserSummary[]>([]);
@@ -50,26 +65,54 @@ export default function AdminUsersPage(): React.ReactElement {
   const [busy, setBusy] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUserSummary | null>(null);
   const [detail, setDetail] = useState<AdminUserDetail | null>(null);
+  const [auditEntries, setAuditEntries] = useState<readonly AdminAuditLogEntry[]>([]);
+  const [plans, setPlans] = useState<readonly AdminPlanRecord[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
   const [grantAmount, setGrantAmount] = useState('');
+  const [grantKind, setGrantKind] = useState<'PLAN' | 'PURCHASED'>('PURCHASED');
+  const [grantExpiresAt, setGrantExpiresAt] = useState('');
   const [grantReason, setGrantReason] = useState('');
+  const [assignPlanId, setAssignPlanId] = useState('');
+  const [assignPeriodEnd, setAssignPeriodEnd] = useState('');
+  const [assignReason, setAssignReason] = useState('');
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
-  const load = useCallback(async (offset: number, append: boolean) => {
-    setBusy(true);
-    try {
-      const page = await getAdminUsers({ limit: PAGE_SIZE, offset });
-      setUsers((prev) => (append ? [...prev, ...page.users] : page.users));
-      setTotal(page.total);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Users could not be loaded.');
-    } finally {
-      setBusy(false);
-    }
+  useEffect(() => {
+    getAdminPlans(false)
+      .then((result) => setPlans(result.plans))
+      .catch(() => undefined); // Non-fatal: the plan-select just stays empty.
   }, []);
+
+  const load = useCallback(
+    async (offset: number, append: boolean) => {
+      setBusy(true);
+      try {
+        const page = await getAdminUsers({
+          limit: PAGE_SIZE,
+          offset,
+          ...(search === '' ? {} : { search }),
+        });
+        setUsers((prev) => (append ? [...prev, ...page.users] : page.users));
+        setTotal(page.total);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Users could not be loaded.');
+      } finally {
+        setBusy(false);
+      }
+    },
+    [search],
+  );
 
   useEffect(() => {
     void load(0, false);
   }, [load]);
+
+  const onSearchSubmit = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    setSearch(searchInput.trim());
+  };
 
   const onToggleOperator = (user: AdminUserSummary): void => {
     setBusy(true);
@@ -93,6 +136,10 @@ export default function AdminUsersPage(): React.ReactElement {
       const result = await getAdminUserDetail(user.id);
       setSelectedUser(user);
       setDetail(result.user);
+      // P4-T5 (master plan): this user's own audited operator actions —
+      // scoped by exact subjectId, never a broader query.
+      const auditResult = await getAdminAuditLog({ subjectId: user.id, limit: 20 });
+      setAuditEntries(auditResult.entries);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'User detail could not be loaded.');
     } finally {
@@ -100,26 +147,71 @@ export default function AdminUsersPage(): React.ReactElement {
     }
   };
 
-  const onGrantCredits = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+  const onRequestGrantCredits = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (selectedUser === null || grantAmount === '' || grantReason.trim() === '') {
       setError('Select a user and provide a positive amount and reason.');
       return;
     }
+    if (grantKind === 'PURCHASED' && grantExpiresAt !== '') {
+      setError('A PURCHASED grant must never expire — leave the expiry blank for it.');
+      return;
+    }
+    setError(null);
+    setPendingAction({
+      kind: 'grant',
+      amount: Number(grantAmount),
+      creditKind: grantKind,
+      expiresAt: grantKind === 'PLAN' && grantExpiresAt !== '' ? new Date(grantExpiresAt).toISOString() : null,
+      reason: grantReason.trim(),
+    });
+  };
+
+  const onRequestAssignPlan = (event: FormEvent<HTMLFormElement>): void => {
+    event.preventDefault();
+    if (selectedUser === null || assignPlanId === '' || assignReason.trim() === '') {
+      setError('Select a user, a plan, and provide a reason.');
+      return;
+    }
+    setError(null);
+    setPendingAction({
+      kind: 'assign-plan',
+      planId: assignPlanId,
+      periodEnd: assignPeriodEnd === '' ? null : new Date(assignPeriodEnd).toISOString(),
+      reason: assignReason.trim(),
+    });
+  };
+
+  const onConfirmPendingAction = async (): Promise<void> => {
+    if (selectedUser === null || pendingAction === null) return;
     setBusy(true);
     setError(null);
     try {
-      await adjustUserCredits(selectedUser.id, {
-        amount: Number(grantAmount),
-        kind: 'PURCHASED',
-        expiresAt: null,
-        reason: grantReason.trim(),
-      });
-      setGrantAmount('');
-      setGrantReason('');
+      if (pendingAction.kind === 'grant') {
+        await adjustUserCredits(selectedUser.id, {
+          amount: pendingAction.amount,
+          kind: pendingAction.creditKind,
+          expiresAt: pendingAction.expiresAt,
+          reason: pendingAction.reason,
+        });
+        setGrantAmount('');
+        setGrantExpiresAt('');
+        setGrantReason('');
+      } else {
+        await assignUserPlan(selectedUser.id, {
+          planId: pendingAction.planId,
+          ...(pendingAction.periodEnd === null ? {} : { periodEnd: pendingAction.periodEnd }),
+          reason: pendingAction.reason,
+        });
+        setAssignPlanId('');
+        setAssignPeriodEnd('');
+        setAssignReason('');
+      }
+      setPendingAction(null);
       await load(0, false);
+      if (detail !== null) await onViewDetail(selectedUser);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Credits could not be granted.');
+      setError(err instanceof ApiError ? err.message : 'That action did not go through.');
       setBusy(false);
     }
   };
@@ -133,6 +225,37 @@ export default function AdminUsersPage(): React.ReactElement {
       />
 
       {error !== null && <p className={styles.error}>{error}</p>}
+
+      <form
+        className={styles.searchRow}
+        onSubmit={onSearchSubmit}
+        role="search"
+        aria-label="Search users by email"
+      >
+        <input
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          placeholder="Search by email…"
+          aria-label="Search by email"
+        />
+        <Button type="submit" variant="secondary" size="sm" disabled={busy}>
+          Search
+        </Button>
+        {search !== '' && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              setSearchInput('');
+              setSearch('');
+            }}
+          >
+            Clear
+          </Button>
+        )}
+      </form>
 
       <Table
         cols={[
@@ -202,34 +325,163 @@ export default function AdminUsersPage(): React.ReactElement {
         </Button>
       )}
 
-      <form className={styles.actionPanel} onSubmit={(event) => void onGrantCredits(event)}>
+      <div className={styles.actionPanel}>
         <strong>
           {selectedUser === null ? 'User actions' : `Actions for ${selectedUser.email}`}
         </strong>
-        <label>
-          Amount
-          <input
-            value={grantAmount}
-            onChange={(event) => setGrantAmount(event.target.value)}
-            inputMode="numeric"
-          />
-        </label>
-        <label>
-          Reason
-          <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} />
-        </label>
-        <Button type="submit" disabled={selectedUser === null || busy}>
-          Grant credits
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={selectedUser === null || busy}
-          onClick={() => undefined}
-        >
-          View detail
-        </Button>
-        {detail !== null && <pre className={styles.detail}>{JSON.stringify(detail, null, 2)}</pre>}
-      </form>
+
+        {detail !== null && (
+          <dl className={styles.detailSummary}>
+            <dt>Plan</dt>
+            <dd>{detail.planId}</dd>
+            <dt>Subscription state</dt>
+            <dd>{detail.subscriptionStatus ?? '—'}</dd>
+            <dt>Plan credits</dt>
+            <dd>{num(String(detail.balance.plan))}</dd>
+            <dt>Purchased credits</dt>
+            <dd>{num(String(detail.balance.purchased))}</dd>
+            <dt>Operator</dt>
+            <dd>{detail.isOperator ? 'Yes' : 'No'}</dd>
+          </dl>
+        )}
+
+        {detail !== null && (
+          <div className={styles.ledger}>
+            <strong>Recent ledger</strong>
+            {detail.recentLedger.length === 0 ? (
+              <p className={styles.muted}>No credit transactions yet.</p>
+            ) : (
+              <ul className={styles.ledgerList}>
+                {detail.recentLedger.map((entry) => (
+                  <li key={entry.id}>
+                    <Badge tone={entry.type === 'DEBIT' ? 'neutral' : 'success'}>{entry.type}</Badge>{' '}
+                    {num(String(entry.amount))} — {entry.reason} (
+                    {new Date(entry.createdAt).toLocaleString()})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {detail !== null && (
+          <div className={styles.ledger}>
+            <strong>Audited operator actions for this user</strong>
+            {auditEntries.length === 0 ? (
+              <p className={styles.muted}>No audited actions recorded.</p>
+            ) : (
+              <ul className={styles.ledgerList}>
+                {auditEntries.map((entry) => (
+                  <li key={entry.id}>
+                    <Badge tone="accent">{entry.action}</Badge>{' '}
+                    {entry.actorEmail ?? entry.actorId} (
+                    {new Date(entry.createdAt).toLocaleString()})
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <form className={styles.subForm} onSubmit={onRequestGrantCredits}>
+          <strong>Grant credits</strong>
+          <label>
+            Amount
+            <input
+              value={grantAmount}
+              onChange={(event) => setGrantAmount(event.target.value)}
+              inputMode="numeric"
+            />
+          </label>
+          <label>
+            Kind
+            <select value={grantKind} onChange={(event) => setGrantKind(event.target.value as 'PLAN' | 'PURCHASED')}>
+              <option value="PURCHASED">Purchased (never expires)</option>
+              <option value="PLAN">Plan (may expire)</option>
+            </select>
+          </label>
+          {grantKind === 'PLAN' && (
+            <label>
+              Expires at (optional)
+              <input
+                type="date"
+                value={grantExpiresAt}
+                onChange={(event) => setGrantExpiresAt(event.target.value)}
+              />
+            </label>
+          )}
+          <label>
+            Reason
+            <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} />
+          </label>
+          <Button type="submit" disabled={selectedUser === null || busy}>
+            Review grant
+          </Button>
+        </form>
+
+        <form className={styles.subForm} onSubmit={onRequestAssignPlan}>
+          <strong>Assign plan (no payment)</strong>
+          <label>
+            Plan
+            <select value={assignPlanId} onChange={(event) => setAssignPlanId(event.target.value)}>
+              <option value="">Select a plan…</option>
+              <option value="free">free (revert to free)</option>
+              {plans
+                .filter((plan) => plan.id !== 'free' && plan.isActive)
+                .map((plan) => (
+                  <option key={plan.id} value={plan.id}>
+                    {plan.name} ({plan.id})
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label>
+            Expires at (optional — indefinite if left blank)
+            <input
+              type="date"
+              value={assignPeriodEnd}
+              onChange={(event) => setAssignPeriodEnd(event.target.value)}
+            />
+          </label>
+          <label>
+            Reason
+            <input value={assignReason} onChange={(event) => setAssignReason(event.target.value)} />
+          </label>
+          <Button type="submit" disabled={selectedUser === null || busy}>
+            Review assignment
+          </Button>
+        </form>
+
+        {pendingAction !== null && selectedUser !== null && (
+          <div className={styles.confirm} role="alertdialog" aria-label="Confirm action">
+            {pendingAction.kind === 'grant' ? (
+              <p>
+                Grant <strong>{pendingAction.amount}</strong> {pendingAction.creditKind.toLowerCase()}{' '}
+                credit(s) to <strong>{selectedUser.email}</strong>
+                {pendingAction.expiresAt !== null
+                  ? ` (expires ${new Date(pendingAction.expiresAt).toLocaleDateString()})`
+                  : ''}
+                ? Reason: “{pendingAction.reason}”.
+              </p>
+            ) : (
+              <p>
+                Assign plan <strong>{pendingAction.planId}</strong> to{' '}
+                <strong>{selectedUser.email}</strong>, no payment involved
+                {pendingAction.periodEnd !== null
+                  ? ` (until ${new Date(pendingAction.periodEnd).toLocaleDateString()})`
+                  : ' (indefinite)'}
+                ? Reason: “{pendingAction.reason}”.
+              </p>
+            )}
+            <Button disabled={busy} onClick={() => void onConfirmPendingAction()}>
+              Confirm
+            </Button>
+            <Button variant="secondary" disabled={busy} onClick={() => setPendingAction(null)}>
+              Cancel
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

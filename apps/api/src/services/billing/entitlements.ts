@@ -78,6 +78,26 @@ export class EntitlementError extends Error {
   }
 }
 
+/**
+ * ACTIVE runs on the plan. A CANCELLED subscription keeps its plan until the
+ * period it was paid for ends. PAST_DUE (a failed renewal payment, retrying)
+ * and everything expired fall back to free — no new chargeable work until the
+ * payment lands.
+ *
+ * Factored out so a caller that already has `status`/`periodEnd` in hand
+ * (e.g. `admin/users.service.ts`'s `listUsers`, which already selects them
+ * for its own display) can compute the same real answer in memory, instead
+ * of either re-querying per row or displaying the raw, possibly-stale
+ * `Subscription.planId` regardless of whether it is still in effect.
+ */
+export function subscriptionOwnsPeriod(
+  status: string,
+  periodEnd: Date,
+  now: Date = new Date(),
+): boolean {
+  return status === 'ACTIVE' || (status === 'CANCELLED' && periodEnd > now);
+}
+
 /** The plan a user's next chargeable operation runs under. */
 export async function resolveEffectivePlan(
   db: PrismaClient,
@@ -89,14 +109,8 @@ export async function resolveEffectivePlan(
     select: { status: true, periodEnd: true, plan: { select: PLAN_SELECT } },
   });
 
-  // ACTIVE runs on the plan. A CANCELLED subscription keeps its plan until the
-  // period it was paid for ends. PAST_DUE (a failed renewal payment, retrying)
-  // and everything expired fall back to free — no new chargeable work until the
-  // payment lands.
   const ownsPeriod =
-    subscription !== null &&
-    (subscription.status === 'ACTIVE' ||
-      (subscription.status === 'CANCELLED' && subscription.periodEnd > now));
+    subscription !== null && subscriptionOwnsPeriod(subscription.status, subscription.periodEnd, now);
 
   if (ownsPeriod) return subscription.plan;
 

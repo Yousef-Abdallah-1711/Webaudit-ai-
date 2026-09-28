@@ -48,6 +48,11 @@ import {
   updateUser,
 } from '../../services/admin/users.service.js';
 import { InvalidCreditAdjustmentError, adjustCredits } from '../../services/credits/adjust.js';
+import {
+  InvalidPlanAssignmentError,
+  PlanNotAssignableError,
+  assignPlan,
+} from '../../services/admin/plan-assignment.service.js';
 
 const NOT_FOUND = { error: { code: 'NOT_FOUND', message: 'No such user.' } };
 
@@ -65,6 +70,7 @@ function pathId(req: AuthedRequest): string {
 const listQuery = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
   offset: z.coerce.number().int().min(0).optional(),
+  search: z.string().trim().min(1).optional(),
 });
 
 const patchUserBody = z.object({ isOperator: z.boolean() }).strict();
@@ -81,6 +87,19 @@ const adjustCreditsBody = z
     amount: z.number().int().positive().max(100_000),
     kind: z.enum(['PLAN', 'PURCHASED']),
     expiresAt: z.string().datetime().nullable(),
+    reason: z.string().trim().min(1).max(500),
+  })
+  .strict();
+
+/**
+ * `periodEnd` is optional — omit for an indefinite assignment (the common
+ * case). `planId` accepts `'free'` explicitly as the documented way to revert
+ * a user to the free tier — see `assignPlan`'s own module note.
+ */
+const assignPlanBody = z
+  .object({
+    planId: z.string().trim().min(1),
+    periodEnd: z.string().datetime().optional(),
     reason: z.string().trim().min(1).max(500),
   })
   .strict();
@@ -165,6 +184,43 @@ export function adminUsersRoutes(db: PrismaClient): Router {
         return;
       }
       if (error instanceof InvalidCreditAdjustmentError) {
+        badRequest(res, error.message);
+        return;
+      }
+      throw error;
+    }
+  });
+
+  router.post('/users/:id/plan', async (req: AuthedRequest, res: Response) => {
+    const parsed = assignPlanBody.safeParse(req.body);
+    if (!parsed.success) {
+      badRequest(
+        res,
+        'plan requires planId (non-empty string; "free" reverts to the free tier), an optional ' +
+          'periodEnd (ISO datetime, future), and reason (non-empty).',
+        parsed.error.flatten(),
+      );
+      return;
+    }
+    try {
+      const user = await assignPlan(db, {
+        operatorId: req.auth!.userId,
+        targetUserId: pathId(req),
+        planId: parsed.data.planId,
+        ...(parsed.data.periodEnd === undefined ? {} : { periodEnd: new Date(parsed.data.periodEnd) }),
+        reason: parsed.data.reason,
+      });
+      res.status(200).json({ user });
+    } catch (error) {
+      if (error instanceof UserNotFoundError) {
+        res.status(404).json(NOT_FOUND);
+        return;
+      }
+      if (error instanceof PlanNotAssignableError) {
+        badRequest(res, error.message);
+        return;
+      }
+      if (error instanceof InvalidPlanAssignmentError) {
         badRequest(res, error.message);
         return;
       }

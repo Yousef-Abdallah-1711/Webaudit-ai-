@@ -47,7 +47,7 @@ function auth(bearer: string) {
 }
 
 /** A `db` that only implements what `requireOperator` touches before throwing. */
-function fakeDbThrowing(error: unknown): PrismaClient {
+function fakeDbThrowing(error: Error): PrismaClient {
   return { user: { findUnique: () => Promise.reject(error) } } as unknown as PrismaClient;
 }
 

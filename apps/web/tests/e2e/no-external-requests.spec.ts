@@ -21,14 +21,27 @@
  * cited, before this suite makes its assertion: this is what turns "should
  * be zero" into "confirmed zero, for real, on every page tested."
  *
- * **Real result: zero third-party requests on all six pages.** Every
- * request `page.on('request', ...)` observed during a full `networkidle`
- * load resolved to the test server's own origin
- * (`http://localhost:<PORT>`) — no Google Fonts, no icon CDN, no other host.
- * Nothing here needed silent exclusion; if a future regression reintroduces
- * a CDN reference (a font import reverting to a `<link>` tag, an icon swap
- * back to a hosted SVG sprite, a new dependency that phones home), this
- * suite fails for real rather than passing on an assumption.
+ * **Real result: zero *third-party* requests on all six pages** — one
+ * legitimate exclusion, not zero requests outright. `AuthProvider`
+ * (`app/layout.tsx` wraps every page with it, unconditionally) always calls
+ * `GET /auth/me` on mount, on every page, precisely so the header can show
+ * "Sign in" vs a signed-in identity — that is a call to this app's own
+ * configured backend, not a CDN or tracker, so it is excluded by origin
+ * below the same way `data:`/`blob:` URLs are: from the *foreign-host*
+ * check, never from whether a request happened at all. Two real gaps found
+ * running this file for real (Phase 10), both fixed here: (1) this suite
+ * never set `NEXT_PUBLIC_API_URL` itself, so whether the assertion passed
+ * depended on whichever *other* spec file happened to run earlier in the
+ * same shared Playwright process (`workers: 1` runs every file in one Node
+ * process, and `support/stack.ts`'s own `startStack()` sets this env var
+ * for its own build but never unsets it) — a real, order-dependent flake,
+ * the same class of bug the project's DB-test-concurrency lesson already
+ * warns about, just for env vars instead of database rows. (2) the
+ * necessary exclusion for the app's own backend origin did not exist at
+ * all. Google Fonts/icon-CDN traffic is still the thing this test actually
+ * guards, and still fails for real if either regresses — nothing about
+ * that guarantee is weakened by excluding a first-party origin this
+ * explicitly, by exact value, rather than by a broad heuristic.
  */
 import { execSync } from 'node:child_process';
 import { test, expect } from '@playwright/test';
@@ -48,12 +61,22 @@ const PAGES: readonly { readonly name: string; readonly path: string }[] = [
 ];
 
 let server: ServerHandle;
+// Explicit, not inherited — this build must not depend on whatever another
+// spec file left in `process.env` earlier in this same shared Playwright
+// process (see the module note above). `lib/api.ts`'s own hardcoded
+// fallback, made explicit here so it is a known value this file controls
+// and can exclude below, rather than an implicit default.
+const API_ORIGIN = 'http://localhost:3001';
 
 test.beforeAll(async () => {
   // See accessibility.spec.ts's own beforeAll for why this is
   // `test.setTimeout` rather than a second argument to `beforeAll` itself.
   test.setTimeout(180_000);
-  execSync('npx next build', { cwd: WEB_DIR, stdio: 'ignore' });
+  execSync('npx next build', {
+    cwd: WEB_DIR,
+    stdio: 'ignore',
+    env: { ...process.env, NEXT_PUBLIC_API_URL: API_ORIGIN },
+  });
   server = await startServer(WEB_DIR, PORT);
 });
 
@@ -74,10 +97,15 @@ for (const { name, path: route } of PAGES) {
     // data:/blob: URLs are not network requests to any host at all (inlined
     // or client-synthesized), so they are not third-party traffic either —
     // excluded from the "foreign host" check the same way, never from
-    // whether a request happened.
+    // whether a request happened. `API_ORIGIN` is this app's own configured
+    // backend (`AuthProvider`'s unconditional `GET /auth/me` on every page,
+    // `app/layout.tsx`), not a CDN or tracker — excluded by this exact,
+    // explicit value, not a broad heuristic, so a real third-party host
+    // still fails this test.
     const foreignRequests = requestUrls.filter((url) => {
       if (url.startsWith('data:') || url.startsWith('blob:')) return false;
-      return new URL(url).origin !== ownOrigin;
+      const origin = new URL(url).origin;
+      return origin !== ownOrigin && origin !== API_ORIGIN;
     });
 
     expect(foreignRequests, JSON.stringify(foreignRequests, null, 2)).toEqual([]);

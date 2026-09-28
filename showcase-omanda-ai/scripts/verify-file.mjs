@@ -1,0 +1,21 @@
+import { chromium } from '@playwright/test';
+import { pathToFileURL } from 'node:url';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+const HERE = dirname(fileURLToPath(import.meta.url));
+const url = pathToFileURL(join(HERE, '..', 'dashboard', 'index.html')).href;
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1440, height: 1000 } });
+const errs = [];
+p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
+p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
+await p.goto(url, { waitUntil: 'load' });
+await p.waitForTimeout(3500);
+const txt = await p.evaluate('document.getElementById("root").innerText.slice(0,180)');
+await p.screenshot({ path: join(HERE, '..', 'data', 'file-report.png'), fullPage: true });
+for (const v of ['Priorities','Fixes','Evidence']) { await p.click(`button:has-text("${v}")`).catch(()=>{}); await p.waitForTimeout(700); }
+await p.screenshot({ path: join(HERE, '..', 'data', 'file-evidence.png'), fullPage: true });
+await b.close();
+console.log('URL:', url);
+console.log('ROOT:', JSON.stringify(txt));
+console.log('ERRORS:', errs.length ? errs.join('\n') : 'none');

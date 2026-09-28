@@ -97,6 +97,48 @@ describe('dependency-scanner (T175)', () => {
   it('is not applicable to an audit with no source attached (FR-021)', () => {
     expect(dependencyScanner.canRun({ priorModuleResults: {} })).toBe(false);
   });
+
+  // Phase 0 (production-without-Paymob-or-AI master plan), TEST-GAP-1: no
+  // existing test supplied an unparseable package.json.
+  it('reports dependency.unparseable-manifest for a package.json that is not valid JSON', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'webaudit-bad-manifest-'));
+    try {
+      await writeFile(join(root, 'package.json'), '{ this is not json', 'utf8');
+      const files = await listing(root, ['package.json']);
+      const ids = await checkIdsFrom(dependencyScanner, root, files);
+      expect(ids).toEqual(['dependency.unparseable-manifest']);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reverify: dependency.unparseable-manifest passes once the manifest is valid JSON again', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'webaudit-bad-manifest-reverify-'));
+    try {
+      const controller = new AbortController();
+      const ctx = createCodeLayerContext({
+        signal: controller.signal,
+        capabilityId: dependencyScanner.id,
+        workspaceRoot: root,
+      });
+
+      await writeFile(join(root, 'package.json'), '{ still not json', 'utf8');
+      const stillBroken = await dependencyScanner.reverify!(
+        { checkId: 'dependency.unparseable-manifest', location: 'package.json' },
+        ctx,
+      );
+      expect(stillBroken.outcome).toBe('FAILED');
+
+      await writeFile(join(root, 'package.json'), '{}', 'utf8');
+      const fixed = await dependencyScanner.reverify!(
+        { checkId: 'dependency.unparseable-manifest', location: 'package.json' },
+        ctx,
+      );
+      expect(fixed.outcome).toBe('PASSED');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('bundle-analyzer (T176)', () => {
@@ -130,6 +172,52 @@ describe('css-analyzer (T177)', () => {
 
   it('says nothing about a small, disciplined stylesheet', async () => {
     expect(await checkIdsFrom(cssAnalyzer, clean.root, clean.files)).toEqual([]);
+  });
+
+  // Phase 0 (production-without-Paymob-or-AI master plan), TEST-GAP-1: no
+  // existing test constructed a stylesheet past the 300KB single-file budget.
+  it('reports css.oversize-stylesheet for a stylesheet past the 300KB budget', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'webaudit-big-css-'));
+    try {
+      // Simple, repetitive, and comfortably past LARGE_STYLESHEET_BYTES
+      // (307_200) without also tripping !important-overuse or colour-sprawl —
+      // isolates this one check.
+      const bigCss = '.a{color:#111}\n'.repeat(25_000);
+      await writeFile(join(root, 'styles.css'), bigCss, 'utf8');
+      const files = await listing(root, ['styles.css']);
+      const ids = await checkIdsFrom(cssAnalyzer, root, files);
+      expect(ids).toEqual(['css.oversize-stylesheet']);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('reverify: css.oversize-stylesheet passes once the file is trimmed under budget', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'webaudit-big-css-reverify-'));
+    try {
+      const controller = new AbortController();
+      const ctx = createCodeLayerContext({
+        signal: controller.signal,
+        capabilityId: cssAnalyzer.id,
+        workspaceRoot: root,
+      });
+
+      await writeFile(join(root, 'styles.css'), '.a{color:#111}\n'.repeat(25_000), 'utf8');
+      const stillBig = await cssAnalyzer.reverify!(
+        { checkId: 'css.oversize-stylesheet', location: 'styles.css' },
+        ctx,
+      );
+      expect(stillBig.outcome).toBe('FAILED');
+
+      await writeFile(join(root, 'styles.css'), '.a{color:#111}\n', 'utf8');
+      const trimmed = await cssAnalyzer.reverify!(
+        { checkId: 'css.oversize-stylesheet', location: 'styles.css' },
+        ctx,
+      );
+      expect(trimmed.outcome).toBe('PASSED');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
 

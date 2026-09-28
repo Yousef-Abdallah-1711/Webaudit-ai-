@@ -278,6 +278,71 @@ describe('meta-checker', () => {
     const findings = await metaChecker.runCodeLayer!(input(), fakeContext(fakeResponse({ body })));
     expect(findings).toHaveLength(0);
   });
+
+  // Phase 0 (production-without-Paymob-or-AI master plan), TEST-GAP-1: no
+  // existing test constructed a title/description past the 60/160-character
+  // thresholds.
+  it('flags a title longer than 60 characters', async () => {
+    const longTitle = 'A'.repeat(61);
+    const body =
+      `<html><head><title>${longTitle}</title>` +
+      '<meta name="description" content="fine.">' +
+      '<meta name="viewport" content="width=device-width">' +
+      '<link rel="canonical" href="https://example.com/">' +
+      '</head><body></body></html>';
+    const findings = await metaChecker.runCodeLayer!(input(), fakeContext(fakeResponse({ body })));
+    expect(checkIds(findings)).toEqual(['meta.title-too-long']);
+  });
+
+  it('flags a meta description longer than 160 characters', async () => {
+    const longDescription = 'B'.repeat(161);
+    const body =
+      '<html><head><title>Fine title</title>' +
+      `<meta name="description" content="${longDescription}">` +
+      '<meta name="viewport" content="width=device-width">' +
+      '<link rel="canonical" href="https://example.com/">' +
+      '</head><body></body></html>';
+    const findings = await metaChecker.runCodeLayer!(input(), fakeContext(fakeResponse({ body })));
+    expect(checkIds(findings)).toEqual(['meta.description-too-long']);
+  });
+
+  it('reverify: meta.title-too-long passes once the title is shortened, fails while it is still long', async () => {
+    const longTitle = 'A'.repeat(61);
+    const stillLong = fakeContext(fakeResponse({ body: `<title>${longTitle}</title>` }));
+    const stillLongResult = await metaChecker.reverify!(
+      { checkId: 'meta.title-too-long', location: 'https://example.com/' },
+      stillLong,
+    );
+    expect(stillLongResult.outcome).toBe('FAILED');
+
+    const fixed = fakeContext(fakeResponse({ body: '<title>Short now</title>' }));
+    const fixedResult = await metaChecker.reverify!(
+      { checkId: 'meta.title-too-long', location: 'https://example.com/' },
+      fixed,
+    );
+    expect(fixedResult.outcome).toBe('PASSED');
+  });
+
+  it('reverify: meta.description-too-long passes once the description is shortened, fails while still long', async () => {
+    const longDescription = 'B'.repeat(161);
+    const stillLong = fakeContext(
+      fakeResponse({ body: `<meta name="description" content="${longDescription}">` }),
+    );
+    const stillLongResult = await metaChecker.reverify!(
+      { checkId: 'meta.description-too-long', location: 'https://example.com/' },
+      stillLong,
+    );
+    expect(stillLongResult.outcome).toBe('FAILED');
+
+    const fixed = fakeContext(
+      fakeResponse({ body: '<meta name="description" content="Short now.">' }),
+    );
+    const fixedResult = await metaChecker.reverify!(
+      { checkId: 'meta.description-too-long', location: 'https://example.com/' },
+      fixed,
+    );
+    expect(fixedResult.outcome).toBe('PASSED');
+  });
 });
 
 describe('content-checker', () => {

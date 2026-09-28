@@ -68,10 +68,17 @@ const UNAUTHORIZED = { error: { code: 'UNAUTHORIZED', message: 'Authentication r
  * app makes, which is same-site as long as the API and the web app share a
  * registrable domain (api.example.com / example.com).
  */
-function setTransactionCookie(res: ExResponse, value: string): void {
+/**
+ * `secure` is `env.isProduction && req.secure`, not `env.isProduction` alone
+ * — see `setRefreshCookie`'s own note in `auth.routes.ts` for why: a browser
+ * refuses to store a `Secure` cookie set over plain HTTP, which is exactly
+ * this deployment's genuine interim state before a real TLS certificate
+ * exists (P8-T5).
+ */
+function setTransactionCookie(req: AuthedRequest, res: ExResponse, value: string): void {
   res.cookie(OAUTH_TX_COOKIE, value, {
     httpOnly: true, // the verifier must be unreadable to page script
-    secure: env.isProduction,
+    secure: env.isProduction && req.secure,
     sameSite: 'lax',
     path: '/auth',
     maxAge: TX_COOKIE_MAX_AGE_MS,
@@ -195,7 +202,7 @@ export function oauthRoutes(db: PrismaClient, http: HttpClient = defaultHttpClie
         query.data.intent,
         safeReturnTo(query.data.returnTo),
       );
-      setTransactionCookie(res, sealTransaction(transaction));
+      setTransactionCookie(req, res, sealTransaction(transaction));
       res.redirect(302, authorizeUrl);
     } catch (e) {
       if (refuse(res, e)) return;
@@ -265,7 +272,7 @@ export function oauthRoutes(db: PrismaClient, http: HttpClient = defaultHttpClie
       }
 
       const session = await issueSessionForUser(db, user);
-      setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
+      setRefreshCookie(req, res, session.refreshToken, session.refreshExpiresAt);
 
       // The access token is NOT put in the redirect: a URL lands in browser
       // history, in the Referer header, and in every proxy log on the way. The

@@ -30,7 +30,7 @@ import type { ModuleType } from '@webaudit/types';
 import { Button, Card, Eyebrow } from '../ui';
 import { useT } from '../../app/theme';
 import type { StringKey } from '../../lib/strings';
-import { ApiError, createScan, createTarget, quoteScan } from '../../lib/api';
+import { ApiError, createScan, createTarget, getPlans, quoteScan } from '../../lib/api';
 import { InputTabs, type InputSelection } from './InputTabs';
 import styles from './ScanForm.module.css';
 
@@ -100,7 +100,28 @@ export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
       const { scan } = await createScan(targetId, selected, quote.credits);
       onStart?.(scan.id);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t('scan_start_error'));
+      if (e instanceof ApiError && e.code === 'INSUFFICIENT_CREDITS') {
+        // Show the server's real shortfall message immediately — never delay
+        // it on a second network round-trip.
+        setError(e.message);
+        // Phase 5 (production-without-Paymob-or-AI master plan): in a
+        // deployment with payments off, "buy more credits" is not an option
+        // this user has — enhance with a pointer to an administrator once
+        // known, fetched lazily on this rare/exceptional path only, not on
+        // every render.
+        getPlans()
+          .then((r) => {
+            if (!r.paymentsEnabled) {
+              setError(
+                `${e.message} Credits in this deployment are granted by an administrator — ` +
+                  'contact yours for more.',
+              );
+            }
+          })
+          .catch(() => undefined); // Unknown — the immediate message above already stands.
+      } else {
+        setError(e instanceof ApiError ? e.message : t('scan_start_error'));
+      }
     } finally {
       setSubmitting(false);
     }

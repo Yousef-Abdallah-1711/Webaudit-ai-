@@ -44,6 +44,7 @@ import { Redis } from 'ioredis';
 import { createLogger } from '@webaudit/config';
 import type { PrismaClient } from '../prisma/generated/client/index.js';
 import { createApp, corsAllowlist } from './app.js';
+import type { IntakeRoutesDeps } from './routes/intake.routes.js';
 import { prisma, disconnect } from './db/client.js';
 import { createRealtimeServer, type RealtimeServer } from './services/realtime/server.js';
 import { startFanout, type Fanout, type RedisSubscriber } from './services/realtime/fanout.js';
@@ -210,6 +211,15 @@ export interface ApiServiceOptions {
    * environment variable.
    */
   readonly webhooks?: WebhookRoutesDeps;
+  /**
+   * Seam for source intake — how GitHub is reached and where a staged
+   * archive upload is stored. Omit for the real GitHub API and the real R2
+   * bucket from `R2_*` env vars — the correct default for an actual
+   * deployment. Exists for the same reason `billing`/`webhooks` above do: a
+   * caller that boots the real process (not `createApp` directly) has no R2
+   * credentials to give a test archive upload somewhere to land.
+   */
+  readonly intake?: IntakeRoutesDeps;
   /** Defaults to true. A suite that does not need real capability rows may skip it. */
   readonly reconcileCapabilities?: boolean;
   readonly drainMs?: number;
@@ -257,164 +267,193 @@ export async function startApi(options: ApiServiceOptions = {}): Promise<ApiServ
   const db = options.db ?? prisma;
   const ownsDb = options.db === undefined;
 
-  // Disk → database, so a scan can never be charged for and executed
-  // against a capability the Capability table has never heard of
-  // (CapabilityExecution's own foreign key). See boot.ts's module note.
-  if (options.reconcileCapabilities ?? true) {
-    await reconcileCapabilitiesAtBoot(db);
-  }
+  // EMAIL-FOLLOWUP-1 (production-without-Paymob-or-AI master plan): everything
+  // from here through the port binding can still throw — most notably
+  // `createApp` below, which constructs the production mailer eagerly and
+  // fails closed when email is not configured (`app.ts`'s own
+  // `createDefaultMailer`). Before this, that throw left `ownedSubscriber`'s
+  // real Redis connection (and, when this call owns it, the Prisma pool)
+  // open with nothing to ever close them — the exact reason
+  // `email-boot-guard.test.ts`'s own child-process test could not observe a
+  // clean exit and had to rely on its own timeout instead. Every resource
+  // created below is torn down in the `catch` before the rejection reaches
+  // the caller.
+  let realtime: RealtimeServer | undefined;
+  let fanout: Fanout | undefined;
+  try {
+    // Disk → database, so a scan can never be charged for and executed
+    // against a capability the Capability table has never heard of
+    // (CapabilityExecution's own foreign key). See boot.ts's module note.
+    if (options.reconcileCapabilities ?? true) {
+      await reconcileCapabilitiesAtBoot(db);
+    }
 
-  // T263's acceptance criterion: the stub `PaymentProvider` must be
-  // "wired-by-default-in-dev/test" — otherwise the whole checkout/webhook/
-  // receipt flow (T264-T266) is fully built and tested but unreachable by
-  // the actual running process, which only ever calls `createApp` through
-  // this factory. Production is never defaulted: Paymob (T267) is explicitly
-  // blocked, so a real deployment must keep `/billing/subscribe` and
-  // `/billing/credits/purchase` on the existing `devTestOnly` 404 path until
-  // a real provider lands, never silently accept the dev stub's fixed
-  // fallback webhook secret. A caller that explicitly passes `billing`/
-  // `webhooks` (every existing test) is respected as-is, with no stub merged
-  // in underneath it.
-  const defaultPaymentProvider: PaymentProvider | undefined = createPaymentProviderFromEnv(
-    process.env,
-  );
-  const defaultBilling: BillingRoutesDeps | undefined =
-    defaultPaymentProvider === undefined
-      ? undefined
-      : {
-          paymentProvider: defaultPaymentProvider,
-          priceCatalog: createEnvBillingPriceCatalog(process.env),
-        };
-  const defaultWebhooks: WebhookRoutesDeps | undefined =
-    defaultPaymentProvider === undefined ? undefined : { paymentProvider: defaultPaymentProvider };
-  const billing = options.billing ?? defaultBilling;
-  const webhooks = options.webhooks ?? defaultWebhooks;
+    // T263's acceptance criterion: the stub `PaymentProvider` must be
+    // "wired-by-default-in-dev/test" — otherwise the whole checkout/webhook/
+    // receipt flow (T264-T266) is fully built and tested but unreachable by
+    // the actual running process, which only ever calls `createApp` through
+    // this factory. Production is never defaulted: Paymob (T267) is explicitly
+    // blocked, so a real deployment must keep `/billing/subscribe` and
+    // `/billing/credits/purchase` on the existing `devTestOnly` 404 path until
+    // a real provider lands, never silently accept the dev stub's fixed
+    // fallback webhook secret. A caller that explicitly passes `billing`/
+    // `webhooks` (every existing test) is respected as-is, with no stub merged
+    // in underneath it.
+    const defaultPaymentProvider: PaymentProvider | undefined = createPaymentProviderFromEnv(
+      process.env,
+    );
+    const defaultBilling: BillingRoutesDeps | undefined =
+      defaultPaymentProvider === undefined
+        ? undefined
+        : {
+            paymentProvider: defaultPaymentProvider,
+            priceCatalog: createEnvBillingPriceCatalog(process.env),
+          };
+    const defaultWebhooks: WebhookRoutesDeps | undefined =
+      defaultPaymentProvider === undefined ? undefined : { paymentProvider: defaultPaymentProvider };
+    const billing = options.billing ?? defaultBilling;
+    const webhooks = options.webhooks ?? defaultWebhooks;
 
-  // FR-017's whole-scan control-level gate — with no `scans` deps, the
-  // `() => 'NONE'` default in `scans.routes.ts` wins and the gate never
-  // actually fires in production, which is exactly the finding this closes.
-  const app = createApp({
-    db,
-    scans: { resolveRequiredControlLevel: buildResolveRequiredControlLevel(db) },
-    ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
-    ...(options.rateLimiters === undefined ? {} : { rateLimiters: options.rateLimiters }),
-    ...(billing === undefined ? {} : { billing }),
-    ...(webhooks === undefined ? {} : { webhooks }),
-  });
-  const server = createServer(app);
-
-  // `ws` upgrades this server rather than binding a second port. Constructed
-  // before `listen` so no connection can arrive before there is something to
-  // handle the upgrade. `allowedOrigins` reuses the same allowlist `cors()`
-  // enforces on the ordinary HTTP surface (`app.ts`'s own `corsAllowlist`) —
-  // one policy, not two to keep in sync. `maxConnectionsPerIp` bounds how
-  // many sockets one source address may hold open at once; generous enough
-  // to be invisible to a real browser client (a handful of tabs, each
-  // opening one socket) while bounding an unbounded-connection-count issue a
-  // prior review found here (Section 6d).
-  const realtime = createRealtimeServer({
-    server,
-    db,
-    allowedOrigins: corsAllowlist(),
-    maxConnectionsPerIp: 50,
-  });
-
-  // Attached before the port opens: a client that subscribes in the first
-  // milliseconds must not miss the channel.
-  const fanout = await startFanout({ subscriber, broadcaster: realtime });
-
-  const boundPort = await new Promise<number>((resolve, reject) => {
-    const onError = (error: Error): void => {
-      // A listen failure — port in use, permission denied — must reject the
-      // start rather than surface later as an unhandled 'error' event on a
-      // service the caller believes is up.
-      server.removeListener('error', onError);
-      reject(error);
-    };
-    server.once('error', onError);
-    server.listen(port, () => {
-      server.removeListener('error', onError);
-      const address = server.address();
-      resolve(typeof address === 'object' && address !== null ? address.port : port);
+    // FR-017's whole-scan control-level gate — with no `scans` deps, the
+    // `() => 'NONE'` default in `scans.routes.ts` wins and the gate never
+    // actually fires in production, which is exactly the finding this closes.
+    const app = createApp({
+      db,
+      scans: { resolveRequiredControlLevel: buildResolveRequiredControlLevel(db) },
+      ...(options.mailer === undefined ? {} : { mailer: options.mailer }),
+      ...(options.rateLimiters === undefined ? {} : { rateLimiters: options.rateLimiters }),
+      ...(billing === undefined ? {} : { billing }),
+      ...(webhooks === undefined ? {} : { webhooks }),
+      ...(options.intake === undefined ? {} : { intake: options.intake }),
     });
-  });
+    const server = createServer(app);
 
-  let shuttingDown: Promise<void> | undefined;
+    // `ws` upgrades this server rather than binding a second port. Constructed
+    // before `listen` so no connection can arrive before there is something to
+    // handle the upgrade. `allowedOrigins` reuses the same allowlist `cors()`
+    // enforces on the ordinary HTTP surface (`app.ts`'s own `corsAllowlist`) —
+    // one policy, not two to keep in sync. `maxConnectionsPerIp` bounds how
+    // many sockets one source address may hold open at once; generous enough
+    // to be invisible to a real browser client (a handful of tabs, each
+    // opening one socket) while bounding an unbounded-connection-count issue a
+    // prior review found here (Section 6d).
+    realtime = createRealtimeServer({
+      server,
+      db,
+      allowedOrigins: corsAllowlist(),
+      maxConnectionsPerIp: 50,
+    });
 
-  const shutdown = (reason = 'shutdown'): Promise<void> => {
-    if (shuttingDown !== undefined) return shuttingDown;
+    // Attached before the port opens: a client that subscribes in the first
+    // milliseconds must not miss the channel.
+    fanout = await startFanout({ subscriber, broadcaster: realtime });
 
-    shuttingDown = (async (): Promise<void> => {
-      logger.warn('draining', { reason, drainMs });
-
-      // 1. Stop accepting. Synchronous effect; the callback is the drain.
-      const drained = new Promise<void>((resolve) => {
-        server.close(() => resolve());
+    const boundPort = await new Promise<number>((resolve, reject) => {
+      const onError = (error: Error): void => {
+        // A listen failure — port in use, permission denied — must reject the
+        // start rather than surface later as an unhandled 'error' event on a
+        // service the caller believes is up.
+        server.removeListener('error', onError);
+        reject(error);
+      };
+      server.once('error', onError);
+      server.listen(port, () => {
+        server.removeListener('error', onError);
+        const address = server.address();
+        resolve(typeof address === 'object' && address !== null ? address.port : port);
       });
-      // Keep-alive sockets that are between requests will otherwise hold the
-      // drain open for their whole timeout while carrying no work.
-      server.closeIdleConnections();
+    });
+    let shuttingDown: Promise<void> | undefined;
+    const finalRealtime = realtime;
+    const finalFanout = fanout;
 
-      // 2. Stop producing events, before the sockets that would receive them go.
-      //    A broadcast into a closing socket is not harmful, but a fan-out still
-      //    subscribed after the sockets are gone keeps a Redis connection open
-      //    and delays the exit.
-      try {
-        await fanout.stop();
-      } catch (error) {
-        // Never let a transport failure block the shutdown. Redis is not the
-        // system of record; there is nothing here to lose.
-        logger.warn('fan-out stop failed', { error: describe(error) });
-      }
-      ownedSubscriber?.disconnect();
+    const shutdown = (reason = 'shutdown'): Promise<void> => {
+      if (shuttingDown !== undefined) return shuttingDown;
 
-      // 3. Close the sockets. Until this runs, `drained` cannot resolve: a
-      //    WebSocket is a connection that never ends on its own.
-      try {
-        await realtime.close();
-      } catch (error) {
-        logger.warn('websocket close failed', { error: describe(error) });
-      }
+      shuttingDown = (async (): Promise<void> => {
+        logger.warn('draining', { reason, drainMs });
 
-      // 4. Now wait for in-flight HTTP. Bounded, then closed by hand — a request
-      //    still open after the deadline is hung, and waiting only delays the
-      //    deploy until the platform's SIGKILL, which is the same interruption
-      //    with less in the log.
-      const timer = setTimeout(() => {
-        logger.error('connections still open after drain deadline — closing them', { drainMs });
-        server.closeAllConnections();
-      }, drainMs);
-      timer.unref();
-      await drained;
-      clearTimeout(timer);
+        // 1. Stop accepting. Synchronous effect; the callback is the drain.
+        const drained = new Promise<void>((resolve) => {
+          server.close(() => resolve());
+        });
+        // Keep-alive sockets that are between requests will otherwise hold the
+        // drain open for their whole timeout while carrying no work.
+        server.closeIdleConnections();
 
-      // 5. Release the shared resources the app owns. The limiters hold a Redis
-      //    connection and the fallback stores' timers; app.ts parks them on
-      //    `app.locals` precisely so whoever owns the lifecycle can do this.
-      const limiters = app.locals['rateLimiters'] as RateLimiters | undefined;
-      if (limiters !== undefined) {
+        // 2. Stop producing events, before the sockets that would receive them go.
+        //    A broadcast into a closing socket is not harmful, but a fan-out still
+        //    subscribed after the sockets are gone keeps a Redis connection open
+        //    and delays the exit.
         try {
-          await limiters.shutdown();
+          await finalFanout.stop();
         } catch (error) {
-          logger.warn('rate limiter shutdown failed', { error: describe(error) });
+          // Never let a transport failure block the shutdown. Redis is not the
+          // system of record; there is nothing here to lose.
+          logger.warn('fan-out stop failed', { error: describe(error) });
         }
-      }
+        ownedSubscriber?.disconnect();
 
-      // 6. The connection pool last: anything above might still have been
-      //    finishing a query. Only ours — see `options.db`.
-      if (ownsDb) await disconnect();
-      logger.warn('stopped');
-    })();
+        // 3. Close the sockets. Until this runs, `drained` cannot resolve: a
+        //    WebSocket is a connection that never ends on its own.
+        try {
+          await finalRealtime.close();
+        } catch (error) {
+          logger.warn('websocket close failed', { error: describe(error) });
+        }
 
-    return shuttingDown;
-  };
+        // 4. Now wait for in-flight HTTP. Bounded, then closed by hand — a request
+        //    still open after the deadline is hung, and waiting only delays the
+        //    deploy until the platform's SIGKILL, which is the same interruption
+        //    with less in the log.
+        const timer = setTimeout(() => {
+          logger.error('connections still open after drain deadline — closing them', { drainMs });
+          server.closeAllConnections();
+        }, drainMs);
+        timer.unref();
+        await drained;
+        clearTimeout(timer);
 
-  if (options.installSignalHandlers ?? true) {
-    process.once('SIGTERM', () => void shutdown('SIGTERM'));
-    process.once('SIGINT', () => void shutdown('SIGINT'));
+        // 5. Release the shared resources the app owns. The limiters hold a Redis
+        //    connection and the fallback stores' timers; app.ts parks them on
+        //    `app.locals` precisely so whoever owns the lifecycle can do this.
+        const limiters = app.locals['rateLimiters'] as RateLimiters | undefined;
+        if (limiters !== undefined) {
+          try {
+            await limiters.shutdown();
+          } catch (error) {
+            logger.warn('rate limiter shutdown failed', { error: describe(error) });
+          }
+        }
+
+        // 6. The connection pool last: anything above might still have been
+        //    finishing a query. Only ours — see `options.db`.
+        if (ownsDb) await disconnect();
+        logger.warn('stopped');
+      })();
+
+      return shuttingDown;
+    };
+
+    if (options.installSignalHandlers ?? true) {
+      process.once('SIGTERM', () => void shutdown('SIGTERM'));
+      process.once('SIGINT', () => void shutdown('SIGINT'));
+    }
+
+    return { server, realtime: finalRealtime, fanout: finalFanout, port: boundPort, shutdown };
+  } catch (error) {
+    // Reverse creation order, and every step is defensive: none of this may
+    // throw a second error over the one the caller actually needs to see.
+    if (fanout !== undefined) {
+      await fanout.stop().catch(() => undefined);
+    }
+    if (realtime !== undefined) {
+      await realtime.close().catch(() => undefined);
+    }
+    ownedSubscriber?.disconnect();
+    if (ownsDb) await disconnect().catch(() => undefined);
+    throw error;
   }
-
-  return { server, realtime, fanout, port: boundPort, shutdown };
 }
 
 function describe(error: unknown): string {

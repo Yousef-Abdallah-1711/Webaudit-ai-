@@ -380,6 +380,8 @@ export interface ReportIssue {
   readonly location: string | null;
   readonly attribution: string;
   readonly fixPrompt: string;
+  /** Phase 6 (master plan): hide a "fix this" CTA when false — e.g. the meta/QA `contradiction.*` findings. */
+  readonly fixable: boolean;
 }
 
 export interface Report {
@@ -431,6 +433,8 @@ export interface FixesIssue {
   readonly location: string | null;
   readonly attribution: string;
   readonly fixPrompt: string;
+  /** Phase 6 (master plan): hide fix/reverify actions when false. */
+  readonly fixable: boolean;
   readonly state: IssueState;
   readonly checkId: string;
   readonly assertedFixedAt: string | null;
@@ -600,7 +604,7 @@ export interface Plan {
   readonly retentionDays: number;
 }
 
-export function getPlans(): Promise<{ plans: readonly Plan[] }> {
+export function getPlans(): Promise<{ plans: readonly Plan[]; paymentsEnabled: boolean }> {
   return request('/billing/plans');
 }
 
@@ -749,11 +753,12 @@ export interface AdminUserSummary {
 }
 
 export function getAdminUsers(
-  opts: { readonly limit?: number; readonly offset?: number } = {},
+  opts: { readonly limit?: number; readonly offset?: number; readonly search?: string } = {},
 ): Promise<{ users: readonly AdminUserSummary[]; total: number; limit: number; offset: number }> {
   const params = new URLSearchParams();
   if (opts.limit !== undefined) params.set('limit', String(opts.limit));
   if (opts.offset !== undefined) params.set('offset', String(opts.offset));
+  if (opts.search !== undefined && opts.search !== '') params.set('search', opts.search);
   const query = params.toString();
   return request(`/admin/users${query === '' ? '' : `?${query}`}`);
 }
@@ -768,9 +773,18 @@ export function setUserOperator(
   });
 }
 
+export interface AdminLedgerEntry {
+  readonly id: string;
+  readonly type: string;
+  readonly amount: number;
+  readonly reason: string;
+  readonly scanId: string | null;
+  readonly createdAt: string;
+}
+
 export interface AdminUserDetail extends AdminUserSummary {
   readonly subscription: unknown;
-  readonly creditLots: readonly unknown[];
+  readonly recentLedger: readonly AdminLedgerEntry[];
 }
 
 export function getAdminUserDetail(userId: string): Promise<{ readonly user: AdminUserDetail }> {
@@ -787,6 +801,21 @@ export function adjustUserCredits(
   },
 ): Promise<{ readonly balanceAfter: unknown }> {
   return request(`/admin/users/${encodeURIComponent(userId)}/credits`, {
+    method: 'POST',
+    body: input,
+  });
+}
+
+/** Phase 3 (production-without-Paymob-or-AI master plan) — `POST /admin/users/:id/plan`. */
+export function assignUserPlan(
+  userId: string,
+  input: {
+    readonly planId: string;
+    readonly periodEnd?: string;
+    readonly reason: string;
+  },
+): Promise<{ readonly user: AdminUserDetail }> {
+  return request(`/admin/users/${encodeURIComponent(userId)}/plan`, {
     method: 'POST',
     body: input,
   });
@@ -995,6 +1024,8 @@ export function getAdminAuditLog(
     readonly offset?: number | undefined;
     readonly action?: string | undefined;
     readonly actorId?: string | undefined;
+    /** Exact match on the mutation's target (e.g. a user id) — P4-T5 (master plan). */
+    readonly subjectId?: string | undefined;
     readonly search?: string | undefined;
     readonly from?: string | undefined;
     readonly to?: string | undefined;
@@ -1010,6 +1041,7 @@ export function getAdminAuditLog(
   if (opts.offset !== undefined) params.set('offset', String(opts.offset));
   if (opts.action !== undefined && opts.action !== '') params.set('action', opts.action);
   if (opts.actorId !== undefined && opts.actorId !== '') params.set('actorId', opts.actorId);
+  if (opts.subjectId !== undefined && opts.subjectId !== '') params.set('subjectId', opts.subjectId);
   if (opts.search !== undefined && opts.search !== '') params.set('search', opts.search);
   if (opts.from !== undefined && opts.from !== '') params.set('from', opts.from);
   if (opts.to !== undefined && opts.to !== '') params.set('to', opts.to);

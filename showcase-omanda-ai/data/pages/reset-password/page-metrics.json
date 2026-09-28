@@ -1,0 +1,28 @@
+{
+  "target": "https://omanda-ai.com/reset-password",
+  "capturedAt": "2026-09-14T09:58:04.275Z",
+  "timings": {
+    "ttfbMs": 71,
+    "domContentLoadedMs": 413,
+    "loadMs": 444,
+    "firstContentfulPaintMs": 780,
+    "domInteractiveMs": 300
+  },
+  "transferKb": 2041.9,
+  "resourceCount": 32,
+  "domNodes": 238,
+  "scripts": 5,
+  "stylesheets": 2,
+  "images": 2,
+  "title": "Omanda — أول موظف مبيعات ذكاء اصطناعي لمتجرك الإلكتروني",
+  "textLength": 356,
+  "headings": {
+    "h1": 1,
+    "h2": 0,
+    "h3": 0
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "target": "https://omanda-ai.com/pricing",
+  "capturedAt": "2026-09-14T09:56:37.593Z",
+  "timings": {
+    "ttfbMs": 65,
+    "domContentLoadedMs": 407,
+    "loadMs": 456,
+    "firstContentfulPaintMs": 728,
+    "domInteractiveMs": 310
+  },
+  "transferKb": 1120.7,
+  "resourceCount": 28,
+  "domNodes": 878,
+  "scripts": 5,
+  "stylesheets": 3,
+  "images": 1,
+  "title": "الأسعار وباقات الاشتراك | Omanda",
+  "textLength": 4415,
+  "headings": {
+    "h1": 1,
+    "h2": 6,
+    "h3": 5
+  },
+  "viewportOverflowPx": {
+    "desktop": 0,
+    "mobile": 0
+  }
+}

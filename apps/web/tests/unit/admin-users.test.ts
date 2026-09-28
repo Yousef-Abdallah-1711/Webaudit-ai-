@@ -45,9 +45,16 @@ describe('AdminUsersPage', () => {
     expect(html).not.toContain('accounts');
   });
 
-  it('renders the real credit-grant and user-detail controls', () => {
+  it('renders the real credit-grant controls', () => {
+    // "View detail" itself is a per-row action (`users.map(...)`), and this
+    // static, pre-data render has no rows yet — it is proven live in
+    // `admin-error-paths.test.ts`'s jsdom-based suite instead. The
+    // action-panel used to also carry a second, purely decorative "View
+    // detail" button (`onClick={() => undefined}` — a no-op), removed by
+    // Phase 4 (production-without-Paymob-or-AI master plan) rather than
+    // pretending it did something.
     const html = render(createElement(AdminUsersPage));
     expect(html).toContain('Grant credits');
-    expect(html).toContain('View detail');
+    expect(html).toContain('Assign plan (no payment)');
   });
 });

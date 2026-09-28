@@ -130,7 +130,14 @@ export function billingRoutes(db: PrismaClient, deps: BillingRoutesDeps = {}): R
       where: { isActive: true },
       orderBy: { monthlyCredits: 'asc' },
     });
-    res.status(200).json({ plans });
+    // Phase 5 (production-without-Paymob-or-AI master plan): the same signal
+    // `devTestOnly` already gates `/billing/subscribe` and
+    // `/billing/credits/purchase` on, surfaced to the frontend so it can
+    // disable/relabel its own checkout CTAs *before* a click, rather than
+    // only reacting to the 404 those routes already return in production.
+    // Reuses `env.isProduction` directly — never a second, independently
+    // drifting flag (this file's own module note explains why that matters).
+    res.status(200).json({ plans, paymentsEnabled: !(deps.isProduction ?? env.isProduction) });
   });
 
   router.get('/billing/credits', async (req: AuthedRequest, res: Response) => {

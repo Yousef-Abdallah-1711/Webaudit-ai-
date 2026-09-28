@@ -25,6 +25,7 @@ function issue(overrides: Partial<FixesIssue> = {}): FixesIssue {
     location: 'https://acme.com/',
     attribution: 'MEASURED',
     fixPrompt: 'add a CSP',
+    fixable: true,
     state: 'OPEN',
     checkId: 'headers.csp-missing',
     assertedFixedAt: null,

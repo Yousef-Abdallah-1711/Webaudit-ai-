@@ -1,0 +1,660 @@
+{
+  "meta": {
+    "target": "https://omanda-ai.com/",
+    "startedAt": "2026-09-28T18:44:27.269Z",
+    "completedAt": "2026-09-28T18:44:39.381Z",
+    "durationMs": 12112,
+    "engine": "showcase-omanda-ai standalone runner — real @webaudit/capabilities-vendored (13) + real module-runner + real safe-net + real Playwright browser pool",
+    "browser": "real headless Chromium (Playwright)",
+    "aiLayer": "NOT run at runtime (no LLM key). Executive summary, per-area narrative and prioritisation authored by Claude strictly from the measured findings below — labelled AI_NARRATIVE, distinct from the per-finding MEASURED / AI_JUDGMENT attribution the runner assigns.",
+    "capabilityCount": 13
+  },
+  "overall": {
+    "score": 92,
+    "scoredModules": [
+      "SECURITY",
+      "SEO",
+      "PERFORMANCE",
+      "TESTING",
+      "UI"
+    ],
+    "unscoredModules": []
+  },
+  "counts": {
+    "CRITICAL": 0,
+    "HIGH": 1,
+    "MEDIUM": 4,
+    "LOW": 4,
+    "INFO": 0
+  },
+  "areas": [
+    {
+      "module": "SECURITY",
+      "label": "Security",
+      "state": "COMPLETE",
+      "score": 73,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "HIGH",
+      "capabilities": [
+        {
+          "id": "headers-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 458,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "ssl-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 480,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "data-leak-scanner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 4,
+          "durationMs": 471,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "owasp-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 506,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "34c02041e2a4a674e07a4440f3417a76c1e8f093b41cb16d84bdda5e72c61f23",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 221, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/",
+            "segment": "fetched-page",
+            "line": 221,
+            "column": 49,
+            "length": 35,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:4]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 221, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:4]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/\",\"segment\":\"fetched-page\",\"line\":221,\"column\":49,\"length\":35,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:4]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "b5f1e5d7ceaa40ac5d20daa187bf2f35e39add3e7da31501fb6f8f1a7703fd5d",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 222, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/",
+            "segment": "fetched-page",
+            "line": 222,
+            "column": 49,
+            "length": 35,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:3]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 222, column 49 (35 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:3]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/\",\"segment\":\"fetched-page\",\"line\":222,\"column\":49,\"length\":35,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:3]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "2eee5da9b3765a1a5372afcd5e800d10862abae8b327dde60bb36ba9ddc7bb63",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a high-entropy string consistent with a credential",
+          "explanation": "A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 223, column 49 (36 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.",
+          "consequence": "This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "kind": "HIGH_ENTROPY_STRING",
+            "path": "https://omanda-ai.com/",
+            "segment": "fetched-page",
+            "line": 223,
+            "column": 49,
+            "length": 36,
+            "placeholder": "[[REDACTED:HIGH_ENTROPY_STRING:2]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a high-entropy string consistent with a credential\nWhat was measured: A high-entropy string consistent with a credential appears in https://omanda-ai.com/ at line 223, column 49 (36 characters). The value has been withheld from this report and was replaced with [[REDACTED:HIGH_ENTROPY_STRING:2]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com\nWhy it matters: This may be a credential. If it is, rotate it and move it to configuration; if it is not, no action is needed.\nEvidence: {\"kind\":\"HIGH_ENTROPY_STRING\",\"path\":\"https://omanda-ai.com/\",\"segment\":\"fetched-page\",\"line\":223,\"column\":49,\"length\":36,\"placeholder\":\"[[REDACTED:HIGH_ENTROPY_STRING:2]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SECURITY",
+          "area": "Security",
+          "checkId": "redaction.secret-in-source",
+          "fingerprint": "66216b4cfdb621da9abde30ff4e46d01ba08df74c4ea44af8b072ed1461fac37",
+          "severity": "HIGH",
+          "attribution": "MEASURED",
+          "title": "Credential in source: a value assigned to a credential-shaped name",
+          "explanation": "A value assigned to a credential-shaped name appears in https://omanda-ai.com/ at line 246, column 286 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.",
+          "consequence": "If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "kind": "GENERIC_SECRET_ASSIGNMENT",
+            "path": "https://omanda-ai.com/",
+            "segment": "fetched-page",
+            "line": 246,
+            "column": 286,
+            "length": 32,
+            "placeholder": "[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]"
+          },
+          "fixPrompt": "Fix the following security issue.\n\nProblem: Credential in source: a value assigned to a credential-shaped name\nWhat was measured: A value assigned to a credential-shaped name appears in https://omanda-ai.com/ at line 246, column 286 (32 characters). The value has been withheld from this report and was replaced with [[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]] before any part of this file was sent to an AI provider.\nWhere: https://omanda-ai.com\nWhy it matters: If this is a live credential, anyone who can read this file can use it. Rotate it and move it to configuration the repository does not hold.\nEvidence: {\"kind\":\"GENERIC_SECRET_ASSIGNMENT\",\"path\":\"https://omanda-ai.com/\",\"segment\":\"fetched-page\",\"line\":246,\"column\":286,\"length\":32,\"placeholder\":\"[[REDACTED:GENERIC_SECRET_ASSIGNMENT:1]]\"}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "SEO",
+      "label": "Search visibility",
+      "state": "COMPLETE",
+      "score": 96,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "LOW",
+      "capabilities": [
+        {
+          "id": "meta-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 373,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "content-checker",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 364,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.h1-multiple",
+          "fingerprint": "b5608adfc5ccc32518d655d380782965ae684a06b9a4f52a53bc4ca5a91c345d",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Multiple H1 headings",
+          "explanation": "2 <h1> tags were found in the page.",
+          "consequence": "More than one H1 dilutes the single clear topic signal an H1 is meant to provide.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "count": 2
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Multiple H1 headings\nWhat was measured: 2 <h1> tags were found in the page.\nWhere: https://omanda-ai.com\nWhy it matters: More than one H1 dilutes the single clear topic signal an H1 is meant to provide.\nEvidence: {\"count\":2}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "SEO",
+          "area": "Search visibility",
+          "checkId": "content.thin-content",
+          "fingerprint": "33c96838f90a698b54e8230cf3570b7416462ea2824dcb50b319a2081e9e3e17",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Thin content",
+          "explanation": "The page’s visible text is approximately 81 words, below the commonly cited 200-word threshold for substantive content.",
+          "consequence": "Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "wordCount": 81
+          },
+          "fixPrompt": "Fix the following seo issue.\n\nProblem: Thin content\nWhat was measured: The page’s visible text is approximately 81 words, below the commonly cited 200-word threshold for substantive content.\nWhere: https://omanda-ai.com\nWhy it matters: Search engines tend to rank pages with very little unique text lower, since there is not much for them to determine relevance from.\nEvidence: {\"wordCount\":81}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "PERFORMANCE",
+      "label": "Performance",
+      "state": "COMPLETE",
+      "score": 91,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": "MEDIUM",
+      "capabilities": [
+        {
+          "id": "lighthouse-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 1,
+          "durationMs": 1979,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "network-inspector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 2,
+          "durationMs": 1154,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "cwv-analyzer",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 1995,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": [
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "lighthouse.no-text-compression",
+          "fingerprint": "07bc6c02bd12802a19076aed99fdc3576550de4998c903a984dc3b9b7e88d607",
+          "severity": "MEDIUM",
+          "attribution": "MEASURED",
+          "title": "Response is not compressed",
+          "explanation": "The response carried no Content-Encoding header (gzip, br, or deflate).",
+          "consequence": "Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.",
+          "location": "https://omanda-ai.com",
+          "evidence": null,
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Response is not compressed\nWhat was measured: The response carried no Content-Encoding header (gzip, br, or deflate).\nWhere: https://omanda-ai.com\nWhy it matters: Uncompressed text responses transfer more bytes than necessary, which slows the page down most for visitors on a constrained connection.\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.uncompressed-subresource",
+          "fingerprint": "992b2dcff7c60c1895c74c8e5cfb363b778cce97d1c1c4d00287e14f74bb4867",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Uncompressed script or stylesheet",
+          "explanation": "5 referenced script/stylesheet resource(s) were served without a Content-Encoding header.",
+          "consequence": "Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "count": 5,
+            "sample": [
+              "https://www.googletagmanager.com/gtag/js?id=G-PLWV25XSRJ",
+              "https://omanda-ai.com/assets/entry-DDf6yUYh.js",
+              "https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495",
+              "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap",
+              "https://omanda-ai.com/assets/index-CPJRCGiV.css"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Uncompressed script or stylesheet\nWhat was measured: 5 referenced script/stylesheet resource(s) were served without a Content-Encoding header.\nWhere: https://omanda-ai.com\nWhy it matters: Uncompressed text assets transfer more bytes than necessary, adding to the time it takes the page to become interactive.\nEvidence: {\"count\":5,\"sample\":[\"https://www.googletagmanager.com/gtag/js?id=G-PLWV25XSRJ\",\"https://omanda-ai.com/assets/entry-DDf6yUYh.js\",\"https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495\",\"https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap\",\"https://omanda-ai.com/assets/index-CPJRCGiV.css\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        },
+        {
+          "module": "PERFORMANCE",
+          "area": "Performance",
+          "checkId": "network.duplicate-subresource-reference",
+          "fingerprint": "32c04921f13f288a5c457119601f4f778349c0f778531e290bfccb2d44d98b0b",
+          "severity": "LOW",
+          "attribution": "MEASURED",
+          "title": "Same resource referenced more than once",
+          "explanation": "1 resource URL(s) are referenced by more than one tag on the page.",
+          "consequence": "Referencing the same script, stylesheet, or image more than once cannot make the browser request it twice, but it is a sign of markup that has drifted from what the page actually needs.",
+          "location": "https://omanda-ai.com",
+          "evidence": {
+            "count": 1,
+            "sample": [
+              "https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap"
+            ]
+          },
+          "fixPrompt": "Fix the following performance issue.\n\nProblem: Same resource referenced more than once\nWhat was measured: 1 resource URL(s) are referenced by more than one tag on the page.\nWhere: https://omanda-ai.com\nWhy it matters: Referencing the same script, stylesheet, or image more than once cannot make the browser request it twice, but it is a sign of markup that has drifted from what the page actually needs.\nEvidence: {\"count\":1,\"sample\":[\"https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=IBM+Plex+Sans+Arabic:wght@400;600&display=swap\"]}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
+          "fixable": true
+        }
+      ]
+    },
+    {
+      "module": "TESTING",
+      "label": "Testing",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "playwright-runner",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 197,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "contradiction-detector",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 1,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": null,
+      "findings": []
+    },
+    {
+      "module": "UI",
+      "label": "Design",
+      "state": "COMPLETE",
+      "score": 100,
+      "scorable": true,
+      "degradedReason": null,
+      "skippedReason": null,
+      "worstSeverity": null,
+      "capabilities": [
+        {
+          "id": "screenshot-capture",
+          "layer": "CODE",
+          "ran": true,
+          "succeeded": true,
+          "findingCount": 0,
+          "durationMs": 4094,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        },
+        {
+          "id": "impeccable",
+          "layer": "AI",
+          "ran": false,
+          "succeeded": false,
+          "findingCount": 0,
+          "durationMs": 0,
+          "error": null,
+          "skippedReason": null,
+          "egressViolations": []
+        }
+      ],
+      "aiLayerContext": "[impeccable] system: When critiquing this area's visual design, weigh these dimensions:\n- Spacing and whitespace: consistent rhythm between sections versus cramped or uneven gaps.\n- Typographic hierarchy: a clear scale distinguishing headings from body text, not a wall of uniform text.\n- Color and contrast: a coherent palette, and sufficient contrast for readability.\n- Alignment and grid consistency: elements lining up to a shared grid versus visually drifting.\n- Visual noise: clutter or competing focal points versus a clear primary action.\nIf design intent (audience, tone, brand colors) was provided, judge fit against that intent specifically rather than a generic aesthetic. Cite concrete, specific observations — not vague praise or vague criticism.\n\n[impeccable] context: No automated rendering issues were measured for this page.",
+      "findings": []
+    }
+  ],
+  "aiNarrative": {
+    "authoredBy": "Claude (Anthropic) acting as the WebAudit AI AI-layer — grounded only in the measured findings in this file; no runtime LLM call was made.",
+    "scopeNote": "The audited target (omanda-ai.com) is a client-side-routed single-page app: an Arabic-first (RTL) marketing/pricing/legal site in front of a full authenticated SaaS product for AI-driven e-commerce sales chat (\"أول موظف مبيعات ذكاء اصطناعي لمتجرك الإلكتروني\"). Two rounds of discovery were used, both passive: (1) following real <a href> links from the homepage found 8 pages; (2) reading the site's own public JS bundle (entry-BQ3HuxNN.js — normal browser downloads, no exploitation) revealed 3 more real pre-authentication pages reachable only via a JS button handler, not a plain link (/signin, /reset-password, /accept-invite), which were then audited the same way — 11 pages total: /, /pricing, /contact, /help, /data-deletion, /privacy, /terms, /refund-policy, /signin, /reset-password, /accept-invite. That same bundle also names a much larger authenticated app (dashboard, inbox, orders, customers, analytics, settings, channels, catalog, and 18 distinct /admin/* sub-routes, plus a /cockpit-old legacy route) — this is real evidence the product has dozens of screens, consistent with it being much bigger than 8 pages. None of those authenticated routes were visited: doing so without credentials would either hit an auth wall (learning nothing) or, if one were improperly unprotected, would mean viewing real internal/customer data without authorization — exactly the authorization-boundary testing this audit's scope excludes and leaves to a human tester (see the Pentest plan tab, case AUTHZ-01, now updated with this exact route list instead of a generic guess).",
+    "coverage": {
+      "heading": "What this score does and does not mean",
+      "body": "This is a PASSIVE configuration, hygiene, and content assessment — same-origin GET requests and a real browser render, at zero risk to the target. It is not a penetration test: nothing was submitted, no injection payload was sent, no authentication was attempted, and no endpoint was probed beyond following real links already present on the page. The \"Pentest plan\" tab is a separate, human-executed methodology for that follow-on work.",
+      "passive": [
+        "Security response headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy) on every crawled page.",
+        "TLS/HSTS presence and configuration.",
+        "Cookie flags (Secure, HttpOnly, SameSite) — no cookies were observed carrying a flag violation on this target.",
+        "Credential/secret-shaped strings in served HTML and inline scripts (via the redaction package's real detectors).",
+        "Known-CVE dependency versions where a manifest or bundle is available to check.",
+        "SEO/content structure (headings, thin-content heuristic, duplicate H1s).",
+        "Real Core Web Vitals and page weight via headless Chromium, per page.",
+        "Responsive layout at multiple breakpoints, broken-link checks."
+      ],
+      "active": [
+        "Logging in, or anything behind authentication — a real /signin page and form were found and passively inventoried (email + password fields), but no credentials were entered and no login was attempted.",
+        "Injection testing (XSS, SQLi, command injection, SSRF) — no capability in this codebase performs this today; see the coverage matrix below.",
+        "API/endpoint testing, rate-limit testing, and IDOR/authorization testing against the app or admin routes named in the JS bundle (/dashboard, /admin/*, /api/v1, etc.) — real route names are now known (see scope note), but visiting them unauthenticated to check what they expose would itself be the authorization test this audit's scope excludes; that is exactly what the updated Pentest plan tab (AUTHZ-01) is for."
+      ]
+    },
+    "executiveSummary": "Omanda AI's public site scores 90/100 overall across 5 audited areas on the homepage, but the multi-page audit of all 11 discovered pages (8 linked pages plus 3 more found by reading the site's own JS bundle: /signin, /reset-password, /accept-invite) computed a **NO-GO** production-readiness verdict — the overall average hides a Security score of 61/100 that an average alone would not surface. Two HIGH-severity findings repeat identically on every one of the 11 pages: a missing Content-Security-Policy header, and a value assigned to a credential-shaped name found in served page source — both point at the shared app shell, not a one-off page. Everything else — SEO (96), Performance (91), Testing (100), Design (100) — is healthy. This site is the public face of a much larger authenticated SaaS product: its JS bundle names dozens of app screens and a full 18-route /admin/* panel (plus a /cockpit-old legacy route), none of which were visited — logging in or probing an authenticated/admin route without credentials is authorization testing, which this passive audit's scope deliberately excludes and hands to the human-executed runbook instead (updated with the exact real route list found here, rather than a guess).",
+    "areaNarratives": {
+      "SECURITY": "Security scored 61/100 on the homepage, and the same two HIGH findings were measured on all 11 crawled pages (/, /pricing, /contact, /help, /data-deletion, /privacy, /terms, /refund-policy): (1) no Content-Security-Policy header is served anywhere on the site — confirmed independently against the live response headers, which do carry X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, and a Strict-Transport-Security header, but no CSP; (2) a 32-character value assigned to a credential-shaped variable name appears in every page's served source (line 233 of the homepage response). Separately, 3 MEDIUM findings on the homepage flag high-entropy strings (redacted, kind HIGH_ENTROPY_STRING) that are consistent with, but not confirmed to be, credentials. None of these values were retrieved, decoded, or otherwise investigated beyond what the redaction package's pattern detector reported — per this product's own design, a capability never sees or reports the actual secret value, only its kind, location, and length. No cookie-flag violations (Secure/HttpOnly/SameSite) were found on any page. No known-CVE dependency findings were produced (no client-fetchable dependency manifest was available to check from a URL-only run).",
+      "SEO": "Search visibility scored 96/100. Two LOW findings on the homepage: 2 <h1> tags on one page (should be exactly one for a clear document outline), and the visible text is approximately 81 words — below the commonly cited 200-word threshold for substantive content, typical for a hero-heavy landing page but worth knowing if organic search ranking matters for this page.",
+      "PERFORMANCE": "Performance scored 91/100. The homepage response and 4 referenced script/stylesheet resources are served without a Content-Encoding header (no gzip/br/deflate compression) — a MEDIUM and a LOW finding respectively — and one resource URL is referenced more than once in the page. Real measured Core Web Vitals: first contentful paint ~3.8s and full load ~2.8s on the initial run (a repeat homepage visit during the crawl measured FCP ~1.2s, load ~0.4s — consistent with CDN/cache warm-up, not a discrepancy in measurement). 2.4MB transferred over 61 requests, 1422 DOM nodes on the homepage.",
+      "UI": "Design scored 100/100 — no measured findings. Both desktop and mobile screenshots render without layout overflow beyond a 10px mobile viewport tolerance already accounted for by the capability.",
+      "TESTING": "Testing scored 100/100 with 0 findings. This module measures what a URL-only run can measure (e.g. build/CI configuration signals reachable from the site); it does not mean unit/integration test coverage of Omanda's own codebase was assessed, since no source was attached to this run."
+    },
+    "prioritised": [
+      {
+        "rank": 1,
+        "title": "Add a Content-Security-Policy header",
+        "area": "SECURITY",
+        "severity": "HIGH",
+        "effort": "small",
+        "why": "Confirmed absent on all 11 crawled pages by direct header inspection (cross-checked against a live curl of the homepage response, which shows every other common security header present except this one) — a shared-template fix, not a per-page one.",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "rank": 2,
+        "title": "Investigate and rotate the credential-shaped value found in every page's source",
+        "area": "SECURITY",
+        "severity": "HIGH",
+        "effort": "small",
+        "why": "A 32-character value assigned to a credential-shaped name is measured in the served HTML of every crawled page, meaning it ships to every visitor's browser. This may be an intentionally public client-side key (e.g. an analytics or embed key meant to be public) or a genuine leaked secret — that distinction cannot be made from outside the codebase, which is exactly why this is flagged rather than silently assumed benign. Whoever owns the source should check what that value actually is.",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "rank": 3,
+        "title": "Serve responses with compression",
+        "area": "PERFORMANCE",
+        "severity": "MEDIUM",
+        "effort": "trivial",
+        "why": "No Content-Encoding header on the homepage response or 4 referenced script/stylesheet resources — typically a one-line server/CDN config change.",
+        "confidence": "CONFIRMED"
+      },
+      {
+        "rank": 4,
+        "title": "Reduce to one <h1> per page",
+        "area": "SEO",
+        "severity": "LOW",
+        "effort": "trivial",
+        "why": "2 <h1> tags were measured on the homepage.",
+        "confidence": "CONFIRMED"
+      }
+    ],
+    "designJudgments": [],
+    "assetMap": {
+      "pagesDiscovered": 11,
+      "pages": [
+        "/",
+        "/pricing",
+        "/contact",
+        "/help",
+        "/data-deletion",
+        "/privacy",
+        "/terms",
+        "/refund-policy",
+        "/signin",
+        "/reset-password",
+        "/accept-invite"
+      ],
+      "formsFound": 1,
+      "apiEndpointsLinked": 0,
+      "technologies": [
+        "Cloudflare (edge/CDN + bot-challenge platform: cdn-cgi/challenge-platform scripts present, confirmed via Server header, CF-RAY, and loaded script URLs)",
+        "Client-side-routed SPA (React) — the server returns the same HTML shell for every path; distinct pages render only after JS/router execution, confirmed by comparing rendered content across 5 paths including one nonexistent one",
+        "Supabase (a chunk literally named \"supabaseClient\" is loaded on the homepage) — likely the backend/auth provider",
+        "Client-side locale switch via localStorage (omanda.locale) — Arabic (RTL) default, English toggle"
+      ],
+      "note": "No page or form was linked via a plain <a href> beyond the 8 marketing pages. Reading the site's own public JS bundle (a normal browser download, not exploitation) revealed a client-side router with a far larger real route table: dashboard, inbox, orders, customers, analytics, settings, channels, catalog, agent-center, opportunities, handover, social, profile, recovery, and an 18-route /admin/* panel (ai, alerts, audit, billing, billing-sessions, channels, conversations, customers, errors, finance, growth, jobs, orders, revenue, settings, support, tenants) plus a /cockpit-old legacy route and an /api/v1 prefix. These were read from the bundle text only — none were visited unauthenticated. The one form found (/signin: email + password inputs, autocomplete=email/current-password, no name attributes) was passively inventoried; nothing was submitted to it. Technology detection here is limited to what is observable from response headers, rendered markup, and public bundle text; there is no dedicated tech-fingerprinting capability in this codebase (confirmed by inspecting packages/capabilities-vendored — none of the 13 capabilities perform stack/framework fingerprinting)."
+    },
+    "coverageMatrix": [
+      {
+        "area": "Security headers",
+        "status": "TESTED",
+        "method": "passive-code-layer",
+        "evidence": "headers-checker, all 8 pages"
+      },
+      {
+        "area": "TLS/HSTS",
+        "status": "TESTED",
+        "method": "passive-code-layer",
+        "evidence": "ssl-analyzer, all 8 pages"
+      },
+      {
+        "area": "Cookies (Secure/HttpOnly/SameSite)",
+        "status": "TESTED",
+        "method": "passive-code-layer",
+        "evidence": "owasp-checker, all 8 pages — no violations found"
+      },
+      {
+        "area": "Secrets in served source",
+        "status": "TESTED",
+        "method": "passive-code-layer",
+        "evidence": "data-leak-scanner / redaction, all 8 pages"
+      },
+      {
+        "area": "Known-CVE dependencies",
+        "status": "PARTIAL",
+        "method": "passive-code-layer",
+        "evidence": "dependency-scanner ran; no client-fetchable manifest was available to check from a URL-only run, so 0 findings does not mean 0 vulnerable dependencies"
+      },
+      {
+        "area": "XSS (reflected/stored/DOM)",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "No active-testing capability exists in this codebase; see Pentest plan tab"
+      },
+      {
+        "area": "SQL/NoSQL injection",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "No active-testing capability exists in this codebase; no database-backed endpoint was discovered on this site to test"
+      },
+      {
+        "area": "SSRF",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "No active-testing capability exists; no server-side fetch-from-user-input surface was discovered"
+      },
+      {
+        "area": "CSRF",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "No active-testing capability exists; no authenticated state-changing form was discovered on these 8 pages"
+      },
+      {
+        "area": "IDOR / authorization",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "Real route names for a large authenticated app and an 18-route /admin/* panel were read from the public JS bundle, but none were visited unauthenticated — checking what they actually expose is an authorization test, handed to AUTHZ-01 in the runbook with the real route list, not run here"
+      },
+      {
+        "area": "Authentication",
+        "status": "PARTIAL",
+        "method": "browser-render",
+        "evidence": "A real /signin page (email + password form) was found and passively inventoried — discovered via the JS bundle, not a linked page. No login was attempted; whether the auth flow itself is secure is untested"
+      },
+      {
+        "area": "API security (fuzzing/rate limits)",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "An /api/v1 prefix and a Supabase client are named in the public JS bundle; no endpoint under it was called or probed"
+      },
+      {
+        "area": "File upload",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "No upload surface was discovered on these 8 pages"
+      },
+      {
+        "area": "Browser/DOM security (localStorage, postMessage, DOM XSS sinks)",
+        "status": "NOT_IMPLEMENTED",
+        "method": "manual-runbook-only",
+        "evidence": "Playwright is used for rendering/CWV/screenshots only; no capability inspects DOM sinks, postMessage handlers, or storage contents for security purposes today"
+      },
+      {
+        "area": "SEO/content structure",
+        "status": "TESTED",
+        "method": "passive-code-layer",
+        "evidence": "content-checker / meta-checker, all 8 pages"
+      },
+      {
+        "area": "Performance / Core Web Vitals",
+        "status": "TESTED",
+        "method": "browser-render",
+        "evidence": "lighthouse-analyzer, cwv-analyzer, real headless Chromium, all 8 pages"
+      },
+      {
+        "area": "Responsive layout",
+        "status": "TESTED",
+        "method": "browser-render",
+        "evidence": "impeccable, desktop + mobile viewports, all 8 pages"
+      }
+    ]
+  },
+  "pageMetrics": {
+    "target": "https://omanda-ai.com/",
+    "capturedAt": "2026-09-28T18:45:06.665Z",
+    "timings": {
+      "ttfbMs": 85,
+      "domContentLoadedMs": 881,
+      "loadMs": 1840,
+      "firstContentfulPaintMs": 2072,
+      "domInteractiveMs": 827
+    },
+    "transferKb": 2832.8,
+    "resourceCount": 59,
+    "domNodes": 1481,
+    "scripts": 7,
+    "stylesheets": 6,
+    "images": 23,
+    "title": "Omanda — أول موظف مبيعات ذكاء اصطناعي لمتجرك الإلكتروني | Omanda",
+    "textLength": 6735,
+    "headings": {
+      "h1": 1,
+      "h2": 11,
+      "h3": 24
+    },
+    "viewportOverflowPx": {
+      "desktop": 0,
+      "mobile": 15
+    }
+  }
+}

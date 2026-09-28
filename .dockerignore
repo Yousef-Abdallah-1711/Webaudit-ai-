@@ -1,0 +1,39 @@
+# Phase 8 (production-without-Paymob-or-AI master plan) — kept in sync with
+# .gitignore's own list, plus Docker-specific exclusions. `turbo prune
+# --docker` (used by every apps/*/Dockerfile here) copies only the pruned
+# subset it needs anyway, so this mostly protects the `pruner` build stage's
+# own initial `COPY . .` from dragging in gigabytes of local dev state.
+
+node_modules/
+**/node_modules/
+.pnpm-store/
+
+dist/
+build/
+.next/
+.turbo/
+*.tsbuildinfo
+.sandbox-build/
+
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+coverage/
+test-results/
+playwright-report/
+blob-report/
+.vitest/
+**/__diff_output__/
+**/*.actual.png
+
+.git/
+.github/
+docs/
+showcase-*/
+load-testing/
+design-system/reference-pages/
+
+*.log
+.DS_Store

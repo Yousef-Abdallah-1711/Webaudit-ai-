@@ -65,7 +65,7 @@ export type AiLayerOutcome =
     }
   | {
       readonly ran: false;
-      readonly reason: 'NO_AI_CAPABILITIES' | 'CHAIN_EXHAUSTED';
+      readonly reason: 'NO_AI_CAPABILITIES' | 'CHAIN_EXHAUSTED' | 'DISABLED';
       readonly detail: string;
       readonly invocations: readonly AiInvocationRecord[];
       readonly secrets: readonly RedactedSecretRef[];
@@ -220,17 +220,27 @@ export async function runAiLayer(options: AiLayerOptions): Promise<AiLayerOutcom
   });
 
   if (!result.ok) {
-    captureAlert('ai_chain_exhaustion', 'Every AI provider in the chain was exhausted', {
-      task: prompt.task,
-      scanId: options.scanId,
-      attempts: result.invocations.length,
-    });
+    // A real chain exhaustion is an outage worth paging; an intentionally
+    // disabled AI layer (`AI_MODE=disabled`) is neither an outage nor a
+    // surprise, and alerting on it here would fire on every scan in a
+    // deployment that runs this mode on purpose, training an operator to
+    // ignore the alert that means something.
+    if (result.reason === 'CHAIN_EXHAUSTED') {
+      captureAlert('ai_chain_exhaustion', 'Every AI provider in the chain was exhausted', {
+        task: prompt.task,
+        scanId: options.scanId,
+        attempts: result.invocations.length,
+      });
+    }
     return {
       ran: false,
-      reason: 'CHAIN_EXHAUSTED',
+      reason: result.reason,
       detail:
-        'No AI provider could be reached for this area, so its findings are what was measured ' +
-        'directly, without interpretation.',
+        result.reason === 'DISABLED'
+          ? 'AI interpretation is intentionally disabled for this deployment (AI_MODE=disabled), ' +
+            'so this area’s findings are what was measured directly, without interpretation.'
+          : 'No AI provider could be reached for this area, so its findings are what was measured ' +
+            'directly, without interpretation.',
       invocations: result.invocations,
       secrets,
       contributorSecrets,

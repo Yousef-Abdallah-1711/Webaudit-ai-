@@ -36,7 +36,23 @@ test('a real completed scan appears in admin/scans, and a real plan edit appears
   const customerPage = await context.newPage();
   await loginViaUi(customerPage, stack.webBaseUrl, customer);
   await runScanToCompletion(customerPage, fixture);
+  // `localStorage` is scoped per browser context + origin, not per `Page` —
+  // `customerPage` and `page` share both, so `customer`'s access token
+  // (`lib/api.ts` mirrors it there — "so a reload does not sign the user
+  // out") is still readable once `page` navigates to this same origin
+  // below. Without clearing it here (while still on that origin, before
+  // this page closes), `page`'s own login-as-`operator` silently
+  // re-authenticates as `customer` instead: `AuthProvider`'s mount-time
+  // bootstrap succeeds from the stale token, `LoginPage` unmounts its own
+  // form (`if (status === 'authenticated') return null`), and the fill
+  // above retries against a detached element until the test times out.
+  // Found live running this file for real (Phase 10) — the identical root
+  // cause `dashboard/payment-and-receipts.spec.ts` had, here reached
+  // through two `Page`s in one context rather than one `Page` reused
+  // across logins.
+  await customerPage.evaluate(() => localStorage.clear());
   await customerPage.close();
+  await context.clearCookies();
 
   await loginViaUi(page, stack.webBaseUrl, operator);
   await page.goto(`${stack.webBaseUrl}/admin/scans`);
