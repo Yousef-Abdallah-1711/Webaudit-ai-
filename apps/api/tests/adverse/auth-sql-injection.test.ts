@@ -144,9 +144,9 @@ describe('SQL injection: password reset and email verification', () => {
   );
 
   it.each(SQLI_PAYLOADS)(
-    'GET /auth/verify/%s is refused as invalid, not a database error',
+    'POST /auth/verify/%s is refused as invalid, not a database error',
     async (payload) => {
-      const res = await request(app).get(`/auth/verify/${encodeURIComponent(payload)}`);
+      const res = await request(app).post(`/auth/verify/${encodeURIComponent(payload)}`);
       expect(res.status).toBe(410);
       await usersTableIsIntact();
     },

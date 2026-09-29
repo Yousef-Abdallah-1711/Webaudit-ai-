@@ -1,11 +1,11 @@
 /**
  * T023 — Registration, duplicate email, unverified-login refusal.
  *
- * FR-001: registration is refused for an address that already holds an account.
+ * Existing addresses receive the same public response as new registrations.
  * FR-002: email confirmation is required before audit capability is granted.
  */
 
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import { createApp } from '../../src/app.js';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
@@ -34,9 +34,15 @@ describe('POST /auth/register', () => {
     const res = await request(app).post('/auth/register').send(VALID);
 
     expect(res.status).toBe(201);
+    expect(res.body).toEqual({
+      message: 'Check your email to confirm your address.',
+      email: VALID.email,
+    });
     // No token on registration: FR-002 requires confirmation first.
     expect(res.body).not.toHaveProperty('accessToken');
-    expect(res.headers['set-cookie']).toBeUndefined();
+    expect(res.headers['set-cookie']?.[0]).toContain('pending_verification=');
+    expect(res.headers['set-cookie']?.[0]).toContain('Path=/auth');
+    expect(res.headers['set-cookie']?.[0]).toContain('HttpOnly');
 
     const user = await testDb.user.findUnique({ where: { email: VALID.email } });
     expect(user).not.toBeNull();
@@ -70,11 +76,20 @@ describe('POST /auth/register', () => {
     expect(lots[0]?.source).toBe('FREE_GRANT');
   });
 
-  it('refuses a duplicate email without revealing which field collided', async () => {
-    await request(app).post('/auth/register').send(VALID).expect(201);
+  it('returns the same response for a duplicate email and sends an account notice', async () => {
+    const first = await request(app).post('/auth/register').send(VALID).expect(201);
+    const notice = vi.spyOn(mailer, 'sendRegistrationAttemptNotice');
 
     const res = await request(app).post('/auth/register').send(VALID);
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(first.status);
+    expect(res.body).toEqual(first.body);
+    expect(res.headers['set-cookie']?.[0]).toContain('pending_verification=');
+    expect(notice).toHaveBeenCalledWith(
+      VALID.email,
+      'http://localhost:3000/login',
+      'http://localhost:3000/reset-password',
+    );
+    expect(mailer.sent().filter((mail) => mail.kind === 'verify')).toHaveLength(1);
 
     // Exactly one account, not two.
     expect(await testDb.user.count({ where: { email: VALID.email } })).toBe(1);
@@ -86,7 +101,11 @@ describe('POST /auth/register', () => {
       .post('/auth/register')
       .send({ ...VALID, email: 'DEV@Example.COM' });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({
+      message: 'Check your email to confirm your address.',
+      email: VALID.email,
+    });
     expect(await testDb.user.count()).toBe(1);
   });
 
@@ -123,7 +142,7 @@ describe('POST /auth/login before verification', () => {
     await request(app).post('/auth/register').send(VALID).expect(201);
 
     // Drive verification through the real endpoint, exactly as the emailed link does.
-    await request(app).get(`/auth/verify/${mailer.lastVerificationToken()}`).expect(200);
+    await request(app).post(`/auth/verify/${mailer.lastVerificationToken()}`).expect(200);
 
     const res = await request(app).post('/auth/login').send(VALID);
     expect(res.status).toBe(200);
@@ -152,19 +171,42 @@ describe('POST /auth/login before verification', () => {
   });
 });
 
-describe('GET /auth/verify/:token', () => {
+describe('POST /auth/verify/:token', () => {
   it('verifies exactly once and refuses replay', async () => {
     await request(app).post('/auth/register').send(VALID).expect(201);
     const token = mailer.lastVerificationToken();
 
-    const first = await request(app).get(`/auth/verify/${token}`);
+    const first = await request(app).post(`/auth/verify/${token}`);
     expect(first.status).toBe(200);
 
     const user = await testDb.user.findUniqueOrThrow({ where: { email: VALID.email } });
     expect(user.emailVerifiedAt).not.toBeNull();
 
-    const replay = await request(app).get(`/auth/verify/${token}`);
+    const replay = await request(app).post(`/auth/verify/${token}`);
     expect(replay.status).toBe(410);
+  });
+
+  it('allows only one concurrent verification request to claim the token', async () => {
+    await request(app).post('/auth/register').send(VALID).expect(201);
+    const token = mailer.lastVerificationToken();
+
+    const results = await Promise.all([
+      request(app).post(`/auth/verify/${token}`),
+      request(app).post(`/auth/verify/${token}`),
+    ]);
+
+    expect(results.map((result) => result.status).sort()).toEqual([200, 410]);
+    expect(await testDb.emailToken.count({ where: { purpose: 'verify', usedAt: { not: null } } })).toBe(1);
+  });
+
+  it('GET never consumes a verification token', async () => {
+    await request(app).post('/auth/register').send(VALID).expect(201);
+    const token = mailer.lastVerificationToken();
+
+    const res = await request(app).get(`/auth/verify/${token}`);
+    expect(res.status).not.toBe(200);
+    expect((await testDb.user.findUniqueOrThrow({ where: { email: VALID.email } })).emailVerifiedAt).toBeNull();
+    expect((await testDb.emailToken.findFirstOrThrow({ where: { purpose: 'verify' } })).usedAt).toBeNull();
   });
 
   it('refuses an expired token', async () => {
@@ -176,7 +218,7 @@ describe('GET /auth/verify/:token', () => {
       data: { expiresAt: new Date(Date.now() - 1000) },
     });
 
-    const res = await request(app).get(`/auth/verify/${token}`);
+    const res = await request(app).post(`/auth/verify/${token}`);
     expect(res.status).toBe(410);
   });
 
@@ -196,11 +238,49 @@ describe('GET /auth/verify/:token', () => {
   it('quickstart row 9: resending verification succeeds even when the email fails to send', async () => {
     await request(app).post('/auth/register').send(VALID).expect(201);
     mailer.clear();
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'verify' },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
     mailer.failVerification(new Error('SMTP unavailable'));
 
     const res = await request(app).post('/auth/verify/resend').send({ email: VALID.email });
 
     expect(res.status).toBe(202);
     expect(mailer.sent()).toHaveLength(0);
+  });
+
+  it('silently suppresses an immediate resend within the per-account cooldown', async () => {
+    await request(app).post('/auth/register').send(VALID).expect(201);
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'verify' },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
+    mailer.clear();
+
+    const first = await request(app).post('/auth/verify/resend').send({ email: VALID.email });
+    const second = await request(app).post('/auth/verify/resend').send({ email: VALID.email });
+
+    expect(first.status).toBe(202);
+    expect(second.status).toBe(202);
+    expect(mailer.sent().filter((mail) => mail.kind === 'verify')).toHaveLength(1);
+  });
+
+  it('resolves resend through the pending-verification cookie without an email body', async () => {
+    const registered = await request(app).post('/auth/register').send(VALID).expect(201);
+    const cookie = registered.headers['set-cookie']?.[0];
+    expect(cookie).toContain('pending_verification=');
+    mailer.clear();
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'verify' },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
+
+    const res = await request(app)
+      .post('/auth/verify/resend')
+      .set('Cookie', cookie!.split(';')[0]!)
+      .send({});
+    expect(res.status).toBe(202);
+    expect(mailer.sent().filter((mail) => mail.kind === 'verify')).toHaveLength(1);
   });
 });

@@ -296,16 +296,24 @@ describe('token supersession on resend (M4)', () => {
 
   it('invalidates earlier verification tokens when a new one is sent', async () => {
     await request(app).post('/auth/register').send(FRESH).expect(201);
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'verify' },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
     await request(app).post('/auth/verify/resend').send({ email: FRESH.email }).expect(202);
+    await testDb.emailToken.updateMany({
+      where: { purpose: 'verify' },
+      data: { createdAt: new Date(Date.now() - 61_000) },
+    });
     await request(app).post('/auth/verify/resend').send({ email: FRESH.email }).expect(202);
 
     const tokens = verifyTokens();
     expect(tokens).toHaveLength(3);
 
     // Only the newest link may work. N resends must not mean N live tokens.
-    await request(app).get(`/auth/verify/${tokens[0]}`).expect(410);
-    await request(app).get(`/auth/verify/${tokens[1]}`).expect(410);
-    await request(app).get(`/auth/verify/${tokens[2]}`).expect(200);
+    await request(app).post(`/auth/verify/${tokens[0]}`).expect(410);
+    await request(app).post(`/auth/verify/${tokens[1]}`).expect(410);
+    await request(app).post(`/auth/verify/${tokens[2]}`).expect(200);
   });
 
   it('invalidates an earlier password-reset token when a new one is requested', async () => {
@@ -383,6 +391,7 @@ describe('expired auth token cleanup (M5)', () => {
   it('deletes rows expired beyond the grace window and keeps everything else', async () => {
     const id = await currentUserId();
     const now = new Date();
+    await testDb.emailSendAttempt.deleteMany();
 
     await testDb.emailToken.createMany({
       data: [

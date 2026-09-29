@@ -9,8 +9,9 @@ import { grantFreeAllocation } from '../credits/grant.js';
 import { captureAlert } from '../../config/monitoring.js';
 
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
+const VERIFY_PENDING_TTL_MS = 60 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
 
-export class EmailTakenError extends Error {}
 export class TokenInvalidError extends Error {}
 
 /**
@@ -64,18 +65,36 @@ export async function register(
   db: PrismaClient,
   mailer: Mailer,
   input: { email: string; password: string; name?: string | undefined },
-): Promise<{ userId: string }> {
+): Promise<{ email: string; pendingVerificationToken: string }> {
   const email = normalizeEmail(input.email);
-
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) throw new EmailTakenError();
-
+  // Keep duplicate attempts on the same password-hashing cost path. Their
+  // pending cookie receives a random decoy below, never a reference to an
+  // account or a token row.
+  const pendingVerificationToken = generateToken();
   const passwordHash = await hashPassword(input.password);
+  const existing = await db.user.findUnique({ where: { email } });
+  if (existing) {
+    const webUrl = (process.env['WEB_URL'] ?? 'http://localhost:3000').replace(/\/+$/, '');
+    try {
+      await mailer.sendRegistrationAttemptNotice(
+        email,
+        `${webUrl}/login`,
+        `${webUrl}/reset-password`,
+      );
+    } catch (error) {
+      console.error(`[auth] registration-attempt email to ${email} failed to send:`, error);
+      captureAlert('email_send_failure', 'Registration-attempt email failed to send', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return { email, pendingVerificationToken };
+  }
+
   const raw = generateToken();
 
   // One transaction: a user without their free allocation, or without a
   // verification token, is a broken account that support has to repair.
-  const user = await db.$transaction(async (tx) => {
+  await db.$transaction(async (tx) => {
     const created = await tx.user.create({ data: { email, passwordHash } });
     if (input.name !== undefined) {
       await tx.$executeRaw`UPDATE "User" SET name = ${input.name.trim()} WHERE id = ${created.id}`;
@@ -88,12 +107,19 @@ export async function register(
         expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
       },
     });
+    await tx.emailToken.create({
+      data: {
+        userId: created.id,
+        purpose: 'verify_pending',
+        tokenHash: hashToken(pendingVerificationToken),
+        expiresAt: new Date(Date.now() + VERIFY_PENDING_TTL_MS),
+      },
+    });
     await grantFreeAllocation(tx, created.id);
-    return created;
   });
 
   await sendVerificationBestEffort(mailer, email, raw);
-  return { userId: user.id };
+  return { email, pendingVerificationToken };
 }
 
 export async function verifyEmail(db: PrismaClient, raw: string): Promise<void> {
@@ -105,29 +131,61 @@ export async function verifyEmail(db: PrismaClient, raw: string): Promise<void> 
     throw new TokenInvalidError();
   }
 
-  await db.$transaction([
-    db.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: new Date() } }),
-    db.emailToken.update({ where: { id: row.id }, data: { usedAt: new Date() } }),
-  ]);
+  await db.$transaction(async (tx) => {
+    const now = new Date();
+    const claim = await tx.emailToken.updateMany({
+      where: { id: row.id, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+    if (claim.count === 0) throw new TokenInvalidError();
+    await tx.user.update({ where: { id: row.userId }, data: { emailVerifiedAt: now } });
+  });
 }
 
 export async function resendVerification(
   db: PrismaClient,
   mailer: Mailer,
-  emailInput: string,
+  input: { email?: string; pendingToken?: string },
 ): Promise<void> {
-  const email = normalizeEmail(emailInput);
-  const user = await db.user.findUnique({ where: { email } });
+  const user = input.pendingToken
+    ? await (async () => {
+        const pending = await db.emailToken.findUnique({
+          where: { tokenHash: hashToken(input.pendingToken!) },
+          include: { user: true },
+        });
+        if (
+          !pending ||
+          pending.purpose !== 'verify_pending' ||
+          pending.usedAt ||
+          pending.expiresAt < new Date()
+        ) {
+          return null;
+        }
+        return pending.user;
+      })()
+    : input.email
+      ? await db.user.findUnique({ where: { email: normalizeEmail(input.email) } })
+      : null;
 
   // Silent when the address is unknown or already verified: the caller must not
   // learn which accounts exist.
   if (!user || user.emailVerifiedAt) return;
 
-  const raw = generateToken();
+  const result = await db.$transaction(async (tx) => {
+    // Serialise resends for this account. Checking the latest issuance and
+    // creating its replacement under the same lock makes the cooldown hold
+    // even when requests arrive concurrently from different IPs.
+    await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${user.id} FOR UPDATE`;
+    const mostRecent = await tx.emailToken.findFirst({
+      where: { userId: user.id, purpose: 'verify' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+    if (mostRecent && mostRecent.createdAt.getTime() > Date.now() - RESEND_COOLDOWN_MS) {
+      return null;
+    }
 
-  // One transaction: superseding without issuing would leave the account with no
-  // way to confirm itself.
-  await db.$transaction(async (tx) => {
+    const raw = generateToken();
     await supersedeEmailTokens(tx, user.id, 'verify');
     await tx.emailToken.create({
       data: {
@@ -137,7 +195,8 @@ export async function resendVerification(
         expiresAt: new Date(Date.now() + VERIFY_TTL_MS),
       },
     });
+    return raw;
   });
 
-  await sendVerificationBestEffort(mailer, email, raw);
+  if (result) await sendVerificationBestEffort(mailer, user.email, result);
 }

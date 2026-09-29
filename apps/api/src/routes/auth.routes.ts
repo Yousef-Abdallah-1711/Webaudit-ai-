@@ -7,7 +7,6 @@ import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import type { Mailer } from '../services/services-types.js';
 import { env } from '../config/env.js';
 import {
-  EmailTakenError,
   TokenInvalidError,
   register,
   resendVerification,
@@ -31,6 +30,8 @@ import {
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 
 const REFRESH_COOKIE = 'refresh_token';
+const PENDING_VERIFICATION_COOKIE = 'pending_verification';
+const PENDING_VERIFICATION_TTL_MS = 60 * 60 * 1000;
 
 /** Length beats composition rules for real-world password strength. */
 const credentials = z.object({
@@ -85,6 +86,11 @@ function cookieToken(req: AuthedRequest): string | undefined {
   return jar?.[REFRESH_COOKIE];
 }
 
+function pendingVerificationToken(req: AuthedRequest): string | undefined {
+  const jar = req.cookies as Record<string, string> | undefined;
+  return jar?.[PENDING_VERIFICATION_COOKIE];
+}
+
 export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
   const r = Router();
 
@@ -96,32 +102,42 @@ export function authRoutes(db: PrismaClient, mailer: Mailer): Router {
         .json({ error: { code: 'VALIDATION', message: 'Invalid email or password.' } });
       return;
     }
-    try {
-      await register(db, mailer, parsed.data);
-      // 201 with no session: FR-002 requires confirmation first.
-      res.status(201).json({ message: 'Check your email to confirm your address.' });
-    } catch (e) {
-      if (e instanceof EmailTakenError) {
-        res
-          .status(409)
-          .json({ error: { code: 'CONFLICT', message: 'That address cannot be registered.' } });
-        return;
-      }
-      throw e;
-    }
+    const result = await register(db, mailer, parsed.data);
+    // The raw cookie value is a one-hour opaque reference on new accounts and
+    // an unpersisted decoy for duplicate attempts, keeping response shape and
+    // cookie presence enumeration-safe.
+    res.cookie(PENDING_VERIFICATION_COOKIE, result.pendingVerificationToken, {
+      httpOnly: true,
+      secure: env.isProduction,
+      sameSite: 'lax',
+      path: '/auth',
+      expires: new Date(Date.now() + PENDING_VERIFICATION_TTL_MS),
+    });
+    res.status(201).json({
+      message: 'Check your email to confirm your address.',
+      email: result.email,
+    });
   });
 
   r.post('/verify/resend', async (req, res) => {
     const body = req.body as { email?: unknown };
     const email = z.string().email().safeParse(body?.email);
+    const pendingToken = pendingVerificationToken(req);
     // Always 202: the response must not disclose whether an address exists.
-    if (email.success) await resendVerification(db, mailer, email.data);
+    // A present cookie takes precedence, including when it is invalid (for
+    // example the decoy sent after a duplicate registration). Legacy callers
+    // without the cookie may continue to submit their email address.
+    if (pendingToken) {
+      await resendVerification(db, mailer, { pendingToken });
+    } else if (email.success) {
+      await resendVerification(db, mailer, { email: email.data });
+    }
     res
       .status(202)
       .json({ message: 'If that address needs confirming, a new link is on its way.' });
   });
 
-  r.get('/verify/:token', async (req, res) => {
+  r.post('/verify/:token', async (req, res) => {
     try {
       await verifyEmail(db, req.params.token);
       res.status(200).json({ message: 'Address confirmed. You can sign in now.' });
