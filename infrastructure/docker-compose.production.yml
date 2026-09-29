@@ -209,6 +209,18 @@ services:
       # "JWT_ACCESS_SECRET is not set" before this fix).
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET is required}
+      # Same shared config module also validates the email transport at
+      # import time (the production hardening work's fail-closed boot guard
+      # applies here too, not just to apps/api) — without these the worker
+      # refuses to start with "SMTP_USER is required for SMTP mail.", found
+      # via a real deploy, not assumed from reading the code.
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-465}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:?EMAIL_FROM is required}
       WORKSPACE_BASE_DIR: /app/.workspaces
       MAX_ARCHIVE_BYTES: ${MAX_ARCHIVE_BYTES:-52428800}
       MAX_ARCHIVE_RATIO: ${MAX_ARCHIVE_RATIO:-100}
