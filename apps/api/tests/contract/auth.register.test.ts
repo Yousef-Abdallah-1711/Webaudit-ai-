@@ -23,6 +23,9 @@ beforeAll(async () => {
 beforeEach(async () => {
   await resetDb();
   await seedPlans();
+  await testDb.emailSendAttempt.deleteMany({
+    where: { messageType: 'registration-attempt-notice' },
+  });
   mailer.clear();
 });
 afterAll(closeDb);
@@ -92,6 +95,21 @@ describe('POST /auth/register', () => {
     expect(mailer.sent().filter((mail) => mail.kind === 'verify')).toHaveLength(1);
 
     // Exactly one account, not two.
+    expect(await testDb.user.count({ where: { email: VALID.email } })).toBe(1);
+  });
+
+  it('sends at most one registration-attempt notice per recipient during the cooldown', async () => {
+    const firstRegistration = await request(app).post('/auth/register').send(VALID).expect(201);
+    const notice = vi.spyOn(mailer, 'sendRegistrationAttemptNotice');
+
+    const firstAttempt = await request(app).post('/auth/register').send(VALID);
+    const secondAttempt = await request(app).post('/auth/register').send(VALID);
+
+    expect(firstAttempt.status).toBe(firstRegistration.status);
+    expect(firstAttempt.body).toEqual(firstRegistration.body);
+    expect(secondAttempt.status).toBe(firstRegistration.status);
+    expect(secondAttempt.body).toEqual(firstRegistration.body);
+    expect(notice).toHaveBeenCalledTimes(1);
     expect(await testDb.user.count({ where: { email: VALID.email } })).toBe(1);
   });
 

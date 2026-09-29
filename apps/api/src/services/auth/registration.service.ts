@@ -11,6 +11,8 @@ import { captureAlert } from '../../config/monitoring.js';
 const VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const VERIFY_PENDING_TTL_MS = 60 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
+const REGISTRATION_NOTICE_COOLDOWN_MS = 60 * 1000;
+const REGISTRATION_NOTICE_MESSAGE_TYPE = 'registration-attempt-notice';
 
 export class TokenInvalidError extends Error {}
 
@@ -37,6 +39,39 @@ export async function supersedeEmailTokens(
 /** Emails are matched case-insensitively; the stored form is lowercase. */
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/** Reserve one per-recipient registration notice slot, serializing duplicates on the user row. */
+async function claimRegistrationNotice(
+  db: PrismaClient,
+  userId: string,
+  email: string,
+): Promise<string | null> {
+  return db.$transaction(async (tx) => {
+    await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+    const recentAttempt = await tx.emailSendAttempt.findFirst({
+      where: {
+        recipient: email,
+        messageType: REGISTRATION_NOTICE_MESSAGE_TYPE,
+        createdAt: { gt: new Date(Date.now() - REGISTRATION_NOTICE_COOLDOWN_MS) },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (recentAttempt) return null;
+
+    // The reservation timestamp is the cooldown anchor, including when the
+    // downstream mail transport is slow or unavailable.
+    const reservation = await tx.emailSendAttempt.create({
+      data: {
+        recipient: email,
+        messageType: REGISTRATION_NOTICE_MESSAGE_TYPE,
+        succeeded: false,
+      },
+      select: { id: true },
+    });
+    return reservation.id;
+  });
 }
 
 /**
@@ -66,6 +101,11 @@ export async function register(
   mailer: Mailer,
   input: { email: string; password: string; name?: string | undefined },
 ): Promise<{ email: string; pendingVerificationToken: string }> {
+  // Known residual timing risk: new registrations write a user, two token rows,
+  // and a free allocation, while duplicate registrations do a lookup and may
+  // send a notice. We defer matching those database costs because a dummy write
+  // on every attempt is invasive and an attacker needs many precise network
+  // timing samples; equalization should be planned deliberately in a follow-up.
   const email = normalizeEmail(input.email);
   // Keep duplicate attempts on the same password-hashing cost path. Their
   // pending cookie receives a random decoy below, never a reference to an
@@ -75,17 +115,51 @@ export async function register(
   const existing = await db.user.findUnique({ where: { email } });
   if (existing) {
     const webUrl = (process.env['WEB_URL'] ?? 'http://localhost:3000').replace(/\/+$/, '');
+    let noticeAttemptId: string | null = null;
     try {
-      await mailer.sendRegistrationAttemptNotice(
-        email,
-        `${webUrl}/login`,
-        `${webUrl}/reset-password`,
-      );
+      noticeAttemptId = await claimRegistrationNotice(db, existing.id, email);
     } catch (error) {
-      console.error(`[auth] registration-attempt email to ${email} failed to send:`, error);
-      captureAlert('email_send_failure', 'Registration-attempt email failed to send', {
+      console.error(`[auth] registration-attempt email cooldown check for ${email} failed:`, error);
+      captureAlert('email_send_failure', 'Registration-attempt email cooldown check failed', {
         error: error instanceof Error ? error.message : String(error),
       });
+    }
+
+    if (noticeAttemptId) {
+      let sendError: unknown;
+      try {
+        await mailer.sendRegistrationAttemptNotice(
+          email,
+          `${webUrl}/login`,
+          `${webUrl}/reset-password`,
+        );
+      } catch (error) {
+        sendError = error;
+      }
+
+      try {
+        await db.emailSendAttempt.update({
+          where: { id: noticeAttemptId },
+          data: {
+            succeeded: sendError === undefined,
+            providerError:
+              sendError === undefined
+                ? null
+                : sendError instanceof Error
+                  ? sendError.message
+                  : String(sendError),
+          },
+        });
+      } catch (error) {
+        console.error('[auth] registration-attempt email result could not be recorded:', error);
+      }
+
+      if (sendError !== undefined) {
+        console.error(`[auth] registration-attempt email to ${email} failed to send:`, sendError);
+        captureAlert('email_send_failure', 'Registration-attempt email failed to send', {
+          error: sendError instanceof Error ? sendError.message : String(sendError),
+        });
+      }
     }
     return { email, pendingVerificationToken };
   }
@@ -168,8 +242,24 @@ export async function resendVerification(
       : null;
 
   // Silent when the address is unknown or already verified: the caller must not
-  // learn which accounts exist.
-  if (!user || user.emailVerifiedAt) return;
+  // learn which accounts exist. A present invalid/decoy cookie also performs a
+  // harmless transaction with the same two-read shape as the real cooldown
+  // path, avoiding an immediate return that reveals the missing account row.
+  if (!user || user.emailVerifiedAt) {
+    if (input.pendingToken && !user) {
+      await db.$transaction(async (tx) => {
+        await tx.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "User" WHERE id = ${'__invalid_pending_verification__'} FOR UPDATE
+        `;
+        await tx.emailToken.findFirst({
+          where: { purpose: 'verify' },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        });
+      });
+    }
+    return;
+  }
 
   const result = await db.$transaction(async (tx) => {
     // Serialise resends for this account. Checking the latest issuance and

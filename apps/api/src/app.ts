@@ -181,6 +181,35 @@ function isBodyParserError(err: unknown): err is BodyParserError {
   );
 }
 
+/** Keep secret-shaped route parameters out of monitoring context. */
+export function monitoringPath(req: Request): string {
+  const pathSegments = req.path.split('/');
+  const routePaths = req.route
+    ? Array.isArray(req.route.path)
+      ? req.route.path
+      : [req.route.path]
+    : [];
+
+  for (const routePath of routePaths) {
+    const routeSegments = routePath.split('/');
+    if (routeSegments.length > pathSegments.length) continue;
+
+    const offset = pathSegments.length - routeSegments.length;
+    const sanitized = [...pathSegments];
+    for (let i = 0; i < routeSegments.length; i += 1) {
+      const parameter = /^:([A-Za-z_$][\w$]*)/.exec(routeSegments[i] ?? '');
+      if (!parameter) continue;
+      const name = parameter[1] ?? '';
+      if (/(?:token|secret|password|credential|key|code)/i.test(name)) {
+        sanitized[offset + i] = `:${name}`;
+      }
+    }
+    return sanitized.join('/');
+  }
+
+  return req.path;
+}
+
 function bodyParserErrorHandler(
   err: unknown,
   _req: Request,
@@ -446,6 +475,7 @@ export function createApp(deps: AppDeps): Express {
   // product reports on its customers. Never leak internals.
   app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
     console.error('[api] unhandled', err);
+    const path = monitoringPath(req);
     // T023 — every unhandled route error is `api_error_rate`; a Prisma
     // connection-layer failure specifically (not just any query error) is
     // additionally tagged `db_connectivity_failure` so the two conditions
@@ -456,12 +486,12 @@ export function createApp(deps: AppDeps): Express {
       (err instanceof Prisma.PrismaClientKnownRequestError && dbConnectivityCodes.has(err.code));
     if (isDbConnectivityError) {
       captureAlert('db_connectivity_failure', 'Database connection failed', {
-        path: req.path,
+        path,
         error: err instanceof Error ? err.message : String(err),
       });
     } else {
       captureAlert('api_error_rate', 'An unhandled API route error occurred', {
-        path: req.path,
+        path,
         error: err instanceof Error ? err.message : String(err),
       });
     }
