@@ -59,10 +59,18 @@ COPY --from=pruner /app/out/full/ ./
 WORKDIR /app/apps/api
 RUN pnpm exec prisma generate --schema prisma/schema.prisma
 WORKDIR /app
-# API_URL is read at request time (client-side fetches call apps/api
-# directly; SSR/route handlers use the same var server-side) — nothing
-# public needs to be baked in at build time for this app
-# (infrastructure/deploy.md's own note: "none are required beyond API_URL").
+# NEXT_PUBLIC_API_URL is what apps/web/lib/api.ts's API_BASE actually reads
+# (client-side fetches call apps/api directly from the browser), and Next.js
+# inlines every NEXT_PUBLIC_* reference at build time — there is no runtime
+# override for it once this image exists. A prior comment here claimed
+# "nothing public needs to be baked in," which was wrong: without this ARG,
+# the build falls back to API_BASE's own http://localhost:3001 default and
+# every client-side fetch in production silently targets the visitor's own
+# machine (found via a real deploy producing exactly that symptom, not
+# assumed from reading the code). docker-compose.production.yml passes this
+# as a build arg from the same API_URL the container also gets at runtime.
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 # DOCKER_BUILD=1 is what next.config.ts checks to turn on `output:
 # 'standalone'` — gated rather than unconditional so a plain local `next
 # build` (apps/web/tests/e2e, tests/visual) never pays for a standalone

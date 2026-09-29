@@ -260,6 +260,12 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      # Must match API_URL below — apps/web/lib/api.ts's API_BASE reads
+      # NEXT_PUBLIC_API_URL, which Next.js inlines at build time, not at
+      # container start. Changing API_URL alone (the runtime env var) does
+      # nothing for client-side fetches; the image must be rebuilt.
+      args:
+        NEXT_PUBLIC_API_URL: ${API_URL:?API_URL is required}
     restart: unless-stopped
     depends_on:
       api:
