@@ -41,6 +41,7 @@
 import { Queue, type ConnectionOptions } from 'bullmq';
 import {
   DEFAULT_JOB_OPTIONS,
+  EMAIL_NOTIFICATION_JOB_OPTIONS,
   PRIORITY,
   QUEUE_NAMES,
   REVERIFY_JOB_OPTIONS,
@@ -55,6 +56,7 @@ import {
 
 export {
   DEFAULT_JOB_OPTIONS,
+  EMAIL_NOTIFICATION_JOB_OPTIONS,
   PRIORITY,
   QUEUE_NAMES,
   REVERIFY_JOB_OPTIONS,
@@ -70,6 +72,7 @@ export interface QueueSet {
   readonly scanPhase: Queue;
   readonly reverify: Queue;
   readonly maintenance: Queue;
+  readonly emailNotification: Queue;
   close(): Promise<void>;
 }
 
@@ -86,13 +89,23 @@ export function createQueues(connection: ConnectionOptions): QueueSet {
     connection,
     defaultJobOptions: { ...DEFAULT_JOB_OPTIONS, priority: PRIORITY.MAINTENANCE },
   });
+  const emailNotification = new Queue(QUEUE_NAMES.emailNotification, {
+    connection,
+    defaultJobOptions: EMAIL_NOTIFICATION_JOB_OPTIONS,
+  });
 
   return {
     scanPhase,
     reverify,
     maintenance,
+    emailNotification,
     async close(): Promise<void> {
-      await Promise.all([scanPhase.close(), reverify.close(), maintenance.close()]);
+      await Promise.all([
+        scanPhase.close(),
+        reverify.close(),
+        maintenance.close(),
+        emailNotification.close(),
+      ]);
     },
   };
 }
@@ -108,4 +121,5 @@ export const CONCURRENCY = {
   scanPhase: 4,
   reverify: 8,
   maintenance: 1,
+  emailNotification: 4,
 } as const;

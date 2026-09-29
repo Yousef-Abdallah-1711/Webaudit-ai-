@@ -416,9 +416,25 @@ describe('expired auth token cleanup (M5)', () => {
         },
       ],
     });
+    await testDb.emailSendAttempt.createMany({
+      data: [
+        {
+          recipient: 'stale@example.com',
+          messageType: 'verification',
+          succeeded: false,
+          createdAt: new Date(now.getTime() - 40 * DAY),
+        },
+        {
+          recipient: 'recent@example.com',
+          messageType: 'verification',
+          succeeded: true,
+          createdAt: new Date(now.getTime() - DAY),
+        },
+      ],
+    });
 
     const result = await purgeExpiredAuthTokens(testDb, { graceMs: 30 * DAY, now });
-    expect(result).toMatchObject({ emailTokens: 1, refreshTokens: 1 });
+    expect(result).toMatchObject({ emailTokens: 1, refreshTokens: 1, emailSendAttempts: 1 });
 
     const emailHashes = (await testDb.emailToken.findMany()).map((r) => r.tokenHash);
     expect(emailHashes).toContain('recently-expired-email');
@@ -428,11 +444,16 @@ describe('expired auth token cleanup (M5)', () => {
     const refreshHashes = (await testDb.refreshToken.findMany()).map((r) => r.tokenHash);
     expect(refreshHashes).toContain('recently-expired-refresh');
     expect(refreshHashes).not.toContain('stale-refresh');
+    const attempts = await testDb.emailSendAttempt.findMany();
+    expect(attempts.map((attempt) => attempt.recipient)).toEqual(['recent@example.com']);
+
+    const rerun = await purgeExpiredAuthTokens(testDb, { graceMs: 30 * DAY, now });
+    expect(rerun).toMatchObject({ emailTokens: 0, refreshTokens: 0, emailSendAttempts: 0 });
   });
 
   it('is safe to run when there is nothing to sweep', async () => {
     const result = await purgeExpiredAuthTokens(testDb);
-    expect(result).toMatchObject({ emailTokens: 0, refreshTokens: 0 });
+    expect(result).toMatchObject({ emailTokens: 0, refreshTokens: 0, emailSendAttempts: 0 });
   });
 });
 

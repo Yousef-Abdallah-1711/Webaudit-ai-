@@ -5,6 +5,7 @@ import type {
   RenewalWarningMail,
   RetentionWarningMail,
 } from './mailer.js';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { escapeEmailHtml, renderEmail } from './template.js';
 
 export interface SmtpMailerOptions {
@@ -76,37 +77,53 @@ export function createSmtpMailer(options: SmtpMailerOptions): Mailer {
   return {
     sendVerification(email, token) {
       const content = renderEmail({
-        title: 'Confirm your WebAudit AI email address',
-        bodyHtml: '<p>Confirm your email address to finish creating your WebAudit AI account.</p>',
+        title: `Confirm your ${PRODUCT_NAME} email address`,
+        bodyHtml: `<p>Confirm your email address to finish creating your ${PRODUCT_NAME} account.</p>`,
         ctaLabel: 'Confirm email',
         ctaUrl: `${webUrl}/verify-email?token=${encodeURIComponent(token)}`,
       });
-      return send(email, 'verification', 'Confirm your WebAudit AI email address', content);
+      return send(email, 'verification', `Confirm your ${PRODUCT_NAME} email address`, content);
     },
     sendPasswordReset(email, token) {
       const content = renderEmail({
-        title: 'Reset your WebAudit AI password',
+        title: `Reset your ${PRODUCT_NAME} password`,
         bodyHtml: '<p>Use the secure link below to choose a new password.</p>',
         ctaLabel: 'Reset password',
         ctaUrl: `${webUrl}/reset-password?token=${encodeURIComponent(token)}`,
       });
-      return send(email, 'password-reset', 'Reset your WebAudit AI password', content);
+      return send(email, 'password-reset', `Reset your ${PRODUCT_NAME} password`, content);
+    },
+    sendRegistrationAttemptNotice(email, loginUrl, resetUrl) {
+      const withReset = renderEmail({
+        title: 'Someone tried to register with your email',
+        bodyHtml:
+          `<p>Someone attempted to create a ${PRODUCT_NAME} account using this email address. ` +
+          `If that was you, <a href="${escapeEmailHtml(resetUrl)}">reset your password</a>.</p>`,
+        ctaLabel: 'Log in',
+        ctaUrl: loginUrl,
+      });
+      return send(
+        email,
+        'registration-attempt-notice',
+        'Someone tried to register with your email',
+        { ...withReset, text: `${withReset.text}\n\nReset password: ${resetUrl}` },
+      );
     },
     sendPaymentConfirmation(email) {
       const content = renderEmail({
-        title: 'Your WebAudit AI payment was successful',
+        title: `Your ${PRODUCT_NAME} payment was successful`,
         bodyHtml: '<p>Your payment was successful and your account has been updated.</p>',
       });
       return send(
         email,
         'payment-confirmation',
-        'Your WebAudit AI payment was successful',
+        `Your ${PRODUCT_NAME} payment was successful`,
         content,
       );
     },
     sendPaymentFailure(email) {
       const content = renderEmail({
-        title: 'Your WebAudit AI payment did not go through',
+        title: `Your ${PRODUCT_NAME} payment did not go through`,
         bodyHtml:
           '<p>Your payment could not be completed, so no credits or plan change were applied. ' +
           'No charge was made. You can try again from your billing page.</p>',
@@ -114,7 +131,7 @@ export function createSmtpMailer(options: SmtpMailerOptions): Mailer {
       return send(
         email,
         'payment-failure',
-        'Your WebAudit AI payment did not go through',
+        `Your ${PRODUCT_NAME} payment did not go through`,
         content,
       );
     },
@@ -129,24 +146,31 @@ export function createSmtpMailer(options: SmtpMailerOptions): Mailer {
     },
     sendRenewalWarning(email, mail: RenewalWarningMail) {
       const content = renderEmail({
-        title: 'Your WebAudit AI plan is renewing soon',
+        title: `Your ${PRODUCT_NAME} plan is renewing soon`,
         bodyHtml: `<p>${String(mail.expiringCredits)} ${escapeEmailHtml(mail.planName)} plan credits expire when your plan renews on ${mail.renewsAt.toISOString().slice(0, 10)}.</p>`,
       });
-      return send(email, 'renewal-warning', 'Your WebAudit AI plan is renewing soon', content);
+      return send(email, 'renewal-warning', `Your ${PRODUCT_NAME} plan is renewing soon`, content);
     },
     sendRetentionWarning(email, mail: RetentionWarningMail) {
       const content = renderEmail({
-        title: 'Your WebAudit AI report is expiring soon',
+        title: `Your ${PRODUCT_NAME} report is expiring soon`,
         bodyHtml: `<p>The report for ${escapeEmailHtml(mail.targetName)} will be removed on ${mail.removesAt.toISOString().slice(0, 10)}.</p>`,
         ctaLabel: 'Export report',
         ctaUrl: mail.exportUrl,
       });
-      return send(email, 'retention-warning', 'Your WebAudit AI report is expiring soon', content);
+      return send(
+        email,
+        'retention-warning',
+        `Your ${PRODUCT_NAME} report is expiring soon`,
+        content,
+      );
     },
   };
 }
 
-export function createSmtpMailerFromEnv(): Mailer {
+export function createSmtpMailerFromEnv(
+  options: Pick<SmtpMailerOptions, 'recordAttempt'> = {},
+): Mailer {
   const host = process.env['SMTP_HOST'] ?? 'smtp.hostinger.com';
   const port = Number(process.env['SMTP_PORT'] ?? '465');
   return createSmtpMailer({
@@ -155,5 +179,6 @@ export function createSmtpMailerFromEnv(): Mailer {
     user: required(process.env['SMTP_USER'] ?? '', 'SMTP_USER'),
     password: required(process.env['SMTP_PASSWORD'] ?? '', 'SMTP_PASSWORD'),
     from: required(process.env['EMAIL_FROM'] ?? '', 'EMAIL_FROM'),
+    ...options,
   });
 }

@@ -32,6 +32,7 @@ export interface RetentionWarningMail {
 export interface Mailer {
   sendVerification(email: string, token: string): Promise<void>;
   sendPasswordReset(email: string, token: string): Promise<void>;
+  sendRegistrationAttemptNotice(email: string, loginUrl: string, resetUrl: string): Promise<void>;
   sendPaymentConfirmation(email: string): Promise<void>;
   /** T019 — "your payment did not go through; no credits/plan change was made." */
   sendPaymentFailure(email: string): Promise<void>;
@@ -43,15 +44,34 @@ export interface Mailer {
   sendRetentionWarning(email: string, mail: RetentionWarningMail): Promise<void>;
 }
 
+export type EmailNotificationJobData =
+  | { readonly kind: 'payment-confirmation'; readonly email: string }
+  | { readonly kind: 'payment-failure'; readonly email: string }
+  | {
+      readonly kind: 'readiness-achieved';
+      readonly email: string;
+      readonly mail: ReadinessAchievedMail;
+    };
+
+export { createSmtpMailerFromEnv } from './smtp-mailer.js';
+
 /** Development transport. */
 export function createConsoleMailer(): Mailer {
   return {
     sendVerification(email, token) {
-      console.warn(`[mail] verify ${email}: /verify-email?token=${token}`);
+      void token;
+      console.warn(`[mail] verification link generated for ${email}`);
       return Promise.resolve();
     },
     sendPasswordReset(email, token) {
-      console.warn(`[mail] reset ${email}: /reset-password?token=${token}`);
+      void token;
+      console.warn(`[mail] password-reset link generated for ${email}`);
+      return Promise.resolve();
+    },
+    sendRegistrationAttemptNotice(email, loginUrl, resetUrl) {
+      void loginUrl;
+      void resetUrl;
+      console.warn(`[mail] registration-attempt notice would be sent to ${email}`);
       return Promise.resolve();
     },
     sendPaymentConfirmation(email) {

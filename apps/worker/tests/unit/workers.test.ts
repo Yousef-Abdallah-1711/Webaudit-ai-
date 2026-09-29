@@ -24,6 +24,7 @@ import {
   dispatch,
   phaseJobSchema,
   questionnaireTimeoutJobSchema,
+  emailNotificationJobSchema,
   type JobHandlers,
 } from '../../src/queue/workers.js';
 import { QUEUE_NAMES } from '../../src/queue/queues.js';
@@ -79,6 +80,38 @@ describe('the placeholder processor fails loudly', () => {
 });
 
 describe('payloads are validated at the queue boundary', () => {
+  it('accepts the strict non-secret email-notification payload and rejects extra fields', async () => {
+    const data = {
+      kind: 'email-notification',
+      notification: { kind: 'payment-confirmation', email: 'user@example.com' },
+    } as const;
+    expect(emailNotificationJobSchema.safeParse(data).success).toBe(true);
+    await expect(
+      dispatch(
+        {
+          name: JOB_NAMES.emailNotification,
+          queueName: QUEUE_NAMES.emailNotification,
+          data: { ...data, token: 'must-not-cross-this-boundary' },
+        },
+        { emailNotification: () => Promise.resolve() },
+      ),
+    ).rejects.toThrow();
+  });
+
+  it('dispatches a validated notification to the real-mailer handler', async () => {
+    const emailNotification = vi.fn(() => Promise.resolve());
+    const notification = { kind: 'payment-failure', email: 'user@example.com' } as const;
+    await dispatch(
+      {
+        name: JOB_NAMES.emailNotification,
+        queueName: QUEUE_NAMES.emailNotification,
+        data: { kind: 'email-notification', notification },
+      },
+      { emailNotification },
+    );
+    expect(emailNotification).toHaveBeenCalledWith(notification);
+  });
+
   it('rejects a phase job whose modules are not audit areas', async () => {
     const error = await dispatch(phaseJob({ ...VALID_PHASE, modules: ['ACCESSIBILITY'] })).catch(
       (e: unknown) => e,

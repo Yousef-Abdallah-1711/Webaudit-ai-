@@ -50,6 +50,7 @@ export function createCapturingMailer(): CapturingMailer {
       log.push({ kind: 'reset', email, token });
       return Promise.resolve();
     },
+    sendRegistrationAttemptNotice: () => Promise.resolve(),
     sendReadinessAchieved: (email, mail) => {
       readiness.push({ email, mail });
       return Promise.resolve();

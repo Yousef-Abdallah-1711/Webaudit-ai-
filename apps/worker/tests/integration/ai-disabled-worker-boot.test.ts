@@ -22,6 +22,11 @@ describe('startWorker() boots for real under AI_MODE=disabled + NODE_ENV=product
   let previousNodeEnv: string | undefined;
   let previousAiMode: string | undefined;
   let previousWorkspaceDir: string | undefined;
+  let previousSmtpHost: string | undefined;
+  let previousSmtpPort: string | undefined;
+  let previousSmtpUser: string | undefined;
+  let previousSmtpPassword: string | undefined;
+  let previousEmailFrom: string | undefined;
 
   afterEach(async () => {
     await service?.shutdown('test-cleanup');
@@ -32,6 +37,16 @@ describe('startWorker() boots for real under AI_MODE=disabled + NODE_ENV=product
     else process.env['AI_MODE'] = previousAiMode;
     if (previousWorkspaceDir === undefined) delete process.env['WORKSPACE_BASE_DIR'];
     else process.env['WORKSPACE_BASE_DIR'] = previousWorkspaceDir;
+    for (const [key, value] of [
+      ['SMTP_HOST', previousSmtpHost],
+      ['SMTP_PORT', previousSmtpPort],
+      ['SMTP_USER', previousSmtpUser],
+      ['SMTP_PASSWORD', previousSmtpPassword],
+      ['EMAIL_FROM', previousEmailFrom],
+    ] as const) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
     // Every AI provider key must be absent for this test to mean anything —
     // clear whatever the local shell/.env happens to carry.
     delete process.env['ANTHROPIC_API_KEY'];
@@ -50,11 +65,21 @@ describe('startWorker() boots for real under AI_MODE=disabled + NODE_ENV=product
       previousNodeEnv = process.env['NODE_ENV'];
       previousAiMode = process.env['AI_MODE'];
       previousWorkspaceDir = process.env['WORKSPACE_BASE_DIR'];
+      previousSmtpHost = process.env['SMTP_HOST'];
+      previousSmtpPort = process.env['SMTP_PORT'];
+      previousSmtpUser = process.env['SMTP_USER'];
+      previousSmtpPassword = process.env['SMTP_PASSWORD'];
+      previousEmailFrom = process.env['EMAIL_FROM'];
       workspaceDir = mkdtempSync(path.join(tmpdir(), 'ai-disabled-boot-'));
 
       process.env['NODE_ENV'] = 'production';
       process.env['AI_MODE'] = 'disabled';
       process.env['WORKSPACE_BASE_DIR'] = workspaceDir;
+      process.env['SMTP_HOST'] = 'smtp.example.test';
+      process.env['SMTP_PORT'] = '465';
+      process.env['SMTP_USER'] = 'worker@example.test';
+      process.env['SMTP_PASSWORD'] = 'placeholder-test-password';
+      process.env['EMAIL_FROM'] = 'worker@example.test';
       delete process.env['ANTHROPIC_API_KEY'];
       delete process.env['OPENAI_API_KEY'];
       delete process.env['GOOGLE_API_KEY'];
@@ -83,11 +108,21 @@ describe('startWorker() boots for real under AI_MODE=disabled + NODE_ENV=product
     previousNodeEnv = process.env['NODE_ENV'];
     previousAiMode = process.env['AI_MODE'];
     previousWorkspaceDir = process.env['WORKSPACE_BASE_DIR'];
+    previousSmtpHost = process.env['SMTP_HOST'];
+    previousSmtpPort = process.env['SMTP_PORT'];
+    previousSmtpUser = process.env['SMTP_USER'];
+    previousSmtpPassword = process.env['SMTP_PASSWORD'];
+    previousEmailFrom = process.env['EMAIL_FROM'];
     workspaceDir = mkdtempSync(path.join(tmpdir(), 'ai-disabled-boot-regress-'));
 
     process.env['NODE_ENV'] = 'production';
     delete process.env['AI_MODE'];
     process.env['WORKSPACE_BASE_DIR'] = workspaceDir;
+    process.env['SMTP_HOST'] = 'smtp.example.test';
+    process.env['SMTP_PORT'] = '465';
+    process.env['SMTP_USER'] = 'worker@example.test';
+    process.env['SMTP_PASSWORD'] = 'placeholder-test-password';
+    process.env['EMAIL_FROM'] = 'worker@example.test';
     delete process.env['ANTHROPIC_API_KEY'];
     delete process.env['OPENAI_API_KEY'];
     delete process.env['GOOGLE_API_KEY'];

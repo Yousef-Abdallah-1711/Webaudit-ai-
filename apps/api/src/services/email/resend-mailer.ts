@@ -4,6 +4,7 @@ import type {
   RenewalWarningMail,
   RetentionWarningMail,
 } from './mailer.js';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { escapeEmailHtml, renderEmail } from './template.js';
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
@@ -73,52 +74,68 @@ export function createResendMailer(options: ResendMailerOptions): Mailer {
     sendVerification(email, token) {
       const url = `${webUrl}/verify-email?token=${encodeURIComponent(token)}`;
       const content = renderEmail({
-        title: 'Confirm your WebAudit AI email address',
-        bodyHtml: '<p>Confirm your email address to finish creating your WebAudit AI account.</p>',
+        title: `Confirm your ${PRODUCT_NAME} email address`,
+        bodyHtml: `<p>Confirm your email address to finish creating your ${PRODUCT_NAME} account.</p>`,
         ctaLabel: 'Confirm email',
         ctaUrl: url,
       });
       return sendEmail({
         to: email,
-        subject: 'Confirm your WebAudit AI email address',
+        subject: `Confirm your ${PRODUCT_NAME} email address`,
         ...content,
       });
     },
     sendPasswordReset(email, token) {
       const url = `${webUrl}/reset-password?token=${encodeURIComponent(token)}`;
       const content = renderEmail({
-        title: 'Reset your WebAudit AI password',
+        title: `Reset your ${PRODUCT_NAME} password`,
         bodyHtml: '<p>Use the secure link below to choose a new password.</p>',
         ctaLabel: 'Reset password',
         ctaUrl: url,
       });
       return sendEmail({
         to: email,
-        subject: 'Reset your WebAudit AI password',
+        subject: `Reset your ${PRODUCT_NAME} password`,
         ...content,
+      });
+    },
+    sendRegistrationAttemptNotice(email, loginUrl, resetUrl) {
+      const content = renderEmail({
+        title: 'Someone tried to register with your email',
+        bodyHtml:
+          `<p>Someone attempted to create a ${PRODUCT_NAME} account using this email address. ` +
+          `If that was you, <a href="${escapeEmailHtml(resetUrl)}">reset your password</a>.</p>`,
+        ctaLabel: 'Log in',
+        ctaUrl: loginUrl,
+      });
+      return sendEmail({
+        to: email,
+        subject: 'Someone tried to register with your email',
+        ...content,
+        text: `${content.text}\n\nReset password: ${resetUrl}`,
       });
     },
     sendPaymentConfirmation(email) {
       const content = renderEmail({
-        title: 'Your WebAudit AI payment was successful',
+        title: `Your ${PRODUCT_NAME} payment was successful`,
         bodyHtml: '<p>Your payment was successful and your account has been updated.</p>',
       });
       return sendEmail({
         to: email,
-        subject: 'Your WebAudit AI payment was successful',
+        subject: `Your ${PRODUCT_NAME} payment was successful`,
         ...content,
       });
     },
     sendPaymentFailure(email) {
       const content = renderEmail({
-        title: 'Your WebAudit AI payment did not go through',
+        title: `Your ${PRODUCT_NAME} payment did not go through`,
         bodyHtml:
           '<p>Your payment could not be completed, so no credits or plan change were applied. ' +
           'No charge was made. You can try again from your billing page.</p>',
       });
       return sendEmail({
         to: email,
-        subject: 'Your WebAudit AI payment did not go through',
+        subject: `Your ${PRODUCT_NAME} payment did not go through`,
         ...content,
       });
     },
@@ -137,25 +154,25 @@ export function createResendMailer(options: ResendMailerOptions): Mailer {
     },
     sendRenewalWarning(email, mail: RenewalWarningMail) {
       const content = renderEmail({
-        title: 'Your WebAudit AI plan is renewing soon',
+        title: `Your ${PRODUCT_NAME} plan is renewing soon`,
         bodyHtml: `<p>${String(mail.expiringCredits)} ${escapeEmailHtml(mail.planName)} plan credits expire when your plan renews on ${mail.renewsAt.toISOString().slice(0, 10)}.</p>`,
       });
       return sendEmail({
         to: email,
-        subject: 'Your WebAudit AI plan is renewing soon',
+        subject: `Your ${PRODUCT_NAME} plan is renewing soon`,
         ...content,
       });
     },
     sendRetentionWarning(email, mail: RetentionWarningMail) {
       const content = renderEmail({
-        title: 'Your WebAudit AI report is expiring soon',
+        title: `Your ${PRODUCT_NAME} report is expiring soon`,
         bodyHtml: `<p>The report for ${escapeEmailHtml(mail.targetName)} will be removed on ${mail.removesAt.toISOString().slice(0, 10)}.</p>`,
         ctaLabel: 'Export report',
         ctaUrl: mail.exportUrl,
       });
       return sendEmail({
         to: email,
-        subject: 'Your WebAudit AI report is expiring soon',
+        subject: `Your ${PRODUCT_NAME} report is expiring soon`,
         ...content,
       });
     },

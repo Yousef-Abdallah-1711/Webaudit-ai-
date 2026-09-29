@@ -72,10 +72,37 @@ describe('createSmtpMailer', () => {
     expect(sendMail).toHaveBeenCalledOnce();
     expect(sendMail.mock.calls[0]![0]).toMatchObject({
       to: 'user@example.com',
-      subject: 'Your WebAudit AI payment did not go through',
+      subject: 'Your Fahes payment did not go through',
     });
     expect(attempts).toEqual([
       { recipient: 'user@example.com', messageType: 'payment-failure', succeeded: true },
     ]);
+  });
+
+  it('sends a registration-attempt notice with both actions via the shared renderer', async () => {
+    const sendMail = vi.fn().mockResolvedValue({ messageId: 'm3' });
+    const mailer = createSmtpMailer({
+      host: 'smtp.hostinger.com',
+      port: 465,
+      user: 'ai-audit@example.com',
+      password: 'test-only',
+      from: 'ai-audit@example.com',
+      transporter: { sendMail },
+    });
+
+    await mailer.sendRegistrationAttemptNotice(
+      'user@example.com',
+      'https://app.example/login',
+      'https://app.example/reset-password',
+    );
+
+    expect(sendMail).toHaveBeenCalledOnce();
+    expect(sendMail.mock.calls[0]![0]).toMatchObject({
+      to: 'user@example.com',
+      subject: 'Someone tried to register with your email',
+    });
+    expect(sendMail.mock.calls[0]![0].html).toContain('https://app.example/login');
+    expect(sendMail.mock.calls[0]![0].html).toContain('https://app.example/reset-password');
+    expect(sendMail.mock.calls[0]![0].text).toContain('https://app.example/reset-password');
   });
 });

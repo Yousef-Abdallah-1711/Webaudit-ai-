@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { JetBrains_Mono, Lexend_Deca } from 'next/font/google';
 import { ThemeScript } from './theme';
 import { AuthProvider } from '../components/auth/AuthProvider';
@@ -31,7 +32,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'WebAudit AI',
+  title: PRODUCT_NAME,
   description: 'An honest audit of your software.',
 };
 

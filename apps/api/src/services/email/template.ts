@@ -1,3 +1,5 @@
+import { PRODUCT_NAME } from '@webaudit/config';
+
 export interface EmailTemplateInput {
   readonly title: string;
   readonly bodyHtml: string;
@@ -43,16 +45,16 @@ export function renderEmail(input: EmailTemplateInput): RenderedEmail {
   const html = [
     '<!doctype html><html><body style="margin:0;background:#f9fafb;color:#1f2937;font-family:Arial,sans-serif">',
     '<div style="max-width:600px;margin:0 auto;padding:32px 20px">',
-    '<div style="font-size:24px;font-weight:700;margin-bottom:32px">Web<span style="color:#fe5a01">Audit</span> AI</div>',
+    `<div style="font-size:24px;font-weight:700;margin-bottom:32px"><span style="color:#fe5a01">${PRODUCT_NAME}</span></div>`,
     `<h1 style="font-size:24px;line-height:32px;margin:0 0 16px">${title}</h1>`,
     `<div style="font-size:16px;line-height:24px">${input.bodyHtml}</div>`,
     cta,
-    '<p style="border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px;line-height:20px;margin:32px 0 0;padding-top:16px">WebAudit AI</p>',
+    `<p style="border-top:1px solid #e5e7eb;color:#6b7280;font-size:13px;line-height:20px;margin:32px 0 0;padding-top:16px">${PRODUCT_NAME}</p>`,
     '</div></body></html>',
   ].join('');
   const ctaText = input.ctaLabel && input.ctaUrl ? `\n\n${input.ctaLabel}: ${input.ctaUrl}` : '';
   return {
     html,
-    text: `WebAudit AI\n\n${input.title}\n\n${htmlToText(input.bodyHtml)}${ctaText}`.trim(),
+    text: `${PRODUCT_NAME}\n\n${input.title}\n\n${htmlToText(input.bodyHtml)}${ctaText}`.trim(),
   };
 }

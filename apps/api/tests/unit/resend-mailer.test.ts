@@ -27,6 +27,15 @@ describe('Resend mailer', () => {
         mailer.sendPasswordReset('user@example.com', 'reset-token'),
     ],
     [
+      'sendRegistrationAttemptNotice',
+      (mailer: ReturnType<typeof createResendMailer>) =>
+        mailer.sendRegistrationAttemptNotice(
+          'user@example.com',
+          'https://app.example/login',
+          'https://app.example/reset-password',
+        ),
+    ],
+    [
       'sendPaymentConfirmation',
       (mailer: ReturnType<typeof createResendMailer>) =>
         mailer.sendPaymentConfirmation('user@example.com'),
@@ -91,8 +100,8 @@ describe('Resend mailer', () => {
     expect(payload.subject).toEqual(expect.any(String));
     expect(payload.html).toEqual(expect.any(String));
     expect(payload.text).toEqual(expect.any(String));
-    expect(payload.html).toContain('Web<span style="color:#fe5a01">Audit</span> AI');
-    expect(String(payload.text)).toContain('WebAudit AI');
+    expect(payload.html).toContain('<span style="color:#fe5a01">Fahes</span>');
+    expect(String(payload.text)).toContain('Fahes');
   });
 
   it('surfaces provider failures as a typed error', async () => {
@@ -111,5 +120,26 @@ describe('Resend mailer', () => {
       message: 'Resend email request failed (422): invalid from address',
       status: 422,
     });
+  });
+
+  it('registration-attempt notice renders both account actions through the shared template', async () => {
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(okResponse());
+    const mailer = createResendMailer({ ...baseOptions, fetchImpl });
+    await mailer.sendRegistrationAttemptNotice(
+      'user@example.com',
+      'https://app.example/login',
+      'https://app.example/reset-password',
+    );
+    const requestBody = fetchImpl.mock.calls[0]?.[1]?.body;
+    if (typeof requestBody !== 'string')
+      throw new Error('Expected a serialized Resend request body.');
+    const payload = JSON.parse(requestBody) as {
+      html: string;
+      text: string;
+    };
+    expect(payload.html).toContain('https://app.example/login');
+    expect(payload.html).toContain('https://app.example/reset-password');
+    expect(payload.text).toContain('https://app.example/login');
+    expect(payload.text).toContain('https://app.example/reset-password');
   });
 });

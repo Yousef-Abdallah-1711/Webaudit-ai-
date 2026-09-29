@@ -47,10 +47,27 @@ describe('maintenance-sweep wiring — dispatch routes each real job name to its
     expect(ran).toBe(true);
   });
 
+  it('routes auth-token cleanup maintenance work to its handler', async () => {
+    let ran = false;
+    await dispatch(
+      {
+        name: JOB_NAMES.authTokenCleanup,
+        queueName: 'maintenance',
+        data: { kind: 'auth-token-cleanup' },
+      },
+      { authTokenCleanup: () => ((ran = true), Promise.resolve()) },
+    );
+    expect(ran).toBe(true);
+  });
+
   it('routes the repeatable telemetry-archive job to the handler', async () => {
     let ran = false;
     await dispatch(
-      { name: JOB_NAMES.telemetryArchive, queueName: 'maintenance', data: { kind: 'telemetry-archive' } },
+      {
+        name: JOB_NAMES.telemetryArchive,
+        queueName: 'maintenance',
+        data: { kind: 'telemetry-archive' },
+      },
       { telemetryArchive: () => ((ran = true), Promise.resolve()) },
     );
     expect(ran).toBe(true);

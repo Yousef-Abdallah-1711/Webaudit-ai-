@@ -71,6 +71,14 @@ import {
   createCostAlertsSweepHandler,
   scheduleCostAlertsSweep,
 } from './orchestrator/cost-alerts-scheduler.js';
+import {
+  createAuthTokenCleanupHandler,
+  scheduleAuthTokenCleanup,
+} from './orchestrator/auth-token-cleanup-scheduler.js';
+import {
+  createEmailNotificationHandler,
+  createWorkerMailer,
+} from './orchestrator/email-notification.js';
 import { installTerminalRefund } from './orchestrator/terminal-refund.js';
 import {
   installTerminalTeardown,
@@ -234,6 +242,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
     options.handlers ??
     (() => {
       const db = options.db ?? createWorkerDb();
+      const mailer = createWorkerMailer(db);
       const workspaceBaseDir = requiredEnv('WORKSPACE_BASE_DIR');
       uninstallTerminalRefund = installTerminalRefund({ db });
       uninstallTerminalTeardown = installTerminalTeardown({
@@ -300,7 +309,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // assert-fixed route is its only producer.
         reverify: createReverifyHandler({ db, publisher }),
         // FR-078 / FR-092 (T188/T189): renewals, renewal warnings, retention.
-        billingSweep: createBillingSweepHandler({ db }),
+        billingSweep: createBillingSweepHandler({ db, mailer }),
         // T032: the repeatable telemetry-partition archive sweep, defaulting
         // to dry-run (TELEMETRY_ARCHIVE_DRY_RUN must be "false" for a real
         // detach+drop). Registered as a repeatable job below.
@@ -308,6 +317,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // FR-C01-C04 (T028): the repeatable cost-alert computation sweep.
         // Registered as a repeatable job below.
         costAlertsSweep: createCostAlertsSweepHandler(db),
+        authTokenCleanup: createAuthTokenCleanupHandler(db),
+        emailNotification: createEmailNotificationHandler(mailer),
         // T104 gap fix (Finding 10): apps/api's /scans/:id/cancel writes
         // CANCELLED directly and never reaches this process's transition(),
         // so the terminal-teardown observer above never fires for it. This
@@ -380,6 +391,11 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           'run until this is resolved',
         { error: error instanceof Error ? error.message : String(error) },
       );
+    });
+    void scheduleAuthTokenCleanup(queues.maintenance).catch((error: unknown) => {
+      logger.error('could not schedule auth-token cleanup', {
+        error: error instanceof Error ? error.message : String(error),
+      });
     });
   }
 

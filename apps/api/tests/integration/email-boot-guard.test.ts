@@ -35,7 +35,8 @@ const BASE_ENV = {
   NODE_ENV: 'production',
   PORT: '0',
   DATABASE_URL:
-    process.env['DATABASE_URL'] ?? 'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit?schema=public',
+    process.env['DATABASE_URL'] ??
+    'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit?schema=public',
   REDIS_URL: 'redis://localhost:6389/15',
   JWT_ACCESS_SECRET: 'test-only-access-secret-not-used-anywhere-else-0123456789',
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-not-used-anywhere-else-0123456789',
@@ -43,7 +44,10 @@ const BASE_ENV = {
   WEB_URL: 'http://localhost:3010',
 };
 
-function runChild(env: Record<string, string | undefined>, waitForListening: boolean): Promise<SpawnResult> {
+function runChild(
+  env: Record<string, string | undefined>,
+  waitForListening: boolean,
+): Promise<SpawnResult> {
   return new Promise((resolve, reject) => {
     // `spawn`'s `env` option does NOT treat `{ KEY: undefined }` as "absent" —
     // Node stringifies it to the literal string "undefined", which is a real
@@ -77,90 +81,82 @@ function runChild(env: Record<string, string | undefined>, waitForListening: boo
     child.on('exit', (code) => finish({ code, stdout, stderr }));
     // The boot-time throw case logs its error near-instantly but does not
     // exit on its own (see the module note in the first test below), so this
-    // fallback is what actually ends that case — kept short since a real
-    // listen or a real synchronous throw both log in well under a second.
-    setTimeout(() => finish({ code: null, stdout, stderr }), 5_000);
+    // fallback is what actually ends that case. tsx startup can take several
+    // seconds on Windows before the entrypoint emits either outcome.
+    setTimeout(() => finish({ code: null, stdout, stderr }), 15_000);
   });
 }
 
 describe('production email fail-closed boot guard — real child process', () => {
-  it(
-    'NODE_ENV=production with no EMAIL_TRANSPORT and no RESEND_API_KEY refuses to start',
-    async () => {
-      const result = await runChild(
-        {
-          ...BASE_ENV,
-          EMAIL_TRANSPORT: undefined,
-          RESEND_API_KEY: undefined,
-          EMAIL_FROM: undefined,
-          SMTP_USER: undefined,
-          SMTP_PASSWORD: undefined,
-        },
-        false,
-      );
-      const combined = result.stdout + result.stderr;
-      // The real, load-bearing evidence: the entrypoint's own `.catch()`
-      // logged the exact boot-time throw this fix depends on.
-      expect(combined, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toMatch(
-        /refusing to start/i,
-      );
-      expect(combined).toMatch(/RESEND_API_KEY is required/);
-      // It must never have reached `listening` — the mailer construction
-      // throws before the server binds a port at all.
-      expect(combined).not.toMatch(/listening/i);
-      // Note: `result.code` is not asserted here. `startApi()`'s rejection
-      // sets `process.exitCode = 1` but does not force an immediate exit —
-      // the realtime fan-out's Redis subscriber connects *before* the mailer
-      // is constructed and keeps the event loop alive, so this process is
-      // killed by this test's own timeout rather than exiting on its own.
-      // That is a real, minor operational characteristic of the entrypoint
-      // (worth a follow-up: a boot failure should tear down what it already
-      // opened before giving up), not a defect in the fail-closed guard
-      // itself, which the log assertions above already prove fired correctly.
-    },
-    20_000,
-  );
+  it('NODE_ENV=production with no EMAIL_TRANSPORT defaults to SMTP and refuses to start without SMTP credentials', async () => {
+    const result = await runChild(
+      {
+        ...BASE_ENV,
+        EMAIL_TRANSPORT: undefined,
+        RESEND_API_KEY: 'placeholder-resend-key-not-a-real-credential',
+        EMAIL_FROM: undefined,
+        SMTP_USER: undefined,
+        SMTP_PASSWORD: undefined,
+      },
+      false,
+    );
+    const combined = result.stdout + result.stderr;
+    // The real, load-bearing evidence: the entrypoint's own `.catch()`
+    // logged the exact boot-time throw this fix depends on.
+    expect(combined, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toMatch(
+      /refusing to start/i,
+    );
+    expect(combined).toMatch(/SMTP_USER is required/);
+    // It must never have reached `listening` — the mailer construction
+    // throws before the server binds a port at all.
+    expect(combined).not.toMatch(/listening/i);
+    // Note: `result.code` is not asserted here. `startApi()`'s rejection
+    // sets `process.exitCode = 1` but does not force an immediate exit —
+    // the realtime fan-out's Redis subscriber connects *before* the mailer
+    // is constructed and keeps the event loop alive, so this process is
+    // killed by this test's own timeout rather than exiting on its own.
+    // That is a real, minor operational characteristic of the entrypoint
+    // (worth a follow-up: a boot failure should tear down what it already
+    // opened before giving up), not a defect in the fail-closed guard
+    // itself, which the log assertions above already prove fired correctly.
+  }, 20_000);
 
-  it(
-    'NODE_ENV=production with EMAIL_TRANSPORT=SMTP and real-shaped SMTP credentials boots successfully',
-    async () => {
-      const result = await runChild(
-        {
-          ...BASE_ENV,
-          EMAIL_TRANSPORT: 'SMTP',
-          SMTP_HOST: 'smtp.hostinger.com',
-          SMTP_PORT: '465',
-          SMTP_USER: 'no-reply@example.com',
-          SMTP_PASSWORD: 'placeholder-password-not-a-real-credential',
-          EMAIL_FROM: 'no-reply@example.com',
-        },
-        true,
-      );
-      expect(result.stdout + result.stderr, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toMatch(
-        /listening/i,
-      );
-    },
-    20_000,
-  );
+  it('NODE_ENV=production with explicit SMTP transport and real-shaped SMTP credentials boots successfully', async () => {
+    const result = await runChild(
+      {
+        ...BASE_ENV,
+        EMAIL_TRANSPORT: 'SMTP',
+        SMTP_HOST: 'smtp.hostinger.com',
+        SMTP_PORT: '465',
+        SMTP_USER: 'no-reply@example.com',
+        SMTP_PASSWORD: 'placeholder-password-not-a-real-credential',
+        EMAIL_FROM: 'no-reply@example.com',
+      },
+      true,
+    );
+    expect(
+      result.stdout + result.stderr,
+      `stdout: ${result.stdout}\nstderr: ${result.stderr}`,
+    ).toMatch(/listening/i);
+  }, 20_000);
 
-  it(
-    'NODE_ENV=production with RESEND_API_KEY and EMAIL_FROM boots successfully (no SMTP needed)',
-    async () => {
-      const result = await runChild(
-        {
-          ...BASE_ENV,
-          EMAIL_TRANSPORT: undefined,
-          SMTP_USER: undefined,
-          SMTP_PASSWORD: undefined,
-          RESEND_API_KEY: 'placeholder-resend-key-not-a-real-credential',
-          EMAIL_FROM: 'no-reply@example.com',
-        },
-        true,
-      );
-      expect(result.stdout + result.stderr, `stdout: ${result.stdout}\nstderr: ${result.stderr}`).toMatch(
-        /listening/i,
-      );
-    },
-    20_000,
-  );
+  it('NODE_ENV=production with no transport override and real-shaped SMTP credentials boots successfully', async () => {
+    const result = await runChild(
+      {
+        ...BASE_ENV,
+        EMAIL_TRANSPORT: undefined,
+        SMTP_HOST: 'smtp.hostinger.com',
+        SMTP_PORT: '465',
+        SMTP_USER: 'no-reply@example.com',
+        SMTP_PASSWORD: 'placeholder-password-not-a-real-credential',
+        RESEND_API_KEY: 'placeholder-resend-key-not-a-real-credential',
+        EMAIL_FROM: 'no-reply@example.com',
+      },
+      true,
+    );
+    expect(
+      result.stdout + result.stderr,
+      `stdout: ${result.stdout}\nstderr: ${result.stderr}`,
+    ).toMatch(/listening/i);
+  }, 20_000);
 });

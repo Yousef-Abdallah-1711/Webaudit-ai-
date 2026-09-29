@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
 import { getUsage, type UsageSummary } from '../../../lib/api';
@@ -27,7 +28,7 @@ function downloadCsv(usage: UsageSummary): void {
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'webaudit-usage.csv';
+  link.download = `${PRODUCT_NAME.toLowerCase()}-usage.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }

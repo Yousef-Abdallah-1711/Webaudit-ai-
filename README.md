@@ -130,6 +130,13 @@ maintenance wiring gaps, and capability-locality/security-test coverage gaps.
 Run checks from the repository root. DB-backed suites must use the separate test database and Redis
 configuration; serialize them with --no-file-parallelism.
 
+API database tests use `TEST_DATABASE_URL` (default:
+`postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public`). Before the first
+`resetDb()` in a test process, the helper runs `prisma migrate deploy` against that URL, so the test
+database is brought up to the checked-in schema without migrating the development `DATABASE_URL`.
+The test database must already exist and be reachable; start the local services with
+`pnpm services:up` when using the Compose Postgres instance.
+
     pnpm format:check
     pnpm lint
     pnpm typecheck

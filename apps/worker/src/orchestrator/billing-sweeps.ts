@@ -15,17 +15,18 @@
  * The pure work lives in `apps/api`'s billing and storage services, reached
  * through the `@webaudit/api/billing` / `@webaudit/api/storage-retention`
  * package subpaths — the same shape the reverify runner uses for
- * `@webaudit/api/issues`. Email goes through a console mailer here (no SMTP is
- * wired anywhere yet); R2 is left unconfigured (`storage: null`) so a retention
+ * `@webaudit/api/issues`. Email uses SMTP in production and the console mailer
+ * in development; R2 is left unconfigured (`storage: null`) so a retention
  * removal still clears the database rows.
  */
 
 import type { Queue } from 'bullmq';
 import { renewDueSubscriptions, sendRenewalWarnings } from '@webaudit/api/billing';
 import { enforceRetention } from '@webaudit/api/storage-retention';
-import { createConsoleMailer } from '@webaudit/api/email';
+import type { Mailer } from '@webaudit/api/email';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
 import { JOB_NAMES } from '../queue/workers.js';
+import { createWorkerMailer } from './email-notification.js';
 
 export const BILLING_SWEEP_JOB_NAME = JOB_NAMES.billingSweep;
 
@@ -50,11 +51,12 @@ export async function scheduleBillingSweeps(maintenanceQueue: Queue): Promise<vo
 
 export interface BillingSweepDeps {
   readonly db: PrismaClient;
+  readonly mailer?: Mailer;
   readonly webUrl?: string;
 }
 
 export function createBillingSweepHandler(deps: BillingSweepDeps): () => Promise<void> {
-  const mailer = createConsoleMailer();
+  const mailer = deps.mailer ?? createWorkerMailer(deps.db);
   const webUrl = deps.webUrl ?? process.env['WEB_URL'] ?? '';
 
   return async function runBillingSweep(): Promise<void> {

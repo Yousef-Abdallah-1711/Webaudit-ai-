@@ -23,7 +23,7 @@ import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 /** Long enough to answer a support question, short enough to bound the table. */
 export const DEFAULT_GRACE_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type CleanupClient = Pick<PrismaClient, 'emailToken' | 'refreshToken'>;
+export type CleanupClient = Pick<PrismaClient, 'emailToken' | 'refreshToken' | 'emailSendAttempt'>;
 
 export interface CleanupOptions {
   /** How long past expiry a row is kept. Defaults to 30 days. */
@@ -35,6 +35,7 @@ export interface CleanupOptions {
 export interface CleanupResult {
   emailTokens: number;
   refreshTokens: number;
+  emailSendAttempts: number;
   /** Rows at or after this instant were kept. */
   cutoff: Date;
 }
@@ -54,10 +55,14 @@ export async function purgeExpiredAuthTokens(
   // next run finishes it.
   const emailTokens = await db.emailToken.deleteMany({ where: { expiresAt: { lt: cutoff } } });
   const refreshTokens = await db.refreshToken.deleteMany({ where: { expiresAt: { lt: cutoff } } });
+  const emailSendAttempts = await db.emailSendAttempt.deleteMany({
+    where: { createdAt: { lt: cutoff } },
+  });
 
   return {
     emailTokens: emailTokens.count,
     refreshTokens: refreshTokens.count,
+    emailSendAttempts: emailSendAttempts.count,
     cutoff,
   };
 }

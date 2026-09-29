@@ -70,6 +70,8 @@ export const QUEUE_NAMES = {
   reverify: 'webaudit-reverify',
   /** FR-038's sweep and other housekeeping. */
   maintenance: 'webaudit-maintenance',
+  /** Non-secret user notifications enqueued by the API for worker delivery. */
+  emailNotification: 'webaudit-email-notification',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
@@ -116,6 +118,11 @@ export const REVERIFY_JOB_OPTIONS: JobsOptions = {
   ...DEFAULT_JOB_OPTIONS,
   attempts: 3,
   backoff: { type: 'exponential', delay: 2_000 },
+};
+
+/** Safe to retry: notification sends contain no bearer credentials. */
+export const EMAIL_NOTIFICATION_JOB_OPTIONS: JobsOptions = {
+  ...REVERIFY_JOB_OPTIONS,
 };
 
 /** Explicit recovery bounds; do not rely on BullMQ package defaults. */

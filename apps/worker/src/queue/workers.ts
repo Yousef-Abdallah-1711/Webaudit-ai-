@@ -54,6 +54,7 @@ import {
 import type { PhaseJobData, QuestionnaireTimeoutJobData } from '../orchestrator/phases.js';
 import type { ReverifyJobData } from '../reverify/runner.js';
 import { captureAlert } from '../config/monitoring.js';
+import type { EmailNotificationJobData } from '@webaudit/api/email';
 
 /**
  * The job names the producers in this repository actually use.
@@ -81,6 +82,8 @@ export const JOB_NAMES = {
   telemetryArchive: 'telemetry-archive',
   /** `cost-alerts-scheduler.ts` → `maintenanceQueue.add('cost-alerts-sweep', …, { repeat })` (T028). */
   costAlertsSweep: 'cost-alerts-sweep',
+  emailNotification: 'email-notification',
+  authTokenCleanup: 'auth-token-cleanup',
 } as const;
 
 export type KnownJobName = (typeof JOB_NAMES)[keyof typeof JOB_NAMES];
@@ -146,13 +149,14 @@ export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep')
 export const paymentExpirySweepJobSchema = z
   .object({ kind: z.literal('payment-expiry-sweep') })
   .strict();
+export const authTokenCleanupJobSchema = z
+  .object({ kind: z.literal('auth-token-cleanup') })
+  .strict();
 
 /** The repeatable billing sweep (renewals, renewal warnings, retention) carries no per-run data. */
 export const billingSweepJobSchema = z.object({ kind: z.literal('billing-sweep') }).strict();
 /** The repeatable FR-C01-C04 cost-alert sweep carries no per-run data. */
-export const costAlertsSweepJobSchema = z
-  .object({ kind: z.literal('cost-alerts-sweep') })
-  .strict();
+export const costAlertsSweepJobSchema = z.object({ kind: z.literal('cost-alerts-sweep') }).strict();
 /**
  * The repeatable T032 telemetry-partition archive sweep carries no per-run
  * data — added for consistency with every sibling maintenance job above,
@@ -164,6 +168,28 @@ export const costAlertsSweepJobSchema = z
  */
 export const telemetryArchiveJobSchema = z
   .object({ kind: z.literal('telemetry-archive') })
+  .strict();
+const emailNotificationSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('payment-confirmation'), email: z.string().email() }).strict(),
+  z.object({ kind: z.literal('payment-failure'), email: z.string().email() }).strict(),
+  z
+    .object({
+      kind: z.literal('readiness-achieved'),
+      email: z.string().email(),
+      mail: z
+        .object({
+          targetName: z.string().min(1).max(256),
+          score: z.number().finite(),
+          baselineScore: z.number().finite(),
+          certificateUrl: z.string().min(1).max(2048),
+          reportUrl: z.string().min(1).max(2048),
+        })
+        .strict(),
+    })
+    .strict(),
+]);
+export const emailNotificationJobSchema = z
+  .object({ kind: z.literal('email-notification'), notification: emailNotificationSchema })
   .strict();
 
 /**
@@ -233,6 +259,7 @@ export interface JobHandlers {
   /** The repeatable FR-038 sweep. Carries no data. */
   readonly timeoutSweep?: () => Promise<void>;
   readonly paymentExpirySweep?: () => Promise<void>;
+  readonly authTokenCleanup?: () => Promise<void>;
   /** The repeatable billing sweep (T188/T189). Carries no data. */
   readonly billingSweep?: () => Promise<void>;
   /** A targeted re-verification (T150). */
@@ -243,6 +270,7 @@ export interface JobHandlers {
   readonly telemetryArchive?: () => Promise<void>;
   /** The repeatable FR-C01-C04 cost-alert sweep (T028). Carries no data. */
   readonly costAlertsSweep?: () => Promise<void>;
+  readonly emailNotification?: (data: EmailNotificationJobData) => Promise<void>;
 }
 
 /**
@@ -324,6 +352,16 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       return;
     }
 
+    case JOB_NAMES.authTokenCleanup: {
+      authTokenCleanupJobSchema.parse(job.data);
+      const handler = handlers.authTokenCleanup;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'auth-token cleanup', 'The cleanup sweep');
+      }
+      await handler();
+      return;
+    }
+
     case JOB_NAMES.billingSweep: {
       billingSweepJobSchema.parse(job.data);
       const handler = handlers.billingSweep;
@@ -355,6 +393,20 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
         throw new JobNotImplementedError(job, 'T028', 'The FR-C01-C04 cost-alert sweep');
       }
       await handler();
+      return;
+    }
+
+    case JOB_NAMES.emailNotification: {
+      const data = emailNotificationJobSchema.parse(job.data);
+      const handler = handlers.emailNotification;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(
+          job,
+          'email notifications',
+          'The email notification worker',
+        );
+      }
+      await handler(data.notification);
       return;
     }
 
@@ -422,6 +474,7 @@ export interface WorkerSet {
   readonly scanPhase: Worker;
   readonly reverify: Worker;
   readonly maintenance: Worker;
+  readonly emailNotification: Worker;
   /**
    * @param force skip waiting for in-flight jobs. Only for a shutdown that has
    *   already exceeded its grace period — a forced close leaves the job stalled
@@ -500,16 +553,23 @@ export function createWorkers(options: WorkerSetOptions): WorkerSet {
   });
   const reverify = build(QUEUE_NAMES.reverify, CONCURRENCY.reverify);
   const maintenance = build(QUEUE_NAMES.maintenance, CONCURRENCY.maintenance);
+  const emailNotification = build(QUEUE_NAMES.emailNotification, CONCURRENCY.emailNotification);
 
   return {
     scanPhase,
     reverify,
     maintenance,
+    emailNotification,
     async close(force = false): Promise<void> {
       // In parallel: they share nothing, and serialising them would multiply the
       // shutdown window by three for no benefit while the platform's SIGKILL
       // timer runs.
-      await Promise.all([scanPhase.close(force), reverify.close(force), maintenance.close(force)]);
+      await Promise.all([
+        scanPhase.close(force),
+        reverify.close(force),
+        maintenance.close(force),
+        emailNotification.close(force),
+      ]);
     },
   };
 }

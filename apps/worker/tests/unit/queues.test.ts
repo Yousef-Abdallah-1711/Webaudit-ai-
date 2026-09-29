@@ -19,6 +19,7 @@ import {
   createQueues,
   QUEUE_LOCK_DURATION_MS,
   QUEUE_NAMES,
+  EMAIL_NOTIFICATION_JOB_OPTIONS,
   QUEUE_STALLED_INTERVAL_MS,
   redisConnection,
   SCAN_PHASE_MAX_STALLED_COUNT,
@@ -54,6 +55,10 @@ describe('the pinned BullMQ version accepts every queue name this repo defines',
       expect(queues.scanPhase.name).toBe(QUEUE_NAMES.scanPhase);
       expect(queues.reverify.name).toBe(QUEUE_NAMES.reverify);
       expect(queues.maintenance.name).toBe(QUEUE_NAMES.maintenance);
+      expect(queues.emailNotification.name).toBe(QUEUE_NAMES.emailNotification);
+      expect(queues.emailNotification.opts.defaultJobOptions).toMatchObject(
+        EMAIL_NOTIFICATION_JOB_OPTIONS,
+      );
     });
 
     it('constructs every production worker without throwing', async () => {

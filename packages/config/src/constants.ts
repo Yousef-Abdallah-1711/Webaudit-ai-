@@ -13,6 +13,9 @@ export const VIEWPORTS = {
 /** Visual-regression threshold, constitution v1.1.0 Design Adherence. */
 export const VISUAL_DIFF_THRESHOLD = 0.005;
 
+/** Customer-facing product name shared by the web app and API. */
+export const PRODUCT_NAME = 'Fahes';
+
 /**
  * FR-015 — archive intake bounds.
  *

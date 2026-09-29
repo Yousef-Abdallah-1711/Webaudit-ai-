@@ -24,6 +24,7 @@
  * — left as `#` rather than guessing a path those tasks might not choose.
  */
 import type { ReactElement } from 'react';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { Button } from '../ui';
 import { LangToggle, ThemeToggle, useT } from '../../app/theme';
 import { useAuth } from '../auth/AuthProvider';
@@ -37,7 +38,7 @@ export interface WordmarkProps {
 export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
   return (
     <div dir="ltr" className={styles.wordmark} style={{ fontSize: size }}>
-      Web<span className={styles.wordmarkAccent}>Audit</span> AI
+      <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
     </div>
   );
 }
@@ -160,7 +161,7 @@ export function PublicFooter(): ReactElement {
         ))}
       </div>
       <div className={styles.footerBottom}>
-        <span className={styles.footerCopy}>© 2026 WebAudit AI</span>
+        <span className={styles.footerCopy}>© 2026 {PRODUCT_NAME}</span>
         {status === 'authenticated' && (
           <a href="/scan" className={styles.footerLink}>
             {t('foot_dashboard')}

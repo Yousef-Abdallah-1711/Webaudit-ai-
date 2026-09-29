@@ -21,7 +21,7 @@ test('boots a real api, worker, and web frontend that can reach each other', asy
   expect(apiHealth.ok()).toBe(true);
 
   await page.goto(stack.webBaseUrl);
-  await expect(page).toHaveTitle(/WebAudit/i);
+  await expect(page).toHaveTitle(/Fahes/i);
 
   // The real regression this fixture exists to catch: a frontend that can't
   // reach its own API because of a CORS/WEB_URL mismatch renders the login

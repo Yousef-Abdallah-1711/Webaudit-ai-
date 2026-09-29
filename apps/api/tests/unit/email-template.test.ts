@@ -10,7 +10,7 @@ describe('email template', () => {
       ctaUrl: 'https://app.example/verify?token=abc&next=home',
     });
 
-    expect(result.html).toContain('Web<span style="color:#fe5a01">Audit</span> AI');
+    expect(result.html).toContain('<span style="color:#fe5a01">Fahes</span>');
     expect(result.html).toContain('style=');
     expect(result.html).toContain('Confirm email');
     expect(result.html).toContain('https://app.example/verify?token=abc&amp;next=home');
