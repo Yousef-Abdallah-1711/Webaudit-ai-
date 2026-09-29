@@ -111,7 +111,7 @@ export function register(
   email: string,
   password: string,
   name?: string,
-): Promise<{ message: string }> {
+): Promise<{ message: string; email: string }> {
   return request('/auth/register', {
     method: 'POST',
     body: { email, password, ...(name === undefined ? {} : { name }) },
@@ -193,12 +193,16 @@ export async function deleteAccount(): Promise<void> {
   setAccessToken(undefined);
 }
 
-export function resendVerification(email: string): Promise<{ message: string }> {
-  return request('/auth/verify/resend', { method: 'POST', body: { email }, token: null });
+export function resendVerification(email?: string): Promise<{ message: string }> {
+  return request('/auth/verify/resend', {
+    method: 'POST',
+    body: email === undefined ? {} : { email },
+    token: null,
+  });
 }
 
 export function verifyEmail(token: string): Promise<{ message: string }> {
-  return request(`/auth/verify/${encodeURIComponent(token)}`, { token: null });
+  return request(`/auth/verify/${encodeURIComponent(token)}`, { method: 'POST', token: null });
 }
 
 export function forgotPassword(email: string): Promise<{ message: string }> {

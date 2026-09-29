@@ -9,8 +9,8 @@
  * link shaped `/verify-email?token=...` — a *frontend* route, not directly
  * to the API — so this page has two states the source did not need to
  * distinguish: no `token` in the query string (just registered, waiting),
- * and `token` present (the user followed the email; verify it against
- * `GET /auth/verify/:token` and show the outcome).
+ * and `token` present (the user followed the email and must explicitly
+ * confirm before the token is submitted to `POST /auth/verify/:token`).
  */
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
@@ -20,28 +20,32 @@ import { useT } from '../../theme';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
 import styles from './page.module.css';
 
-type Outcome = 'checking' | 'confirmed' | 'invalid';
+type Outcome = 'ready' | 'confirming' | 'confirmed' | 'invalid';
 
 function TokenOutcome({ token }: { token: string }): React.ReactElement {
   const [t] = useT();
-  const [outcome, setOutcome] = useState<Outcome>('checking');
+  const [outcome, setOutcome] = useState<Outcome>('ready');
 
-  useEffect(() => {
-    let cancelled = false;
-    verifyEmail(token)
-      .then(() => {
-        if (!cancelled) setOutcome('confirmed');
-      })
-      .catch(() => {
-        if (!cancelled) setOutcome('invalid');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+  async function onConfirm(): Promise<void> {
+    setOutcome('confirming');
+    try {
+      await verifyEmail(token);
+      setOutcome('confirmed');
+    } catch {
+      setOutcome('invalid');
+    }
+  }
 
-  if (outcome === 'checking') {
-    return <AuthFrame title={t('auth_verify_title')} />;
+  if (outcome === 'ready' || outcome === 'confirming') {
+    return (
+      <AuthFrame title={t('auth_verify_confirm_title')} lead={t('auth_verify_confirm_lead')}>
+        <Button fullWidth disabled={outcome === 'confirming'} onClick={() => void onConfirm()}>
+          {outcome === 'confirming'
+            ? t('auth_verify_confirm_pending')
+            : t('auth_verify_confirm_button')}
+        </Button>
+      </AuthFrame>
+    );
   }
   if (outcome === 'confirmed') {
     return (
@@ -67,7 +71,7 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
 
   async function onResend(): Promise<void> {
     try {
-      await resendVerification(email);
+      await resendVerification(email || undefined);
     } catch (e) {
       // resendVerification always answers 202 regardless of whether the
       // address exists (no account-enumeration signal) — a thrown ApiError
@@ -81,14 +85,14 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
   return (
     <AuthFrame
       title={t('auth_verify_title')}
-      lead={t('auth_verify_lead').replace('{email}', email || 'you@company.com')}
+      lead={t('auth_verify_lead').replace('{email}', email || 'the email you registered with')}
       foot={
         <span>
           {t('auth_verify_foot_lead')} <a href="/signup">{t('auth_verify_foot_link')}</a>
         </span>
       }
     >
-      <div className={styles.emailBox}>{email || 'you@company.com'}</div>
+      <div className={styles.emailBox}>{email || 'the email you registered with'}</div>
       <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
         {sent ? t('auth_verify_confirmed_lead') : t('auth_verify_resend')}
       </Button>
@@ -99,7 +103,20 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
 function VerifyPageInner(): React.ReactElement {
   const params = useSearchParams();
   const token = params.get('token');
-  const email = params.get('email') ?? '';
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (token !== null && token !== '') return;
+    try {
+      const displayEmail = window.sessionStorage.getItem('wa-verification-display-email');
+      if (displayEmail !== null) {
+        window.sessionStorage.removeItem('wa-verification-display-email');
+        setEmail(displayEmail);
+      }
+    } catch {
+      // Storage can be unavailable; the generic waiting copy remains usable.
+    }
+  }, [token]);
 
   if (token !== null && token !== '') return <TokenOutcome token={token} />;
   return <WaitingForClick email={email} />;

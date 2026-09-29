@@ -16,7 +16,8 @@ test('a new account registers through the real form and lands on the verify-emai
   await page.getByLabel('Work email').fill(email);
   await page.getByLabel('Password').fill('correct-horse-battery-staple');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await page.waitForURL(/\/verify-email\?email=/);
+  await page.waitForURL(`${stack.webBaseUrl}/verify-email`);
+  await expect(page).not.toHaveURL(/\?email=/);
   await expect(page.getByText(email, { exact: true })).toBeVisible();
 
   const user = await stack.db.user.findUnique({ where: { email } });
@@ -24,23 +25,21 @@ test('a new account registers through the real form and lands on the verify-emai
   expect(user?.emailVerifiedAt).toBeNull();
 });
 
-test('registering the same address twice is refused with a specific reason', async ({ page }) => {
+test('registering the same address twice shows the uniform verification response', async ({ page }) => {
   const email = 'duplicate-signup@example.com';
   await page.goto(`${stack.webBaseUrl}/signup`);
   await page.getByLabel('Work email').fill(email);
   await page.getByLabel('Password').fill('correct-horse-battery-staple');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await page.waitForURL(/\/verify-email\?email=/);
+  await page.waitForURL(`${stack.webBaseUrl}/verify-email`);
 
   await page.goto(`${stack.webBaseUrl}/signup`);
   await page.getByLabel('Work email').fill(email);
   await page.getByLabel('Password').fill('another-correct-password');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  // lib/strings.ts's real copy: "That address cannot be registered."
-  await expect(page.getByText('That address cannot be registered.')).toBeVisible({
-    timeout: 5_000,
-  });
-  await expect(page).toHaveURL(`${stack.webBaseUrl}/signup`);
+  await page.waitForURL(`${stack.webBaseUrl}/verify-email`);
+  await expect(page).not.toHaveURL(/\?email=/);
+  await expect(page.getByText(email, { exact: true })).toBeVisible();
 });
 
 test('following the real verification link lets the account sign in', async ({ page }) => {
@@ -49,10 +48,15 @@ test('following the real verification link lets the account sign in', async ({ p
   await page.getByLabel('Work email').fill(email);
   await page.getByLabel('Password').fill('correct-horse-battery-staple');
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
-  await page.waitForURL(/\/verify-email\?email=/);
+  await page.waitForURL(`${stack.webBaseUrl}/verify-email`);
 
   const token = stack.mailer.lastVerificationToken();
   await page.goto(`${stack.webBaseUrl}/verify-email?token=${token}`);
+  const confirmButton = page.getByRole('button', { name: 'Confirm Email Address' });
+  await expect(confirmButton).toBeVisible();
+  const userBeforeConfirmation = await stack.db.user.findUnique({ where: { email } });
+  expect(userBeforeConfirmation?.emailVerifiedAt).toBeNull();
+  await confirmButton.click();
   // lib/strings.ts's real copy for the confirmed outcome. The confirmed
   // outcome's "Sign in" control is a `<Button href="/login">`, which renders
   // an `<a>`, not a `<button>` — see components/ui/Button.tsx. Scoped to

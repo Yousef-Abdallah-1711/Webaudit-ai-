@@ -33,7 +33,10 @@ vi.mock('../../lib/api.js', async (importOriginal) => {
   const actual = await importOriginal<typeof ApiModule>();
   return {
     ...actual,
-    register: vi.fn().mockResolvedValue({ message: 'Check your email to confirm your address.' }),
+    register: vi.fn().mockResolvedValue({
+      message: 'Check your email to confirm your address.',
+      email: 'blank-name@example.com',
+    }),
     getMe: vi.fn().mockRejectedValue(new Error('no session')),
     refreshAccessToken: vi.fn().mockRejectedValue(new Error('no session')),
     setAccessToken: vi.fn(),
@@ -78,7 +81,10 @@ describe('RegisterPage', () => {
         'correct-horse-battery-staple',
         undefined,
       );
-      expect(push).toHaveBeenCalledWith('/verify-email?email=blank-name%40example.com');
+      expect(push).toHaveBeenCalledWith('/verify-email');
+      expect(window.sessionStorage.getItem('wa-verification-display-email')).toBe(
+        'blank-name@example.com',
+      );
     } finally {
       mounted.unmount();
     }

@@ -3,7 +3,8 @@
 /**
  * T128 — `RegisterPage`, ported from `design-system/ui_kits/marketing/
  * AuthPages.jsx`. Submits against `POST /auth/register`, then routes to
- * `/verify-email` with the address in the query string.
+ * `/verify-email`; the address is carried only in session storage for the
+ * waiting page's display and is never added to the URL.
  *
  * The `Name` field is optional on both ends: `register()`'s third argument
  * is omitted entirely (not sent as `''`) when left blank, matching
@@ -18,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
 import { useT } from '../../theme';
-import { ApiError, API_BASE, register } from '../../../lib/api';
+import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import styles from './page.module.css';
 
@@ -42,14 +43,15 @@ export default function RegisterPage(): React.ReactElement | null {
     setSubmitting(true);
     try {
       const trimmedName = name.trim();
-      await register(email, password, trimmedName === '' ? undefined : trimmedName);
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-    } catch (e) {
-      if (e instanceof ApiError && e.code === 'CONFLICT') {
-        setError(t('auth_error_conflict'));
-      } else {
-        setError(t('auth_error_generic'));
+      const result = await register(email, password, trimmedName === '' ? undefined : trimmedName);
+      try {
+        window.sessionStorage.setItem('wa-verification-display-email', result.email);
+      } catch {
+        // The verification flow still works without this display-only value.
       }
+      router.push('/verify-email');
+    } catch {
+      setError(t('auth_error_generic'));
     } finally {
       setSubmitting(false);
     }
