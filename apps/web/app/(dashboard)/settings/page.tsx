@@ -197,7 +197,7 @@ export default function SettingsPage(): React.ReactElement {
             </Row>
             <Row label={t('settings_email')} note={t('settings_email_cannot_change_here')}>
               <div className={styles.fieldWrap}>
-                <Input value={email} type="email" readOnly />
+                <Input value={email} type="email" readOnly dir="ltr" />
               </div>
             </Row>
             {profileError !== null && <p className={styles.deleteError}>{profileError}</p>}

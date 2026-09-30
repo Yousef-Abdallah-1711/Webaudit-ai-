@@ -22,6 +22,7 @@ export interface InputProps {
   /** Mono face for machine-truth values (headers, selectors, paths) */
   mono?: boolean;
   readOnly?: boolean;
+  dir?: 'ltr' | 'rtl' | 'auto';
   /** For an input with no visible, associated `<label>` — e.g. login's password field. */
   'aria-label'?: string;
 }

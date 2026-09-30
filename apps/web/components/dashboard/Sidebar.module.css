@@ -142,10 +142,16 @@
 }
 .navItemActive,
 .navItemActive:hover {
+  --nav-marker-offset: 2px;
   background: var(--surface-page);
   color: var(--text-strong);
   font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--accent);
+  box-shadow: inset var(--nav-marker-offset) 0 0 var(--accent);
+}
+
+:global(html[dir='rtl']) .navItemActive,
+:global(html[dir='rtl']) .navItemActive:hover {
+  --nav-marker-offset: -2px;
 }
 
 .navItemLabel {
