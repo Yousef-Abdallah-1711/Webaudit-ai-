@@ -27,7 +27,7 @@ test('wrong password shows the real, specific error — not a generic network fa
   await page.getByLabel('Email').fill(creds.email);
   await page.getByLabel('Password').fill('definitely-wrong');
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  // lib/strings.ts's real copy: "Incorrect email or password."
+  // Source: `messages/en/auth.json`, `error_credentials`.
   await expect(page.getByText('Incorrect email or password.')).toBeVisible({ timeout: 5_000 });
   await expect(page).toHaveURL(/\/login$/);
 });
@@ -48,6 +48,6 @@ test('an unverified account is refused with a specific reason, not silently logg
   await page.getByLabel('Email').fill(unverified.email);
   await page.getByLabel('Password').fill(unverified.password);
   await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  // lib/strings.ts's real copy: "Confirm your address first."
+  // Source: `messages/en/auth.json`, `error_not_verified`.
   await expect(page.getByText('Confirm your address first.')).toBeVisible({ timeout: 5_000 });
 });

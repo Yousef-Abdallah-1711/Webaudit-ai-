@@ -18,9 +18,9 @@ test('requesting, following, and completing a real reset link lets the account s
   await page.goto(`${stack.webBaseUrl}/forgot-password`);
   await page.getByLabel('Email').fill(creds.email);
   await page.getByRole('button', { name: 'Send reset link', exact: true }).click();
-  // "Back to sign in" is in the page's `foot` in both states, so it can't
-  // prove the request completed — lib/strings.ts's real copy for the
-  // sent-only lead text can.
+  // "Back to sign in" is in the page's `foot` in both states, so it cannot
+  // prove the request completed; `messages/en/auth.json`'s `forgot_sent_lead`
+  // appears only after the request completes.
   await expect(
     page.getByText('If that address has an account, a reset link is on its way.'),
   ).toBeVisible({ timeout: 5_000 });
@@ -31,7 +31,7 @@ test('requesting, following, and completing a real reset link lets the account s
   await page.getByLabel('New password', { exact: true }).fill(newPassword);
   await page.getByLabel('Confirm new password').fill(newPassword);
   await page.getByRole('button', { name: 'Set password and sign in', exact: true }).click();
-  // lib/strings.ts's real copy: "Password changed"
+  // Source: `messages/en/auth.json`, `reset_done_title`.
   await expect(page.getByText('Password changed')).toBeVisible({ timeout: 5_000 });
 
   // The done state's "Sign in" control is a `<Button href="/login">`, which
@@ -66,7 +66,7 @@ test('an already-used reset link is refused, not silently accepted twice', async
   await page.getByLabel('New password', { exact: true }).fill(secondPassword);
   await page.getByLabel('Confirm new password').fill(secondPassword);
   await page.getByRole('button', { name: 'Set password and sign in', exact: true }).click();
-  // lib/strings.ts's real copy for a 410 (already-used/expired) token.
+  // This checks the user-facing 410 message for an already-used/expired token.
   await expect(page.getByText('It has already been used, or it expired.')).toBeVisible({
     timeout: 5_000,
   });
@@ -84,7 +84,7 @@ test('mismatched passwords are refused before submission', async ({ page }) => {
   await page.goto(`${stack.webBaseUrl}/reset-password?token=${token}`);
   await page.getByLabel('New password', { exact: true }).fill('one-password-123456');
   await page.getByLabel('Confirm new password').fill('a-different-password-123');
-  // lib/strings.ts's real copy: "Passwords do not match."
+  // Source: `messages/en/auth.json`, `error_passwords_match`.
   await expect(page.getByText('Passwords do not match.')).toBeVisible({ timeout: 5_000 });
   await expect(
     page.getByRole('button', { name: 'Set password and sign in', exact: true }),

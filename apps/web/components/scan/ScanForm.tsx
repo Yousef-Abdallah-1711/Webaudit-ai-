@@ -15,8 +15,8 @@
  * — and that is what gets sent to `POST /scans` as `acceptedQuote`.
  *
  * **Preserves the quote-is-not-a-charge copy (FR-011, FR-012)** verbatim
- * from `lib/strings.ts`'s existing `quote_note`/`quote_bundled`/`areas_note`
- * keys — already present from T248, not re-authored here.
+ * from the authoritative `messages/{locale}/scan.json` `quote_note`,
+ * `quote_bundled`, and `areas_note` keys — established during T248.
  *
  * **All three inputs are real as of T179.** The tab strip, the repository
  * list and the dropzone moved to `InputTabs`, which now talks to `GET /repos`

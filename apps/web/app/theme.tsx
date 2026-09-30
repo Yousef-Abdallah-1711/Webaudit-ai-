@@ -20,10 +20,9 @@
  * it once, in the root layout's `<head>`.
  */
 import { useEffect, useReducer } from 'react';
-import { NextIntlClientProvider, useMessages } from 'next-intl';
-import { type Lang, type StringKey } from '../lib/strings';
+import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { messagesByLocale } from '../i18n/messages';
-import { defaultLocale, localeMetadata, locales, type Locale } from '../i18n/locales';
+import { defaultLocale, localeMetadata, locales, type Lang, type Locale } from '../i18n/locales';
 import styles from './theme.module.css';
 
 const isBrowser = typeof window !== 'undefined';
@@ -102,34 +101,6 @@ export function useLang(): [Lang, (value: Lang) => void] {
   return waUse(waLang);
 }
 
-const namespaceByKey = Object.fromEntries(
-  Object.entries(messagesByLocale.en).flatMap(([namespace, messages]) =>
-    Object.keys(messages).map((key) => [key, namespace]),
-  ),
-) as Partial<Record<StringKey, string>>;
-
-function getMessage(messages: unknown, namespace: string | undefined, key: StringKey): string | undefined {
-  if (!namespace || !messages || typeof messages !== 'object') return undefined;
-  const namespaced = (messages as Record<string, unknown>)[namespace];
-  if (!namespaced || typeof namespaced !== 'object') return undefined;
-  const value = (namespaced as Record<string, unknown>)[key];
-  return typeof value === 'string' ? value : undefined;
-}
-
-export function useT(): [(key: StringKey) => string, Lang, (value: Lang) => void] {
-  const [lang, setLang] = useLang();
-  const messages = useMessages();
-  const t = (key: StringKey): string => {
-    const namespace = namespaceByKey[key];
-    return (
-      getMessage(messages, namespace, key) ??
-      getMessage(messagesByLocale.en, namespace, key) ??
-      key
-    );
-  };
-  return [t, lang, setLang];
-}
-
 export function I18nProvider({
   children,
   initialLocale,
@@ -183,7 +154,7 @@ export function ThemeToggle({
 }: ThemeToggleProps): React.ReactElement {
   const [theme, setTheme] = useTheme();
   const dark = theme === 'dark';
-  const [t] = useT();
+  const t = useTranslations('common');
 
   const classes = [
     styles.toggle,

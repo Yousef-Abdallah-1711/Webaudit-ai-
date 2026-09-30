@@ -29,8 +29,25 @@ import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
 import { LangToggle, ThemeToggle } from '../../app/theme';
 import { useAuth } from '../auth/AuthProvider';
-import type { StringKey } from '../../lib/strings';
+import type { messagesByLocale } from '../../i18n/messages';
 import styles from './Public.module.css';
+
+type PublicNavKey = keyof Pick<
+  typeof messagesByLocale.en.navigation,
+  'nav_product' | 'nav_pricing' | 'nav_docs' | 'nav_changelog'
+>;
+type FooterHeadingKey = keyof Pick<
+  typeof messagesByLocale.en.navigation,
+  'foot_product' | 'foot_pricing' | 'foot_company'
+>;
+type FooterItemKey =
+  | keyof Pick<typeof messagesByLocale.en.scan, 'a_seo' | 'credits'>
+  | keyof Pick<typeof messagesByLocale.en.public, 'loop_eyebrow'>
+  | keyof Pick<typeof messagesByLocale.en.dashboard, 'top_up'>
+  | keyof Pick<
+      typeof messagesByLocale.en.navigation,
+      'n_readiness' | 'foot_pricing' | 'nav_docs' | 'nav_changelog' | 'foot_zero'
+    >;
 
 export interface WordmarkProps {
   size?: number;
@@ -44,7 +61,7 @@ export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
   );
 }
 
-const NAV: readonly (readonly [href: string, key: StringKey])[] = [
+const NAV: readonly (readonly [href: string, key: PublicNavKey])[] = [
   ['/', 'nav_product'],
   ['/pricing', 'nav_pricing'],
   ['/pricing', 'nav_docs'],
@@ -52,7 +69,7 @@ const NAV: readonly (readonly [href: string, key: StringKey])[] = [
 ];
 
 export interface PublicHeaderProps {
-  active?: StringKey;
+  active?: PublicNavKey;
 }
 
 export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
@@ -110,33 +127,34 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
   );
 }
 
-const FOOTER_COLUMNS: readonly (readonly [StringKey, readonly (readonly [StringKey, string])[]])[] =
+const FOOTER_COLUMNS: readonly (
+  readonly [FooterHeadingKey, readonly (readonly [FooterItemKey, string])[]]
+)[] = [
   [
+    'foot_product',
     [
-      'foot_product',
-      [
-        ['a_seo', '/'],
-        ['loop_eyebrow', '/'],
-        ['n_readiness', '/readiness'],
-      ],
+      ['a_seo', '/'],
+      ['loop_eyebrow', '/'],
+      ['n_readiness', '/readiness'],
     ],
+  ],
+  [
+    'foot_pricing',
     [
-      'foot_pricing',
-      [
-        ['foot_pricing', '/pricing'],
-        ['credits', '/pricing'],
-        ['top_up', '/pricing'],
-      ],
+      ['foot_pricing', '/pricing'],
+      ['credits', '/pricing'],
+      ['top_up', '/pricing'],
     ],
+  ],
+  [
+    'foot_company',
     [
-      'foot_company',
-      [
-        ['nav_docs', '/pricing'],
-        ['nav_changelog', '/pricing'],
-        ['foot_zero', '/'],
-      ],
+      ['nav_docs', '/pricing'],
+      ['nav_changelog', '/pricing'],
+      ['foot_zero', '/'],
     ],
-  ];
+  ],
+];
 
 export function PublicFooter(): ReactElement {
   const tDashboard = useTranslations('dashboard');
@@ -144,7 +162,7 @@ export function PublicFooter(): ReactElement {
   const tPublic = useTranslations('public');
   const tScan = useTranslations('scan');
   const { status, isOperator } = useAuth();
-  const translateFooterItem = (key: StringKey): string => {
+  const translateFooterItem = (key: FooterItemKey): string => {
     switch (key) {
       case 'a_seo':
       case 'credits':
@@ -199,7 +217,7 @@ export function PublicFooter(): ReactElement {
 }
 
 export interface PublicPageProps {
-  active?: StringKey;
+  active?: PublicNavKey;
   tint?: string;
   children?: React.ReactNode;
 }

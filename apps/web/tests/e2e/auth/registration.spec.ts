@@ -57,8 +57,8 @@ test('following the real verification link lets the account sign in', async ({ p
   const userBeforeConfirmation = await stack.db.user.findUnique({ where: { email } });
   expect(userBeforeConfirmation?.emailVerifiedAt).toBeNull();
   await confirmButton.click();
-  // lib/strings.ts's real copy for the confirmed outcome. The confirmed
-  // outcome's "Sign in" control is a `<Button href="/login">`, which renders
+  // The confirmed outcome's "Sign in" label is `verify_confirmed_submit` in
+  // `messages/en/auth.json`. Its control is a `<Button href="/login">`, which renders
   // an `<a>`, not a `<button>` — see components/ui/Button.tsx. Scoped to
   // `main` because the page header also has a "Sign in" link.
   const confirmSignIn = page.getByRole('main').getByRole('link', { name: 'Sign in' });
