@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { PRODUCT_NAME } from '@webaudit/config';
 import { JetBrains_Mono, Lexend_Deca } from 'next/font/google';
-import { ThemeScript } from './theme';
+import { I18nProvider, ThemeScript } from './theme';
 import { AuthProvider } from '../components/auth/AuthProvider';
 import './globals.css';
 
@@ -58,7 +58,9 @@ export default function RootLayout({
         <ThemeScript />
       </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <I18nProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </I18nProvider>
       </body>
     </html>
   );

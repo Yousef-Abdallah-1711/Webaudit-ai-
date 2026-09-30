@@ -21,8 +21,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InputTabs } from '../../components/scan/InputTabs';
 import { ApiError, listRepositories, uploadArchive } from '../../lib/api';
+import { I18nProvider } from '../../app/theme';
 
-const render = (el: React.ReactElement): string => renderToStaticMarkup(el);
+const render = (el: React.ReactElement): string =>
+  renderToStaticMarkup(createElement(I18nProvider, null, el));
 
 afterEach(() => {
   vi.unstubAllGlobals();

@@ -59,7 +59,7 @@ describe('VerifyPage token confirmation', () => {
 
   it('shows the same calm invalid-link state for any client error', async () => {
     const { ApiError } = await import('../../lib/api.js');
-    verifyEmail.mockRejectedValue(new ApiError(410));
+    verifyEmail.mockRejectedValue(new ApiError(410, 'TOKEN_INVALID', 'Token is invalid or expired'));
     const { default: VerifyPage } = await import('../../app/(auth)/verify-email/page.js');
     const mounted = await renderClient(createElement(VerifyPage));
     try {

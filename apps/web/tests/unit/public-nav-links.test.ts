@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { PublicFooter, PublicHeader } from '../../components/public/Public.js';
 import { AuthProvider } from '../../components/auth/AuthProvider.js';
 import LandingPage from '../../app/(public)/page';
+import { I18nProvider } from '../../app/theme';
 
 function hrefs(html: string): string[] {
   return [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? '');
@@ -12,9 +13,15 @@ function hrefs(html: string): string[] {
 describe('public navigation', () => {
   it('contains no dead hash or nonexistent register links', () => {
     const html = [
-      renderToStaticMarkup(createElement(AuthProvider, null, createElement(PublicHeader))),
-      renderToStaticMarkup(createElement(AuthProvider, null, createElement(PublicFooter))),
-      renderToStaticMarkup(createElement(AuthProvider, null, createElement(LandingPage))),
+      renderToStaticMarkup(
+        createElement(I18nProvider, null, createElement(AuthProvider, null, createElement(PublicHeader))),
+      ),
+      renderToStaticMarkup(
+        createElement(I18nProvider, null, createElement(AuthProvider, null, createElement(PublicFooter))),
+      ),
+      renderToStaticMarkup(
+        createElement(I18nProvider, null, createElement(AuthProvider, null, createElement(LandingPage))),
+      ),
     ].join('');
     for (const href of hrefs(html)) {
       expect(href).not.toBe('#');

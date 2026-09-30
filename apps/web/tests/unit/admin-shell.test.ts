@@ -11,13 +11,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { AdminShell, AHead, Stat, Table } from '../../components/admin';
 import { AuthProvider } from '../../components/auth/AuthProvider';
+import { I18nProvider } from '../../app/theme';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/admin'),
 }));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(createElement(AuthProvider, null, element));
+  return renderToStaticMarkup(
+    createElement(I18nProvider, null, createElement(AuthProvider, null, element)),
+  );
 }
 
 describe('AdminShell', () => {

@@ -15,9 +15,12 @@ import { describe, expect, it } from 'vitest';
 import BillingPage from '../../app/(dashboard)/billing/page';
 import PricingPage, { TierGrid, CostTable } from '../../app/(public)/pricing/page';
 import { AuthProvider } from '../../components/auth/AuthProvider';
+import { I18nProvider } from '../../app/theme';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(createElement(AuthProvider, null, element));
+  return renderToStaticMarkup(
+    createElement(I18nProvider, null, createElement(AuthProvider, null, element)),
+  );
 }
 
 describe('BillingPage', () => {

@@ -1,0 +1,23 @@
+{
+  "nav_product": "Product",
+  "nav_pricing": "Pricing",
+  "nav_docs": "Docs",
+  "nav_changelog": "Changelog",
+  "foot_tag": "Measured before inferred. Green means verified. You are never charged for our failures.",
+  "foot_product": "Product",
+  "foot_pricing": "Pricing",
+  "foot_company": "Company",
+  "foot_dashboard": "Dashboard",
+  "foot_admin": "Admin console",
+  "foot_zero": "zero third-party runtime requests",
+  "g_audits": "Audits",
+  "g_account": "Account",
+  "n_scan": "New scan",
+  "n_progress": "Live scan",
+  "n_report": "Report",
+  "n_fixes": "Fixes",
+  "n_readiness": "Readiness",
+  "n_usage": "Usage",
+  "n_billing": "Billing and plans",
+  "n_profile": "Profile"
+}

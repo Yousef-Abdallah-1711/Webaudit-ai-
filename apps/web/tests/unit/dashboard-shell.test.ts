@@ -17,13 +17,16 @@ import { usePathname } from 'next/navigation';
 import { AppShell, PageHead, Sidebar } from '../../components/dashboard';
 import { AuthProvider } from '../../components/auth/AuthProvider';
 import sidebarStyles from '../../components/dashboard/Sidebar.module.css';
+import { I18nProvider } from '../../app/theme';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/'),
 }));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(createElement(AuthProvider, null, element));
+  return renderToStaticMarkup(
+    createElement(I18nProvider, null, createElement(AuthProvider, null, element)),
+  );
 }
 
 function setPathname(path: string): void {

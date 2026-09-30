@@ -20,7 +20,9 @@
  * it once, in the root layout's `<head>`.
  */
 import { useEffect, useReducer } from 'react';
-import { WA_STRINGS, type Lang, type StringKey } from '../lib/strings';
+import { NextIntlClientProvider, useMessages } from 'next-intl';
+import { type Lang, type StringKey } from '../lib/strings';
+import { messagesByLocale } from '../i18n/messages';
 import styles from './theme.module.css';
 
 const isBrowser = typeof window !== 'undefined';
@@ -77,6 +79,7 @@ const waLang = createStore<Lang>('wa-lang', 'en', (value) => {
   const html = document.documentElement;
   html.lang = value;
   html.dir = value === 'ar' ? 'rtl' : 'ltr';
+  document.cookie = `wa-lang=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 });
 
 function waUse<T extends string>(store: Store<T>): [T, (value: T) => void] {
@@ -98,10 +101,41 @@ export function useLang(): [Lang, (value: Lang) => void] {
   return waUse(waLang);
 }
 
+const namespaceByKey = Object.fromEntries(
+  Object.entries(messagesByLocale.en).flatMap(([namespace, messages]) =>
+    Object.keys(messages).map((key) => [key, namespace]),
+  ),
+) as Partial<Record<StringKey, string>>;
+
+function getMessage(messages: unknown, namespace: string | undefined, key: StringKey): string | undefined {
+  if (!namespace || !messages || typeof messages !== 'object') return undefined;
+  const namespaced = (messages as Record<string, unknown>)[namespace];
+  if (!namespaced || typeof namespaced !== 'object') return undefined;
+  const value = (namespaced as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function useT(): [(key: StringKey) => string, Lang, (value: Lang) => void] {
   const [lang, setLang] = useLang();
-  const t = (key: StringKey): string => WA_STRINGS[lang][key] ?? WA_STRINGS.en[key] ?? key;
+  const messages = useMessages();
+  const t = (key: StringKey): string => {
+    const namespace = namespaceByKey[key];
+    return (
+      getMessage(messages, namespace, key) ??
+      getMessage(messagesByLocale.en, namespace, key) ??
+      key
+    );
+  };
   return [t, lang, setLang];
+}
+
+export function I18nProvider({ children }: Readonly<{ children: React.ReactNode }>): React.ReactElement {
+  const [lang] = useLang();
+  return (
+    <NextIntlClientProvider locale={lang} messages={messagesByLocale[lang]}>
+      {children}
+    </NextIntlClientProvider>
+  );
 }
 
 /**

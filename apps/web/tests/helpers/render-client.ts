@@ -6,9 +6,10 @@
  * after its fetch settles. Import only from a test file carrying the
  * `// @vitest-environment jsdom` pragma; `document` does not exist otherwise.
  */
-import { act } from 'react';
+import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import type { ReactElement } from 'react';
+import { I18nProvider } from '../../app/theme';
 
 // React's `act` warns ("not configured to support act") without this global —
 // it still ran correctly in practice, but the flag is what React's own testing
@@ -35,7 +36,7 @@ export async function renderClient(element: ReactElement): Promise<ClientRender>
   let root!: Root;
   await act(async () => {
     root = createRoot(container);
-    root.render(element);
+    root.render(createElement(I18nProvider, null, element));
     // Gives a fetch mock's promise (and the effect's subsequent setState)
     // one microtask to settle before `act` considers the work done.
     await Promise.resolve();

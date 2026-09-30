@@ -12,10 +12,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { LangToggle, ThemeScript, ThemeToggle } from '../../app/theme';
+import { I18nProvider, LangToggle, ThemeScript, ThemeToggle } from '../../app/theme';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 describe('module import (no window)', () => {
