@@ -13,11 +13,13 @@
  * one documented way to pre-fill an editable field; same demo values, same
  * editability, no contract extension.
  *
- * Every value here (name, email, plan, sessions, connected account) is the
- * exact placeholder content the vendored source shows — not real data.
+ * The authenticated profile, plan credits, and GitHub connection status load
+ * from the real account through `getMe()`. Session device details and token
+ * usage details are not currently available.
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Badge, Button, Card, Input } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
 import {
@@ -49,11 +51,8 @@ function Row({ label, note, children }: RowProps): React.ReactElement {
   );
 }
 
-function planLabel(plan: CurrentUser['plan']): string {
-  return plan === 'free' ? 'Free plan' : `${plan.charAt(0).toUpperCase()}${plan.slice(1)} plan`;
-}
-
 export default function SettingsPage(): React.ReactElement {
+  const t = useTranslations('settings');
   const router = useRouter();
   const [theme, setTheme] = useTheme();
   const { logout } = useAuth();
@@ -83,17 +82,24 @@ export default function SettingsPage(): React.ReactElement {
         setProfile(profile);
       })
       .catch(() => {
-        if (active) setProfileError('Your profile could not be loaded.');
+        if (active) setProfileError(t('settings_profile_load_error'));
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
+
+  const planLabel = (plan: CurrentUser['plan']): string =>
+    plan === 'free'
+      ? t('settings_plan_free')
+      : t('settings_plan_label', {
+          plan: `${plan.charAt(0).toUpperCase()}${plan.slice(1)}`,
+        });
 
   const onSaveProfile = async (): Promise<void> => {
     const trimmedName = name.trim();
     if (trimmedName === '') {
-      setProfileError('Name is required.');
+      setProfileError(t('settings_name_required'));
       return;
     }
     setSavingProfile(true);
@@ -102,7 +108,7 @@ export default function SettingsPage(): React.ReactElement {
       const profile = await updateProfile(trimmedName);
       setName(profile.name ?? trimmedName);
     } catch {
-      setProfileError('Your profile could not be saved.');
+      setProfileError(t('settings_profile_save_error'));
     } finally {
       setSavingProfile(false);
     }
@@ -117,7 +123,7 @@ export default function SettingsPage(): React.ReactElement {
       setNewPassword('');
       setShowPasswordForm(false);
     } catch {
-      setProfileError('The current password was incorrect or the new password was invalid.');
+      setProfileError(t('settings_password_change_error'));
     } finally {
       setChangingPassword(false);
     }
@@ -130,7 +136,7 @@ export default function SettingsPage(): React.ReactElement {
       await disconnectGithub();
       setProfile((current) => (current === null ? current : { ...current, githubLogin: null }));
     } catch {
-      setProfileError('The GitHub account could not be disconnected.');
+      setProfileError(t('settings_github_disconnect_error'));
     } finally {
       setDisconnectingGithub(false);
     }
@@ -145,7 +151,7 @@ export default function SettingsPage(): React.ReactElement {
       await deleteAccount();
       window.location.assign('/login');
     } catch {
-      setDeleteError('The account could not be deleted.');
+      setDeleteError(t('settings_delete_error'));
       setDeleting(false);
     }
   };
@@ -159,24 +165,27 @@ export default function SettingsPage(): React.ReactElement {
   return (
     <div>
       <PageHead
-        eyebrow="Profile"
-        title={name || 'Profile'}
-        meta={`${email || 'Loading profile...'} · ${planLabel(profile?.plan ?? 'free')}`}
+        eyebrow={t('settings_profile')}
+        title={name || t('settings_profile')}
+        meta={t('settings_profile_meta', {
+          email: email || t('settings_profile_loading'),
+          plan: planLabel(profile?.plan ?? 'free'),
+        })}
         actions={
           <Button
             size="sm"
             disabled={savingProfile || name.trim() === ''}
             onClick={() => void onSaveProfile()}
           >
-            {savingProfile ? 'Saving...' : 'Save changes'}
+            {savingProfile ? t('settings_saving') : t('settings_save_changes')}
           </Button>
         }
       />
 
       <div className={styles.layout}>
         <div className={styles.col}>
-          <Card padding={26} title="Account">
-            <Row label="Name">
+          <Card padding={26} title={t('settings_account')}>
+            <Row label={t('settings_name')}>
               <div className={styles.fieldWrap}>
                 <Input
                   value={name}
@@ -186,24 +195,24 @@ export default function SettingsPage(): React.ReactElement {
                 />
               </div>
             </Row>
-            <Row label="Email" note="Changing this sends a new verification link.">
+            <Row label={t('settings_email')} note={t('settings_email_cannot_change_here')}>
               <div className={styles.fieldWrap}>
                 <Input value={email} type="email" readOnly />
               </div>
             </Row>
             {profileError !== null && <p className={styles.deleteError}>{profileError}</p>}
-            <Row label="Password" note="At least 12 characters.">
+            <Row label={t('settings_password')} note={t('settings_password_minimum')}>
               {showPasswordForm ? (
                 <div className={styles.fieldWrap}>
                   <Input
                     type="password"
-                    placeholder="Current password"
+                    placeholder={t('settings_current_password')}
                     value={currentPassword}
                     onChange={(event) => setCurrentPassword(event.target.value)}
                   />
                   <Input
                     type="password"
-                    placeholder="New password"
+                    placeholder={t('settings_new_password')}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}
                   />
@@ -213,16 +222,21 @@ export default function SettingsPage(): React.ReactElement {
                     disabled={changingPassword || currentPassword === '' || newPassword === ''}
                     onClick={() => void onChangePassword()}
                   >
-                    {changingPassword ? 'Changing...' : 'Confirm password change'}
+                    {changingPassword
+                      ? t('settings_password_changing')
+                      : t('settings_password_confirm_change')}
                   </Button>
                 </div>
               ) : (
                 <Button variant="secondary" size="sm" onClick={() => setShowPasswordForm(true)}>
-                  Change password
+                  {t('settings_password_change')}
                 </Button>
               )}
             </Row>
-            <Row label="Appearance" note="Dark-mode severity values are not contrast-verified yet.">
+            <Row
+              label={t('settings_appearance')}
+              note={t('settings_appearance_severity_note')}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -241,61 +255,68 @@ export default function SettingsPage(): React.ReactElement {
                     }
                   />
                 </span>
-                {dark ? 'Dark' : 'Light'}
+                {dark ? t('settings_theme_dark') : t('settings_theme_light')}
               </button>
             </Row>
           </Card>
 
-          <Card padding={26} title="Connected accounts">
+          <Card padding={26} title={t('settings_connected_accounts')}>
             <Row
-              label="GitHub"
-              note="Grants repository input. Revoking it refunds any scan that then fails."
+              label={t('settings_github')}
+              note={t('settings_github_note')}
             >
               <div className={styles.connectedRow}>
                 {profile?.githubLogin === null ? (
-                  <span className={styles.tokensNote}>Not connected</span>
+                  <span className={styles.tokensNote}>{t('settings_not_connected')}</span>
                 ) : (
                   <>
-                    <Badge tone="success">Connected</Badge>
-                    <span className={styles.mono}>{profile?.githubLogin ?? 'Loading...'}</span>
+                    <Badge tone="success">{t('settings_connected')}</Badge>
+                    <span className={styles.mono}>
+                      {profile?.githubLogin ?? t('settings_github_loading')}
+                    </span>
                     <Button
                       variant="ghost"
                       size="sm"
                       disabled={disconnectingGithub}
                       onClick={() => void onDisconnectGithub()}
                     >
-                      {disconnectingGithub ? 'Disconnecting...' : 'Disconnect'}
+                      {disconnectingGithub
+                        ? t('settings_github_disconnecting')
+                        : t('settings_github_disconnect')}
                     </Button>
                   </>
                 )}
               </div>
             </Row>
-            <Row label="Tokens" note="Stored encrypted. There is no plaintext column.">
+            <Row label={t('settings_tokens')} note={t('settings_tokens_note')}>
               <span className={styles.tokensNote}>
-                Stored encrypted · usage details unavailable
+                {t('settings_tokens_usage_unavailable')}
               </span>
             </Row>
           </Card>
 
-          <Card padding={26} title="Sessions">
-            <p className={styles.tokensNote}>Session device details are not available yet.</p>
+          <Card padding={26} title={t('settings_sessions')}>
+            <p className={styles.tokensNote}>{t('settings_sessions_unavailable')}</p>
             <Button
               variant="secondary"
               size="sm"
               disabled={signingOut}
               onClick={() => void onLogout()}
             >
-              {signingOut ? 'Signing out...' : 'Sign out'}
+              {signingOut ? t('settings_signing_out') : t('settings_sign_out')}
             </Button>
           </Card>
 
-          <Card padding={26} title="Delete account" accentRule="var(--sev-critical)">
+          <Card
+            padding={26}
+            title={t('settings_delete_account')}
+            accentRule="var(--sev-critical)"
+          >
             <p className={styles.deleteNote}>
-              Deletion cascades: every scan, report, issue, verification attempt and stored artifact
-              is removed. Purchased credits are forfeited. This cannot be undone.
+              {t('settings_delete_note')}
             </p>
             <label className={styles.confirmLabel}>
-              Type DELETE to confirm
+              {t('settings_delete_confirm')}
               <Input
                 value={deleteConfirmation}
                 onChange={(event) => setDeleteConfirmation(event.target.value)}
@@ -308,27 +329,31 @@ export default function SettingsPage(): React.ReactElement {
               disabled={deleting || deleteConfirmation !== 'DELETE'}
               onClick={() => void onDeleteAccount()}
             >
-              Delete my account
+              {t('settings_delete_button')}
             </Button>
           </Card>
         </div>
 
         <div className={styles.col}>
-          <Card padding={22} title="Plan">
+          <Card padding={22} title={t('settings_plan')}>
             <div className={styles.planValue}>{planLabel(profile?.plan ?? 'free')}</div>
             <div className={styles.planSub}>
               {profile === null
-                ? 'Loading plan details...'
-                : `${String(profile.credits.plan)} plan credits available`}
+                ? t('settings_plan_loading')
+                : t('settings_plan_credit_count', { count: profile.credits.plan })}
             </div>
-            <Button variant="secondary" fullWidth size="sm">
-              Manage plan
+            <Button
+              variant="secondary"
+              fullWidth
+              size="sm"
+              onClick={() => router.push('/billing')}
+            >
+              {t('settings_manage_plan')}
             </Button>
           </Card>
-          <Card padding={22} title="Retention">
+          <Card padding={22} title={t('settings_retention')}>
             <p className={styles.retentionText}>
-              Reports are kept 12 months on Pro. We warn you before anything is removed, and an
-              export is always self-contained.
+              {t('settings_retention_note')}
             </p>
           </Card>
         </div>

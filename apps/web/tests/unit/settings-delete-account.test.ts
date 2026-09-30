@@ -4,7 +4,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { deleteAccount } from '../../lib/api.js';
 import SettingsPage from '../../app/(dashboard)/settings/page';
+import { I18nProvider } from '../../app/theme';
 import { AuthProvider } from '../../components/auth/AuthProvider';
+import { messagesByLocale } from '../../i18n/messages';
 
 // SettingsPage calls useRouter()/useAuth() directly -- see
 // dashboard-shell.test.ts for the established pattern this matches.
@@ -16,9 +18,15 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('account deletion', () => {
   it('exposes an explicit confirmation before the destructive action', () => {
-    const html = renderToStaticMarkup(createElement(AuthProvider, null, createElement(SettingsPage)));
-    expect(html).toContain('Type DELETE to confirm');
-    expect(html).toContain('Delete my account');
+    const html = renderToStaticMarkup(
+      createElement(
+        I18nProvider,
+        null,
+        createElement(AuthProvider, null, createElement(SettingsPage)),
+      ),
+    );
+    expect(html).toContain(messagesByLocale.en.settings.settings_delete_confirm);
+    expect(html).toContain(messagesByLocale.en.settings.settings_delete_button);
   });
 
   it('calls DELETE /auth/me and accepts the empty 204 response', async () => {

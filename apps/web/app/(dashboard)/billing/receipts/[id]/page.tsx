@@ -2,11 +2,13 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../../../components/dashboard';
 import { ApiError, getReceiptHtml } from '../../../../../lib/api';
 import styles from './page.module.css';
 
 export default function BillingReceiptPage(): React.ReactElement {
+  const t = useTranslations('billing');
   const params = useParams<{ id: string }>();
   const receiptId = params.id;
   const [html, setHtml] = useState<string | null>(null);
@@ -22,20 +24,31 @@ export default function BillingReceiptPage(): React.ReactElement {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : 'The receipt could not be loaded.');
+        setError(
+          err instanceof ApiError ? err.message : t('billing_receipt_load_error'),
+        );
       });
     return () => {
       cancelled = true;
     };
-  }, [receiptId]);
+  }, [receiptId, t]);
 
   const srcDoc = useMemo(() => html ?? '<!doctype html><html><body></body></html>', [html]);
 
   return (
     <div>
-      <PageHead eyebrow="Billing" title="Receipt" meta={`receipt ${receiptId.slice(0, 8)}`} />
+      <PageHead
+        eyebrow={t('billing_page_eyebrow')}
+        title={t('billing_receipt_title')}
+        meta={t('billing_receipt_meta', { receiptId: receiptId.slice(0, 8) })}
+      />
       {error !== null && <p className={styles.error}>{error}</p>}
-      <iframe className={styles.frame} title="Payment receipt" sandbox="" srcDoc={srcDoc} />
+      <iframe
+        className={styles.frame}
+        title={t('billing_receipt_frame_title')}
+        sandbox=""
+        srcDoc={srcDoc}
+      />
     </div>
   );
 }

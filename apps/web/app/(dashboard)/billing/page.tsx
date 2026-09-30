@@ -21,6 +21,7 @@
  * until the provider webhook confirms the payment.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { Badge, Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
 import {
@@ -42,20 +43,6 @@ import styles from './page.module.css';
 
 const SUBSCRIBABLE = new Set<string>(['starter', 'pro', 'business']);
 
-function formatDate(iso: string | null): string {
-  if (iso === null) return '—';
-  return new Date(iso).toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function retentionLine(days: number): string {
-  if (days >= 365 && days % 365 === 0) return `${String((days / 365) * 12)} months`;
-  return `${String(days)} days`;
-}
-
 function goToCheckout(url: string): void {
   window.location.assign(url);
 }
@@ -65,18 +52,25 @@ interface DrewFromProps {
 }
 
 function DrewFrom({ drewFrom }: DrewFromProps): React.ReactElement | null {
+  const t = useTranslations('billing');
   const parts = Object.entries(drewFrom);
   if (parts.length === 0) return null;
   return (
     <span className={styles.drewFrom}>
       {parts
-        .map(([kind, n]) => `${String(n)} ${kind === 'PLAN' ? 'plan' : 'purchased'}`)
+        .map(([kind, count]) =>
+          kind === 'PLAN'
+            ? t('billing_drew_from_plan', { count })
+            : t('billing_drew_from_purchased', { count }),
+        )
         .join(' · ')}
     </span>
   );
 }
 
 export default function BillingPage(): React.ReactElement {
+  const t = useTranslations('billing');
+  const format = useFormatter();
   const [balance, setBalance] = useState<CreditBalanceView | null>(null);
   const [movements, setMovements] = useState<readonly CreditMovement[]>([]);
   const [receipts, setReceipts] = useState<readonly BillingReceiptSummary[]>([]);
@@ -89,6 +83,20 @@ export default function BillingPage(): React.ReactElement {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const formatDate = (iso: string | null): string =>
+    iso === null
+      ? t('billing_value_unavailable')
+      : format.dateTime(new Date(iso), {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+  const retentionLine = (days: number): string =>
+    days >= 365 && days % 365 === 0
+      ? t('billing_retention_months', { count: (days / 365) * 12 })
+      : t('billing_retention_days', { count: days });
+  const formatCount = (count: number): string => t('billing_number', { value: count });
 
   const refresh = useCallback(async () => {
     try {
@@ -112,9 +120,9 @@ export default function BillingPage(): React.ReactElement {
         setCancelAtPeriodEnd(false);
       }
     } catch {
-      setError('Your billing details could not be loaded.');
+      setError(t('billing_load_error'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -135,24 +143,24 @@ export default function BillingPage(): React.ReactElement {
           setError(
             tier === undefined
               ? err.message
-              : `${err.message} The ${tier} plan or higher is required.`,
+            : t('billing_plan_upgrade_error', { message: err.message, tier }),
           );
         } else if (err instanceof ApiError) {
           setError(err.message);
         } else {
-          setError('That did not go through.');
+          setError(t('billing_action_error'));
         }
       } finally {
         setBusy(false);
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   const onPickPlan = (planId: string): void => {
     if (!SUBSCRIBABLE.has(planId)) return;
     const id = planId as SubscribablePlanId;
-    void run(`You are now on the ${planId} plan.`, async () => {
+    void run(t('billing_plan_changed', { plan: planId }), async () => {
       if (currentPlanId === 'free') {
         const result = await subscribe(id);
         if ('checkout' in result) {
@@ -172,21 +180,21 @@ export default function BillingPage(): React.ReactElement {
   };
 
   const onCancel = (): void => {
-    void run('Your plan will end at the period boundary.', async () => {
+    void run(t('billing_plan_cancelled'), async () => {
       const { subscription, reportsReadableUntil } = await cancelSubscription();
       setCancelAtPeriodEnd(subscription.cancelAtPeriodEnd);
       setRenewsAt(subscription.periodEnd);
-      setNotice(`Reports stay readable until ${formatDate(reportsReadableUntil)}.`);
+      setNotice(t('billing_reports_readable_until', { date: formatDate(reportsReadableUntil) }));
     });
   };
 
   const onBuy = (): void => {
     const n = Number(topUp);
     if (!Number.isInteger(n) || n <= 0) {
-      setError('Enter a whole number of credits.');
+      setError(t('billing_credit_amount_invalid'));
       return;
     }
-    void run('Continue to checkout to complete the credit purchase.', async () => {
+    void run(t('billing_continue_to_checkout'), async () => {
       const result = await purchaseCredits(n);
       if ('checkout' in result) {
         goToCheckout(result.checkout.checkoutUrl);
@@ -199,12 +207,16 @@ export default function BillingPage(): React.ReactElement {
   return (
     <div>
       <PageHead
-        eyebrow="Billing"
-        title="Billing and plans"
+        eyebrow={t('billing_page_eyebrow')}
+        title={t('billing_page_title')}
         meta={
           renewsAt === null
-            ? 'Free plan · credits granted once'
-            : `${currentPlanId} plan · ${cancelAtPeriodEnd ? 'ends' : 'renews'} ${formatDate(renewsAt)}`
+            ? t('billing_meta_free')
+            : t('billing_meta_active', {
+                plan: currentPlanId,
+                status: t(cancelAtPeriodEnd ? 'billing_status_ends' : 'billing_status_renews'),
+                date: formatDate(renewsAt),
+              })
         }
       />
 
@@ -213,28 +225,35 @@ export default function BillingPage(): React.ReactElement {
 
       <div className={styles.layout}>
         <div className={styles.mainCol}>
-          <Card padding={22} title="Credit balance">
+          <Card padding={22} title={t('billing_credit_balance')}>
             <div className={styles.balanceGrid}>
               <div>
-                <div className={styles.balanceValue}>{balance?.plan ?? '—'}</div>
-                <div className={styles.balanceLabel}>Plan credits</div>
+                <div className={styles.balanceValue}>
+                  {balance === null ? t('billing_value_unavailable') : formatCount(balance.plan)}
+                </div>
+                <div className={styles.balanceLabel}>{t('billing_plan_credits')}</div>
                 <div className={styles.balanceNote}>
-                  Expire at renewal
                   {balance?.planExpiresAt !== null && balance?.planExpiresAt !== undefined
-                    ? ` · ${formatDate(balance.planExpiresAt)}`
-                    : ''}
+                    ? t('billing_plan_credit_expiration_date', {
+                        date: formatDate(balance.planExpiresAt),
+                      })
+                    : t('billing_plan_credit_expiration')}
                 </div>
               </div>
               <div>
-                <div className={styles.balanceValue}>{balance?.purchased ?? '—'}</div>
-                <div className={styles.balanceLabel}>Purchased credits</div>
-                <div className={styles.balanceNote}>Never expire · spent after plan credits</div>
+                <div className={styles.balanceValue}>
+                  {balance === null ? t('billing_value_unavailable') : formatCount(balance.purchased)}
+                </div>
+                <div className={styles.balanceLabel}>{t('billing_purchased_credits')}</div>
+                <div className={styles.balanceNote}>{t('billing_purchased_credit_note')}</div>
               </div>
             </div>
           </Card>
 
-          <Card padding={22} title="Movements">
-            {movements.length === 0 && <p className={styles.balanceNote}>No movements yet.</p>}
+          <Card padding={22} title={t('billing_movements')}>
+            {movements.length === 0 && (
+              <p className={styles.balanceNote}>{t('billing_no_movements')}</p>
+            )}
             {movements.map((m) => (
               <div key={m.id} className={styles.moveRow}>
                 <span className={styles.moveDate}>{formatDate(m.createdAt)}</span>
@@ -250,18 +269,19 @@ export default function BillingPage(): React.ReactElement {
                   }
                 >
                   {m.type === 'REFUND' || m.type === 'GRANT' ? '+' : '−'}
-                  {String(Math.abs(m.amount))}
+                  {formatCount(Math.abs(m.amount))}
                 </span>
               </div>
             ))}
             <p className={styles.balanceNote}>
-              You are never charged for our failures. Platform faults, provider outages and internal
-              errors refund automatically or never debit.
+              {t('billing_failure_refund_note')}
             </p>
           </Card>
 
-          <Card padding={22} title="Receipts">
-            {receipts.length === 0 && <p className={styles.balanceNote}>No receipts yet.</p>}
+          <Card padding={22} title={t('billing_receipts')}>
+            {receipts.length === 0 && (
+              <p className={styles.balanceNote}>{t('billing_no_receipts')}</p>
+            )}
             {receipts.map((receipt) => (
               <a
                 key={receipt.id}
@@ -273,7 +293,7 @@ export default function BillingPage(): React.ReactElement {
                   <span className={styles.receiptMeta}>{formatDate(receipt.createdAt)}</span>
                 </span>
                 <span className={styles.receiptAmount}>
-                  {(receipt.amountMicros / 1_000_000).toLocaleString(undefined, {
+                  {format.number(receipt.amountMicros / 1_000_000, {
                     style: 'currency',
                     currency: 'USD',
                   })}
@@ -282,11 +302,10 @@ export default function BillingPage(): React.ReactElement {
             ))}
           </Card>
 
-          <Card padding={22} title="Choose a plan">
+          <Card padding={22} title={t('billing_choose_plan')}>
             {!paymentsEnabled && (
               <p className={styles.balanceNote}>
-                Plan changes are managed by an administrator in this deployment — contact yours to
-                move to a different plan.
+                {t('billing_plan_changes_administered')}
               </p>
             )}
             <div className={styles.tierGrid}>
@@ -302,13 +321,19 @@ export default function BillingPage(): React.ReactElement {
                       {isNow && <Badge tone="accent">Current</Badge>}
                     </div>
                     <div className={styles.tierCredits}>
-                      {p.monthlyCredits} credits{p.creditsRecur ? ' / mo' : ', once'}
+                      {p.creditsRecur
+                        ? t('billing_tier_credits_monthly', { count: p.monthlyCredits })
+                        : t('billing_tier_credits_once', { count: p.monthlyCredits })}
                     </div>
                     <div className={styles.tierFeat}>
-                      <div>{p.concurrentScanLimit} concurrent</div>
-                      <div>{retentionLine(p.retentionDays)} retention</div>
-                      {p.allowCreditPurchase && <div>Top-ups</div>}
-                      {p.allowLoadGeneration && <div>Load generation</div>}
+                      <div>{t('billing_feature_concurrency', { count: p.concurrentScanLimit })}</div>
+                      <div>
+                        {t('billing_feature_retention', {
+                          retention: retentionLine(p.retentionDays),
+                        })}
+                      </div>
+                      {p.allowCreditPurchase && <div>{t('billing_feature_topups')}</div>}
+                      {p.allowLoadGeneration && <div>{t('billing_feature_load_generation')}</div>}
                     </div>
                     {paymentsEnabled ? (
                       <Button
@@ -320,11 +345,17 @@ export default function BillingPage(): React.ReactElement {
                           onPickPlan(p.id);
                         }}
                       >
-                        {isNow ? 'Current plan' : p.id === 'free' ? 'Free' : `Choose ${p.name}`}
+                      {isNow
+                        ? t('billing_current_plan')
+                        : p.id === 'free'
+                          ? t('billing_plan_free')
+                          : t('billing_choose_named_plan', { plan: p.name })}
                       </Button>
                     ) : (
                       <Button variant="secondary" size="sm" fullWidth disabled>
-                        {isNow ? 'Current plan' : 'Contact administrator'}
+                        {isNow
+                          ? t('billing_current_plan')
+                          : t('billing_contact_administrator')}
                       </Button>
                     )}
                   </div>
@@ -335,29 +366,31 @@ export default function BillingPage(): React.ReactElement {
         </div>
 
         <div className={styles.sideCol}>
-          <Card padding={22} title="Plan">
-            <div className={styles.planName}>{currentPlan?.name ?? 'Free'}</div>
+          <Card padding={22} title={t('billing_plan')}>
+            <div className={styles.planName}>{currentPlan?.name ?? t('billing_plan_free')}</div>
             <div className={styles.balanceNote}>
               {currentPlan === null
-                ? 'Credits granted once.'
-                : `${String(currentPlan.monthlyCredits)} credits a month${
-                    renewsAt === null
-                      ? ''
-                      : ` · ${cancelAtPeriodEnd ? 'ends' : 'renews'} ${formatDate(renewsAt)}`
-                  }`}
+                ? t('billing_plan_credits_granted_once')
+                : renewsAt === null
+                  ? t('billing_plan_monthly_credits', { count: currentPlan.monthlyCredits })
+                  : t('billing_plan_monthly_credits_status', {
+                      count: currentPlan.monthlyCredits,
+                      status: t(cancelAtPeriodEnd ? 'billing_status_ends' : 'billing_status_renews'),
+                      date: formatDate(renewsAt),
+                    })}
             </div>
             {renewsAt !== null && !cancelAtPeriodEnd && (
               <Button variant="secondary" size="sm" fullWidth disabled={busy} onClick={onCancel}>
-                Cancel plan
+                {t('billing_cancel_plan')}
               </Button>
             )}
           </Card>
 
-          <Card padding={22} title="Top up">
+          <Card padding={22} title={t('billing_topup')}>
             {paymentsEnabled ? (
               <>
                 <p className={styles.balanceNote}>
-                  Purchased credits never expire. Paid plans only.
+                  {t('billing_topup_note')}
                 </p>
                 <input
                   className={styles.topUpInput}
@@ -366,25 +399,27 @@ export default function BillingPage(): React.ReactElement {
                   onChange={(e) => {
                     setTopUp(e.target.value);
                   }}
-                  aria-label="Credits to purchase"
+                  aria-label={t('billing_credits_to_purchase')}
                 />
                 <Button variant="primary" size="sm" fullWidth disabled={busy} onClick={onBuy}>
-                  Buy credits
+                  {t('billing_buy_credits')}
                 </Button>
               </>
             ) : (
               <p className={styles.balanceNote}>
-                Credit purchases are managed by an administrator in this deployment — contact
-                yours for additional credits.
+                {t('billing_credit_purchases_administered')}
               </p>
             )}
           </Card>
 
-          <Card padding={22} title="Retention">
+          <Card padding={22} title={t('billing_retention')}>
             <p className={styles.balanceNote}>
-              Reports are kept{' '}
-              {currentPlan === null ? '7 days' : retentionLine(currentPlan.retentionDays)}. We warn
-              you before anything is removed, and an export is always self-contained.
+              {t('billing_retention_note', {
+                retention:
+                  currentPlan === null
+                    ? t('billing_retention_days', { count: 7 })
+                    : retentionLine(currentPlan.retentionDays),
+              })}
             </p>
           </Card>
         </div>
