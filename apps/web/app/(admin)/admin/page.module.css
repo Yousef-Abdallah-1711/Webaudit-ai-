@@ -37,3 +37,22 @@
   flex-direction: column;
   gap: 6px;
 }
+
+@media (max-width: 40rem) {
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .twoCol {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid > *,
+  .twoCol > * {
+    min-width: 0;
+  }
+
+  .statsGrid > * {
+    overflow-wrap: anywhere;
+  }
+}

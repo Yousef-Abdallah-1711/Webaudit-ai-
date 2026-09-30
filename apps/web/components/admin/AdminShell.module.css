@@ -254,7 +254,8 @@
 }
 
 .table {
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-card);
   background: var(--surface-page);
@@ -308,6 +309,30 @@
 }
 
 @media (max-width: 40rem) {
+  .topBar {
+    height: auto;
+    min-height: var(--space-12);
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3) var(--space-2)
+      calc(var(--space-12) + var(--space-1));
+  }
+
+  .topBarOperator {
+    flex: 1 1 100%;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .topBarActions {
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+
+  .mainInner :global([class*='page_grid__']) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .sidebar {
     position: fixed;
     inset-inline-start: 0;
