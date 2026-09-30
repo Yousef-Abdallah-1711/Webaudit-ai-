@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { PRODUCT_NAME } from '@webaudit/config';
-import { JetBrains_Mono, Lexend_Deca } from 'next/font/google';
+import { JetBrains_Mono, Lexend_Deca, Noto_Sans_Arabic } from 'next/font/google';
 import { getLocale } from 'next-intl/server';
 import { I18nProvider, ThemeScript } from './theme';
 import { AuthProvider } from '../components/auth/AuthProvider';
@@ -33,6 +33,13 @@ const jetbrainsMono = JetBrains_Mono({
   display: 'swap',
 });
 
+const notoSansArabic = Noto_Sans_Arabic({
+  subsets: ['arabic'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-noto-sans-arabic',
+  display: 'swap',
+});
+
 export const metadata: Metadata = {
   title: PRODUCT_NAME,
   description: 'An honest audit of your software.',
@@ -49,7 +56,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${lexendDeca.variable} ${jetbrainsMono.variable}`}
+      className={`${lexendDeca.variable} ${jetbrainsMono.variable} ${notoSansArabic.variable}`}
       suppressHydrationWarning
     >
       <head>
