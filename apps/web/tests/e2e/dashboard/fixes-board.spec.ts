@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import enFixes from '../../../messages/en/fixes.json';
+import enFixes from '../../../messages/en/fixes.json' with { type: 'json' };
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi } from '../support/auth.js';
 import { runScanToCompletion } from '../support/journey.js';
