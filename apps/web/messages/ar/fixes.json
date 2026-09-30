@@ -1,1 +1,26 @@
-{}
+{
+  "fixes_label": "الإصلاحات",
+  "fixes_loading": "جارٍ التحميل…",
+  "fixes_load_error": "تعذّر تحميل هذا التدقيق.",
+  "fixes_assert_not_charged": "تعذّر بدء إعادة الفحص. لم يتم خصم أي رصيد.",
+  "fixes_assert_refresh_balance": "تعذّر بدء إعادة الفحص. حدّث الصفحة لمعرفة رصيدك الحالي.",
+  "fixes_no_audit": "لم يتم اختيار تدقيق",
+  "fixes_no_audit_meta": "افتح تقريراً ثم اختر الإصلاحات.",
+  "fixes_scan_title": "الفحص {scanId}",
+  "fixes_loading_meta": "جارٍ التحميل…",
+  "fixes_status": "المتبقي {outstanding} · تم التحقق من {resolved}",
+  "fixes_count_only": "{count}",
+  "fixes_stat_critical": "حرجة",
+  "fixes_stat_high": "مرتفعة",
+  "fixes_stat_medium_low": "متوسطة ومنخفضة",
+  "fixes_stat_resolved": "تم التحقق",
+  "fixes_empty": "لم ينتج عن هذا التدقيق أي مشكلات.",
+  "fixes_note": "عند تحديد مشكلة على أنها أُصلحت، نجري فحصاً محدوداً. ولا تتحول إلى الأخضر إلا بعد اجتياز الفحص.",
+  "fixes_verified": "تم التحقق {time}",
+  "fixes_regressed": "عادت المشكلة",
+  "fixes_button_verified": "تم التحقق",
+  "fixes_button_rechecking": "جارٍ إعادة الفحص…",
+  "fixes_button_assert": "أصلحت هذا — ٣ أرصدة",
+  "fixes_unverifiable": "لا يمكن إعادة فحص هذه المشكلة تلقائياً. أعد التدقيق للتأكد من إصلاحها.",
+  "fixes_evidence_label": "فشلت إعادة الفحص — الأدلة الحالية"
+}

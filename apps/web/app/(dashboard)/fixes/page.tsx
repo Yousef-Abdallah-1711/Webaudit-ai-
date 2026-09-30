@@ -24,6 +24,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../components/dashboard';
 import { FixesBoard } from '../../../components/fixes';
 import { connectRealtime } from '../../../lib/realtime';
@@ -37,15 +38,17 @@ import {
 } from '../../../lib/api';
 
 export default function FixesPage(): React.ReactElement {
+  const t = useTranslations('fixes');
   // `useSearchParams` needs a Suspense boundary for static rendering (Next 15).
   return (
-    <Suspense fallback={<PageHead eyebrow="Fixes" title="Loading…" />}>
+    <Suspense fallback={<PageHead eyebrow={t('fixes_label')} title={t('fixes_loading')} />}>
       <FixesPageContent />
     </Suspense>
   );
 }
 
 function FixesPageContent(): React.ReactElement {
+  const t = useTranslations('fixes');
   const scanId = useSearchParams().get('scan') ?? '';
   const [issues, setIssues] = useState<readonly FixesIssue[] | null>(null);
   const [failingEvidence, setFailingEvidence] = useState<Record<string, unknown>>({});
@@ -61,9 +64,9 @@ function FixesPageContent(): React.ReactElement {
       setIssues(fetched);
       setFailingEvidence(evidence);
     } catch {
-      setError('This audit could not be loaded.');
+      setError(t('fixes_load_error'));
     }
-  }, [scanId]);
+  }, [scanId, t]);
 
   useEffect(() => {
     void refresh();
@@ -99,22 +102,22 @@ function FixesPageContent(): React.ReactElement {
       } catch (err) {
         setError(
           err instanceof ApiError && (err.status === 402 || err.status === 409)
-            ? 'That re-check could not be started. You were not charged.'
-            : 'That re-check could not be started. Refresh to see your current balance.',
+            ? t('fixes_assert_not_charged')
+            : t('fixes_assert_refresh_balance'),
         );
         void refresh();
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   if (scanId === '') {
     return (
       <div>
         <PageHead
-          eyebrow="Fixes"
-          title="No audit selected"
-          meta="Open a report and choose Fixes."
+          eyebrow={t('fixes_label')}
+          title={t('fixes_no_audit')}
+          meta={t('fixes_no_audit_meta')}
         />
       </div>
     );
@@ -126,12 +129,12 @@ function FixesPageContent(): React.ReactElement {
   return (
     <div>
       <PageHead
-        eyebrow="Fixes"
-        title={`scan ${scanId.slice(0, 8)}`}
+        eyebrow={t('fixes_label')}
+        title={t('fixes_scan_title', { scanId: scanId.slice(0, 8) })}
         meta={
           issues === null
-            ? 'Loading…'
-            : `${String(outstanding)} outstanding · ${String(resolved)} resolved`
+            ? t('fixes_loading_meta')
+            : t('fixes_status', { outstanding, resolved })
         }
       />
       {error !== null && <p>{error}</p>}

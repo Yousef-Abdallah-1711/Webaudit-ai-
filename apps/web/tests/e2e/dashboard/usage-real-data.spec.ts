@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
+import enUsage from '../../../messages/en/usage.json';
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi, type Creds } from '../support/auth.js';
 import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';
@@ -41,17 +42,17 @@ test('usage reflects a completed scan and exports the same real data', async ({ 
   await page.waitForURL(/\/reports\/[^/]+$/);
 
   await page.goto(`${stack.webBaseUrl}/usage`);
-  const auditsCard = page.getByText('Audits run').locator('..');
+  const auditsCard = page.getByText(enUsage.usage_audits_run).locator('..');
   await expect(auditsCard).toContainText('1');
-  const spentCard = page.getByText('Spent this period').locator('..');
+  const spentCard = page.getByText(enUsage.usage_spent_this_period).locator('..');
   await expect(spentCard).toContainText('30');
   await expect(page.getByText('Khalid Ahmed')).toHaveCount(0);
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export CSV' }).click();
+  await page.getByRole('button', { name: enUsage.usage_export_csv }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('webaudit-usage.csv');
   const csv = await readFile(await download.path(), 'utf8');
-  expect(csv).toContain('daily_spend');
-  expect(csv).toContain('area');
+  expect(csv).toContain(enUsage.usage_csv_daily_spend);
+  expect(csv).toContain(enUsage.usage_csv_area);
 });

@@ -16,6 +16,7 @@
  */
 
 import { SeverityBadge, type SeverityBadgeProps } from '../report';
+import { useFormatter, useTranslations } from 'next-intl';
 import type { FixesIssue } from '../../lib/api';
 import styles from './IssueRow.module.css';
 
@@ -36,12 +37,6 @@ const SEVERITY_CASE: Record<string, NonNullable<SeverityBadgeProps['level']>> = 
   INFO: 'info',
 };
 
-function timeOf(iso: string | null): string {
-  if (iso === null) return '';
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
 export interface IssueRowProps {
   issue: FixesIssue;
   /** Current failing evidence from the most recent FAILED re-check, if any. */
@@ -56,9 +51,20 @@ export function IssueRow({
   first = false,
   onAssertFixed,
 }: IssueRowProps): React.ReactElement {
+  const t = useTranslations('fixes');
+  const format = useFormatter();
   const resolved = issue.state === 'RESOLVED';
   const checking = issue.state === 'ASSERTED_FIXED';
   const level = resolved ? 'resolved' : (SEVERITY_CASE[issue.severity] ?? 'info');
+  const resolvedTime =
+    issue.resolvedAt === null
+      ? ''
+      : format.dateTime(new Date(issue.resolvedAt), {
+          hour: '2-digit',
+          minute: '2-digit',
+          hourCycle: 'h23',
+          timeZone: 'UTC',
+        });
 
   const rowClass = [styles.row, first ? '' : styles.rowBordered, resolved ? styles.rowResolved : '']
     .filter(Boolean)
@@ -70,9 +76,11 @@ export function IssueRow({
         <SeverityBadge level={level} />
         <span className={styles.title}>{issue.title}</span>
         <span className={styles.actions}>
-          {resolved && <span className={styles.verified}>verified {timeOf(issue.resolvedAt)}</span>}
+          {resolved && (
+            <span className={styles.verified}>{t('fixes_verified', { time: resolvedTime })}</span>
+          )}
           {issue.previouslyResolved && !resolved && (
-            <span className={styles.regressed}>regressed</span>
+            <span className={styles.regressed}>{t('fixes_regressed')}</span>
           )}
           <button
             type="button"
@@ -82,7 +90,11 @@ export function IssueRow({
               onAssertFixed(issue.id);
             }}
           >
-            {resolved ? 'Verified' : checking ? 'Re-checking…' : 'I fixed this — 3 cr'}
+            {resolved
+              ? t('fixes_button_verified')
+              : checking
+                ? t('fixes_button_rechecking')
+                : t('fixes_button_assert')}
           </button>
         </span>
       </div>
@@ -95,13 +107,13 @@ export function IssueRow({
 
       {issue.state === 'UNVERIFIABLE' && (
         <div className={styles.unverifiable}>
-          This issue has no automated re-check. Re-run the audit to confirm it is fixed.
+          {t('fixes_unverifiable')}
         </div>
       )}
 
       {failingEvidence !== undefined && !resolved && !checking && (
         <div className={styles.evidence}>
-          <div className={styles.evidenceLabel}>Re-check failed — current evidence</div>
+          <div className={styles.evidenceLabel}>{t('fixes_evidence_label')}</div>
           <pre className={styles.evidenceBody}>{formatEvidence(failingEvidence)}</pre>
         </div>
       )}

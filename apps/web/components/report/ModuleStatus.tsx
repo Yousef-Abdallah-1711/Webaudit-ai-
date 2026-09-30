@@ -15,6 +15,7 @@
  * prefers-reduced-motion guard targets `[style*="wa-spin"]`, so moving this
  * to a CSS class would silently break that guard.
  */
+import { useTranslations } from 'next-intl';
 import styles from './ModuleStatus.module.css';
 
 export interface ModuleStatusProps {
@@ -38,14 +39,6 @@ const STATE_CLASS: Record<State, string> = {
   'not-applicable': styles.stateNotApplicable!,
 };
 
-const STATE_WORD: Record<State, string> = {
-  waiting: 'Waiting',
-  running: 'Running',
-  complete: 'Complete',
-  degraded: 'Degraded',
-  'not-applicable': 'Not applicable',
-};
-
 const STATE_ICON_PATH: Record<State, string> = {
   waiting: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4v5l3 2',
   running: 'M12 3a9 9 0 1 0 9 9',
@@ -61,6 +54,14 @@ export function ModuleStatus({
   issues = null,
   compact = false,
 }: ModuleStatusProps): React.ReactElement {
+  const t = useTranslations('reports');
+  const stateWord: Record<State, string> = {
+    waiting: t('report_module_waiting'),
+    running: t('report_module_running'),
+    complete: t('report_module_complete'),
+    degraded: t('report_module_degraded'),
+    'not-applicable': t('report_module_not_applicable'),
+  };
   const boxClasses = [styles.box, STATE_CLASS[state], compact ? styles.compact : undefined]
     .filter(Boolean)
     .join(' ');
@@ -94,12 +95,12 @@ export function ModuleStatus({
           <span className={styles.compactArea}>{area}</span>
           {issues !== null && (
             <span dir="ltr" className={styles.compactIssues}>
-              {issues}
+              {t('report_count_only', { count: issues })}
             </span>
           )}
         </div>
         <div className={styles.compactMeta}>
-          <span className={styles.compactWord}>{STATE_WORD[state]}</span>
+          <span className={styles.compactWord}>{stateWord[state]}</span>
           {detail !== undefined && <span className={styles.compactDetail}>{detail}</span>}
         </div>
       </div>
@@ -110,11 +111,11 @@ export function ModuleStatus({
     <div className={boxClasses}>
       {icon}
       <span className={styles.area}>{area}</span>
-      <span className={styles.word}>{STATE_WORD[state]}</span>
+      <span className={styles.word}>{stateWord[state]}</span>
       {detail !== undefined && <span className={styles.detail}>{detail}</span>}
       {issues !== null && (
         <span dir="ltr" className={styles.issues}>
-          {issues}
+          {t('report_count_only', { count: issues })}
         </span>
       )}
     </div>

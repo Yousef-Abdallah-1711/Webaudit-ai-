@@ -17,6 +17,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { READINESS_PASS_COST } from '@webaudit/config';
 import { Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
@@ -30,23 +31,18 @@ import {
   type ReadinessStatus,
 } from '../../../lib/api';
 
-const MODULE_LABEL: Readonly<Record<string, string>> = {
-  PERFORMANCE: 'Performance',
-  SECURITY: 'Security',
-  UI: 'Design',
-  TESTING: 'Testing',
-  SEO: 'Search visibility',
-};
-
 export default function ReadinessPage(): React.ReactElement {
+  const t = useTranslations('readiness');
   return (
-    <Suspense fallback={<PageHead eyebrow="Readiness" title="Loading…" />}>
+    <Suspense fallback={<PageHead eyebrow={t('readiness_label')} title={t('readiness_loading')} />}>
       <ReadinessPageContent />
     </Suspense>
   );
 }
 
 function ReadinessPageContent(): React.ReactElement {
+  const t = useTranslations('readiness');
+  const tr = useTranslations('reports');
   const router = useRouter();
   const scanId = useSearchParams().get('scan') ?? '';
   const [status, setStatus] = useState<ReadinessStatus | null>(null);
@@ -59,9 +55,9 @@ function ReadinessPageContent(): React.ReactElement {
       const { readiness } = await getReadiness(scanId);
       setStatus(readiness);
     } catch {
-      setError('This scan could not be loaded.');
+      setError(t('readiness_load_error'));
     }
-  }, [scanId]);
+  }, [scanId, t]);
 
   useEffect(() => {
     void refresh();
@@ -92,19 +88,67 @@ function ReadinessPageContent(): React.ReactElement {
       const { scan } = await startReadiness(scanId, READINESS_PASS_COST);
       router.push(`/readiness?scan=${scan.id}`);
     } catch (e) {
-      const message = e instanceof Error ? e.message : 'The readiness pass could not be started.';
+      const message = e instanceof Error ? e.message : t('readiness_start_error');
       setError(message);
       setStarting(false);
     }
-  }, [scanId, router]);
+  }, [scanId, router, t]);
+
+  const moduleLabel = (module: string): string => {
+    switch (module) {
+      case 'PERFORMANCE':
+        return tr('area_performance');
+      case 'SECURITY':
+        return tr('area_security');
+      case 'UI':
+        return tr('area_design');
+      case 'TESTING':
+        return tr('area_testing');
+      case 'SEO':
+        return tr('area_search_visibility');
+      default:
+        return module;
+    }
+  };
+
+  const scanStateLabel = (state: string): string => {
+    switch (state.toUpperCase()) {
+      case 'QUEUED':
+        return tr('report_scan_state_queued');
+      case 'RUNNING':
+        return tr('report_scan_state_running');
+      case 'RUNNING_PHASE_1':
+        return tr('report_scan_state_running_phase_1');
+      case 'AWAITING_QUESTIONNAIRE':
+        return tr('report_scan_state_awaiting_questionnaire');
+      case 'RUNNING_PHASE_2':
+        return tr('report_scan_state_running_phase_2');
+      case 'RUNNING_PHASE_3':
+        return tr('report_scan_state_running_phase_3');
+      case 'RUNNING_MASTER':
+        return tr('report_scan_state_running_master');
+      case 'RUNNING_DOCS':
+        return tr('report_scan_state_running_docs');
+      case 'COMPLETED':
+        return tr('report_scan_state_completed');
+      case 'FAILED':
+        return tr('report_scan_state_failed');
+      case 'CANCELLED':
+        return tr('report_scan_state_cancelled');
+      case 'TIMED_OUT':
+        return tr('report_scan_state_timed_out');
+      default:
+        return state.toLowerCase();
+    }
+  };
 
   if (scanId === '') {
     return (
       <div>
         <PageHead
-          eyebrow="Readiness"
-          title="No audit selected"
-          meta="Open a completed report first."
+          eyebrow={t('readiness_label')}
+          title={t('readiness_no_audit')}
+          meta={t('readiness_no_audit_meta')}
         />
       </div>
     );
@@ -113,7 +157,7 @@ function ReadinessPageContent(): React.ReactElement {
   if (status === null) {
     return (
       <div>
-        <PageHead eyebrow="Readiness" title="Loading…" />
+        <PageHead eyebrow={t('readiness_label')} title={t('readiness_loading')} />
         {error !== null && <p>{error}</p>}
       </div>
     );
@@ -125,14 +169,16 @@ function ReadinessPageContent(): React.ReactElement {
       return (
         <div>
           <PageHead
-            eyebrow="Readiness"
-            title="Production readiness pass"
-            meta="A pass is under way."
+            eyebrow={t('readiness_label')}
+            title={t('readiness_pass_title')}
+            meta={t('readiness_pass_underway')}
           />
           <Card padding={22}>
             <p>
-              A readiness pass is {String(status.readinessScanState ?? 'running').toLowerCase()}.{' '}
-              <a href={`/readiness?scan=${status.readinessScanId}`}>View it</a>.
+              {t('readiness_pass_status', {
+                state: scanStateLabel(status.readinessScanState ?? 'RUNNING'),
+              })}{' '}
+              <a href={`/readiness?scan=${status.readinessScanId}`}>{t('readiness_view')}</a>.
             </p>
           </Card>
         </div>
@@ -141,33 +187,30 @@ function ReadinessPageContent(): React.ReactElement {
     return (
       <div>
         <PageHead
-          eyebrow="Readiness"
-          title="Production readiness pass"
-          meta={`Fresh full re-audit · ${String(READINESS_PASS_COST)} credits`}
+          eyebrow={t('readiness_label')}
+          title={t('readiness_pass_title')}
+          meta={t('readiness_fresh_full_reaudit', { credits: READINESS_PASS_COST })}
         />
         <Card padding={22}>
           {status.premature ? (
             <>
               <p>
-                {String(status.outstandingBlocking ?? 0)} critical or high issue
-                {status.outstandingBlocking === 1 ? '' : 's'} still outstanding. The readiness pass
-                is available, but running it now is premature — resolve the blocking issues first.
+                {t('readiness_blocking_issues', { count: status.outstandingBlocking ?? 0 })}
               </p>
-              <Button disabled>Run readiness pass — {READINESS_PASS_COST} cr</Button>
+              <Button disabled>{t('readiness_run_pass', { credits: READINESS_PASS_COST })}</Button>
             </>
           ) : (
             <>
-              <p>
-                No critical or high issues remain. A readiness pass re-audits every area fresh,
-                compares against this audit, and returns an explicit go or no-go.
-              </p>
+              <p>{t('readiness_no_blocking_issues')}</p>
               <Button
                 onClick={() => {
                   void onStart();
                 }}
                 disabled={starting}
               >
-                {starting ? 'Starting…' : `Run readiness pass — ${READINESS_PASS_COST} cr`}
+                {starting
+                  ? t('readiness_starting')
+                  : t('readiness_run_pass', { credits: READINESS_PASS_COST })}
               </Button>
             </>
           )}
@@ -183,12 +226,12 @@ function ReadinessPageContent(): React.ReactElement {
     return (
       <div>
         <PageHead
-          eyebrow="Readiness"
-          title="Production readiness pass"
-          meta={`Auditing every area fresh · ${String(status.state ?? '').toLowerCase()}`}
+          eyebrow={t('readiness_label')}
+          title={t('readiness_pass_title')}
+          meta={t('readiness_auditing', { state: scanStateLabel(status.state ?? '') })}
         />
         <Card padding={22}>
-          <p>The readiness pass is running. This page updates when the verdict is ready.</p>
+          <p>{t('readiness_running')}</p>
         </Card>
       </div>
     );
@@ -197,9 +240,11 @@ function ReadinessPageContent(): React.ReactElement {
   return (
     <div>
       <PageHead
-        eyebrow="Readiness"
-        title="Production readiness pass"
-        meta={`Baseline scan ${(status.baselineScanId ?? '').slice(0, 8)}`}
+        eyebrow={t('readiness_label')}
+        title={t('readiness_pass_title')}
+        meta={t('readiness_baseline_scan', {
+          scanId: (status.baselineScanId ?? '').slice(0, 8),
+        })}
       />
       <ReadinessVerdict
         verdict={verdict.isReady ? 'go' : 'no-go'}
@@ -207,7 +252,7 @@ function ReadinessPageContent(): React.ReactElement {
         baseline={verdict.baselineScore}
         blockers={[...verdict.blockers]}
         areas={verdict.moduleOutcomes.map((o) => ({
-          name: MODULE_LABEL[o.module] ?? o.module,
+          name: moduleLabel(o.module),
           score: o.score,
           threshold: o.threshold,
           pass: o.pass,
@@ -217,7 +262,7 @@ function ReadinessPageContent(): React.ReactElement {
       {verdict.regressions.length > 0 && (
         <Card
           padding={20}
-          title="Regressions since the original audit"
+          title={t('readiness_regressions_title')}
           style={{ marginTop: 'var(--space-4)' }}
         >
           <ul>
@@ -229,7 +274,11 @@ function ReadinessPageContent(): React.ReactElement {
       )}
 
       {verdict.improvements.length > 0 && (
-        <Card padding={20} title="Improvements" style={{ marginTop: 'var(--space-4)' }}>
+        <Card
+          padding={20}
+          title={t('readiness_improvements_title')}
+          style={{ marginTop: 'var(--space-4)' }}
+        >
           <ul>
             {verdict.improvements.map((i) => (
               <li key={i.name}>{i.name}</li>
@@ -252,7 +301,7 @@ function ReadinessPageContent(): React.ReactElement {
               target="_blank"
               rel="noreferrer"
             >
-              Open the shareable readiness certificate
+              {t('readiness_open_certificate')}
             </a>
           </Card>
         )}

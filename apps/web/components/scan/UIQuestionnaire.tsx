@@ -57,6 +57,7 @@
  * `ScanProgress.tsx`'s module note.
  */
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Card, Input } from '../ui';
 import {
   ApiError,
@@ -83,15 +84,6 @@ function splitList(value: string | undefined): readonly string[] {
     .filter((v) => v.length > 0);
 }
 
-function fieldPlaceholder(question: QuestionnaireQuestion): string | undefined {
-  // No literal hex value here on purpose — the adherence lint's raw-colour
-  // rule matches any string Literal shaped like a hex colour, not just ones
-  // used as CSS, and a placeholder is not an exception worth carving out.
-  if (question.kind === 'colors') return 'e.g. burnt orange, navy, or a hex code';
-  if (question.id === 'admiredReferences') return 'e.g. stripe.com, linear.app';
-  return undefined;
-}
-
 type LoadState =
   | { readonly status: 'loading' }
   | {
@@ -115,6 +107,7 @@ export interface UIQuestionnaireProps {
 }
 
 export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): React.ReactElement {
+  const t = useTranslations('scan');
   const [load, setLoad] = useState<LoadState>({ status: 'loading' });
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -141,16 +134,16 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
         if (cancelled) return;
         setLoad({
           status: 'error',
-          message: error instanceof ApiError ? error.message : 'Could not load the questionnaire.',
+          message: error instanceof ApiError ? error.message : t('questionnaire_load_error'),
         });
       });
     return () => {
       cancelled = true;
     };
-    // Deliberately scoped to scanId only — onResolved is expected to be a
-    // stable callback (ScanProgress passes its memoised refetch), and
+    // Scoped to scanId and the locale translator — onResolved is expected to
+    // be a stable callback (ScanProgress passes its memoised refetch), and
     // refiring this fetch on every parent render would be wrong regardless.
-  }, [scanId]);
+  }, [scanId, t]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -173,9 +166,7 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
         onResolved?.();
         return;
       }
-      setSubmitError(
-        error instanceof ApiError ? error.message : 'Could not save your answer. Try again.',
-      );
+      setSubmitError(error instanceof ApiError ? error.message : t('questionnaire_save_error'));
     } finally {
       setSubmitting(false);
     }
@@ -202,26 +193,23 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
 
   if (load.status === 'loading') {
     return (
-      <Card eyebrow="Design intent" title="A quick question about your brand">
-        <p className={styles.note}>Loading the questionnaire…</p>
+      <Card eyebrow={t('questionnaire_eyebrow')} title={t('questionnaire_title')}>
+        <p className={styles.note}>{t('questionnaire_loading')}</p>
       </Card>
     );
   }
 
   if (load.status === 'resolved') {
     return (
-      <Card eyebrow="Design intent" title="A quick question about your brand">
-        <p className={styles.note}>
-          This question is no longer waiting for an answer — it resumed on its own, and the audit is
-          continuing.
-        </p>
+      <Card eyebrow={t('questionnaire_eyebrow')} title={t('questionnaire_title')}>
+        <p className={styles.note}>{t('questionnaire_resolved')}</p>
       </Card>
     );
   }
 
   if (load.status === 'error') {
     return (
-      <Card eyebrow="Design intent" title="A quick question about your brand">
+      <Card eyebrow={t('questionnaire_eyebrow')} title={t('questionnaire_title')}>
         <p className={styles.error}>{load.message}</p>
       </Card>
     );
@@ -231,22 +219,31 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
   const urgent = remainingMs !== null && remainingMs < 60_000;
 
   return (
-    <Card eyebrow="Design intent" title="A quick question about your brand">
+    <Card eyebrow={t('questionnaire_eyebrow')} title={t('questionnaire_title')}>
       {remainingMs !== null && (
         <p className={urgent ? `${styles.deadline} ${styles.deadlineUrgent}` : styles.deadline}>
-          You have <span dir="ltr">{formatRemaining(Math.max(0, remainingMs))}</span> left to answer
-          — after that the audit resumes on its own.
+          {t.rich('questionnaire_deadline', {
+            remaining: formatRemaining(Math.max(0, remainingMs)),
+            time: (chunks) => <span dir="ltr">{chunks}</span>,
+          })}
         </p>
       )}
 
       <div className={styles.fields}>
         {load.questions.map((question) => {
-          const placeholder = fieldPlaceholder(question);
+          // The prompt and choices come from the API question contract; the
+          // optional examples below are local presentation copy.
+          const placeholder =
+            question.kind === 'colors'
+              ? t('questionnaire_colors_placeholder')
+              : question.id === 'admiredReferences'
+                ? t('questionnaire_references_placeholder')
+                : undefined;
           return (
             <div key={question.id} className={styles.field}>
               <label className={styles.label}>{question.prompt}</label>
               {question.id === 'admiredReferences' || question.kind === 'colors' ? (
-                <p className={styles.hint}>Separate more than one with a comma.</p>
+                <p className={styles.hint}>{t('questionnaire_multi_hint')}</p>
               ) : null}
               {question.kind === 'choice' ? (
                 <div className={styles.choices}>
@@ -285,10 +282,10 @@ export function UIQuestionnaire({ scanId, onResolved }: UIQuestionnaireProps): R
 
       <div className={styles.actions}>
         <Button disabled={submitting} onClick={handleSubmit}>
-          Submit answers
+          {t('questionnaire_submit')}
         </Button>
         <Button variant="secondary" disabled={submitting} onClick={handleSkip}>
-          Skip
+          {t('questionnaire_skip')}
         </Button>
       </div>
     </Card>

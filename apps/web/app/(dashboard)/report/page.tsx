@@ -5,15 +5,17 @@
  * already shows for its own id-less case, rather than inventing a
  * different empty pattern.
  */
+import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../components/dashboard';
 
 export default function ReportPlaceholderPage(): React.ReactElement {
+  const t = useTranslations('reports');
   return (
     <div>
       <PageHead
-        eyebrow="Report"
-        title="No report selected"
-        meta="Open a completed scan's live-progress page to see its report."
+        eyebrow={t('report_label')}
+        title={t('report_placeholder_title')}
+        meta={t('report_placeholder_meta')}
       />
     </div>
   );

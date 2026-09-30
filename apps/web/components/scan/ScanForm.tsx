@@ -25,16 +25,15 @@
  * It no longer knows which tab is open — only what was selected.
  */
 import { useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { AREA_COST, ALL_AREAS, quoteAreas } from '@webaudit/config';
 import type { ModuleType } from '@webaudit/types';
 import { Button, Card, Eyebrow } from '../ui';
-import { useT } from '../../app/theme';
-import type { StringKey } from '../../lib/strings';
 import { ApiError, createScan, createTarget, getPlans, quoteScan } from '../../lib/api';
 import { InputTabs, type InputSelection } from './InputTabs';
 import styles from './ScanForm.module.css';
 
-const AREA_LABEL_KEY: Readonly<Record<ModuleType, StringKey>> = {
+const AREA_LABEL_KEY: Readonly<Record<ModuleType, string>> = {
   PERFORMANCE: 'a_perf',
   SECURITY: 'a_sec',
   UI: 'a_des',
@@ -48,7 +47,7 @@ export interface ScanFormProps {
 }
 
 export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('scan');
   const [selection, setSelection] = useState<InputSelection | null>(null);
   const [selected, setSelected] = useState<readonly ModuleType[]>(ALL_AREAS);
   const [submitting, setSubmitting] = useState(false);
@@ -112,10 +111,7 @@ export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
         getPlans()
           .then((r) => {
             if (!r.paymentsEnabled) {
-              setError(
-                `${e.message} Credits in this deployment are granted by an administrator — ` +
-                  'contact yours for more.',
-              );
+              setError(t('scan_admin_credits_notice', { message: e.message }));
             }
           })
           .catch(() => undefined); // Unknown — the immediate message above already stands.

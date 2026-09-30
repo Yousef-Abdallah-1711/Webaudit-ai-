@@ -2,6 +2,7 @@
 import { act, createElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
+import enReports from '../../messages/en/reports.json';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -26,7 +27,7 @@ describe('IssueCard copy control', () => {
         await Promise.resolve();
       });
       expect(writeText).toHaveBeenCalledWith('Add a strict CSP header.');
-      expect(mounted.html()).toContain('Copied');
+      expect(mounted.html()).toContain(enReports.report_copied);
     } finally {
       mounted.unmount();
     }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useFormatter, useTranslations } from 'next-intl';
 import { PRODUCT_NAME } from '@webaudit/config';
 import { Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
@@ -15,12 +16,26 @@ const AREA_COLORS: Record<string, string> = {
   SEO: 'var(--sev-info)',
 };
 
-function downloadCsv(usage: UsageSummary): void {
+interface CsvLabels {
+  type: string;
+  date: string;
+  label: string;
+  credits: string;
+  dailySpend: string;
+  area: string;
+  refund: string;
+}
+
+function downloadCsv(
+  usage: UsageSummary,
+  labels: CsvLabels,
+  areaLabel: (area: string) => string,
+): void {
   const rows = [
-    ['type', 'date', 'label', 'credits'],
-    ...usage.dailySpend.map((e) => ['daily_spend', e.date, '', String(e.credits)]),
-    ...usage.byArea.map((e) => ['area', '', e.area, String(e.credits)]),
-    ...usage.refunds.map((e) => ['refund', e.date, e.reason, String(e.credits)]),
+    [labels.type, labels.date, labels.label, labels.credits],
+    ...usage.dailySpend.map((e) => [labels.dailySpend, e.date, '', String(e.credits)]),
+    ...usage.byArea.map((e) => [labels.area, '', areaLabel(e.area), String(e.credits)]),
+    ...usage.refunds.map((e) => [labels.refund, e.date, e.reason, String(e.credits)]),
   ];
   const csv = rows
     .map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(','))
@@ -34,41 +49,84 @@ function downloadCsv(usage: UsageSummary): void {
 }
 
 export default function UsagePage(): React.ReactElement {
+  const t = useTranslations('usage');
+  const tr = useTranslations('reports');
+  const format = useFormatter();
   const [usage, setUsage] = useState<UsageSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     void getUsage()
       .then(setUsage)
-      .catch(() => setError('Usage data could not be loaded.'));
-  }, []);
+      .catch(() => setError(t('usage_error')));
+  }, [t]);
   const maxDaily = Math.max(...(usage?.dailySpend.map((entry) => entry.credits) ?? [0]), 1);
   const maxArea = Math.max(...(usage?.byArea.map((entry) => entry.credits) ?? [0]), 1);
   const audits = usage?.auditsRun ?? 0;
   const rechecks = usage?.rechecks ?? 0;
+  const areaLabel = (area: string): string => {
+    switch (area) {
+      case 'PERFORMANCE':
+        return tr('area_performance');
+      case 'SECURITY':
+        return tr('area_security');
+      case 'UI':
+        return tr('area_design');
+      case 'TESTING':
+        return tr('area_testing');
+      case 'SEO':
+        return tr('area_search_visibility');
+      default:
+        return area;
+    }
+  };
+  const csvLabels: CsvLabels = {
+    type: t('usage_csv_type'),
+    date: t('usage_csv_date'),
+    label: t('usage_csv_label'),
+    credits: t('usage_csv_credits'),
+    dailySpend: t('usage_csv_daily_spend'),
+    area: t('usage_csv_area'),
+    refund: t('usage_csv_refund'),
+  };
   const stats = [
-    ['Spent this period', String(usage?.spentCredits ?? 0), 'real ledger debits'],
     [
-      'Remaining',
-      String((usage?.balance.plan ?? 0) + (usage?.balance.purchased ?? 0)),
-      `${usage?.balance.plan ?? 0} plan · ${usage?.balance.purchased ?? 0} purchased`,
+      t('usage_spent_this_period'),
+      t('usage_number', { value: usage?.spentCredits ?? 0 }),
+      t('usage_real_ledger_debits'),
     ],
-    ['Audits run', String(audits), `${audits} initial scans`],
-    ['Re-checks', String(rechecks), `${rechecks} readiness scans`],
+    [
+      t('usage_remaining'),
+      t('usage_number', { value: (usage?.balance.plan ?? 0) + (usage?.balance.purchased ?? 0) }),
+      t('usage_balance_breakdown', {
+        plan: usage?.balance.plan ?? 0,
+        purchased: usage?.balance.purchased ?? 0,
+      }),
+    ],
+    [
+      t('usage_audits_run'),
+      t('usage_number', { value: audits }),
+      t('usage_initial_scans', { count: audits }),
+    ],
+    [
+      t('usage_rechecks'),
+      t('usage_number', { value: rechecks }),
+      t('usage_readiness_scans', { count: rechecks }),
+    ],
   ] as const;
   return (
     <div>
       <PageHead
-        eyebrow="Usage"
-        title="Credit usage"
-        meta={usage ? 'current period · last 30 days' : 'Loading usage...'}
+        eyebrow={t('usage_label')}
+        title={t('usage_title')}
+        meta={usage ? t('usage_period') : t('usage_loading')}
         actions={
           <Button
             variant="secondary"
             size="sm"
             disabled={usage === null}
-            onClick={() => usage && downloadCsv(usage)}
+            onClick={() => usage && downloadCsv(usage, csvLabels, areaLabel)}
           >
-            Export CSV
+            {t('usage_export_csv')}
           </Button>
         }
       />
@@ -81,12 +139,12 @@ export default function UsagePage(): React.ReactElement {
           </Card>
         ))}
       </div>
-      <Card padding={24} title="Daily spend">
+      <Card padding={24} title={t('usage_daily_spend')}>
         <div className={styles.chartRow}>
           {(usage?.dailySpend ?? []).map((entry) => (
             <div
               key={entry.date}
-              title={`${entry.credits} credits`}
+              title={t('usage_chart_credits', { count: entry.credits })}
               className={
                 entry.credits ? `${styles.chartBar} ${styles.chartBarActive}` : styles.chartBar
               }
@@ -95,18 +153,20 @@ export default function UsagePage(): React.ReactElement {
           ))}
         </div>
         <div className={styles.chartLegend}>
-          <span>last 30 days</span>
-          <span>peak {maxDaily} cr</span>
-          <span>today</span>
+          <span>{t('usage_last_30_days')}</span>
+          <span>{t('usage_peak_credits', { credits: maxDaily })}</span>
+          <span>{t('usage_today')}</span>
         </div>
       </Card>
       <div className={styles.twoCol}>
-        <Card padding={22} title="By area">
+        <Card padding={22} title={t('usage_by_area')}>
           {(usage?.byArea ?? []).map((entry) => (
             <div key={entry.area} className={styles.areaRow}>
               <div className={styles.areaRowHead}>
-                <span>{entry.area}</span>
-                <span className={styles.areaRowValue}>{entry.credits} cr</span>
+                <span>{areaLabel(entry.area)}</span>
+                <span className={styles.areaRowValue}>
+                  {t('usage_area_credits', { credits: entry.credits })}
+                </span>
               </div>
               <div className={styles.areaBar}>
                 <div
@@ -120,17 +180,19 @@ export default function UsagePage(): React.ReactElement {
             </div>
           ))}
         </Card>
-        <Card padding={22} title="Refunds and adjustments">
+        <Card padding={22} title={t('usage_refunds_adjustments')}>
           {(usage?.refunds ?? []).map((entry) => (
             <div key={`${entry.date}-${entry.reason}`} className={styles.refundRow}>
-              <span className={styles.refundDate}>{new Date(entry.date).toLocaleDateString()}</span>
+              <span className={styles.refundDate}>
+                {format.dateTime(new Date(entry.date), { dateStyle: 'medium', timeZone: 'UTC' })}
+              </span>
               <span className={styles.refundReason}>{entry.reason}</span>
-              <span className={styles.refundValue}>+{entry.credits}</span>
+              <span className={styles.refundValue}>
+                {t('usage_refund_amount', { credits: entry.credits })}
+              </span>
             </div>
           ))}
-          <p className={styles.refundNote}>
-            You are never charged for our failures. These returned automatically.
-          </p>
+          <p className={styles.refundNote}>{t('usage_refund_note')}</p>
         </Card>
       </div>
     </div>

@@ -45,6 +45,7 @@
  *     recorded rather than implied.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ModuleState, ModuleType, ScanEvent, ScanState } from '@webaudit/types';
 import { Button } from '../ui';
 import { PageHead } from '../dashboard';
@@ -69,12 +70,12 @@ const TO_UI_STATE: Readonly<Record<ModuleState, NonNullable<UiState>>> = {
 
 const SCAN_TERMINAL = new Set<ScanState>(['COMPLETED', 'FAILED', 'CANCELLED', 'TIMED_OUT']);
 
-const MODULE_LABEL: Readonly<Record<ModuleType, string>> = {
-  PERFORMANCE: 'Performance',
-  SECURITY: 'Security',
-  UI: 'Design',
-  TESTING: 'Testing',
-  SEO: 'Search visibility',
+const MODULE_LABEL_KEY: Readonly<Record<ModuleType, string>> = {
+  PERFORMANCE: 'a_perf',
+  SECURITY: 'a_sec',
+  UI: 'a_des',
+  TESTING: 'a_test',
+  SEO: 'a_seo',
 };
 
 function formatElapsed(ms: number): string {
@@ -97,6 +98,7 @@ export function ScanProgress({
   onCancel,
   onDone,
 }: ScanProgressProps): React.ReactElement {
+  const t = useTranslations('scan');
   const [modules, setModules] = useState<readonly ModuleType[]>([]);
   const [moduleStates, setModuleStates] = useState<Partial<Record<ModuleType, UiState>>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
@@ -178,13 +180,13 @@ export function ScanProgress({
   return (
     <div>
       <PageHead
-        eyebrow="Live scan"
+        eyebrow={t('progress_eyebrow')}
         title={hostname}
-        meta={`scan ${scanId.slice(0, 8)}`}
+        meta={t('progress_scan_meta', { scanId: scanId.slice(0, 8) })}
         actions={
           !finished ? (
             <Button variant="secondary" size="sm" {...(onCancel ? { onClick: onCancel } : {})}>
-              Cancel scan
+              {t('progress_cancel')}
             </Button>
           ) : undefined
         }
@@ -201,28 +203,28 @@ export function ScanProgress({
           <ProgressRow
             phase={
               finished
-                ? 'Audit complete'
+                ? t('progress_audit_complete')
                 : running !== undefined
-                  ? `Running ${MODULE_LABEL[running].toLowerCase()} checks`
-                  : 'Preparing'
+                  ? t('progress_running_checks', { module: t(MODULE_LABEL_KEY[running]) })
+                  : t('progress_preparing')
             }
             elapsed={elapsed}
             done={done}
             total={modules.length || 1}
           />
           {scanState === 'QUEUED' && queuePosition !== null && (
-            <p aria-live="polite">Position in queue: {queuePosition}</p>
+            <p aria-live="polite">{t('progress_queue_position', { queuePosition })}</p>
           )}
           {modules.map((module) => (
             <ModuleStatus
               key={module}
-              area={MODULE_LABEL[module]}
+              area={t(MODULE_LABEL_KEY[module])}
               state={moduleStates[module] ?? 'waiting'}
             />
           ))}
           {finished && (
             <div className={styles.done}>
-              <Button {...(onDone ? { onClick: onDone } : {})}>Open report</Button>
+              <Button {...(onDone ? { onClick: onDone } : {})}>{t('progress_open_report')}</Button>
             </div>
           )}
         </div>

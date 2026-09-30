@@ -28,8 +28,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Input } from '../ui';
-import { useT } from '../../app/theme';
 import {
   API_BASE,
   ApiError,
@@ -73,7 +73,7 @@ type ArchiveState =
   | { readonly status: 'refused'; readonly message: string };
 
 export function InputTabs({ onChange }: InputTabsProps): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('scan');
   const [tab, setTab] = useState<InputTab>('url');
   const [url, setUrl] = useState('');
   const [repos, setRepos] = useState<RepoState>({ status: 'idle' });
@@ -120,26 +120,29 @@ export function InputTabs({ onChange }: InputTabsProps): React.ReactElement {
       });
   }, [tab, repos.status, t]);
 
-  const stage = useCallback((file: File | undefined): void => {
-    if (file === undefined) return;
-    setArchive({ status: 'uploading', fileName: file.name });
-    setStagedTargetId(null);
-    void uploadArchive(file)
-      .then(({ upload }) => {
-        setStagedTargetId(upload.targetId);
-        setArchive({ status: 'staged', fileName: file.name, fileCount: upload.fileCount });
-      })
-      .catch((error: unknown) => {
-        // The API's message names the actual rule that refused — "the upload
-        // is larger than the published archive size limit", "a symbolic link
-        // is never extracted". Showing it verbatim is the whole point: a
-        // generic "upload failed" would hide the one useful sentence.
-        setArchive({
-          status: 'refused',
-          message: error instanceof ApiError ? error.message : 'The archive could not be accepted.',
+  const stage = useCallback(
+    (file: File | undefined): void => {
+      if (file === undefined) return;
+      setArchive({ status: 'uploading', fileName: file.name });
+      setStagedTargetId(null);
+      void uploadArchive(file)
+        .then(({ upload }) => {
+          setStagedTargetId(upload.targetId);
+          setArchive({ status: 'staged', fileName: file.name, fileCount: upload.fileCount });
+        })
+        .catch((error: unknown) => {
+          // The API's message names the actual rule that refused — "the upload
+          // is larger than the published archive size limit", "a symbolic link
+          // is never extracted". Showing it verbatim is the whole point: a
+          // generic "upload failed" would hide the one useful sentence.
+          setArchive({
+            status: 'refused',
+            message: error instanceof ApiError ? error.message : t('drop_error_fallback'),
+          });
         });
-      });
-  }, []);
+    },
+    [t],
+  );
 
   const tabs: readonly (readonly [InputTab, string])[] = [
     ['url', t('tab_url')],

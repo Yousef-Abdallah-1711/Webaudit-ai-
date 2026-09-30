@@ -12,8 +12,10 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { I18nProvider } from '../../app/theme';
 import { FixesBoard, IssueRow } from '../../components/fixes';
 import type { FixesIssue } from '../../lib/api';
+import enFixes from '../../messages/en/fixes.json';
 
 function issue(overrides: Partial<FixesIssue> = {}): FixesIssue {
   return {
@@ -37,12 +39,13 @@ function issue(overrides: Partial<FixesIssue> = {}): FixesIssue {
   };
 }
 
-const render = (el: React.ReactElement): string => renderToStaticMarkup(el);
+const render = (el: React.ReactElement): string =>
+  renderToStaticMarkup(createElement(I18nProvider, null, el));
 
 describe('IssueRow', () => {
   it('an open issue shows the "I fixed this — 3 cr" button, enabled', () => {
     const html = render(createElement(IssueRow, { issue: issue(), onAssertFixed: () => {} }));
-    expect(html).toContain('I fixed this — 3 cr');
+    expect(html).toContain(enFixes.fixes_button_assert);
     expect(html).not.toContain('disabled');
   });
 
@@ -53,7 +56,7 @@ describe('IssueRow', () => {
         onAssertFixed: () => {},
       }),
     );
-    expect(html).toContain('Re-checking…');
+    expect(html).toContain(enFixes.fixes_button_rechecking);
     expect(html).toContain('disabled');
   });
 
@@ -64,8 +67,8 @@ describe('IssueRow', () => {
         onAssertFixed: () => {},
       }),
     );
-    expect(html).toContain('Verified');
-    expect(html).toMatch(/verified \d\d:\d\d/);
+    expect(html).toContain(enFixes.fixes_button_verified);
+    expect(html).toContain(enFixes.fixes_verified.replace('{time}', ''));
     expect(html).toContain('disabled');
   });
 
@@ -77,7 +80,7 @@ describe('IssueRow', () => {
         onAssertFixed: () => {},
       }),
     );
-    expect(html).toContain('Re-check failed');
+    expect(html).toContain(enFixes.fixes_evidence_label);
     expect(html).toContain('<pre');
     expect(html).toContain('content-security-policy');
     expect(html).not.toContain('<button'.concat(' hidden'));
@@ -90,14 +93,14 @@ describe('IssueRow', () => {
         onAssertFixed: () => {},
       }),
     );
-    expect(html).toContain('regressed');
+    expect(html).toContain(enFixes.fixes_regressed);
   });
 
   it('an UNVERIFIABLE issue explains there is no automated re-check', () => {
     const html = render(
       createElement(IssueRow, { issue: issue({ state: 'UNVERIFIABLE' }), onAssertFixed: () => {} }),
     );
-    expect(html).toContain('no automated re-check');
+    expect(html).toContain(enFixes.fixes_unverifiable);
   });
 });
 
@@ -118,10 +121,10 @@ describe('FixesBoard', () => {
   it('counts outstanding by severity band and resolved separately (FR-057)', () => {
     const html = render(createElement(FixesBoard, { issues, onAssertFixed: () => {} }));
     // 1 critical, 1 high, 1 medium-and-low (D only; C is resolved), 1 resolved
-    expect(html).toContain('critical');
-    expect(html).toContain('high');
-    expect(html).toContain('medium and low');
-    expect(html).toContain('resolved');
+    expect(html).toContain(enFixes.fixes_stat_critical);
+    expect(html).toContain(enFixes.fixes_stat_high);
+    expect(html).toContain(enFixes.fixes_stat_medium_low);
+    expect(html).toContain(enFixes.fixes_stat_resolved);
   });
 
   it('renders every issue and puts resolved ones after outstanding ones', () => {
@@ -135,7 +138,7 @@ describe('FixesBoard', () => {
 
   it('shows the "turns green only when that check passes" note', () => {
     const html = render(createElement(FixesBoard, { issues: [], onAssertFixed: () => {} }));
-    expect(html).toContain('turns green only when that check passes');
-    expect(html).toContain('no issues');
+    expect(html).toContain(enFixes.fixes_note);
+    expect(html).toContain(enFixes.fixes_empty);
   });
 });

@@ -12,39 +12,49 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { I18nProvider } from '../../app/theme';
 import { ModuleStatus, ScoreArc } from '../../components/report';
 import moduleStatusStyles from '../../components/report/ModuleStatus.module.css';
+import enReports from '../../messages/en/reports.json';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 describe('ScoreArc', () => {
   it('renders the measured score immediately, with no animation run yet', () => {
     const html = render(createElement(ScoreArc, { score: 84, delta: 23 }));
-    expect(html).toContain('>84<');
-    expect(html).toContain('+23 vs baseline');
+    expect(html).toContain(`>${enReports.report_count_only.replace('{count}', '84')}<`);
+    expect(html).toContain(
+      enReports.report_score_delta.replace('{sign}', '+').replace('{delta}', '23'),
+    );
   });
 
   it('omits the delta text entirely when delta is not given', () => {
     const withDelta = render(createElement(ScoreArc, { score: 50, delta: 5 }));
     const without = render(createElement(ScoreArc, { score: 50 }));
-    expect(withDelta).toContain('vs baseline');
-    expect(without).not.toContain('vs baseline');
+    expect(withDelta).toContain(
+      enReports.report_score_delta.replace('{sign}', '+').replace('{delta}', '5'),
+    );
+    expect(without).not.toContain(
+      enReports.report_score_delta.replace('{sign}', '+').replace('{delta}', '5'),
+    );
   });
 
   it('a negative delta omits the leading plus sign', () => {
     const html = render(createElement(ScoreArc, { score: 50, delta: -8 }));
-    expect(html).toContain('-8 vs baseline');
+    expect(html).toContain(
+      enReports.report_score_delta.replace('{sign}', '').replace('{delta}', '-8'),
+    );
     expect(html).not.toContain('+-8');
   });
 
   it('the default label is "Health score"; a caller can override it', () => {
     const html = render(createElement(ScoreArc, { score: 60 }));
-    expect(html).toContain('Health score');
+    expect(html).toContain(enReports.report_health_score);
     const custom = render(createElement(ScoreArc, { score: 60, label: 'Design score' }));
     expect(custom).toContain('Design score');
-    expect(custom).not.toContain('Health score');
+    expect(custom).not.toContain(enReports.report_health_score);
   });
 });
 
@@ -74,7 +84,7 @@ describe('ModuleStatus', () => {
     const withoutIssues = render(
       createElement(ModuleStatus, { area: 'Security', state: 'complete' }),
     );
-    expect(withIssues).toContain('>7<');
+    expect(withIssues).toContain(`>${enReports.report_count_only.replace('{count}', '7')}<`);
     expect(withoutIssues).not.toContain('dir="ltr"');
 
     const withDetail = render(

@@ -18,6 +18,7 @@
  */
 
 import { StatRow } from '../ui';
+import { useTranslations } from 'next-intl';
 import { IssueRow } from './IssueRow';
 import type { FixesIssue } from '../../lib/api';
 import styles from './FixesBoard.module.css';
@@ -46,15 +47,33 @@ export function FixesBoard({
   failingEvidence = {},
   onAssertFixed,
 }: FixesBoardProps): React.ReactElement {
+  const t = useTranslations('fixes');
   const outstanding = issues.filter(isOutstanding);
   const counts = [
-    { value: outstanding.filter((i) => i.severity === 'CRITICAL').length, label: 'critical' },
-    { value: outstanding.filter((i) => i.severity === 'HIGH').length, label: 'high' },
     {
-      value: outstanding.filter((i) => i.severity === 'MEDIUM' || i.severity === 'LOW').length,
-      label: 'medium and low',
+      value: t('fixes_count_only', {
+        count: outstanding.filter((i) => i.severity === 'CRITICAL').length,
+      }),
+      label: t('fixes_stat_critical'),
     },
-    { value: issues.filter((i) => i.state === 'RESOLVED').length, label: 'resolved' },
+    {
+      value: t('fixes_count_only', {
+        count: outstanding.filter((i) => i.severity === 'HIGH').length,
+      }),
+      label: t('fixes_stat_high'),
+    },
+    {
+      value: t('fixes_count_only', {
+        count: outstanding.filter((i) => i.severity === 'MEDIUM' || i.severity === 'LOW').length,
+      }),
+      label: t('fixes_stat_medium_low'),
+    },
+    {
+      value: t('fixes_count_only', {
+        count: issues.filter((i) => i.state === 'RESOLVED').length,
+      }),
+      label: t('fixes_stat_resolved'),
+    },
   ];
 
   const ordered = [...issues].sort((a, b) => {
@@ -73,7 +92,7 @@ export function FixesBoard({
       </div>
 
       {ordered.length === 0 ? (
-        <p className={styles.empty}>This audit produced no issues.</p>
+        <p className={styles.empty}>{t('fixes_empty')}</p>
       ) : (
         <div className={styles.list}>
           {ordered.map((issue, index) => (
@@ -88,9 +107,7 @@ export function FixesBoard({
         </div>
       )}
 
-      <p className={styles.note}>
-        Marking an issue fixed runs one narrow check. It turns green only when that check passes.
-      </p>
+      <p className={styles.note}>{t('fixes_note')}</p>
     </div>
   );
 }

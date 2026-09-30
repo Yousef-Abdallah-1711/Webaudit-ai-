@@ -8,14 +8,16 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { I18nProvider } from '../../app/theme';
 import { TwoToneHeading } from '../../components/ui';
 import { AttributionMark, SeverityBadge } from '../../components/report';
 import twoToneStyles from '../../components/ui/TwoToneHeading.module.css';
 import severityStyles from '../../components/report/SeverityBadge.module.css';
 import attributionStyles from '../../components/report/AttributionMark.module.css';
+import enReports from '../../messages/en/reports.json';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 describe('TwoToneHeading', () => {
@@ -75,25 +77,25 @@ describe('SeverityBadge', () => {
     const withoutCount = render(createElement(SeverityBadge, { level: 'high' }));
     const withCount = render(createElement(SeverityBadge, { level: 'high', count: 3 }));
     const labelled = render(createElement(SeverityBadge, { level: 'high', label: 'Urgent' }));
-    expect(withoutCount).toContain('High');
-    expect(withCount).toContain('High');
-    expect(withCount).toContain('3');
+    expect(withoutCount).toContain(enReports.report_severity_badge_high);
+    expect(withCount).toContain(enReports.report_severity_badge_high);
+    expect(withCount).toContain(enReports.report_count_only.replace('{count}', '3'));
     expect(labelled).toContain('Urgent');
-    expect(labelled).not.toContain('High');
+    expect(labelled).not.toContain(enReports.report_severity_badge_high);
   });
 });
 
 describe('AttributionMark', () => {
   it('is measured by default, with a title explaining what that means', () => {
     const html = render(createElement(AttributionMark, {}));
-    expect(html).toContain('Measured');
-    expect(html).toContain('title="Observed directly by a check"');
+    expect(html).toContain(enReports.report_attribution_measured);
+    expect(html).toContain(`title="${enReports.report_attribution_measured_title}"`);
   });
 
   it('ai-judgment gets its own label, title, and class', () => {
     const html = render(createElement(AttributionMark, { kind: 'ai-judgment' }));
-    expect(html).toContain('AI judgment');
-    expect(html).toContain('title="Concluded by a model from measured input"');
+    expect(html).toContain(enReports.report_attribution_ai_judgment);
+    expect(html).toContain(`title="${enReports.report_attribution_ai_judgment_title}"`);
     expect(html).toContain(attributionStyles.aiJudgment);
     expect(html).not.toContain(attributionStyles.measured);
   });

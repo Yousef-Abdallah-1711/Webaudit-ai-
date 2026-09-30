@@ -13,37 +13,48 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
+import { I18nProvider } from '../../app/theme';
 import UsagePage from '../../app/(dashboard)/usage/page';
 import SettingsPage from '../../app/(dashboard)/settings/page';
 import { AuthProvider } from '../../components/auth/AuthProvider';
+import enUsage from '../../messages/en/usage.json';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: () => undefined, push: () => undefined }),
 }));
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(createElement(AuthProvider, null, element));
+  return renderToStaticMarkup(
+    createElement(I18nProvider, null, createElement(AuthProvider, null, element)),
+  );
 }
 
 describe('UsagePage', () => {
   it('renders the real-data loading shell, stat cards, chart, and breakdown tables', () => {
     const html = render(createElement(UsagePage));
-    expect(html).toContain('Spent this period');
-    expect(html).toContain('Loading usage...');
-    expect(html).toContain('peak 1 cr');
-    expect(html).toContain('By area');
-    expect(html).toContain('Refunds and adjustments');
+    expect(html).toContain(enUsage.usage_spent_this_period);
+    expect(html).toContain(enUsage.usage_loading);
+    expect(html).toContain(
+      enUsage.usage_peak_credits.replace(
+        '{credits, plural, one {# cr} other {# cr}}',
+        '1 cr',
+      ),
+    );
+    expect(html).toContain(enUsage.usage_by_area);
+    expect(html).toContain(enUsage.usage_refunds_adjustments);
   });
 
   it('does not fabricate daily-spend bars before the usage query resolves', () => {
     const html = render(createElement(UsagePage));
-    const bars = [...html.matchAll(/title="\d+ credits"/g)];
+    const bars = [...html.matchAll(/title="\d+ credits?"/g)];
     expect(bars).toHaveLength(0);
   });
 
   it('keeps the chart empty rather than inventing zero and non-zero days', () => {
     const html = render(createElement(UsagePage));
-    const barClasses = [...html.matchAll(/title="\d+ credits" class="([^"]+)"/g)].map((m) => m[1]);
+    const barClasses = [...html.matchAll(/title="\d+ credits?" class="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
     expect(barClasses).toHaveLength(0);
   });
 });

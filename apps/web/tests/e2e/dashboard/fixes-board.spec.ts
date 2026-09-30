@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import enFixes from '../../../messages/en/fixes.json';
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi } from '../support/auth.js';
 import { runScanToCompletion } from '../support/journey.js';
@@ -36,11 +37,11 @@ test('the fixes board lists real issues from a completed scan and re-verify reac
   // copy ("I fixed this — 3 cr", IssueCard.prompt.md's own rule for this
   // control) is the stable selector — scoped to the first row via `.first()`
   // rather than guessing at a hashed CSS-module row class.
-  const assertButton = page.getByRole('button', { name: 'I fixed this — 3 cr' }).first();
+  const assertButton = page.getByRole('button', { name: enFixes.fixes_button_assert }).first();
   await expect(assertButton).toBeVisible({ timeout: 10_000 });
 
   await assertButton.click();
-  await expect(page.getByRole('button', { name: 'Re-checking…' }).first()).toBeVisible({
+  await expect(page.getByRole('button', { name: enFixes.fixes_button_rechecking }).first()).toBeVisible({
     timeout: 5_000,
   });
 
@@ -49,7 +50,7 @@ test('the fixes board lists real issues from a completed scan and re-verify reac
   // not which one: the fixture's canned reverify outcome is not this test's
   // concern, only that the real assert-fixed -> re-check -> realtime-update
   // loop completes end to end.
-  await expect(page.getByRole('button', { name: 'Re-checking…' })).toHaveCount(0, {
+  await expect(page.getByRole('button', { name: enFixes.fixes_button_rechecking })).toHaveCount(0, {
     timeout: 15_000,
   });
 });

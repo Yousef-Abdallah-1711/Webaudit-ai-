@@ -1,1 +1,23 @@
-{}
+{
+  "readiness_label": "الجاهزية",
+  "readiness_loading": "جارٍ التحميل…",
+  "readiness_no_audit": "لم يتم اختيار تدقيق",
+  "readiness_no_audit_meta": "افتح تقريراً مكتملاً أولاً.",
+  "readiness_load_error": "تعذّر تحميل هذا الفحص.",
+  "readiness_start_error": "تعذّر بدء فحص الجاهزية.",
+  "readiness_pass_title": "فحص الجاهزية للإنتاج",
+  "readiness_pass_underway": "الفحص جارٍ.",
+  "readiness_pass_status": "فحص الجاهزية {state}.",
+  "readiness_view": "عرض الفحص",
+  "readiness_fresh_full_reaudit": "إعادة تدقيق كاملة · {credits, plural, zero {مجاناً} one {رصيد واحد} two {رصيدان} few {# أرصدة} many {# رصيداً} other {# رصيد}}",
+  "readiness_blocking_issues": "{count, plural, zero {لا توجد مشكلات حرجة أو مرتفعة قائمة} one {ما زالت مشكلة حرجة أو مرتفعة واحدة قائمة} two {ما زالت مشكلتان حرجتان أو مرتفعتان قائمتين} few {ما زالت # مشكلات حرجة أو مرتفعة قائمة} many {ما زالت # مشكلة حرجة أو مرتفعة قائمة} other {ما زالت # مشكلة حرجة أو مرتفعة قائمة}}. فحص الجاهزية متاح، لكن إجراؤه الآن سابق لأوانه — أصلح المشكلات المعيقة أولاً.",
+  "readiness_run_pass": "بدء فحص الجاهزية — {credits, plural, zero {مجاناً} one {رصيد واحد} two {رصيدان} few {# أرصدة} many {# رصيداً} other {# رصيد}}",
+  "readiness_no_blocking_issues": "لا توجد مشكلات حرجة أو مرتفعة. يعيد فحص الجاهزية تدقيق كل المجالات، ويقارن النتائج بهذا التدقيق، ثم يصدر قراراً واضحاً بالجاهزية أو عدمها.",
+  "readiness_starting": "جارٍ البدء…",
+  "readiness_auditing": "جارٍ تدقيق كل المجالات · {state}",
+  "readiness_running": "فحص الجاهزية جارٍ. ستتحدث هذه الصفحة عند صدور النتيجة.",
+  "readiness_baseline_scan": "الفحص الأساسي {scanId}",
+  "readiness_regressions_title": "تراجعات منذ التدقيق الأصلي",
+  "readiness_improvements_title": "تحسينات",
+  "readiness_open_certificate": "فتح شهادة الجاهزية القابلة للمشاركة"
+}

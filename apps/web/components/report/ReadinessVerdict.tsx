@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * T168 — ported from `design-system/components/report/VerdictPanel.jsx`.
  *
@@ -16,6 +14,7 @@
  * by a class rather than an inline `var()` switch.
  */
 
+import { useTranslations } from 'next-intl';
 import styles from './ReadinessVerdict.module.css';
 
 export interface ReadinessVerdictProps {
@@ -35,26 +34,27 @@ export function ReadinessVerdict({
   blockers = [],
   areas = [],
 }: ReadinessVerdictProps): React.ReactElement {
+  const t = useTranslations('reports');
   const go = verdict === 'go';
   const delta = score !== undefined && baseline !== undefined ? score - baseline : undefined;
 
   return (
     <div className={go ? `${styles.panel} ${styles.go}` : `${styles.panel} ${styles.noGo}`}>
       <div className={styles.head}>
-        <div className={styles.eyebrow}>Production readiness</div>
-        <div className={styles.title}>{go ? 'Ready to ship' : 'Not ready to ship'}</div>
+        <div className={styles.eyebrow}>{t('report_readiness_heading')}</div>
+        <div className={styles.title}>
+          {go ? t('report_readiness_go') : t('report_readiness_no_go')}
+        </div>
         {score !== undefined && (
           <div className={styles.score}>
-            Score {score}
-            {baseline !== undefined && (
-              <>
-                {' · baseline '}
-                {baseline}
-                {' · '}
-                {delta !== undefined && delta >= 0 ? '+' : ''}
-                {delta}
-              </>
-            )}
+            {baseline !== undefined && delta !== undefined
+              ? t('report_score_summary', {
+                  score,
+                  baseline,
+                  sign: delta >= 0 ? '+' : '',
+                  delta,
+                })
+              : t('report_score_only', { score })}
           </div>
         )}
       </div>
@@ -81,14 +81,16 @@ export function ReadinessVerdict({
             </span>
             <span className={styles.areaName}>{area.name}</span>
             <span dir="ltr" className={styles.areaScore}>
-              {area.score === null ? '—' : area.score} / {area.threshold}
+              {area.score === null
+                ? t('report_area_score_missing', { threshold: area.threshold })
+                : t('report_area_score', { score: area.score, threshold: area.threshold })}
             </span>
           </div>
         ))}
 
         {blockers.length > 0 && (
           <div className={styles.blockers}>
-            <div className={styles.blockersTitle}>Blockers</div>
+            <div className={styles.blockersTitle}>{t('report_blockers')}</div>
             {blockers.map((b) => (
               <div key={b} className={styles.blocker}>
                 — {b}

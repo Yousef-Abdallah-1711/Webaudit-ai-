@@ -10,11 +10,13 @@
  */
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../../components/dashboard';
 import { ScanProgress } from '../../../../components/scan/ScanProgress';
 import { ApiError, cancelScan, getScan } from '../../../../lib/api';
 
 export default function ScanProgressPage(): React.ReactElement {
+  const t = useTranslations('scan');
   const params = useParams<{ id: string }>();
   const scanId = params.id;
   const router = useRouter();
@@ -29,17 +31,17 @@ export default function ScanProgressPage(): React.ReactElement {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : 'This scan could not be loaded.');
+        setError(err instanceof ApiError ? err.message : t('progress_load_error'));
       });
     return () => {
       cancelled = true;
     };
-  }, [scanId]);
+  }, [scanId, t]);
 
   if (error !== null) {
     return (
       <div>
-        <PageHead eyebrow="Live scan" title="Not found" />
+        <PageHead eyebrow={t('progress_eyebrow')} title={t('progress_not_found')} />
         <p>{error}</p>
       </div>
     );
@@ -48,7 +50,7 @@ export default function ScanProgressPage(): React.ReactElement {
   if (hostname === null) {
     return (
       <div>
-        <PageHead eyebrow="Live scan" title="Loading…" />
+        <PageHead eyebrow={t('progress_eyebrow')} title={t('progress_loading')} />
       </div>
     );
   }

@@ -9,10 +9,12 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
+import { I18nProvider } from '../../app/theme';
 import { AnnotatedScreenshot, type ScreenshotAnnotation } from '../../components/report';
+import enReports from '../../messages/en/reports.json';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 const ANNOTATIONS: readonly ScreenshotAnnotation[] = [
@@ -32,7 +34,7 @@ describe('AnnotatedScreenshot', () => {
     const html = render(
       createElement(AnnotatedScreenshot, { alt: 'Home page', annotations: ANNOTATIONS }),
     );
-    expect(html).toContain('not available for this scan yet');
+    expect(html).toContain(enReports.report_screenshot_unavailable);
     expect(html).not.toContain('<img');
     expect(html).not.toContain('Missing CSP header');
   });

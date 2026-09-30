@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import enReports from '../../../messages/en/reports.json';
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi } from '../support/auth.js';
 import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';
@@ -69,7 +70,7 @@ test('a new user receives a real report, export, clipboard prompt, and fixes cou
   // FR-053/spec.md: a fix prompt exists for every issue — assert the real,
   // accessible "Copy fix prompt" control is present rather than guessing at
   // a hashed CSS-module class name.
-  await expect(page.getByRole('button', { name: 'Copy fix prompt' }).first()).toBeVisible({
+  await expect(page.getByRole('button', { name: enReports.report_copy_prompt }).first()).toBeVisible({
     timeout: 5_000,
   });
 
@@ -84,7 +85,7 @@ test('a new user receives a real report, export, clipboard prompt, and fixes cou
   const fixesLink = page.getByRole('link', { name: /Fixes/ });
   await expect(fixesLink).toContainText(String(issueCount));
 
-  const copyButton = page.getByRole('button', { name: 'Copy fix prompt' }).first();
+  const copyButton = page.getByRole('button', { name: enReports.report_copy_prompt }).first();
   const scanId = page.url().split('/').pop();
   expect(scanId).toBeTruthy();
   const reportResponse = await request.get(`${stack.apiBaseUrl}/scans/${String(scanId)}/report`, {
@@ -97,12 +98,12 @@ test('a new user receives a real report, export, clipboard prompt, and fixes cou
   const expectedPrompt = reportBody.report.issues[0]?.fixPrompt;
   expect(expectedPrompt).toBeTruthy();
   await copyButton.click();
-  await expect(page.getByRole('button', { name: 'Copied' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: enReports.report_copied }).first()).toBeVisible();
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   expect(clipboardText.replaceAll('\r\n', '\n')).toBe(expectedPrompt?.replaceAll('\r\n', '\n'));
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Export' }).click();
+  await page.getByRole('button', { name: enReports.report_export }).click();
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toMatch(/\.html$/);
 });

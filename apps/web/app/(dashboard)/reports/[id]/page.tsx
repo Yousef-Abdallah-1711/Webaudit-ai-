@@ -18,6 +18,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Button, Card, StatRow } from '../../../../components/ui';
 import { PageHead } from '../../../../components/dashboard';
 import {
@@ -35,15 +36,7 @@ import {
 } from '../../../../lib/api';
 import styles from './page.module.css';
 
-const MODULE_LABEL: Readonly<Record<string, string>> = {
-  PERFORMANCE: 'Performance',
-  SECURITY: 'Security',
-  UI: 'Design',
-  TESTING: 'Testing',
-  SEO: 'Search visibility',
-};
-
-const AREA_TABS = ['All', 'Performance', 'Security', 'Design', 'Testing', 'Search visibility'];
+const AREA_TABS = ['ALL', 'PERFORMANCE', 'SECURITY', 'UI', 'TESTING', 'SEO'] as const;
 
 const SEVERITY_CASE: Record<string, 'critical' | 'high' | 'medium' | 'low' | 'info'> = {
   CRITICAL: 'critical',
@@ -72,11 +65,12 @@ function issueCountFor(issues: readonly ReportIssue[], module: string): number {
 }
 
 export default function ReportPage(): React.ReactElement {
+  const t = useTranslations('reports');
   const params = useParams<{ id: string }>();
   const scanId = params.id;
   const [report, setReport] = useState<Report | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [area, setArea] = useState('All');
+  const [area, setArea] = useState<(typeof AREA_TABS)[number]>('ALL');
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -88,12 +82,12 @@ export default function ReportPage(): React.ReactElement {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setLoadError(err instanceof ApiError ? err.message : 'This report could not be loaded.');
+        setLoadError(err instanceof ApiError ? err.message : t('report_load_error'));
       });
     return () => {
       cancelled = true;
     };
-  }, [scanId]);
+  }, [scanId, t]);
 
   const onExport = async (): Promise<void> => {
     setExporting(true);
@@ -107,16 +101,64 @@ export default function ReportPage(): React.ReactElement {
       link.click();
       URL.revokeObjectURL(url);
     } catch {
-      setExportError('The report export could not be created.');
+      setExportError(t('report_export_error'));
     } finally {
       setExporting(false);
+    }
+  };
+
+  const moduleLabel = (module: string): string => {
+    switch (module) {
+      case 'PERFORMANCE':
+        return t('area_performance');
+      case 'SECURITY':
+        return t('area_security');
+      case 'UI':
+        return t('area_design');
+      case 'TESTING':
+        return t('area_testing');
+      case 'SEO':
+        return t('area_search_visibility');
+      default:
+        return module;
+    }
+  };
+
+  const scanStateLabel = (state: string): string => {
+    switch (state.toUpperCase()) {
+      case 'QUEUED':
+        return t('report_scan_state_queued');
+      case 'RUNNING':
+        return t('report_scan_state_running');
+      case 'RUNNING_PHASE_1':
+        return t('report_scan_state_running_phase_1');
+      case 'AWAITING_QUESTIONNAIRE':
+        return t('report_scan_state_awaiting_questionnaire');
+      case 'RUNNING_PHASE_2':
+        return t('report_scan_state_running_phase_2');
+      case 'RUNNING_PHASE_3':
+        return t('report_scan_state_running_phase_3');
+      case 'RUNNING_MASTER':
+        return t('report_scan_state_running_master');
+      case 'RUNNING_DOCS':
+        return t('report_scan_state_running_docs');
+      case 'COMPLETED':
+        return t('report_scan_state_completed');
+      case 'FAILED':
+        return t('report_scan_state_failed');
+      case 'CANCELLED':
+        return t('report_scan_state_cancelled');
+      case 'TIMED_OUT':
+        return t('report_scan_state_timed_out');
+      default:
+        return state.toLowerCase();
     }
   };
 
   if (loadError !== null) {
     return (
       <div>
-        <PageHead eyebrow="Report" title="Not found" />
+        <PageHead eyebrow={t('report_label')} title={t('report_not_found')} />
         <p className={styles.empty}>{loadError}</p>
       </div>
     );
@@ -125,13 +167,13 @@ export default function ReportPage(): React.ReactElement {
   if (report === null) {
     return (
       <div>
-        <PageHead eyebrow="Report" title="Loading…" />
+        <PageHead eyebrow={t('report_label')} title={t('report_loading')} />
       </div>
     );
   }
 
   const list =
-    area === 'All' ? report.issues : report.issues.filter((i) => MODULE_LABEL[i.module] === area);
+    area === 'ALL' ? report.issues : report.issues.filter((i) => i.module === area);
 
   const counts = {
     critical: report.issues.filter((i) => i.severity === 'CRITICAL').length,
@@ -143,9 +185,9 @@ export default function ReportPage(): React.ReactElement {
   return (
     <div>
       <PageHead
-        eyebrow="Report"
-        title={`scan ${scanId.slice(0, 8)}`}
-        meta={`state ${report.state.toLowerCase()}`}
+        eyebrow={t('report_label')}
+        title={t('report_scan_title', { scanId: scanId.slice(0, 8) })}
+        meta={t('report_scan_state', { state: scanStateLabel(report.state) })}
         actions={
           <>
             <Button
@@ -154,9 +196,9 @@ export default function ReportPage(): React.ReactElement {
               disabled={exporting}
               onClick={() => void onExport()}
             >
-              {exporting ? 'Exporting...' : 'Export'}
+              {exporting ? t('report_exporting') : t('report_export')}
             </Button>
-            <Button size="sm">Re-audit</Button>
+            <Button size="sm">{t('report_reaudit')}</Button>
           </>
         }
       />
@@ -166,10 +208,10 @@ export default function ReportPage(): React.ReactElement {
           <Card padding={20}>
             <div className={styles.scoreWrap}>
               <ScoreArc score={report.score ?? 0} delta={null} />
-              {report.score === null && <div className={styles.noScore}>No score yet</div>}
+              {report.score === null && <div className={styles.noScore}>{t('report_no_score')}</div>}
             </div>
           </Card>
-          <Card padding={20} title="Areas">
+          <Card padding={20} title={t('report_areas')}>
             <div className={styles.areasList}>
               {report.areas.map((a) => {
                 const detail = a.degradedReason ?? a.skippedReason;
@@ -177,7 +219,7 @@ export default function ReportPage(): React.ReactElement {
                   <ModuleStatus
                     key={a.module}
                     compact
-                    area={MODULE_LABEL[a.module] ?? a.module}
+                    area={moduleLabel(a.module)}
                     state={MODULE_STATE_CASE[a.state] ?? 'waiting'}
                     issues={issueCountFor(report.issues, a.module)}
                     {...(detail !== null ? { detail } : {})}
@@ -188,15 +230,27 @@ export default function ReportPage(): React.ReactElement {
           </Card>
         </div>
         <div>
-          <Card padding={24} title="Executive summary" style={{ marginBottom: 'var(--space-4)' }}>
-            <p className={styles.summaryText}>{report.summary ?? 'No summary yet.'}</p>
+          <Card padding={24} title={t('report_summary')} style={{ marginBottom: 'var(--space-4)' }}>
+            <p className={styles.summaryText}>{report.summary ?? t('report_no_summary')}</p>
             <div className={styles.statRow}>
               <StatRow
                 items={[
-                  { value: counts.critical, label: 'critical' },
-                  { value: counts.high, label: 'high' },
-                  { value: counts.medium, label: 'medium' },
-                  { value: counts.low, label: 'low' },
+                  {
+                    value: t('report_count_only', { count: counts.critical }),
+                    label: t('report_severity_critical'),
+                  },
+                  {
+                    value: t('report_count_only', { count: counts.high }),
+                    label: t('report_severity_high'),
+                  },
+                  {
+                    value: t('report_count_only', { count: counts.medium }),
+                    label: t('report_severity_medium'),
+                  },
+                  {
+                    value: t('report_count_only', { count: counts.low }),
+                    label: t('report_severity_low'),
+                  },
                 ]}
               />
             </div>
@@ -211,7 +265,7 @@ export default function ReportPage(): React.ReactElement {
                 }}
                 className={area === tab ? `${styles.tab} ${styles.tabActive}` : styles.tab}
               >
-                {tab}
+                {tab === 'ALL' ? t('report_tab_all') : moduleLabel(tab)}
               </button>
             ))}
           </div>
@@ -220,7 +274,7 @@ export default function ReportPage(): React.ReactElement {
               <IssueCard
                 key={issue.id}
                 severity={SEVERITY_CASE[issue.severity] ?? 'medium'}
-                area={MODULE_LABEL[issue.module] ?? issue.module}
+                area={moduleLabel(issue.module)}
                 title={issue.title}
                 {...(issue.location !== null ? { location: issue.location } : {})}
                 description={issue.explanation}
@@ -228,7 +282,9 @@ export default function ReportPage(): React.ReactElement {
                 {...(issue.fixable ? { prompt: issue.fixPrompt } : {})}
               />
             ))}
-            {list.length === 0 && <div className={styles.empty}>No issues in this area.</div>}
+            {list.length === 0 && (
+              <div className={styles.empty}>{t('report_no_issues_in_area')}</div>
+            )}
           </div>
         </div>
       </div>

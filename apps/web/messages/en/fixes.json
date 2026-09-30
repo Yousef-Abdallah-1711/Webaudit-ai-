@@ -1,1 +1,26 @@
-{}
+{
+  "fixes_label": "Fixes",
+  "fixes_loading": "Loading…",
+  "fixes_load_error": "This audit could not be loaded.",
+  "fixes_assert_not_charged": "That re-check could not be started. You were not charged.",
+  "fixes_assert_refresh_balance": "That re-check could not be started. Refresh to see your current balance.",
+  "fixes_no_audit": "No audit selected",
+  "fixes_no_audit_meta": "Open a report and choose Fixes.",
+  "fixes_scan_title": "scan {scanId}",
+  "fixes_loading_meta": "Loading…",
+  "fixes_status": "{outstanding} outstanding · {resolved} resolved",
+  "fixes_count_only": "{count}",
+  "fixes_stat_critical": "critical",
+  "fixes_stat_high": "high",
+  "fixes_stat_medium_low": "medium and low",
+  "fixes_stat_resolved": "resolved",
+  "fixes_empty": "This audit produced no issues.",
+  "fixes_note": "Marking an issue fixed runs one narrow check. It turns green only when that check passes.",
+  "fixes_verified": "verified {time}",
+  "fixes_regressed": "regressed",
+  "fixes_button_verified": "Verified",
+  "fixes_button_rechecking": "Re-checking…",
+  "fixes_button_assert": "I fixed this — 3 cr",
+  "fixes_unverifiable": "This issue has no automated re-check. Re-run the audit to confirm it is fixed.",
+  "fixes_evidence_label": "Re-check failed — current evidence"
+}

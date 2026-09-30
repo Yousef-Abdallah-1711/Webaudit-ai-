@@ -1,1 +1,23 @@
-{}
+{
+  "readiness_label": "Readiness",
+  "readiness_loading": "Loading…",
+  "readiness_no_audit": "No audit selected",
+  "readiness_no_audit_meta": "Open a completed report first.",
+  "readiness_load_error": "This scan could not be loaded.",
+  "readiness_start_error": "The readiness pass could not be started.",
+  "readiness_pass_title": "Production readiness pass",
+  "readiness_pass_underway": "A pass is under way.",
+  "readiness_pass_status": "A readiness pass is {state}.",
+  "readiness_view": "View it",
+  "readiness_fresh_full_reaudit": "Fresh full re-audit · {credits, plural, one {# credit} other {# credits}}",
+  "readiness_blocking_issues": "{count, plural, one {# critical or high issue} other {# critical or high issues}} still outstanding. The readiness pass is available, but running it now is premature — resolve the blocking issues first.",
+  "readiness_run_pass": "Run readiness pass — {credits, plural, one {# cr} other {# cr}}",
+  "readiness_no_blocking_issues": "No critical or high issues remain. A readiness pass re-audits every area fresh, compares against this audit, and returns an explicit go or no-go.",
+  "readiness_starting": "Starting…",
+  "readiness_auditing": "Auditing every area fresh · {state}",
+  "readiness_running": "The readiness pass is running. This page updates when the verdict is ready.",
+  "readiness_baseline_scan": "Baseline scan {scanId}",
+  "readiness_regressions_title": "Regressions since the original audit",
+  "readiness_improvements_title": "Improvements",
+  "readiness_open_certificate": "Open the shareable readiness certificate"
+}

@@ -34,6 +34,7 @@
  * `capability-loader.ts`'s own note already declined to do for T116's
  * browser-pool transport, for the same reason.
  */
+import { useTranslations } from 'next-intl';
 import type { SeverityBadgeProps } from './SeverityBadge';
 import { SeverityBadge } from './SeverityBadge';
 import styles from './AnnotatedScreenshot.module.css';
@@ -81,11 +82,12 @@ export function AnnotatedScreenshot({
   annotations = [],
   alt,
 }: AnnotatedScreenshotProps): React.ReactElement {
+  const t = useTranslations('reports');
   return (
     <div className={styles.wrapper}>
-      <div className={styles.heading}>Page screenshot</div>
+      <div className={styles.heading}>{t('report_screenshot_heading')}</div>
       {screenshotUrl === undefined ? (
-        <p className={styles.unavailable}>Screenshot capture is not available for this scan yet.</p>
+        <p className={styles.unavailable}>{t('report_screenshot_unavailable')}</p>
       ) : (
         <>
           <div className={styles.frame}>

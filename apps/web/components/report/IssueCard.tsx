@@ -14,6 +14,7 @@
  * carry visible attribution).
  */
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { SeverityBadge, type SeverityBadgeProps } from './SeverityBadge';
 import { AttributionMark, type AttributionMarkProps } from './AttributionMark';
 import styles from './IssueCard.module.css';
@@ -51,6 +52,7 @@ export function IssueCard({
   area,
   onCopy,
 }: IssueCardProps): React.ReactElement {
+  const t = useTranslations('reports');
   const [copied, setCopied] = useState(false);
 
   function copy(): void {
@@ -86,7 +88,7 @@ export function IssueCard({
           onClick={copy}
           className={copied ? `${styles.copyBtn} ${styles.copyBtnCopied}` : styles.copyBtn}
         >
-          {copied ? 'Copied' : 'Copy fix prompt'}
+          {copied ? t('report_copied') : t('report_copy_prompt')}
         </button>
       )}
     </div>

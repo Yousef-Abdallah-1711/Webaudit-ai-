@@ -9,37 +9,29 @@
  * caller reads it before wrapping this in a `title`-only or `:hover`-revealed
  * container.
  */
+import { useTranslations } from 'next-intl';
 import styles from './AttributionMark.module.css';
 
 export interface AttributionMarkProps {
   kind?: 'measured' | 'ai-judgment';
 }
 
-const KIND: Record<
-  NonNullable<AttributionMarkProps['kind']>,
-  {
-    readonly className: string;
-    readonly label: string;
-    readonly title: string;
-    readonly path: string;
-  }
-> = {
-  measured: {
-    className: styles.measured!,
-    label: 'Measured',
-    title: 'Observed directly by a check',
-    path: 'M4 20V10m5 10V4m5 16v-7m5 7V8',
-  },
-  'ai-judgment': {
-    className: styles.aiJudgment!,
-    label: 'AI judgment',
-    title: 'Concluded by a model from measured input',
-    path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-2 7a2 2 0 1 1 4 0c0 1.5-2 1.8-2 3m0 3v.5',
-  },
-};
-
 export function AttributionMark({ kind = 'measured' }: AttributionMarkProps): React.ReactElement {
-  const entry = KIND[kind];
+  const t = useTranslations('reports');
+  const entry =
+    kind === 'measured'
+      ? {
+          className: styles.measured!,
+          label: t('report_attribution_measured'),
+          title: t('report_attribution_measured_title'),
+          path: 'M4 20V10m5 10V4m5 16v-7m5 7V8',
+        }
+      : {
+          className: styles.aiJudgment!,
+          label: t('report_attribution_ai_judgment'),
+          title: t('report_attribution_ai_judgment_title'),
+          path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-2 7a2 2 0 1 1 4 0c0 1.5-2 1.8-2 3m0 3v.5',
+        };
 
   return (
     <span className={`${styles.mark} ${entry.className}`} title={entry.title}>

@@ -16,6 +16,7 @@
  * can only cost the animation — never the number").
  */
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import styles from './ScoreArc.module.css';
 
 export interface ScoreArcProps {
@@ -39,8 +40,9 @@ export function ScoreArc({
   score,
   delta = null,
   size = 180,
-  label = 'Health score',
+  label,
 }: ScoreArcProps): React.ReactElement {
+  const t = useTranslations('reports');
   const [v, setV] = useState(score);
 
   useEffect(() => {
@@ -108,7 +110,7 @@ export function ScoreArc({
           fill="var(--text-strong)"
           className={styles.value}
         >
-          {v}
+          {t('report_count_only', { count: v })}
         </text>
         {delta !== null && (
           <text
@@ -119,12 +121,14 @@ export function ScoreArc({
             fontSize="13"
             fill={delta >= 0 ? 'var(--sev-resolved)' : 'var(--sev-critical)'}
           >
-            {delta >= 0 ? '+' : ''}
-            {delta} vs baseline
+            {t('report_score_delta', {
+              sign: delta >= 0 ? '+' : '',
+              delta,
+            })}
           </text>
         )}
       </svg>
-      <div className={styles.label}>{label}</div>
+      <div className={styles.label}>{label ?? t('report_health_score')}</div>
     </div>
   );
 }

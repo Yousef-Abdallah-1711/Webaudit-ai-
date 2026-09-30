@@ -7,6 +7,7 @@
  * `done`/`total` — there is no animation independent of that ratio for it to
  * run indeterminately.
  */
+import { useTranslations } from 'next-intl';
 import styles from './ProgressRow.module.css';
 
 export interface ProgressRowProps {
@@ -26,15 +27,14 @@ export function ProgressRow({
   total = 5,
   safeToClose = true,
 }: ProgressRowProps): React.ReactElement {
+  const t = useTranslations('reports');
   const pct = Math.round((done / total) * 100);
 
   return (
     <div className={styles.row}>
       <div className={styles.head}>
         <span className={styles.phase}>{phase}</span>
-        <span className={styles.count}>
-          {done} of {total} areas
-        </span>
+        <span className={styles.count}>{t('report_progress_area_count', { done, total })}</span>
         <span dir="ltr" className={styles.elapsed}>
           {elapsed}
         </span>
@@ -43,9 +43,7 @@ export function ProgressRow({
         <div className={styles.fill} style={{ width: `${String(pct)}%` }} />
       </div>
       {safeToClose && (
-        <div className={styles.safe}>
-          You can close this tab. The audit keeps running and the report will be waiting.
-        </div>
+        <div className={styles.safe}>{t('report_safe_to_close')}</div>
       )}
     </div>
   );

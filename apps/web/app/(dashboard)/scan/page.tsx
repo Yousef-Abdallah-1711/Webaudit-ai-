@@ -11,14 +11,16 @@
  * dead UI), fixed alongside it rather than filed for later.
  */
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../components/dashboard';
 import { ScanForm } from '../../../components/scan/ScanForm';
 
 export default function ScanPage(): React.ReactElement {
   const router = useRouter();
+  const t = useTranslations('scan');
   return (
     <div>
-      <PageHead eyebrow="Dashboard" title="What should we audit?" />
+      <PageHead eyebrow={t('scan_eyebrow')} title={t('scan_title')} />
       <ScanForm
         onStart={(scanId) => {
           router.push(`/scan/${scanId}`);
