@@ -19,6 +19,7 @@
  * Component — same reason as `Public.tsx`.
  */
 import { useState } from 'react';
+import { AREA_COST } from '@webaudit/config';
 import {
   Button,
   Card,
@@ -112,11 +113,11 @@ function Difference(): React.ReactElement {
 }
 
 const AREA_ROWS: readonly (readonly [PublicKey, PublicKey, number])[] = [
-  ['a_perf', 'a_perf_d', 20],
-  ['a_sec', 'a_sec_d', 25],
-  ['a_des', 'a_des_d', 20],
-  ['a_test', 'a_test_d', 20],
-  ['a_seo', 'a_seo_d', 10],
+  ['a_perf', 'a_perf_d', AREA_COST.PERFORMANCE],
+  ['a_sec', 'a_sec_d', AREA_COST.SECURITY],
+  ['a_des', 'a_des_d', AREA_COST.UI],
+  ['a_test', 'a_test_d', AREA_COST.TESTING],
+  ['a_seo', 'a_seo_d', AREA_COST.SEO],
 ];
 
 function Areas(): React.ReactElement {
@@ -212,7 +213,7 @@ export default function LandingPage(): React.ReactElement {
 
   return (
     <div>
-      <PromoBar message={t('promo')} code="START50" />
+      <PromoBar message={t('promo')} />
       <PublicPage active="nav_product">
         <Hero />
         <Difference />
