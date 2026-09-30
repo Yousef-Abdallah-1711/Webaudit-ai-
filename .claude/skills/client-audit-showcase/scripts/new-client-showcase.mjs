@@ -270,12 +270,9 @@ async function main() {
   }
 
   // 4b. dashboard/ — showcase.jsx is the generic client-facing UI (needs the
-  //     brand/localStorage replacements above); vendor/ is the shared
-  //     design-system bundle (ds-bundle.js, theme.jsx, strings.jsx,
-  //     styles.css, tokens/ — never client-specific). react.js/react-dom.js/
-  //     babel.min.js are gitignored upstream (fetched from a CDN once); reuse
-  //     them from source if already fetched there, otherwise leave a note —
-  //     render-dashboard.ts prints the exact curl commands either way.
+  //     brand/localStorage replacements above). The dashboard renderer reads
+  //     design-system sources live from the sibling checkout, so only its
+  //     required React/Babel CDN libraries belong in dashboard/vendor/.
   let fetchedVendorLibsNote = '';
   if (await pathExists(join(sourceDir, 'dashboard', 'showcase.jsx'))) {
     await copyWithReplacements(
@@ -285,27 +282,21 @@ async function main() {
     );
   }
   const vendorFrom = join(sourceDir, 'dashboard', 'vendor');
-  if (await pathExists(vendorFrom)) {
-    const CDN_LIBS = ['react.js', 'react-dom.js', 'babel.min.js'];
-    for (const entry of await readdir(vendorFrom, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        await mkdir(join(destDir, 'dashboard', 'vendor', entry.name), { recursive: true });
-        for (const sub of await readdir(join(vendorFrom, entry.name))) {
-          await copyFileVerbatim(join(vendorFrom, entry.name, sub), join(destDir, 'dashboard', 'vendor', entry.name, sub));
-        }
-      } else {
-        await copyFileVerbatim(join(vendorFrom, entry.name), join(destDir, 'dashboard', 'vendor', entry.name));
-      }
+  const CDN_LIBS = ['react.js', 'react-dom.js', 'babel.min.js'];
+  const missingCdnLibs = [];
+  for (const lib of CDN_LIBS) {
+    const sourceLib = join(vendorFrom, lib);
+    if (await pathExists(sourceLib)) {
+      await mkdir(join(destDir, 'dashboard', 'vendor'), { recursive: true });
+      await copyFileVerbatim(sourceLib, join(destDir, 'dashboard', 'vendor', lib));
+    } else {
+      missingCdnLibs.push(lib);
     }
-    const missingCdnLibs = [];
-    for (const lib of CDN_LIBS) {
-      if (!(await pathExists(join(vendorFrom, lib)))) missingCdnLibs.push(lib);
-    }
-    if (missingCdnLibs.length > 0) {
-      fetchedVendorLibsNote =
-        `\n  note: ${missingCdnLibs.join(', ')} not found in ${args.source}/dashboard/vendor/ — ` +
-        `\`pnpm --filter ${newPkgName} run dashboard\` will fail with the exact curl commands to fetch them once.\n`;
-    }
+  }
+  if (missingCdnLibs.length > 0) {
+    fetchedVendorLibsNote =
+      `\n  note: ${missingCdnLibs.join(', ')} not found in ${args.source}/dashboard/vendor/ — ` +
+      `\`pnpm --filter ${newPkgName} run dashboard\` will fail with the exact curl commands to fetch them once.\n`;
   }
 
   // 5. package.json — same deps, new identity.

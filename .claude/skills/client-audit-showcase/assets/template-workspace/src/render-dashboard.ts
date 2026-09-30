@@ -25,9 +25,9 @@ const read = (p: string) => readFile(p, 'utf8');
 const readB64 = async (p: string) => (await readFile(p)).toString('base64');
 
 async function inlineStyles(): Promise<string> {
-  // styles.css is just `@import url("tokens/X.css")` lines. Inline each token
-  // file. fonts.css leads (its remote Google Fonts @import must stay at the top
-  // of the combined sheet, where CSS requires @import to be).
+  // Read the canonical token CSS from design-system/tokens/ and inline it.
+  // fonts.css leads (its remote Google Fonts @import must stay at the top of
+  // the combined sheet, where CSS requires @import to be).
   const order = ['fonts', 'colors', 'typography', 'radius', 'elevation', 'layout', 'motion', 'dark'];
   const parts = await Promise.all(order.map((n) => read(join(DS, 'tokens', `${n}.css`))));
   return parts.join('\n');

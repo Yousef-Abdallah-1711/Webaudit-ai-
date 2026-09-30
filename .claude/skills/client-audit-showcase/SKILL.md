@@ -76,8 +76,8 @@ mechanical work.
    This clones the generic/reusable files (`runner.ts`, `capabilities.ts`,
    `capture.ts`, `crawl.ts`, `render-report.ts`, `render-dashboard.ts`,
    `pipeline-run.ts`, `merge-pipeline.ts`, `build-runbook.ts`,
-   `runbook-data.ts`, `serve.mjs`, `dashboard/showcase.jsx`,
-   `dashboard/vendor/`) into `showcase-<slug>/`,
+   `runbook-data.ts`, `serve.mjs`, `dashboard/showcase.jsx`, and any
+   available React/ReactDOM/Babel CDN libraries into `showcase-<slug>/`,
    rewrites `package.json`, and swaps the template target's hostname/brand for the
    new one everywhere it appears — including the dashboard's localStorage key
    and export-filename prefixes, so two different clients' dashboards never
@@ -203,11 +203,22 @@ mechanical work.
 | `src/runbook-data.ts` (the 47-case methodology) | mostly | review for topology fit (widget/multi-tenant/app-api-split cases) |
 | `src/build-runbook.ts` | ✅ | `PASSIVE_OBSERVATIONS` only (optional) |
 | `src/ai-narrative.ts` | shell only | ✅ everything in `build()`, required |
-| `dashboard/showcase.jsx`, `dashboard/vendor/` | ✅ | landing tab (`useState`) optional, see step 6 |
+| `dashboard/showcase.jsx`, `dashboard/vendor/{react.js,react-dom.js,babel.min.js}` | ✅ | landing tab (`useState`) optional, see step 6 |
 | `serve.mjs` | ✅ | — |
 
 Dashboard tabs, in nav order: **Readiness** (go/no-go, `VerdictPanel`) →
 Report → Pages → Priorities → Fixes → Evidence → Pentest plan.
+
+### Copy and dashboard asset sources
+
+Production copy lives in `apps/web/messages/{locale}/*.json` and is consumed by `next-intl`.
+Design mockup copy lives in `design-system/ui_kits/strings.jsx`, the design skill's own
+browser-global catalog. The renderer reads the design system's theme, strings, tokens, and
+`_ds_bundle.js` directly from the sibling `design-system/` checkout; the old copied vendor
+versions were unused and have been removed. `_ds_bundle.js` and `_ds_manifest.json` are generated
+by external tooling unavailable in this repository; there is no local regeneration command, and
+they must not be hand-edited. `dashboard/vendor/` contains only required CDN libraries when they
+have been fetched; no design-system sync command applies.
 
 `runner.ts` and `capture.ts` export `runAudit()` / `captureMetrics()` —
 `crawl.ts` imports and calls them per page rather than shelling out, so a
