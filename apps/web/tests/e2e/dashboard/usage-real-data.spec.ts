@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import enUsage from '../../../messages/en/usage.json';
+import enUsage from '../../../messages/en/usage.json' with { type: 'json' };
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi, type Creds } from '../support/auth.js';
 import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';

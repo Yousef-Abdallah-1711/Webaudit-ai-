@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import enReports from '../../../messages/en/reports.json';
+import enReports from '../../../messages/en/reports.json' with { type: 'json' };
 import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi } from '../support/auth.js';
 import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';
