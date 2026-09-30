@@ -51,3 +51,12 @@ for (const { name, path: route } of PAGES) {
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
   });
 }
+
+test('pricing has no horizontal overflow at mobile and tablet widths', async ({ page }) => {
+  for (const width of [390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto(`${server.url}/pricing`, { waitUntil: 'networkidle' });
+    const scrollWidth = await page.evaluate(() => document.documentElement.scrollWidth);
+    expect(scrollWidth, `/pricing at ${String(width)}px`).toBeLessThanOrEqual(width + 2);
+  }
+});
