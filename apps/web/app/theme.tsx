@@ -23,7 +23,7 @@ import { useEffect, useReducer } from 'react';
 import { NextIntlClientProvider, useMessages } from 'next-intl';
 import { type Lang, type StringKey } from '../lib/strings';
 import { messagesByLocale } from '../i18n/messages';
-import { defaultLocale, localeMetadata, locales } from '../i18n/locales';
+import { defaultLocale, localeMetadata, locales, type Locale } from '../i18n/locales';
 import styles from './theme.module.css';
 
 const isBrowser = typeof window !== 'undefined';
@@ -130,10 +130,18 @@ export function useT(): [(key: StringKey) => string, Lang, (value: Lang) => void
   return [t, lang, setLang];
 }
 
-export function I18nProvider({ children }: Readonly<{ children: React.ReactNode }>): React.ReactElement {
+export function I18nProvider({
+  children,
+  initialLocale,
+}: Readonly<{ children: React.ReactNode; initialLocale?: Locale }>): React.ReactElement {
   const [lang] = useLang();
+  const resolvedLang = isBrowser ? lang : (initialLocale ?? lang);
   return (
-    <NextIntlClientProvider locale={lang} messages={messagesByLocale[lang]} timeZone="UTC">
+    <NextIntlClientProvider
+      locale={resolvedLang}
+      messages={messagesByLocale[resolvedLang]}
+      timeZone="UTC"
+    >
       {children}
     </NextIntlClientProvider>
   );

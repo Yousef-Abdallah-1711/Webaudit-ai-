@@ -52,7 +52,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>): Promise<React.ReactElement> {
   const requestLocale = await getLocale().catch(() => defaultLocale);
-  const locale = locales.includes(requestLocale as Locale) ? requestLocale : defaultLocale;
+  const locale: Locale = locales.includes(requestLocale as Locale)
+    ? (requestLocale as Locale)
+    : defaultLocale;
 
   return (
     <html
@@ -72,7 +74,7 @@ export default async function RootLayout({
         <ThemeScript />
       </head>
       <body>
-        <I18nProvider>
+        <I18nProvider initialLocale={locale}>
           <AuthProvider>{children}</AuthProvider>
         </I18nProvider>
       </body>
