@@ -108,9 +108,7 @@ matching component contracts/prompts in `design-system/`; detailed rules:
   `eslint.config.js`, `.prettierrc`, `vitest.workspace.ts`, `WEB/playwright.config.ts`.
   No `.github/` CI workflow is present in this checkout; old setup claims are not proof of CI.
 - `var/`: ignored runtime workspaces/installed bundles, not project context to read.
-  `showcase-eink/`, `showcase-trimora/`, `showcase-esaalnybot/`: separate showcase workspaces
-  included by the workspace glob; inspect only for tasks affecting them or root-tooling failures.
-  `apps/early-access/` is explicitly excluded from workspaces, separate parked work.
+- `apps/early-access/` is explicitly excluded from workspaces, separate parked work.
   Dependency/build outputs and `.playwright-mcp/` are not source documentation.
 
 ## Verification entry points

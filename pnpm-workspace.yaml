@@ -1,6 +1,5 @@
 packages:
   - 'apps/*'
-  - 'showcase-*'
   - 'packages/*'
   - 'packages/capabilities-vendored'
   - 'packages/capabilities-vendored/*'

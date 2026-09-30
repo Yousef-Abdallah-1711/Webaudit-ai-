@@ -1,15 +1,15 @@
 ---
 name: client-audit-showcase
-description: Use when asked to build a client-facing WebAudit AI demo/showcase for a new website — generate a standalone audit + screenshots + AI narrative + pentest runbook + self-contained dashboard for a URL, the same way showcase-esaalnybot was built. Triggers include "make a showcase for <url>", "audit this client's site like the esaalnybot one", "new client demo", "run our audit tool against <site>".
+description: Use when asked to build a client-facing WebAudit AI demo/showcase for a new website — generate a standalone audit + screenshots + AI narrative + pentest runbook + self-contained dashboard for a URL using the reusable workspace template bundled with this skill. Triggers include "make a showcase for <url>", "audit this client's site", "new client demo", "run our audit tool against <site>".
 ---
 
 # Client Audit Showcase
 
 ## Overview
 
-Packages the exact workflow used to build `showcase-esaalnybot/` into a
-repeatable pipeline for a new client's website: a standalone runner drives
-the product's **real** vendored capabilities, module-runner, safe-net and
+Packages the reusable workflow and workspace template bundled with this
+skill into a repeatable pipeline for a new client's website: a standalone
+runner drives the product's **real** vendored capabilities, module-runner, safe-net and
 Playwright browser pool against the live URL (no mocks), then an AI layer —
 authored by Claude, strictly from the measured findings — explains and
 prioritises it, and a self-contained HTML dashboard is rendered for the
@@ -57,8 +57,8 @@ ever submitting them — `src/crawl.ts` already does this (`forms.json`).
 - `<url>` — the client's live site, e.g. `https://example.com/`.
 - `--slug` — optional; defaults to the URL's hostname, slugified. Produces
   workspace `showcase-<slug>/`.
-- `--source` — optional; the existing showcase workspace to clone the
-  mechanical files from. Defaults to `showcase-esaalnybot`.
+- `--source` — optional; the workspace to clone the mechanical files from.
+  Defaults to `.claude/skills/client-audit-showcase/assets/template-workspace`.
 - `--force` — overwrite an existing `showcase-<slug>/` directory.
 
 This command runs the full pipeline below end to end, stopping only where a
@@ -78,7 +78,7 @@ mechanical work.
    `pipeline-run.ts`, `merge-pipeline.ts`, `build-runbook.ts`,
    `runbook-data.ts`, `serve.mjs`, `dashboard/showcase.jsx`,
    `dashboard/vendor/`) into `showcase-<slug>/`,
-   rewrites `package.json`, and swaps the old target's hostname/brand for the
+   rewrites `package.json`, and swaps the template target's hostname/brand for the
    new one everywhere it appears — including the dashboard's localStorage key
    and export-filename prefixes, so two different clients' dashboards never
    collide in the same browser. It does **not** copy the old client's
@@ -148,14 +148,13 @@ mechanical work.
    another client's showcase — the guard exists specifically to stop that.
 
 5. **Review the copied runbook, then optionally pre-fill passive
-   observations.** `src/runbook-data.ts`'s 47 test cases were written
-   against `showcase-esaalnybot`'s actual topology (an `app.`/`api.`
-   subdomain split, a multi-tenant chat widget). Hostnames were swapped
+   observations.** `src/runbook-data.ts`'s 47 test cases use the bundled
+   template's `app`/`api`/optional-widget assumptions. Hostnames are swapped
    mechanically, but re-read it for cases that don't apply to the new
    target (no widget → drop the widget-specific cases; single host → drop
    the app/api split assumptions in tool configs; not multi-tenant → the
-   IDOR cases need rewording) — `grep -i "esaalny\|widget"
-   showcase-<slug>/src/runbook-data.ts` finds what's left. Separately, in
+   IDOR cases need rewording). Search the copied runbook for widget-specific
+   cases, template hostnames, and app/api topology assumptions. Separately, in
    `src/build-runbook.ts`, `PASSIVE_OBSERVATIONS` was reset to an empty
    array. If you want the dashboard's "Pentest plan" tab to start pre-filled
    rather than fully blank, run a few **non-intrusive** checks against the
@@ -171,8 +170,8 @@ mechanical work.
    ```
    `serve.mjs` defaults to port 4173 in every generated workspace — pass a
    distinct port (as a plain arg to `node serve.mjs`, not through `pnpm run
-   serve --`, which does not forward it cleanly) if another showcase (or
-   `showcase-esaalnybot` itself) is already being served, or they'll collide
+   serve --`, which does not forward it cleanly) if another showcase is
+   already being served, or they'll collide
    with `EADDRINUSE`. Or open
    `showcase-<slug>/dashboard/index.html` directly — it is fully
    self-contained (no server needed unless the browser restricts `file://`).
@@ -180,18 +179,18 @@ mechanical work.
    done — a build that only typechecks is not a demo that works. Click into
    the **Pages** and **Readiness** tabs specifically and confirm each shows
    real data (not the "run crawl.ts" placeholder, which means step 3 didn't
-   actually merge into `data/audit.json`). `showcase-esaalnybot` itself
-   keeps `Report` as its landing tab (it predates the crawl/readiness work
-   and was intentionally single-page); for a new client where the go/no-go
+   actually merge into `data/audit.json`). The bundled dashboard template
+   keeps `Report` as its landing tab (it predates the crawl/readiness work);
+   for a new client where the go/no-go
    verdict is the headline result, consider changing `useState('report')`
    to `useState('readiness')` near the bottom of `showcase.jsx` so it's the
    first thing a client sees — a one-line, per-client choice, not a shared
    template default.
 
 7. **(Optional) full-pipeline cross-check.** Needs `pnpm services:up`
-   (Postgres :5442, Redis :6389) and a scratch DB — see
-   `showcase-esaalnybot/README.md`'s "Run it" section for the exact
-   commands; the same steps apply with `showcase-<slug>` substituted. Skip
+   (Postgres :5442, Redis :6389) and a scratch DB. Run
+   `pnpm --filter showcase-<slug> run pipeline https://example.com/` to
+   compare the standalone runner with the product's real orchestrator. Skip
    this for a quick client demo; it exists to prove the standalone runner
    agrees with the product's real orchestrator, not to produce report content.
 

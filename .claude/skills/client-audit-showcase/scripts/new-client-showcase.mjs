@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // Scaffolds a new `showcase-<slug>` workspace for a new client's website,
-// by cloning the generic/reusable parts of an existing showcase workspace
-// (default: showcase-esaalnybot) and resetting the parts of it that are
+// by cloning the generic/reusable parts of the bundled workspace template
+// and resetting the parts of it that are
 // hand-authored prose specific to the OLD client.
 //
 // Usage:
 //   node .claude/skills/client-audit-showcase/scripts/new-client-showcase.mjs \
-//     --url https://example.com/ --slug example-client [--source showcase-esaalnybot] [--force]
+//     --url https://example.com/ --slug example-client [--source <workspace>] [--force]
 //
 // What it does:
 //   1. Finds the repo root (walks up from cwd looking for pnpm-workspace.yaml).
@@ -34,7 +34,10 @@ import { fileURLToPath } from 'node:url';
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 function parseArgs(argv) {
-  const args = { source: 'showcase-esaalnybot', force: false };
+  const args = {
+    source: '.claude/skills/client-audit-showcase/assets/template-workspace',
+    force: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--url') args.url = argv[++i];
@@ -162,8 +165,8 @@ async function main() {
   const oldPkgName = oldPkg.name;
   const newPkgName = `showcase-${slug}`;
 
-  // The old demo's runbook mentions an `app.` + `api.` subdomain split (its
-  // actual topology). We can't know the new target's real subdomains, so:
+  // The template runbook models an `app.` + `api.` subdomain split and an
+  // optional widget. We can't know the new target's real topology, so:
   // exact host swaps first (handles the common single-host case correctly),
   // then a bare-apex catch-all for anything left (DNS/email/subfinder-style
   // mentions). SKILL.md tells the agent to review the result for topology
@@ -221,9 +224,8 @@ async function main() {
     }
   }
 
-  // 2. runbook-data.ts — the 47-case runbook. NOT purely generic: it embeds
-  //    the old target's actual discovered topology (app/api subdomain split,
-  //    a chatbot widget, multi-tenancy). Host/apex strings are swapped as a
+  // 2. runbook-data.ts — the 47-case runbook. NOT purely generic: it carries
+  //    app/api/widget topology assumptions. Host/apex strings are swapped as a
   //    starting point; SKILL.md requires a review pass for topology that
   //    doesn't apply to the new target (drop widget-specific cases if there
   //    is no widget, fix tool configs, adjust IDOR cases if not multi-tenant).
@@ -314,7 +316,7 @@ async function main() {
 
   process.stdout.write(
     `\n  created ${newPkgName}/ for ${targetUrl.href}\n` +
-      `  (cloned from ${oldPkgName}; ai-narrative.ts reset to a guarded placeholder,\n` +
+      `  (cloned from the workspace template; ai-narrative.ts reset to a guarded placeholder,\n` +
       `   build-runbook.ts's passive observations reset to an empty array)\n` +
       fetchedVendorLibsNote +
       `\n  next steps (use \`pnpm run\`, not \`pnpm audit\` — that's pnpm's own builtin command):\n` +

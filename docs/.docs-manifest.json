@@ -197,24 +197,6 @@
       "confidence": 0.5
     },
     {
-      "name": "node",
-      "version": "",
-      "root": "showcase-eink",
-      "confidence": 0.5
-    },
-    {
-      "name": "node",
-      "version": "",
-      "root": "showcase-esaalnybot",
-      "confidence": 0.5
-    },
-    {
-      "name": "node",
-      "version": "",
-      "root": "showcase-trimora",
-      "confidence": 0.5
-    },
-    {
       "name": "next",
       "version": "15.5.23",
       "root": "apps/web",
