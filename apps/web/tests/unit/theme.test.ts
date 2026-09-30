@@ -19,6 +19,7 @@ import {
   resolveBrowserLocale,
   ThemeScript,
   ThemeToggle,
+  useLang,
 } from '../../app/theme';
 
 interface TestDom {
@@ -83,6 +84,21 @@ describe('LangToggle', () => {
   it('renders full width with a border only when label is true', () => {
     const html = render(createElement(LangToggle, { label: true }));
     expect(html).toContain('class="');
+  });
+});
+
+describe('locale provider context', () => {
+  it('uses the request locale for useLang during server rendering', () => {
+    function LocaleProbe(): React.ReactElement {
+      const [locale] = useLang();
+      return createElement('span', null, locale);
+    }
+
+    const html = renderToStaticMarkup(
+      createElement(I18nProvider, { initialLocale: 'ar', children: createElement(LocaleProbe) }),
+    );
+
+    expect(html).toContain('<span>ar</span>');
   });
 });
 

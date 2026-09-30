@@ -8,8 +8,8 @@
  * which is fine in the design system's client-only preview but not here —
  * Next renders this module on the server first, where `document` and
  * `localStorage` don't exist. Every place the source touched either
- * unconditionally is now guarded on `typeof window !== 'undefined'`; nothing
- * else about the store, the hooks, or the two toggle components changed.
+ * unconditionally is now guarded on `typeof window !== 'undefined'`. `useLang`
+ * also uses the request locale during hydration so prefixed pages match SSR.
  *
  * The source has no equivalent of `ThemeScript` — it didn't need one, since
  * it never faced a server-rendered first paint. `ThemeScript` is the "no
@@ -19,13 +19,20 @@
  * store re-deriving the same value) is a no-op, not a visible flip. Render
  * it once, in the root layout's `<head>`.
  */
-import { useEffect, useReducer } from 'react';
+import { createContext, useContext, useEffect, useReducer, useState } from 'react';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { messagesByLocale } from '../i18n/messages';
 import { defaultLocale, localeMetadata, locales, type Lang, type Locale } from '../i18n/locales';
 import styles from './theme.module.css';
 
 const isBrowser = typeof window !== 'undefined';
+const InitialLocaleContext = createContext<Locale | undefined>(undefined);
+
+function hasLocalePrefix(): boolean {
+  const currentPath = isBrowser ? window.location.pathname : '';
+  const firstSegment = currentPath.split('/')[1];
+  return locales.includes(firstSegment as Locale);
+}
 
 function waRead(key: string, fallback: string): string {
   if (!isBrowser) return fallback;
@@ -129,31 +136,52 @@ const waLang = createStore<Lang>('wa-lang', initialLocale(), (value) => {
   document.cookie = `wa-lang=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 });
 
-function waUse<T extends string>(store: Store<T>): [T, (value: T) => void] {
-  const [, force] = useReducer((x: number) => x + 1, 0);
+function waUse<T extends string>(store: Store<T>): [T, (value: T) => void, number] {
+  const [revision, force] = useReducer((x: number) => x + 1, 0);
   useEffect(() => {
     store.subs.add(force);
     return () => {
       store.subs.delete(force);
     };
   }, [store, force]);
-  return [store.v, (value: T) => store.set(value)];
+  return [store.v, (value: T) => store.set(value), revision];
 }
 
 export function useTheme(): [Theme, (value: Theme) => void] {
-  return waUse(waTheme);
+  const [theme, setTheme] = waUse(waTheme);
+  return [theme, setTheme];
 }
 
 export function useLang(): [Lang, (value: Lang) => void] {
-  return waUse(waLang);
+  const initialLocale = useContext(InitialLocaleContext);
+  const [storeLang, setStoreLang, storeRevision] = waUse(waLang);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const useRequestLocale =
+    initialLocale !== undefined && (!hydrated || (hasLocalePrefix() && storeRevision === 0));
+
+  return [useRequestLocale ? initialLocale : storeLang, setStoreLang];
 }
 
-export function I18nProvider({
+function I18nProviderContent({
   children,
   initialLocale,
 }: Readonly<{ children: React.ReactNode; initialLocale?: Locale }>): React.ReactElement {
   const [lang] = useLang();
   const resolvedLang = isBrowser ? lang : (initialLocale ?? lang);
+
+  useEffect(() => {
+    if (!isBrowser || initialLocale === undefined || !hasLocalePrefix()) return;
+
+    const html = document.documentElement;
+    html.lang = resolvedLang;
+    html.dir = localeMetadata[resolvedLang].direction;
+  }, [initialLocale, resolvedLang]);
+
   return (
     <NextIntlClientProvider
       locale={resolvedLang}
@@ -162,6 +190,19 @@ export function I18nProvider({
     >
       {children}
     </NextIntlClientProvider>
+  );
+}
+
+export function I18nProvider({
+  children,
+  initialLocale,
+}: Readonly<{ children: React.ReactNode; initialLocale?: Locale }>): React.ReactElement {
+  return (
+    <InitialLocaleContext.Provider value={initialLocale}>
+      <I18nProviderContent {...(initialLocale === undefined ? {} : { initialLocale })}>
+        {children}
+      </I18nProviderContent>
+    </InitialLocaleContext.Provider>
   );
 }
 
