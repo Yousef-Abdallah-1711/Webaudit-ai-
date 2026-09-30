@@ -16,6 +16,7 @@
   "operator": "operator",
   "sidebar_collapse": "Collapse sidebar",
   "sidebar_expand": "Expand sidebar",
+  "mobile_open_menu": "Open navigation menu",
   "actions_recorded": "every action here is recorded",
   "back_dashboard": "Back to dashboard",
   "public_site": "Public site",

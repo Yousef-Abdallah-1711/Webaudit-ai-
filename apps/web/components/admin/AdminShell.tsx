@@ -32,7 +32,7 @@
  * appends `px` itself, the same move as `Card`'s `padding: number` (T237).
  */
 import { usePathname } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { PRODUCT_NAME } from '@webaudit/config';
 import { Badge, Card, Eyebrow } from '../ui';
@@ -133,43 +133,60 @@ function ANavItem({ open, active, label, icon, href }: ANavItemProps): React.Rea
 interface AdminSidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement {
+function AdminSidebar({
+  open,
+  setOpen,
+  mobileOpen = false,
+  onMobileClose = () => {},
+}: AdminSidebarProps): React.ReactElement {
   const pathname = usePathname();
   const t = useTranslations('admin');
+  const contentOpen = open || mobileOpen;
 
-  const sidebarClasses = [styles.sidebar, open ? styles.sidebarOpen : undefined]
+  const sidebarClasses = [
+    styles.sidebar,
+    contentOpen ? styles.sidebarOpen : undefined,
+    mobileOpen ? styles.sidebarMobileOpen : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
-  const headClasses = [styles.sidebarHead, open ? styles.sidebarHeadOpen : undefined]
+  const headClasses = [styles.sidebarHead, contentOpen ? styles.sidebarHeadOpen : undefined]
     .filter(Boolean)
     .join(' ');
-  const navScrollClasses = [styles.navScroll, open ? styles.navScrollOpen : undefined]
+  const navScrollClasses = [styles.navScroll, contentOpen ? styles.navScrollOpen : undefined]
     .filter(Boolean)
     .join(' ');
-  const footClasses = [styles.sidebarFoot, open ? styles.sidebarFootOpen : undefined]
+  const footClasses = [styles.sidebarFoot, contentOpen ? styles.sidebarFootOpen : undefined]
     .filter(Boolean)
     .join(' ');
-  const footRowClasses = [styles.footRow, open ? styles.footRowOpen : undefined]
+  const footRowClasses = [styles.footRow, contentOpen ? styles.footRowOpen : undefined]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <aside className={sidebarClasses}>
+    <aside id="admin-sidebar" className={sidebarClasses}>
       <div className={headClasses}>
         <button
           type="button"
           onClick={() => {
-            setOpen(!open);
+            if (mobileOpen) {
+              onMobileClose();
+            } else {
+              setOpen(!open);
+            }
           }}
-          aria-label={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
-          title={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
+          id="admin-sidebar-mobile-close"
+          aria-label={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
+          title={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
           className={styles.toggleBtn}
         >
           <Icon name="menu" size={19} />
         </button>
-        {open && (
+        {contentOpen && (
           <div className={styles.brand}>
             <div className={styles.wordmark}>
               <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
@@ -182,7 +199,7 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
       <div className={navScrollClasses}>
         {NAV_GROUPS.map(([group, items]) => (
           <div key={group} className={styles.navGroup}>
-            {open ? (
+            {contentOpen ? (
               <div className={styles.navGroupLabel}>{t(group)}</div>
             ) : (
               <div className={styles.navGroupDivider} />
@@ -191,7 +208,7 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
               {items.map((item) => (
                 <ANavItem
                   key={item.key}
-                  open={open}
+                  open={contentOpen}
                   active={isActive(pathname, item.href)}
                   label={t(item.label)}
                   icon={item.icon}
@@ -204,12 +221,12 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
       </div>
 
       <div className={footClasses}>
-        {open && <div className={styles.recordedNote}>{t('actions_recorded')}</div>}
+        {contentOpen && <div className={styles.recordedNote}>{t('actions_recorded')}</div>}
         <div className={footRowClasses}>
           <a href="/scan" title={t('back_dashboard')} className={styles.exitLink}>
             <Icon name="logOut" size={16} />
           </a>
-          {open && (
+          {contentOpen && (
             <a href="/" className={styles.publicSiteLink}>
               {t('public_site')}
             </a>
@@ -227,12 +244,81 @@ export interface AdminShellProps {
 export function AdminShell({ children }: AdminShellProps): React.ReactElement {
   const t = useTranslations('admin');
   const [open, setOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDrawerWasOpenRef = useRef(false);
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const desktopViewport = window.matchMedia('(min-width: 40.0625rem)');
+    const closeOnDesktop = (): void => {
+      if (desktopViewport.matches) setMobileDrawerOpen(false);
+    };
+    closeOnDesktop();
+    desktopViewport.addEventListener('change', closeOnDesktop);
+    return () => desktopViewport.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      mobileDrawerWasOpenRef.current = true;
+      document.getElementById('admin-sidebar-mobile-close')?.focus();
+      return;
+    }
+
+    if (!mobileDrawerWasOpenRef.current) return;
+    mobileDrawerWasOpenRef.current = false;
+    mobileTriggerRef.current?.focus();
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMobileDrawerOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [mobileDrawerOpen]);
 
   return (
     <div className={styles.shellRoot}>
-      <AdminSidebar open={open} setOpen={setOpen} />
-      <div className={styles.mainCol}>
+      <AdminSidebar
+        open={open}
+        setOpen={setOpen}
+        mobileOpen={mobileDrawerOpen}
+        onMobileClose={() => setMobileDrawerOpen(false)}
+      />
+      {mobileDrawerOpen && (
+        <div
+          className={styles.mobileBackdrop}
+          aria-hidden="true"
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
+      <div className={styles.mainCol} inert={mobileDrawerOpen}>
+        <button
+          ref={mobileTriggerRef}
+          type="button"
+          className={`${styles.toggleBtn} ${styles.mobileMenuTrigger}`}
+          aria-label={t('mobile_open_menu')}
+          aria-controls="admin-sidebar"
+          aria-expanded={mobileDrawerOpen}
+          onClick={() => setMobileDrawerOpen(true)}
+        >
+          <Icon name="menu" />
+        </button>
         <div className={styles.topBar}>
           <span className={styles.topBarOperator}>
             {t('operator_header', { email: user?.email ?? t('unavailable') })}

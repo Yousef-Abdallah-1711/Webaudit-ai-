@@ -10,6 +10,7 @@
  */
 
 .sidebar {
+  --sidebar-expanded-width: 248px;
   flex-shrink: 0;
   width: 60px;
   height: 100vh;
@@ -23,7 +24,7 @@
   transition: width 150ms var(--easing);
 }
 .sidebarOpen {
-  width: 248px;
+  width: var(--sidebar-expanded-width);
 }
 
 .sidebarHead {
@@ -299,4 +300,55 @@
   margin-top: 6px;
   font: var(--type-small);
   color: var(--text-secondary);
+}
+
+.mobileBackdrop,
+.mobileMenuTrigger {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .sidebar {
+    position: fixed;
+    inset-inline-start: 0;
+    inset-block-start: 0;
+    inset-block-end: 0;
+    width: min(var(--sidebar-expanded-width), 85vw);
+    height: auto;
+    z-index: 950;
+    transform: translateX(-100%);
+    transition: transform var(--duration) var(--easing);
+  }
+
+  :global(html[dir='rtl']) .sidebar {
+    transform: translateX(100%);
+  }
+
+  .sidebarMobileOpen {
+    transform: translateX(0);
+  }
+
+  :global(html[dir='rtl']) .sidebar.sidebarMobileOpen {
+    transform: translateX(0);
+  }
+
+  .mobileBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    padding: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--text-strong) 42%, transparent);
+    cursor: pointer;
+  }
+
+  .mobileMenuTrigger {
+    display: grid;
+    position: fixed;
+    inset-block-start: var(--space-16);
+    inset-inline-start: var(--space-2);
+    z-index: 850;
+    background: var(--surface-raised);
+  }
 }
