@@ -38,6 +38,7 @@ const notoSansArabic = Noto_Sans_Arabic({
   weight: ['400', '500', '600', '700'],
   variable: '--font-noto-sans-arabic',
   display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {
