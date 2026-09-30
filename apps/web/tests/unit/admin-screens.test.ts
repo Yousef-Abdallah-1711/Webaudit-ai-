@@ -17,14 +17,23 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { I18nProvider } from '../../app/theme';
+import { describe, expect, it, vi } from 'vitest';
 import AdminScansPage from '../../app/(admin)/admin/scans/page';
 import AdminProvidersPage from '../../app/(admin)/admin/providers/page';
 import AdminLogPage from '../../app/(admin)/admin/log/page';
 import AdminSettingsPage from '../../app/(admin)/admin/settings/page';
 
+vi.mock('next-intl/server', async () => {
+  const { messagesByLocale } = await import('../../i18n/messages');
+  const messages = messagesByLocale.en.admin;
+  return {
+    getTranslations: async () => (key: keyof typeof messages) => messages[key],
+  };
+});
+
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 describe('AdminScansPage', () => {
@@ -76,8 +85,8 @@ describe('AdminLogPage', () => {
 });
 
 describe('AdminSettingsPage', () => {
-  it('renders configuration reference data without pretending switches persist', () => {
-    const html = render(createElement(AdminSettingsPage));
+  it('renders configuration reference data without pretending switches persist', async () => {
+    const html = renderToStaticMarkup(await AdminSettingsPage());
     expect(html).toContain('Repository input');
     expect(html).toContain('Archive upload');
     expect(html).toContain('Scan timeout');

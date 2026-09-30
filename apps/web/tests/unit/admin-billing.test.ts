@@ -11,11 +11,12 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { I18nProvider } from '../../app/theme';
 import { describe, expect, it } from 'vitest';
 import AdminBillingPage from '../../app/(admin)/admin/billing/page';
 
 function render(element: React.ReactElement): string {
-  return renderToStaticMarkup(element);
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
 }
 
 describe('AdminBillingPage', () => {

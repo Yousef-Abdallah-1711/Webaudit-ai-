@@ -29,6 +29,7 @@
  * action.
  */
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Stat, Table } from '../../../../components/admin';
 import {
@@ -39,18 +40,18 @@ import {
 } from '../../../../lib/api';
 import styles from './page.module.css';
 
-function formatCredits(n: number): string {
-  return `${String(n)} cr`;
-}
-
-function formatUsd(costMicros: number): string {
-  return `$${(costMicros / 1_000_000).toFixed(2)}`;
-}
-
 export default function AdminBillingPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [report, setReport] = useState<MarginReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+  const moduleLabels: Readonly<Record<string, string>> = {
+    PERFORMANCE: t('module_performance'),
+    SECURITY: t('module_security'),
+    UI: t('module_ui'),
+    TESTING: t('module_testing'),
+    SEO: t('module_seo'),
+  };
 
   const onExport = async (): Promise<void> => {
     setExporting(true);
@@ -64,7 +65,7 @@ export default function AdminBillingPage(): React.ReactElement {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The margin export failed.');
+      setError(err instanceof ApiError ? err.message : t('margin_export_error'));
     } finally {
       setExporting(false);
     }
@@ -78,12 +79,12 @@ export default function AdminBillingPage(): React.ReactElement {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : 'The margin report could not be loaded.');
+        setError(err instanceof ApiError ? err.message : t('margin_load_error'));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const totalCharged =
     report === null ? 0 : report.perScan.reduce((sum, s) => sum + s.chargedCredits, 0);
@@ -93,9 +94,9 @@ export default function AdminBillingPage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Commerce"
-        title="Margin"
-        meta="attributable to the individual capability that caused the cost"
+        eyebrow={t('group_commerce')}
+        title={t('margin')}
+        meta={t('billing_meta')}
         actions={
           <Button
             variant="secondary"
@@ -103,7 +104,7 @@ export default function AdminBillingPage(): React.ReactElement {
             disabled={exporting}
             onClick={() => void onExport()}
           >
-            {exporting ? 'Exporting...' : 'Export'}
+            {exporting ? t('exporting') : t('export')}
           </Button>
         }
       />
@@ -112,48 +113,51 @@ export default function AdminBillingPage(): React.ReactElement {
 
       <div className={styles.statsGrid}>
         <Stat
-          label="Credits recognised"
-          value={report === null ? '—' : formatCredits(totalCharged)}
-        />
-        <Stat label="Provider cost" value={report === null ? '—' : formatUsd(totalCostMicros)} />
-        <Stat
-          label="Scans in window"
-          value={report === null ? '—' : String(report.perScan.length)}
+          label={t('credits_recognised')}
+          value={report === null ? t('dash') : t('credits_value', { count: totalCharged })}
         />
         <Stat
-          label="Capabilities measured"
-          value={report === null ? '—' : String(report.perCapability.length)}
+          label={t('provider_cost')}
+          value={
+            report === null ? t('dash') : t('usd_value', { amount: totalCostMicros / 1_000_000 })
+          }
+        />
+        <Stat
+          label={t('scans_in_window')}
+          value={report === null ? t('dash') : t('number_value', { value: report.perScan.length })}
+        />
+        <Stat
+          label={t('capabilities_measured')}
+          value={
+            report === null ? t('dash') : t('number_value', { value: report.perCapability.length })
+          }
         />
       </div>
 
       <Table
         cols={[
-          { label: 'Capability', width: '1fr' },
-          { label: 'Area', width: 150 },
-          { label: 'Runs', width: 80 },
-          { label: 'Succeeded', width: 90 },
-          { label: 'Failed', width: 80 },
-          { label: 'Cost (window)', width: 130 },
+          { label: t('table_capability'), width: '1fr' },
+          { label: t('table_area'), width: 150 },
+          { label: t('table_runs'), width: 80 },
+          { label: t('table_succeeded'), width: 90 },
+          { label: t('table_failed'), width: 80 },
+          { label: t('table_cost_window'), width: 130 },
         ]}
         rows={
           report?.perCapability.map((c) => [
             mono(c.capabilityName),
-            c.module,
-            num(String(c.executionCount)),
-            num(String(c.succeededCount)),
-            num(String(c.failedCount)),
-            num(formatUsd(c.costMicros)),
+            moduleLabels[c.module] ?? c.module,
+            num(t('number_value', { value: c.executionCount })),
+            num(t('number_value', { value: c.succeededCount })),
+            num(t('number_value', { value: c.failedCount })),
+            num(t('usd_value', { amount: c.costMicros / 1_000_000 })),
           ]) ?? []
         }
       />
 
       <div className={styles.noteCard}>
-        <Card padding={20} title="Why there is no margin percentage here">
-          <p className={styles.note}>
-            {report?.note ??
-              'Revenue is denominated in credits, cost is real USD micros, and this codebase has ' +
-                'no published conversion rate between them.'}
-          </p>
+        <Card padding={20} title={t('margin_no_percentage_title')}>
+          <p className={styles.note}>{report?.note ?? t('margin_no_percentage_note')}</p>
         </Card>
       </div>
     </div>

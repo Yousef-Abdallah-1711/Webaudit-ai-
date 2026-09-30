@@ -16,32 +16,35 @@
  */
 import { Card } from '../../../components/ui';
 import { AHead, Stat } from '../../../components/admin';
+import { getTranslations } from 'next-intl/server';
 import styles from './page.module.css';
 
-const STATS: readonly (readonly [string, string, string])[] = [
-  ['Audits completed', 'Unavailable', 'Live overview data is not available'],
-  ['Credits recognised', 'Unavailable', 'Live overview data is not available'],
-  ['Provider cost', 'Unavailable', 'Live overview data is not available'],
-  ['Queue depth', 'Unavailable', 'Live overview data is not available'],
-];
+const STATS = [
+  ['stat_audits_completed', 'unavailable', 'overview_data_unavailable'],
+  ['credits_recognised', 'unavailable', 'overview_data_unavailable'],
+  ['provider_cost', 'unavailable', 'overview_data_unavailable'],
+  ['queue_depth', 'unavailable', 'overview_data_unavailable'],
+] as const;
 
-export default function AdminOverviewPage(): React.ReactElement {
+export default async function AdminOverviewPage(): Promise<React.ReactElement> {
+  const t = await getTranslations('admin');
+
   return (
     <div>
-      <AHead eyebrow="Platform" title="Overview" meta="all figures last 24 hours" />
+      <AHead eyebrow={t('group_platform')} title={t('overview')} meta={t('overview_meta')} />
 
       <div className={styles.statsGrid}>
         {STATS.map(([label, value, sub]) => (
-          <Stat key={label} label={label} value={value} sub={sub} />
+          <Stat key={label} label={t(label)} value={t(value)} sub={t(sub)} />
         ))}
       </div>
 
       <div className={styles.twoCol}>
-        <Card padding={22} title="Needs attention">
-          <div className={styles.attentionDesc}>No live attention items are available.</div>
+        <Card padding={22} title={t('overview_needs_attention')}>
+          <div className={styles.attentionDesc}>{t('overview_no_attention_items')}</div>
         </Card>
-        <Card padding={22} title="Area health">
-          <div className={styles.attentionDesc}>Live area health data is not available.</div>
+        <Card padding={22} title={t('overview_area_health')}>
+          <div className={styles.attentionDesc}>{t('overview_area_health_unavailable')}</div>
         </Card>
       </div>
     </div>

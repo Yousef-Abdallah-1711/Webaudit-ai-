@@ -32,6 +32,7 @@
  * whether the data behind the table is real or mocked.
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button, Badge, Card } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
@@ -45,6 +46,7 @@ import {
 import styles from './page.module.css';
 
 export default function AdminCapabilitiesPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [capabilities, setCapabilities] = useState<readonly AdminCapabilitySummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -57,10 +59,21 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
   const [pendingRestrictionId, setPendingRestrictionId] = useState<string | null>(null);
   const plans = ['free', 'starter', 'pro', 'business'] as const;
   const planLabels: Record<(typeof plans)[number], string> = {
-    free: 'Free',
-    starter: 'Starter',
-    pro: 'Pro',
-    business: 'Business',
+    free: t('plan_free'),
+    starter: t('plan_starter'),
+    pro: t('plan_pro'),
+    business: t('plan_business'),
+  };
+  const trustLabels: Readonly<Record<string, string>> = {
+    VENDORED: t('status_vendored'),
+    INSTALLED: t('status_installed'),
+  };
+  const moduleLabels: Readonly<Record<string, string>> = {
+    PERFORMANCE: t('module_performance'),
+    SECURITY: t('module_security'),
+    UI: t('module_ui'),
+    TESTING: t('module_testing'),
+    SEO: t('module_seo'),
   };
 
   const refresh = useCallback(async () => {
@@ -71,16 +84,14 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         Object.fromEntries(rows.map((row) => [row.id, [...row.restrictedToPlans]])),
       );
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : 'The capability catalogue could not be loaded.',
-      );
+      setError(err instanceof ApiError ? err.message : t('capability_load_error'));
     }
-  }, []);
+  }, [t]);
 
   const onUpload = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (uploadFile === null || uploadName.trim() === '') {
-      setError('Choose a bundle and provide its capability name.');
+      setError(t('capability_upload_missing_inputs'));
       return;
     }
     setUploading(true);
@@ -88,9 +99,11 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
     setUploadResult(null);
     try {
       const result = await uploadCapability(uploadFile, uploadName.trim(), uploadVersion.trim());
-      setUploadResult(result.passed ? 'Conformance passed.' : 'Conformance failed.');
+      setUploadResult(
+        t(result.passed ? 'capability_conformance_passed' : 'capability_conformance_failed'),
+      );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The capability upload failed.');
+      setError(err instanceof ApiError ? err.message : t('capability_upload_error'));
     } finally {
       setUploading(false);
     }
@@ -100,22 +113,25 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
     void refresh();
   }, [refresh]);
 
-  const onToggle = useCallback((id: string, isEnabled: boolean): void => {
-    setPendingId(id);
-    setError(null);
-    setCapabilityEnabled(id, !isEnabled)
-      .then(({ capability }) => {
-        setCapabilities((rows) =>
-          rows === null ? rows : rows.map((r) => (r.id === capability.id ? capability : r)),
-        );
-      })
-      .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'That capability could not be updated.');
-      })
-      .finally(() => {
-        setPendingId(null);
-      });
-  }, []);
+  const onToggle = useCallback(
+    (id: string, isEnabled: boolean): void => {
+      setPendingId(id);
+      setError(null);
+      setCapabilityEnabled(id, !isEnabled)
+        .then(({ capability }) => {
+          setCapabilities((rows) =>
+            rows === null ? rows : rows.map((r) => (r.id === capability.id ? capability : r)),
+          );
+        })
+        .catch((err: unknown) => {
+          setError(err instanceof ApiError ? err.message : t('capability_update_error'));
+        })
+        .finally(() => {
+          setPendingId(null);
+        });
+    },
+    [t],
+  );
 
   const enabledCount = capabilities?.filter((c) => c.isEnabled).length ?? 0;
 
@@ -128,7 +144,7 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         rows === null ? rows : rows.map((row) => (row.id === id ? capability : row)),
       );
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The plan restriction could not be saved.');
+      setError(err instanceof ApiError ? err.message : t('capability_restriction_error'));
     } finally {
       setPendingRestrictionId(null);
     }
@@ -137,12 +153,12 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Catalogue"
-        title="Capabilities"
+        eyebrow={t('group_catalogue')}
+        title={t('capabilities')}
         meta={
           capabilities === null
-            ? 'trust derives from discovery root'
-            : `${String(capabilities.length)} discovered · ${String(enabledCount)} enabled · trust derives from discovery root`
+            ? t('capabilities_meta_unloaded')
+            : t('capabilities_meta', { discovered: capabilities.length, enabled: enabledCount })
         }
       />
 
@@ -151,23 +167,23 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
 
       <form className={styles.uploadForm} onSubmit={(event) => void onUpload(event)}>
         <label className={styles.field}>
-          <span>Capability name</span>
+          <span>{t('capability_name')}</span>
           <input
             value={uploadName}
             onChange={(event) => setUploadName(event.target.value)}
-            placeholder="Security checks"
+            placeholder={t('capability_name_placeholder')}
           />
         </label>
         <label className={styles.field}>
-          <span>Version</span>
+          <span>{t('version')}</span>
           <input
             value={uploadVersion}
             onChange={(event) => setUploadVersion(event.target.value)}
-            placeholder="1.0.0"
+            placeholder={t('version_placeholder')}
           />
         </label>
         <label className={styles.field}>
-          <span>Bundle</span>
+          <span>{t('bundle')}</span>
           <input
             type="file"
             accept=".js,.mjs,.cjs,.txt"
@@ -175,30 +191,30 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
           />
         </label>
         <Button type="submit" disabled={uploading}>
-          {uploading ? 'Uploading...' : 'Upload capability'}
+          {uploading ? t('uploading') : t('upload_capability')}
         </Button>
       </form>
 
       <Table
         cols={[
-          { label: 'Capability', width: '1fr' },
-          { label: 'Area', width: 150 },
-          { label: 'Trust', width: 110 },
-          { label: 'Est. tokens', width: 110 },
-          { label: 'State', width: 110 },
-          { label: 'Plan access', width: 260 },
+          { label: t('table_capability'), width: '1fr' },
+          { label: t('table_area'), width: 150 },
+          { label: t('table_trust'), width: 110 },
+          { label: t('table_estimated_tokens'), width: 110 },
+          { label: t('table_state'), width: 110 },
+          { label: t('plan_access'), width: 260 },
           { label: '', width: 110 },
         ]}
         rows={
           capabilities?.map((c) => [
             mono(c.name),
-            c.module,
+            moduleLabels[c.module] ?? c.module,
             <Badge key="trust" tone={c.trust === 'trusted' ? 'success' : 'neutral'}>
-              {c.trust}
+              {trustLabels[c.trust] ?? c.trust}
             </Badge>,
-            num(String(c.estimatedTokens)),
+            num(t('number_value', { value: c.estimatedTokens })),
             <Badge key="state" tone={c.isEnabled ? 'success' : 'neutral'}>
-              {c.isEnabled ? 'enabled' : 'disabled'}
+              {t(c.isEnabled ? 'status_enabled' : 'status_disabled')}
             </Badge>,
             <div key="plans" className={styles.planAccess}>
               {plans.map((plan) => (
@@ -224,7 +240,7 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
                 disabled={pendingRestrictionId === c.id}
                 onClick={() => void onSaveRestriction(c.id)}
               >
-                Save
+                {t('save')}
               </Button>
             </div>,
             <Button
@@ -236,27 +252,27 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
                 onToggle(c.id, c.isEnabled);
               }}
             >
-              {c.isEnabled ? 'Disable' : 'Enable'}
+              {t(c.isEnabled ? 'disable' : 'enable')}
             </Button>,
           ]) ?? []
         }
       />
 
-      <p className={styles.planLegend}>Plan access: Free · Starter · Pro · Business</p>
+      <p className={styles.planLegend}>
+        {t('plan_access_legend', {
+          free: planLabels.free,
+          starter: planLabels.starter,
+          pro: planLabels.pro,
+          business: planLabels.business,
+        })}
+      </p>
 
       <div className={styles.grid}>
-        <Card padding={20} title="Disabling is safe" accentRule="var(--sev-resolved)">
-          <p className={styles.cardText}>
-            Disabling any single capability still lets every audit complete. Its area reports the
-            check unavailable and the customer is not charged for it.
-          </p>
+        <Card padding={20} title={t('disabling_safe_title')} accentRule="var(--sev-resolved)">
+          <p className={styles.cardText}>{t('disabling_safe_body')}</p>
         </Card>
-        <Card padding={20} title="Uploads are sandboxed or refused" accentRule="var(--sev-high)">
-          <p className={styles.cardText}>
-            Until the sandbox runner is deployed, upload returns{' '}
-            <span className={styles.code}>503 SANDBOX_UNAVAILABLE</span>. There is no unsandboxed
-            fallback path.
-          </p>
+        <Card padding={20} title={t('uploads_sandboxed_title')} accentRule="var(--sev-high)">
+          <p className={styles.cardText}>{t('uploads_sandboxed_body')}</p>
         </Card>
       </div>
     </div>

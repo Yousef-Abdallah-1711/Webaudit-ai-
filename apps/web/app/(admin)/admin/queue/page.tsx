@@ -31,6 +31,7 @@
  * provider" — so both stay rendered with no `onClick`.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
@@ -49,18 +50,27 @@ function stateTone(state: AdminJobSummary['state']): 'accent' | 'success' | 'neu
 }
 
 export default function AdminQueuePage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [jobs, setJobs] = useState<readonly AdminJobSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const stateLabels: Readonly<Record<AdminJobSummary['state'], string>> = {
+    waiting: t('status_waiting'),
+    prioritized: t('status_prioritized'),
+    active: t('status_active'),
+    delayed: t('status_delayed'),
+    failed: t('status_failed'),
+    completed: t('status_completed'),
+  };
 
   const refresh = useCallback(async () => {
     try {
       const { jobs: fetched } = await getAdminQueueJobs();
       setJobs(fetched);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The queue could not be loaded.');
+      setError(err instanceof ApiError ? err.message : t('queue_load_error'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -74,12 +84,12 @@ export default function AdminQueuePage(): React.ReactElement {
         await fn();
         await refresh();
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'That did not go through.');
+        setError(err instanceof ApiError ? err.message : t('action_did_not_go_through'));
       } finally {
         setBusy(false);
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   const onRetry = (jobId: string): void => {
@@ -93,15 +103,15 @@ export default function AdminQueuePage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Platform"
-        title="Queue"
-        meta="six plan-derived priority levels · BullMQ"
+        eyebrow={t('group_platform')}
+        title={t('queue')}
+        meta={t('queue_meta')}
         actions={
           <>
             <Button variant="secondary" size="sm">
-              Pause intake
+              {t('queue_pause_intake')}
             </Button>
-            <Button size="sm">Retry stalled</Button>
+            <Button size="sm">{t('queue_retry_stalled')}</Button>
           </>
         }
       />
@@ -110,12 +120,12 @@ export default function AdminQueuePage(): React.ReactElement {
 
       <Table
         cols={[
-          { label: 'Job', width: 130 },
-          { label: 'Queue', width: 180 },
-          { label: 'Name', width: 130 },
-          { label: 'State', width: 110 },
-          { label: 'Attempts', width: 90 },
-          { label: 'Waiting since', width: 120 },
+          { label: t('table_job'), width: 130 },
+          { label: t('queue'), width: 180 },
+          { label: t('table_name'), width: 130 },
+          { label: t('table_state'), width: 110 },
+          { label: t('table_attempts'), width: 90 },
+          { label: t('table_waiting_since'), width: 120 },
           { label: '', width: 150 },
         ]}
         rows={jobs.map((job) => [
@@ -123,10 +133,10 @@ export default function AdminQueuePage(): React.ReactElement {
           job.queue,
           mono(job.name),
           <Badge key="state" tone={stateTone(job.state)}>
-            {job.state}
+            {stateLabels[job.state]}
           </Badge>,
-          num(String(job.attemptsMade)),
-          num(new Date(job.timestamp).toLocaleTimeString()),
+          num(t('number_value', { value: job.attemptsMade })),
+          num(t('time_value', { time: new Date(job.timestamp) })),
           <span key="actions" className={styles.actions}>
             <Button
               variant="ghost"
@@ -136,7 +146,7 @@ export default function AdminQueuePage(): React.ReactElement {
                 onRetry(job.id);
               }}
             >
-              Retry
+              {t('retry')}
             </Button>
             <Button
               variant="ghost"
@@ -146,16 +156,13 @@ export default function AdminQueuePage(): React.ReactElement {
                 onCancel(job.id);
               }}
             >
-              Cancel
+              {t('cancel')}
             </Button>
           </span>,
         ])}
       />
 
-      <p className={styles.note}>
-        A questionnaire pause holds no worker slot. Stalled jobs are terminated by the timeout sweep
-        and only delivered areas are charged.
-      </p>
+      <p className={styles.note}>{t('queue_note')}</p>
     </div>
   );
 }

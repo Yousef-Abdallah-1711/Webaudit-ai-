@@ -20,6 +20,7 @@
  * pagination-UI precedent elsewhere in this admin console to match.
  */
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
@@ -47,10 +48,22 @@ const PAGE_SIZE = 50;
  * "confirmation dialog before granting" gap).
  */
 type PendingAction =
-  | { readonly kind: 'grant'; readonly amount: number; readonly creditKind: 'PLAN' | 'PURCHASED'; readonly expiresAt: string | null; readonly reason: string }
-  | { readonly kind: 'assign-plan'; readonly planId: string; readonly periodEnd: string | null; readonly reason: string };
+  | {
+      readonly kind: 'grant';
+      readonly amount: number;
+      readonly creditKind: 'PLAN' | 'PURCHASED';
+      readonly expiresAt: string | null;
+      readonly reason: string;
+    }
+  | {
+      readonly kind: 'assign-plan';
+      readonly planId: string;
+      readonly periodEnd: string | null;
+      readonly reason: string;
+    };
 
 export default function AdminUsersPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [users, setUsers] = useState<readonly AdminUserSummary[]>([]);
   // `null` until the first successful load — an adversarial review of this
   // task found a real defect here: a plain `useState(0)` renders "0
@@ -77,6 +90,21 @@ export default function AdminUsersPage(): React.ReactElement {
   const [assignPeriodEnd, setAssignPeriodEnd] = useState('');
   const [assignReason, setAssignReason] = useState('');
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const planLabels: Readonly<Record<string, string>> = {
+    free: t('plan_free'),
+    starter: t('plan_starter'),
+    pro: t('plan_pro'),
+    business: t('plan_business'),
+  };
+  const statusLabels: Readonly<Record<string, string>> = {
+    ACTIVE: t('subscription_active'),
+    PAST_DUE: t('subscription_past_due'),
+    CANCELLED: t('subscription_cancelled'),
+    EXPIRED: t('subscription_expired'),
+    free: t('status_free'),
+  };
+  const planLabel = (planId: string): string => planLabels[planId] ?? planId;
+  const statusLabel = (status: string): string => statusLabels[status] ?? status;
 
   useEffect(() => {
     getAdminPlans(false)
@@ -97,12 +125,12 @@ export default function AdminUsersPage(): React.ReactElement {
         setTotal(page.total);
         setError(null);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'Users could not be loaded.');
+        setError(err instanceof ApiError ? err.message : t('users_load_error'));
       } finally {
         setBusy(false);
       }
     },
-    [search],
+    [search, t],
   );
 
   useEffect(() => {
@@ -120,7 +148,7 @@ export default function AdminUsersPage(): React.ReactElement {
     setUserOperator(user.id, !user.isOperator)
       .then(() => load(0, false))
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'That did not go through.');
+        setError(err instanceof ApiError ? err.message : t('users_mutation_error'));
         setBusy(false);
       });
   };
@@ -141,7 +169,7 @@ export default function AdminUsersPage(): React.ReactElement {
       const auditResult = await getAdminAuditLog({ subjectId: user.id, limit: 20 });
       setAuditEntries(auditResult.entries);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'User detail could not be loaded.');
+      setError(err instanceof ApiError ? err.message : t('users_detail_error'));
     } finally {
       setBusy(false);
     }
@@ -150,11 +178,11 @@ export default function AdminUsersPage(): React.ReactElement {
   const onRequestGrantCredits = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (selectedUser === null || grantAmount === '' || grantReason.trim() === '') {
-      setError('Select a user and provide a positive amount and reason.');
+      setError(t('users_grant_invalid'));
       return;
     }
     if (grantKind === 'PURCHASED' && grantExpiresAt !== '') {
-      setError('A PURCHASED grant must never expire — leave the expiry blank for it.');
+      setError(t('users_purchased_never_expires_error'));
       return;
     }
     setError(null);
@@ -162,7 +190,10 @@ export default function AdminUsersPage(): React.ReactElement {
       kind: 'grant',
       amount: Number(grantAmount),
       creditKind: grantKind,
-      expiresAt: grantKind === 'PLAN' && grantExpiresAt !== '' ? new Date(grantExpiresAt).toISOString() : null,
+      expiresAt:
+        grantKind === 'PLAN' && grantExpiresAt !== ''
+          ? new Date(grantExpiresAt).toISOString()
+          : null,
       reason: grantReason.trim(),
     });
   };
@@ -170,7 +201,7 @@ export default function AdminUsersPage(): React.ReactElement {
   const onRequestAssignPlan = (event: FormEvent<HTMLFormElement>): void => {
     event.preventDefault();
     if (selectedUser === null || assignPlanId === '' || assignReason.trim() === '') {
-      setError('Select a user, a plan, and provide a reason.');
+      setError(t('users_assign_invalid'));
       return;
     }
     setError(null);
@@ -211,7 +242,7 @@ export default function AdminUsersPage(): React.ReactElement {
       await load(0, false);
       if (detail !== null) await onViewDetail(selectedUser);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'That action did not go through.');
+      setError(err instanceof ApiError ? err.message : t('users_action_error'));
       setBusy(false);
     }
   };
@@ -219,9 +250,9 @@ export default function AdminUsersPage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Commerce"
-        title="Users"
-        {...(total === null ? {} : { meta: `${String(total)} accounts` })}
+        eyebrow={t('group_commerce')}
+        title={t('users')}
+        {...(total === null ? {} : { meta: t('users_accounts', { count: total }) })}
       />
 
       {error !== null && <p className={styles.error}>{error}</p>}
@@ -230,16 +261,16 @@ export default function AdminUsersPage(): React.ReactElement {
         className={styles.searchRow}
         onSubmit={onSearchSubmit}
         role="search"
-        aria-label="Search users by email"
+        aria-label={t('search_users_aria')}
       >
         <input
           value={searchInput}
           onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Search by email…"
-          aria-label="Search by email"
+          placeholder={t('search_by_email')}
+          aria-label={t('search_by_email')}
         />
         <Button type="submit" variant="secondary" size="sm" disabled={busy}>
-          Search
+          {t('search')}
         </Button>
         {search !== '' && (
           <Button
@@ -252,19 +283,19 @@ export default function AdminUsersPage(): React.ReactElement {
               setSearch('');
             }}
           >
-            Clear
+            {t('clear')}
           </Button>
         )}
       </form>
 
       <Table
         cols={[
-          { label: 'Email', width: '1fr' },
-          { label: 'Plan', width: 110 },
-          { label: 'Plan credits', width: 110 },
-          { label: 'Purchased', width: 110 },
-          { label: 'State', width: 110 },
-          { label: 'Created', width: 110 },
+          { label: t('table_email'), width: '1fr' },
+          { label: t('table_plan'), width: 110 },
+          { label: t('table_plan_credits'), width: 110 },
+          { label: t('table_purchased'), width: 110 },
+          { label: t('table_state'), width: 110 },
+          { label: t('table_created'), width: 110 },
           { label: '', width: 160 },
         ]}
         rows={users.map((user) => {
@@ -272,14 +303,14 @@ export default function AdminUsersPage(): React.ReactElement {
           return [
             mono(user.email),
             <Badge key="plan" tone={user.planId === 'free' ? 'neutral' : 'accent'}>
-              {user.planId}
+              {planLabel(user.planId)}
             </Badge>,
-            num(String(user.balance.plan)),
-            num(String(user.balance.purchased)),
+            num(t('number_value', { value: user.balance.plan })),
+            num(t('number_value', { value: user.balance.purchased })),
             <Badge key="state" tone={status === 'active' ? 'success' : 'neutral'}>
-              {status}
+              {statusLabel(status)}
             </Badge>,
-            new Date(user.createdAt).toLocaleDateString(),
+            t('date_value', { date: new Date(user.createdAt) }),
             <span key="actions" className={styles.actions}>
               <Button
                 variant="ghost"
@@ -287,7 +318,7 @@ export default function AdminUsersPage(): React.ReactElement {
                 disabled={busy}
                 onClick={() => onToggleOperator(user)}
               >
-                {user.isOperator ? 'Remove operator' : 'Make operator'}
+                {t(user.isOperator ? 'user_remove_operator' : 'user_make_operator')}
               </Button>
               <Button
                 variant="ghost"
@@ -295,7 +326,7 @@ export default function AdminUsersPage(): React.ReactElement {
                 disabled={busy}
                 onClick={() => void onViewDetail(user)}
               >
-                View detail
+                {t('view_detail')}
               </Button>
               <Button
                 variant="ghost"
@@ -306,7 +337,7 @@ export default function AdminUsersPage(): React.ReactElement {
                   setDetail(null);
                 }}
               >
-                Grant credits
+                {t('grant_credits')}
               </Button>
             </span>,
           ];
@@ -321,42 +352,57 @@ export default function AdminUsersPage(): React.ReactElement {
           onClick={onLoadMore}
           className={`${styles.loadMore}`}
         >
-          Load more
+          {t('load_more')}
         </Button>
       )}
 
       <div className={styles.actionPanel}>
         <strong>
-          {selectedUser === null ? 'User actions' : `Actions for ${selectedUser.email}`}
+          {selectedUser === null
+            ? t('user_actions')
+            : t('actions_for_user', { email: selectedUser.email })}
         </strong>
 
         {detail !== null && (
           <dl className={styles.detailSummary}>
-            <dt>Plan</dt>
-            <dd>{detail.planId}</dd>
-            <dt>Subscription state</dt>
-            <dd>{detail.subscriptionStatus ?? '—'}</dd>
-            <dt>Plan credits</dt>
-            <dd>{num(String(detail.balance.plan))}</dd>
-            <dt>Purchased credits</dt>
-            <dd>{num(String(detail.balance.purchased))}</dd>
-            <dt>Operator</dt>
-            <dd>{detail.isOperator ? 'Yes' : 'No'}</dd>
+            <dt>{t('table_plan')}</dt>
+            <dd>{planLabel(detail.planId)}</dd>
+            <dt>{t('subscription_state')}</dt>
+            <dd>
+              {detail.subscriptionStatus === null
+                ? t('dash')
+                : statusLabel(detail.subscriptionStatus)}
+            </dd>
+            <dt>{t('table_plan_credits')}</dt>
+            <dd>{num(t('number_value', { value: detail.balance.plan }))}</dd>
+            <dt>{t('purchased_credits')}</dt>
+            <dd>{num(t('number_value', { value: detail.balance.purchased }))}</dd>
+            <dt>{t('operator')}</dt>
+            <dd>{detail.isOperator ? t('yes') : t('no')}</dd>
           </dl>
         )}
 
         {detail !== null && (
           <div className={styles.ledger}>
-            <strong>Recent ledger</strong>
+            <strong>{t('recent_ledger')}</strong>
             {detail.recentLedger.length === 0 ? (
-              <p className={styles.muted}>No credit transactions yet.</p>
+              <p className={styles.muted}>{t('no_credit_transactions')}</p>
             ) : (
               <ul className={styles.ledgerList}>
                 {detail.recentLedger.map((entry) => (
                   <li key={entry.id}>
-                    <Badge tone={entry.type === 'DEBIT' ? 'neutral' : 'success'}>{entry.type}</Badge>{' '}
-                    {num(String(entry.amount))} — {entry.reason} (
-                    {new Date(entry.createdAt).toLocaleString()})
+                    <Badge tone={entry.type === 'DEBIT' ? 'neutral' : 'success'}>
+                      {entry.type === 'DEBIT'
+                        ? t('status_debit')
+                        : entry.type === 'CREDIT'
+                          ? t('status_credit')
+                          : entry.type}
+                    </Badge>{' '}
+                    {t('ledger_entry_tail', {
+                      amount: entry.amount,
+                      reason: entry.reason,
+                      date: new Date(entry.createdAt),
+                    })}
                   </li>
                 ))}
               </ul>
@@ -366,16 +412,18 @@ export default function AdminUsersPage(): React.ReactElement {
 
         {detail !== null && (
           <div className={styles.ledger}>
-            <strong>Audited operator actions for this user</strong>
+            <strong>{t('audited_user_actions')}</strong>
             {auditEntries.length === 0 ? (
-              <p className={styles.muted}>No audited actions recorded.</p>
+              <p className={styles.muted}>{t('no_audited_actions')}</p>
             ) : (
               <ul className={styles.ledgerList}>
                 {auditEntries.map((entry) => (
                   <li key={entry.id}>
                     <Badge tone="accent">{entry.action}</Badge>{' '}
-                    {entry.actorEmail ?? entry.actorId} (
-                    {new Date(entry.createdAt).toLocaleString()})
+                    {t('audit_entry_meta', {
+                      actor: entry.actorEmail ?? entry.actorId,
+                      date: new Date(entry.createdAt),
+                    })}
                   </li>
                 ))}
               </ul>
@@ -384,9 +432,9 @@ export default function AdminUsersPage(): React.ReactElement {
         )}
 
         <form className={styles.subForm} onSubmit={onRequestGrantCredits}>
-          <strong>Grant credits</strong>
+          <strong>{t('grant_credits')}</strong>
           <label>
-            Amount
+            {t('amount')}
             <input
               value={grantAmount}
               onChange={(event) => setGrantAmount(event.target.value)}
@@ -394,15 +442,18 @@ export default function AdminUsersPage(): React.ReactElement {
             />
           </label>
           <label>
-            Kind
-            <select value={grantKind} onChange={(event) => setGrantKind(event.target.value as 'PLAN' | 'PURCHASED')}>
-              <option value="PURCHASED">Purchased (never expires)</option>
-              <option value="PLAN">Plan (may expire)</option>
+            {t('kind')}
+            <select
+              value={grantKind}
+              onChange={(event) => setGrantKind(event.target.value as 'PLAN' | 'PURCHASED')}
+            >
+              <option value="PURCHASED">{t('purchased_never_expires')}</option>
+              <option value="PLAN">{t('plan_may_expire')}</option>
             </select>
           </label>
           {grantKind === 'PLAN' && (
             <label>
-              Expires at (optional)
+              {t('expires_at_optional')}
               <input
                 type="date"
                 value={grantExpiresAt}
@@ -411,32 +462,32 @@ export default function AdminUsersPage(): React.ReactElement {
             </label>
           )}
           <label>
-            Reason
+            {t('reason')}
             <input value={grantReason} onChange={(event) => setGrantReason(event.target.value)} />
           </label>
           <Button type="submit" disabled={selectedUser === null || busy}>
-            Review grant
+            {t('review_grant')}
           </Button>
         </form>
 
         <form className={styles.subForm} onSubmit={onRequestAssignPlan}>
-          <strong>Assign plan (no payment)</strong>
+          <strong>{t('assign_plan_no_payment')}</strong>
           <label>
-            Plan
+            {t('table_plan')}
             <select value={assignPlanId} onChange={(event) => setAssignPlanId(event.target.value)}>
-              <option value="">Select a plan…</option>
-              <option value="free">free (revert to free)</option>
+              <option value="">{t('select_plan')}</option>
+              <option value="free">{t('free_revert')}</option>
               {plans
                 .filter((plan) => plan.id !== 'free' && plan.isActive)
                 .map((plan) => (
                   <option key={plan.id} value={plan.id}>
-                    {plan.name} ({plan.id})
+                    {t('plan_option_with_id', { name: plan.name, id: plan.id })}
                   </option>
                 ))}
             </select>
           </label>
           <label>
-            Expires at (optional — indefinite if left blank)
+            {t('expires_at_indefinite_optional')}
             <input
               type="date"
               value={assignPeriodEnd}
@@ -444,40 +495,66 @@ export default function AdminUsersPage(): React.ReactElement {
             />
           </label>
           <label>
-            Reason
+            {t('reason')}
             <input value={assignReason} onChange={(event) => setAssignReason(event.target.value)} />
           </label>
           <Button type="submit" disabled={selectedUser === null || busy}>
-            Review assignment
+            {t('review_assignment')}
           </Button>
         </form>
 
         {pendingAction !== null && selectedUser !== null && (
-          <div className={styles.confirm} role="alertdialog" aria-label="Confirm action">
+          <div className={styles.confirm} role="alertdialog" aria-label={t('confirm_action')}>
             {pendingAction.kind === 'grant' ? (
               <p>
-                Grant <strong>{pendingAction.amount}</strong> {pendingAction.creditKind.toLowerCase()}{' '}
-                credit(s) to <strong>{selectedUser.email}</strong>
                 {pendingAction.expiresAt !== null
-                  ? ` (expires ${new Date(pendingAction.expiresAt).toLocaleDateString()})`
-                  : ''}
-                ? Reason: “{pendingAction.reason}”.
+                  ? t.rich('grant_confirm_with_expiry', {
+                      amount: pendingAction.amount,
+                      creditKind: t(
+                        pendingAction.creditKind === 'PLAN'
+                          ? 'credit_kind_plan'
+                          : 'credit_kind_purchased',
+                      ),
+                      email: selectedUser.email,
+                      expires: new Date(pendingAction.expiresAt),
+                      reason: pendingAction.reason,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })
+                  : t.rich('grant_confirm', {
+                      amount: pendingAction.amount,
+                      creditKind: t(
+                        pendingAction.creditKind === 'PLAN'
+                          ? 'credit_kind_plan'
+                          : 'credit_kind_purchased',
+                      ),
+                      email: selectedUser.email,
+                      reason: pendingAction.reason,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })}
               </p>
             ) : (
               <p>
-                Assign plan <strong>{pendingAction.planId}</strong> to{' '}
-                <strong>{selectedUser.email}</strong>, no payment involved
                 {pendingAction.periodEnd !== null
-                  ? ` (until ${new Date(pendingAction.periodEnd).toLocaleDateString()})`
-                  : ' (indefinite)'}
-                ? Reason: “{pendingAction.reason}”.
+                  ? t.rich('assign_confirm_with_expiry', {
+                      planId: pendingAction.planId,
+                      email: selectedUser.email,
+                      expires: new Date(pendingAction.periodEnd),
+                      reason: pendingAction.reason,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })
+                  : t.rich('assign_confirm_indefinite', {
+                      planId: pendingAction.planId,
+                      email: selectedUser.email,
+                      reason: pendingAction.reason,
+                      strong: (chunks) => <strong>{chunks}</strong>,
+                    })}
               </p>
             )}
             <Button disabled={busy} onClick={() => void onConfirmPendingAction()}>
-              Confirm
+              {t('confirm')}
             </Button>
             <Button variant="secondary" disabled={busy} onClick={() => setPendingAction(null)}>
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         )}

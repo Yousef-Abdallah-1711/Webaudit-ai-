@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   getAdminProviders,
   setAdminProviderChain,
@@ -11,6 +12,7 @@ import { AHead, mono, num, Table } from '../../../../components/admin';
 import styles from './page.module.css';
 
 export default function AdminProvidersPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [chain, setChain] = useState<readonly AdminProviderChainEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +28,13 @@ export default function AdminProvidersPage(): React.ReactElement {
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        setError(cause instanceof Error ? cause.message : 'Unable to load provider chain.');
+        setError(cause instanceof Error ? cause.message : t('providers_load_error'));
         setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [t]);
 
   const vendors = new Set(chain.map((entry) => entry.vendor)).size;
 
@@ -45,7 +47,7 @@ export default function AdminProvidersPage(): React.ReactElement {
       );
       setChain(result.chain);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Unable to save provider chain.');
+      setError(cause instanceof Error ? cause.message : t('providers_save_error'));
     } finally {
       setSaving(false);
     }
@@ -61,29 +63,24 @@ export default function AdminProvidersPage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Catalogue"
-        title="AI providers"
-        meta={`ordered fallback chain · ${String(vendors)} vendors`}
+        eyebrow={t('group_catalogue')}
+        title={t('providers')}
+        meta={t('providers_meta', { vendors })}
       />
-      <p className={styles.caveat}>
-        Changes are persisted for the next worker deployment; running workers keep their boot-time
-        provider chain until redeployed.
-      </p>
-      {loading && <p className={styles.status}>Loading provider chain...</p>}
+      <p className={styles.caveat}>{t('providers_caveat')}</p>
+      {loading && <p className={styles.status}>{t('providers_loading')}</p>}
       {error && <p className={styles.error}>{error}</p>}
       {vendors < 2 && !loading && (
-        <div className={styles.warning}>
-          A chain spanning fewer than two vendors is refused at startup.
-        </div>
+        <div className={styles.warning}>{t('providers_two_vendor_warning')}</div>
       )}
       <Table
         cols={[
-          { label: '#', width: 40 },
-          { label: 'Provider', width: '1fr' },
-          { label: 'Vendor', width: 150 },
-          { label: 'Status', width: 110 },
-          { label: 'Invocations', width: 120 },
-          { label: 'Cost 24h', width: 100 },
+          { label: t('table_number'), width: 40 },
+          { label: t('table_provider'), width: '1fr' },
+          { label: t('table_vendor'), width: 150 },
+          { label: t('table_status'), width: 110 },
+          { label: t('table_invocations'), width: 120 },
+          { label: t('table_cost_24h'), width: 100 },
           { label: '', width: 160 },
         ]}
         rows={chain.map(({ vendor, model, isEnabled }, index) => [
@@ -94,10 +91,10 @@ export default function AdminProvidersPage(): React.ReactElement {
             key="status"
             className={`${styles.health} ${isEnabled ? styles.healthHealthy : styles.healthDegraded}`}
           >
-            {isEnabled ? 'enabled' : 'disabled'}
+            {t(isEnabled ? 'status_enabled' : 'status_disabled')}
           </span>,
-          num(0),
-          num(0),
+          num(t('number_value', { value: 0 })),
+          num(t('number_value', { value: 0 })),
           <span key="actions" className={styles.actions}>
             <Button
               variant="ghost"
@@ -105,7 +102,7 @@ export default function AdminProvidersPage(): React.ReactElement {
               disabled={index === 0 || saving}
               onClick={() => move(index, -1)}
             >
-              Up
+              {t('button_up')}
             </Button>
             <Button
               variant="ghost"
@@ -113,23 +110,17 @@ export default function AdminProvidersPage(): React.ReactElement {
               disabled={index === chain.length - 1 || saving}
               onClick={() => move(index, 1)}
             >
-              Down
+              {t('button_down')}
             </Button>
           </span>,
         ])}
       />
       <div className={styles.grid}>
-        <Card padding={20} title="Schema failures advance the chain">
-          <p className={styles.cardText}>
-            A schema-invalid response is treated as a provider failure. Nothing is partially
-            accepted.
-          </p>
+        <Card padding={20} title={t('provider_schema_title')}>
+          <p className={styles.cardText}>{t('provider_schema_body')}</p>
         </Card>
-        <Card padding={20} title="Exhaustion degrades, never collapses">
-          <p className={styles.cardText}>
-            With every provider unavailable, measured findings are still delivered and the area is
-            marked degraded.
-          </p>
+        <Card padding={20} title={t('provider_exhaustion_title')}>
+          <p className={styles.cardText}>{t('provider_exhaustion_body')}</p>
         </Card>
       </div>
     </div>

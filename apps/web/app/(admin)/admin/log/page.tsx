@@ -14,6 +14,7 @@
  * log must never hide.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, Table } from '../../../../components/admin';
 import { ApiError, getAdminAuditLog, type AdminAuditLogEntry } from '../../../../lib/api';
@@ -22,6 +23,7 @@ import styles from './page.module.css';
 const PAGE_SIZE = 50;
 
 export default function AdminLogPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [entries, setEntries] = useState<readonly AdminAuditLogEntry[]>([]);
   const [total, setTotal] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,12 +51,12 @@ export default function AdminLogPage(): React.ReactElement {
         setTotal(page.total);
         setError(null);
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : 'The audit log could not be loaded.');
+        setError(err instanceof ApiError ? err.message : t('audit_log_load_error'));
       } finally {
         setBusy(false);
       }
     },
-    [action, actorId, from, search, to],
+    [action, actorId, from, search, t, to],
   );
 
   useEffect(() => {
@@ -64,9 +66,9 @@ export default function AdminLogPage(): React.ReactElement {
   return (
     <div>
       <AHead
-        eyebrow="Governance"
-        title="Audit log"
-        {...(total === null ? {} : { meta: `${String(total)} entries · append only` })}
+        eyebrow={t('group_governance')}
+        title={t('audit_log')}
+        {...(total === null ? {} : { meta: t('audit_log_entries', { count: total }) })}
       />
 
       {error !== null && <p className={styles.error}>{error}</p>}
@@ -79,56 +81,59 @@ export default function AdminLogPage(): React.ReactElement {
         }}
       >
         <input
-          aria-label="Search audit log"
-          placeholder="Search action or subject"
+          aria-label={t('audit_search_aria')}
+          placeholder={t('audit_search_placeholder')}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
         <input
-          aria-label="Filter action"
-          placeholder="Action"
+          aria-label={t('audit_filter_action_aria')}
+          placeholder={t('audit_action_placeholder')}
           value={action}
           onChange={(event) => setAction(event.target.value)}
         />
         <input
-          aria-label="Filter actor"
-          placeholder="Actor ID"
+          aria-label={t('audit_filter_actor_aria')}
+          placeholder={t('audit_actor_id_placeholder')}
           value={actorId}
           onChange={(event) => setActorId(event.target.value)}
         />
         <input
-          aria-label="From date"
+          aria-label={t('from_date')}
           type="date"
           value={from}
           onChange={(event) => setFrom(event.target.value)}
         />
         <input
-          aria-label="To date"
+          aria-label={t('to_date')}
           type="date"
           value={to}
           onChange={(event) => setTo(event.target.value)}
         />
         <Button type="submit" size="sm">
-          Filter
+          {t('filter')}
         </Button>
       </form>
 
       <Table
         cols={[
-          { label: 'When', width: 170 },
-          { label: 'Actor', width: 230 },
-          { label: 'Action', width: 180 },
-          { label: 'Subject', width: '1fr' },
+          { label: t('table_when'), width: 170 },
+          { label: t('table_actor'), width: 230 },
+          { label: t('table_action'), width: 180 },
+          { label: t('table_subject'), width: '1fr' },
         ]}
         rows={entries.map((entry) => [
-          mono(new Date(entry.createdAt).toLocaleString()),
+          mono(t('date_time_value', { date: new Date(entry.createdAt) })),
           mono(entry.actorEmail ?? entry.actorId),
           <Badge key="action" mono pill={false}>
             {entry.action}
           </Badge>,
           entry.subjectId === null
             ? entry.subjectType
-            : `${entry.subjectType} ${entry.subjectId.slice(0, 8)}`,
+            : t('audit_subject_with_id', {
+                subjectType: entry.subjectType,
+                subjectId: entry.subjectId.slice(0, 8),
+              }),
         ])}
       />
 
@@ -142,7 +147,7 @@ export default function AdminLogPage(): React.ReactElement {
           }}
           className={`${styles.loadMore}`}
         >
-          Load more
+          {t('load_more')}
         </Button>
       )}
     </div>

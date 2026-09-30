@@ -33,6 +33,8 @@
  */
 import { usePathname } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
+import { PRODUCT_NAME } from '@webaudit/config';
 import { Badge, Card, Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { ThemeToggle } from '../../app/theme';
@@ -42,39 +44,52 @@ import styles from './AdminShell.module.css';
 interface NavEntry {
   readonly key: string;
   readonly href: string;
-  readonly label: string;
+  readonly label:
+    | 'overview'
+    | 'queue'
+    | 'scans'
+    | 'capabilities'
+    | 'providers'
+    | 'users'
+    | 'plans'
+    | 'margin'
+    | 'audit_log'
+    | 'settings';
   readonly icon: IconName;
 }
 
-const NAV_GROUPS: readonly (readonly [string, readonly NavEntry[]])[] = [
+const NAV_GROUPS: readonly (readonly [
+  'group_platform' | 'group_catalogue' | 'group_commerce' | 'group_governance',
+  readonly NavEntry[],
+])[] = [
   [
-    'Platform',
+    'group_platform',
     [
-      { key: 'overview', href: '/admin', label: 'Overview', icon: 'barChart' },
-      { key: 'queue', href: '/admin/queue', label: 'Queue', icon: 'list' },
-      { key: 'scans', href: '/admin/scans', label: 'Scans', icon: 'search' },
+      { key: 'overview', href: '/admin', label: 'overview', icon: 'barChart' },
+      { key: 'queue', href: '/admin/queue', label: 'queue', icon: 'list' },
+      { key: 'scans', href: '/admin/scans', label: 'scans', icon: 'search' },
     ],
   ],
   [
-    'Catalogue',
+    'group_catalogue',
     [
-      { key: 'caps', href: '/admin/capabilities', label: 'Capabilities', icon: 'layoutGrid' },
-      { key: 'providers', href: '/admin/providers', label: 'AI providers', icon: 'layers' },
+      { key: 'caps', href: '/admin/capabilities', label: 'capabilities', icon: 'layoutGrid' },
+      { key: 'providers', href: '/admin/providers', label: 'providers', icon: 'layers' },
     ],
   ],
   [
-    'Commerce',
+    'group_commerce',
     [
-      { key: 'users', href: '/admin/users', label: 'Users', icon: 'userCircle' },
-      { key: 'plans', href: '/admin/plans', label: 'Plans', icon: 'creditCard' },
-      { key: 'margin', href: '/admin/billing', label: 'Margin', icon: 'trendingUp' },
+      { key: 'users', href: '/admin/users', label: 'users', icon: 'userCircle' },
+      { key: 'plans', href: '/admin/plans', label: 'plans', icon: 'creditCard' },
+      { key: 'margin', href: '/admin/billing', label: 'margin', icon: 'trendingUp' },
     ],
   ],
   [
-    'Governance',
+    'group_governance',
     [
-      { key: 'log', href: '/admin/log', label: 'Audit log', icon: 'fileText' },
-      { key: 'settings', href: '/admin/settings', label: 'Settings', icon: 'settings' },
+      { key: 'log', href: '/admin/log', label: 'audit_log', icon: 'fileText' },
+      { key: 'settings', href: '/admin/settings', label: 'settings', icon: 'settings' },
     ],
   ],
 ];
@@ -122,6 +137,7 @@ interface AdminSidebarProps {
 
 function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement {
   const pathname = usePathname();
+  const t = useTranslations('admin');
 
   const sidebarClasses = [styles.sidebar, open ? styles.sidebarOpen : undefined]
     .filter(Boolean)
@@ -147,18 +163,18 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
           onClick={() => {
             setOpen(!open);
           }}
-          aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
-          title={open ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-label={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
+          title={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
           className={styles.toggleBtn}
         >
           <Icon name="menu" size={19} />
         </button>
         {open && (
           <div className={styles.brand}>
-            <span className={styles.wordmark}>
-              Web<span className={styles.wordmarkAccent}>Audit</span>
-            </span>
-            <span className={styles.operatorChip}>operator</span>
+            <div className={styles.wordmark}>
+              <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
+            </div>
+            <span className={styles.operatorChip}>{t('operator')}</span>
           </div>
         )}
       </div>
@@ -167,7 +183,7 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
         {NAV_GROUPS.map(([group, items]) => (
           <div key={group} className={styles.navGroup}>
             {open ? (
-              <div className={styles.navGroupLabel}>{group}</div>
+              <div className={styles.navGroupLabel}>{t(group)}</div>
             ) : (
               <div className={styles.navGroupDivider} />
             )}
@@ -177,7 +193,7 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
                   key={item.key}
                   open={open}
                   active={isActive(pathname, item.href)}
-                  label={item.label}
+                  label={t(item.label)}
                   icon={item.icon}
                   href={item.href}
                 />
@@ -188,14 +204,14 @@ function AdminSidebar({ open, setOpen }: AdminSidebarProps): React.ReactElement 
       </div>
 
       <div className={footClasses}>
-        {open && <div className={styles.recordedNote}>every action here is recorded</div>}
+        {open && <div className={styles.recordedNote}>{t('actions_recorded')}</div>}
         <div className={footRowClasses}>
-          <a href="/scan" title="Back to dashboard" className={styles.exitLink}>
+          <a href="/scan" title={t('back_dashboard')} className={styles.exitLink}>
             <Icon name="logOut" size={16} />
           </a>
           {open && (
             <a href="/" className={styles.publicSiteLink}>
-              Public site
+              {t('public_site')}
             </a>
           )}
         </div>
@@ -209,6 +225,7 @@ export interface AdminShellProps {
 }
 
 export function AdminShell({ children }: AdminShellProps): React.ReactElement {
+  const t = useTranslations('admin');
   const [open, setOpen] = useState(true);
   const { user } = useAuth();
 
@@ -217,10 +234,12 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
       <AdminSidebar open={open} setOpen={setOpen} />
       <div className={styles.mainCol}>
         <div className={styles.topBar}>
-          <span className={styles.topBarOperator}>operator · {user?.email ?? 'Unavailable'}</span>
+          <span className={styles.topBarOperator}>
+            {t('operator_header', { email: user?.email ?? t('unavailable') })}
+          </span>
           <span className={styles.topBarActions}>
-            <Badge>Workers unavailable</Badge>
-            <Badge>Queue unavailable</Badge>
+            <Badge>{t('workers_unavailable')}</Badge>
+            <Badge>{t('queue_unavailable')}</Badge>
             <ThemeToggle />
           </span>
         </div>

@@ -2,8 +2,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { I18nProvider } from '../../app/theme';
 import { uploadCapability } from '../../lib/api.js';
 import AdminCapabilitiesPage from '../../app/(admin)/admin/capabilities/page';
+
+function render(element: React.ReactElement): string {
+  return renderToStaticMarkup(createElement(I18nProvider, null, element));
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -11,7 +16,7 @@ afterEach(() => {
 
 describe('capability upload', () => {
   it('renders real metadata fields and a bundle file control', () => {
-    const html = renderToStaticMarkup(createElement(AdminCapabilitiesPage));
+    const html = render(createElement(AdminCapabilitiesPage));
     expect(html).toContain('Capability name');
     expect(html).toContain('Version');
     expect(html).toContain('type="file"');

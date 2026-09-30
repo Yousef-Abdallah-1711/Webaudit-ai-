@@ -19,6 +19,7 @@
  * fields via the same `PATCH /admin/plans/:id` used for the active toggle.
  */
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { Badge, Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import {
@@ -36,21 +37,8 @@ import styles from './page.module.css';
  * `retentionLine` — `lib/api.ts` doesn't export it, and this codebase's
  * existing convention doesn't share helpers across route folders.
  */
-function retentionLine(days: number): string {
-  if (days >= 365 && days % 365 === 0) return `${String((days / 365) * 12)} months`;
-  return `${String(days)} days`;
-}
-
-function entitlementsLine(plan: AdminPlanRecord): string {
-  const labels: string[] = [];
-  if (plan.allowReadinessPass) labels.push('Readiness pass');
-  if (plan.allowLoadGeneration) labels.push('Load generation');
-  if (plan.allowCustomCapability) labels.push('Custom capability');
-  if (plan.allowCreditPurchase) labels.push('Top-ups');
-  return labels.length === 0 ? '—' : labels.join(', ');
-}
-
 export default function AdminPlansPage(): React.ReactElement {
+  const t = useTranslations('admin');
   const [plans, setPlans] = useState<readonly AdminPlanRecord[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,9 +64,9 @@ export default function AdminPlansPage(): React.ReactElement {
       setPlans(list);
       setError(null);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Plans could not be loaded.');
+      setError(err instanceof ApiError ? err.message : t('plans_load_error'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -90,7 +78,7 @@ export default function AdminPlansPage(): React.ReactElement {
     setPlanActive(plan.id, !plan.isActive)
       .then(() => load())
       .catch((err: unknown) => {
-        setError(err instanceof ApiError ? err.message : 'That did not go through.');
+        setError(err instanceof ApiError ? err.message : t('action_did_not_go_through'));
       })
       .finally(() => {
         setBusy(false);
@@ -124,21 +112,37 @@ export default function AdminPlansPage(): React.ReactElement {
       setForm(null);
       await load();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'The plan could not be saved.');
+      setError(err instanceof ApiError ? err.message : t('save_plan_error'));
     } finally {
       setSaving(false);
     }
   };
 
+  const retentionLine = (days: number): string => {
+    if (days >= 365 && days % 365 === 0) {
+      return t('retention_months', { count: (days / 365) * 12 });
+    }
+    return t('retention_day_count', { count: days });
+  };
+
+  const entitlementsLine = (plan: AdminPlanRecord): string => {
+    const labels: string[] = [];
+    if (plan.allowReadinessPass) labels.push(t('entitlement_readiness_pass'));
+    if (plan.allowLoadGeneration) labels.push(t('settings_load_generation'));
+    if (plan.allowCustomCapability) labels.push(t('entitlement_custom_capability'));
+    if (plan.allowCreditPurchase) labels.push(t('entitlement_top_ups'));
+    return labels.length === 0 ? t('dash') : t('entitlement_list', { items: labels.join(', ') });
+  };
+
   return (
     <div>
       <AHead
-        eyebrow="Commerce"
-        title="Plans"
-        meta="entitlements are enforced server-side before any charge"
+        eyebrow={t('group_commerce')}
+        title={t('plans')}
+        meta={t('plans_meta')}
         actions={
           <Button size="sm" onClick={beginCreate}>
-            New plan
+            {t('new_plan')}
           </Button>
         }
       />
@@ -148,11 +152,15 @@ export default function AdminPlansPage(): React.ReactElement {
       {form !== null && (
         <Card
           padding={20}
-          title={plans.some((plan) => plan.id === form.id) ? `Edit ${form.name}` : 'Create plan'}
+          title={
+            plans.some((plan) => plan.id === form.id)
+              ? t('edit_plan_title', { name: form.name })
+              : t('create_plan')
+          }
         >
           <div className={styles.formGrid}>
             <label className={styles.field}>
-              <span>Plan ID</span>
+              <span>{t('plan_id')}</span>
               <input
                 value={form.id}
                 disabled={plans.some((plan) => plan.id === form.id)}
@@ -160,14 +168,14 @@ export default function AdminPlansPage(): React.ReactElement {
               />
             </label>
             <label className={styles.field}>
-              <span>Name</span>
+              <span>{t('name')}</span>
               <input
                 value={form.name}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
               />
             </label>
             <label className={styles.field}>
-              <span>Monthly credits</span>
+              <span>{t('monthly_credits')}</span>
               <input
                 type="number"
                 min="0"
@@ -178,7 +186,7 @@ export default function AdminPlansPage(): React.ReactElement {
               />
             </label>
             <label className={styles.field}>
-              <span>Concurrent scan limit</span>
+              <span>{t('concurrent_scan_limit')}</span>
               <input
                 type="number"
                 min="1"
@@ -189,7 +197,7 @@ export default function AdminPlansPage(): React.ReactElement {
               />
             </label>
             <label className={styles.field}>
-              <span>Retention days</span>
+              <span>{t('retention_days')}</span>
               <input
                 type="number"
                 min="1"
@@ -205,15 +213,15 @@ export default function AdminPlansPage(): React.ReactElement {
                 checked={form.creditsRecur}
                 onChange={(event) => setForm({ ...form, creditsRecur: event.target.checked })}
               />{' '}
-              Credits recur monthly
+              {t('credits_recur_monthly')}
             </label>
           </div>
           <div className={styles.formActions}>
             <Button size="sm" disabled={saving} onClick={() => void savePlan()}>
-              {saving ? 'Saving...' : 'Save plan'}
+              {saving ? t('saving') : t('save_plan')}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setForm(null)}>
-              Cancel
+              {t('cancel')}
             </Button>
           </div>
         </Card>
@@ -221,23 +229,27 @@ export default function AdminPlansPage(): React.ReactElement {
 
       <Table
         cols={[
-          { label: 'Plan', width: 130 },
-          { label: 'Credits', width: 130 },
-          { label: 'Entitlements', width: '1fr' },
-          { label: 'Concurrent', width: 110 },
-          { label: 'Retention', width: 100 },
-          { label: 'State', width: 100 },
+          { label: t('table_plan'), width: 130 },
+          { label: t('table_credits'), width: 130 },
+          { label: t('table_entitlements'), width: '1fr' },
+          { label: t('table_concurrent'), width: 110 },
+          { label: t('table_retention'), width: 100 },
+          { label: t('table_state'), width: 100 },
           { label: '', width: 120 },
           { label: '', width: 120 },
         ]}
         rows={plans.map((plan) => [
           <strong key="name">{plan.name}</strong>,
-          mono(`${String(plan.monthlyCredits)}${plan.creditsRecur ? ' / mo' : ', once'}`),
+          mono(
+            plan.creditsRecur
+              ? t('monthly_credit_recur', { count: plan.monthlyCredits })
+              : t('monthly_credit_once', { count: plan.monthlyCredits }),
+          ),
           entitlementsLine(plan),
-          num(String(plan.concurrentScanLimit)),
+          num(t('number_value', { value: plan.concurrentScanLimit })),
           num(retentionLine(plan.retentionDays)),
           <Badge key="state" tone={plan.isActive ? 'success' : 'neutral'}>
-            {plan.isActive ? 'active' : 'inactive'}
+            {t(plan.isActive ? 'status_active' : 'status_inactive')}
           </Badge>,
           <Button
             key="toggle"
@@ -248,7 +260,7 @@ export default function AdminPlansPage(): React.ReactElement {
               onToggleActive(plan);
             }}
           >
-            {plan.isActive ? 'Deactivate' : 'Activate'}
+            {t(plan.isActive ? 'deactivate' : 'activate')}
           </Button>,
           <Button
             key="edit"
@@ -257,18 +269,18 @@ export default function AdminPlansPage(): React.ReactElement {
             disabled={busy}
             onClick={() => beginEdit(plan)}
           >
-            Edit
+            {t('edit')}
           </Button>,
         ])}
       />
 
       <div className={styles.grid}>
-        <Card padding={20} title="Credit schedule">
+        <Card padding={20} title={t('credit_schedule')}>
           {[
-            ['One area', '10–25'],
-            ['Full audit bundled', '80'],
-            ['Re-check', '3'],
-            ['Readiness pass', '60'],
+            [t('credit_schedule_one_area'), t('credit_range', { minimum: 10, maximum: 25 })],
+            [t('credit_schedule_full_audit'), t('number_value', { value: 80 })],
+            [t('credit_schedule_recheck'), t('number_value', { value: 3 })],
+            [t('entitlement_readiness_pass'), t('number_value', { value: 60 })],
           ].map(([a, b]) => (
             <div key={a} className={styles.scheduleRow}>
               <span>{a}</span>
@@ -276,17 +288,11 @@ export default function AdminPlansPage(): React.ReactElement {
             </div>
           ))}
         </Card>
-        <Card padding={20} title="Two credit lifetimes">
-          <p className={styles.cardText}>
-            Plan credits expire at renewal. Purchased top-ups never expire. Expiring lots are always
-            drawn first, so nothing paid for is quietly destroyed.
-          </p>
+        <Card padding={20} title={t('credit_lifetimes')}>
+          <p className={styles.cardText}>{t('credit_lifetimes_note')}</p>
         </Card>
-        <Card padding={20} title="Top-ups">
-          <p className={styles.cardText}>
-            Refused on the free tier, so it stays an evaluation rather than a route around
-            subscribing.
-          </p>
+        <Card padding={20} title={t('top_ups')}>
+          <p className={styles.cardText}>{t('top_ups_note')}</p>
         </Card>
       </div>
     </div>

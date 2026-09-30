@@ -132,7 +132,7 @@ export function useT(): [(key: StringKey) => string, Lang, (value: Lang) => void
 export function I18nProvider({ children }: Readonly<{ children: React.ReactNode }>): React.ReactElement {
   const [lang] = useLang();
   return (
-    <NextIntlClientProvider locale={lang} messages={messagesByLocale[lang]}>
+    <NextIntlClientProvider locale={lang} messages={messagesByLocale[lang]} timeZone="UTC">
       {children}
     </NextIntlClientProvider>
   );

@@ -12,6 +12,7 @@ import { usePathname } from 'next/navigation';
 import { AdminShell, AHead, Stat, Table } from '../../components/admin';
 import { AuthProvider } from '../../components/auth/AuthProvider';
 import { I18nProvider } from '../../app/theme';
+import adminMessages from '../../messages/en/admin.json';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/admin'),
@@ -28,7 +29,7 @@ describe('AdminShell', () => {
     const html = render(createElement(AdminShell, {}, 'page body'));
     expect(html).toContain('operator');
     expect(html).toContain('Unavailable');
-    expect(html).toContain('Workers unavailable');
+    expect(html).toContain(adminMessages.workers_unavailable);
     expect(html).toContain('page body');
   });
 
