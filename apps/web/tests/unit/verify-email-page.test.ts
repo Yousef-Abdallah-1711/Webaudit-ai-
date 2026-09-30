@@ -11,7 +11,11 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams('?token=single-use-token'),
 }));
 vi.mock('../../lib/api.js', () => ({
-  ApiError: class ApiError extends Error {},
+  ApiError: class ApiError extends Error {
+    constructor(readonly status: number) {
+      super('API request failed');
+    }
+  },
   resendVerification,
   verifyEmail,
 }));
@@ -42,8 +46,64 @@ describe('VerifyPage token confirmation', () => {
       });
 
       expect(verifyEmail).toHaveBeenCalledWith('single-use-token');
-      expect(mounted.html()).toContain('Address confirmed');
+      expect(mounted.html()).toContain('Email verified successfully');
+      expect(mounted.html()).toContain(
+        'Your email address has been confirmed. Your account is ready.',
+      );
+      expect(mounted.html()).toContain('You can safely close this page.');
       expect(mounted.html()).toContain('href="/login"');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('shows the same calm invalid-link state for any client error', async () => {
+    const { ApiError } = await import('../../lib/api.js');
+    verifyEmail.mockRejectedValue(new ApiError(410));
+    const { default: VerifyPage } = await import('../../app/(auth)/verify-email/page.js');
+    const mounted = await renderClient(createElement(VerifyPage));
+    try {
+      await act(async () => {
+        Array.from(document.querySelectorAll('button'))
+          .find((button) => button.textContent?.includes('Confirm Email Address'))!
+          .click();
+        await Promise.resolve();
+      });
+
+      expect(mounted.html()).toContain('This link is no longer valid');
+      expect(mounted.html()).toContain('Start again');
+      expect(mounted.html()).not.toContain('Email verified successfully');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('offers retry after a transient verification failure', async () => {
+    verifyEmail.mockRejectedValueOnce(new Error('Network unavailable'));
+    verifyEmail.mockResolvedValueOnce({ message: 'confirmed' });
+    const { default: VerifyPage } = await import('../../app/(auth)/verify-email/page.js');
+    const mounted = await renderClient(createElement(VerifyPage));
+    try {
+      await act(async () => {
+        Array.from(document.querySelectorAll('button'))
+          .find((button) => button.textContent?.includes('Confirm Email Address'))!
+          .click();
+        await Promise.resolve();
+      });
+
+      expect(mounted.html()).toContain('Something went wrong. Please try again.');
+      expect(mounted.html()).toContain('Try again');
+      expect(mounted.html()).not.toContain('Start again');
+
+      await act(async () => {
+        Array.from(document.querySelectorAll('button'))
+          .find((button) => button.textContent?.includes('Try again'))!
+          .click();
+        await Promise.resolve();
+      });
+
+      expect(verifyEmail).toHaveBeenNthCalledWith(2, 'single-use-token');
+      expect(mounted.html()).toContain('Email verified successfully');
     } finally {
       mounted.unmount();
     }

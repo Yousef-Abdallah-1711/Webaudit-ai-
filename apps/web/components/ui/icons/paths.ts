@@ -37,6 +37,8 @@ export const ICON_PATHS = {
   loader: 'M12 3a9 9 0 1 0 9 9M12 7v5l3 2',
   fileText: 'M7 3h7l5 5v13H7Zm7 0v5h5M10 13h7M10 17h5',
   check: 'm4 12 5 5L20 6',
+  // CircleAlert marks a routine link issue without implying success or danger.
+  circleAlert: 'M12 8v4m0 4h.01M22 12a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
   minus: 'M5 12h14',
   flag: 'M6 21V4h12l-2 4 2 4H6',
   barChart: 'M4 20V10m5 10V4m5 16v-7m5 7V8',

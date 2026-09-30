@@ -16,11 +16,12 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame } from '../../../components/auth/AuthFrame';
+import { Icon } from '../../../components/ui/icons/Icon';
 import { useT } from '../../theme';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
 import styles from './page.module.css';
 
-type Outcome = 'ready' | 'confirming' | 'confirmed' | 'invalid';
+type Outcome = 'ready' | 'confirming' | 'confirmed' | 'invalid' | 'failed';
 
 function TokenOutcome({ token }: { token: string }): React.ReactElement {
   const [t] = useT();
@@ -31,8 +32,12 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
     try {
       await verifyEmail(token);
       setOutcome('confirmed');
-    } catch {
-      setOutcome('invalid');
+    } catch (error) {
+      setOutcome(
+        error instanceof ApiError && error.status >= 400 && error.status < 500
+          ? 'invalid'
+          : 'failed',
+      );
     }
   }
 
@@ -49,15 +54,37 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
   }
   if (outcome === 'confirmed') {
     return (
-      <AuthFrame title={t('auth_verify_confirmed_title')} lead={t('auth_verify_confirmed_lead')}>
+      <AuthFrame>
+        <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
+          <Icon name="check" className={styles.statusIcon} />
+        </div>
+        <h1 className={styles.outcomeTitle}>{t('auth_verify_confirmed_title')}</h1>
+        <p className={styles.outcomeLead}>{t('auth_verify_confirmed_lead')}</p>
         <Button fullWidth href="/login">
           {t('auth_verify_confirmed_submit')}
+        </Button>
+        <p className={styles.closeNote}>{t('auth_verify_confirmed_close_note')}</p>
+      </AuthFrame>
+    );
+  }
+  if (outcome === 'failed') {
+    return (
+      <AuthFrame>
+        <h1 className={styles.outcomeTitle}>{t('auth_verify_retry_title')}</h1>
+        <p className={styles.outcomeLead}>{t('auth_verify_retry_lead')}</p>
+        <Button fullWidth onClick={() => void onConfirm()}>
+          {t('auth_verify_retry_button')}
         </Button>
       </AuthFrame>
     );
   }
   return (
-    <AuthFrame title={t('auth_verify_invalid_title')} lead={t('auth_verify_invalid_lead')}>
+    <AuthFrame>
+      <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
+        <Icon name="circleAlert" className={styles.statusIcon} />
+      </div>
+      <h1 className={styles.outcomeTitle}>{t('auth_verify_invalid_title')}</h1>
+      <p className={styles.outcomeLead}>{t('auth_verify_invalid_lead')}</p>
       <Button fullWidth href="/signup">
         {t('auth_verify_foot_link')}
       </Button>

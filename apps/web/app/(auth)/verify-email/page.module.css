@@ -1,9 +1,54 @@
 .emailBox {
   background: var(--surface-sunken);
   border: var(--border-width) solid var(--border-default);
-  padding: 14px 16px;
+  padding: var(--space-4);
+  font: var(--type-small);
   font-family: var(--font-mono);
-  font-size: 13px;
   color: var(--text-zinc);
-  margin-bottom: 18px;
+  margin-bottom: var(--space-5);
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-16);
+  height: var(--space-16);
+  margin: 0 auto var(--space-5);
+  border-radius: 50%;
+}
+
+.outcomeTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--text-strong);
+  font: var(--type-card-title);
+}
+
+.outcomeLead {
+  margin: 0 0 var(--space-5);
+  color: var(--text-secondary);
+  font: var(--type-small);
+  text-wrap: pretty;
+}
+
+.successBadge {
+  color: var(--sev-resolved);
+  background: var(--sev-resolved-bg);
+}
+
+.neutralBadge {
+  color: var(--sev-info);
+  background: var(--sev-info-bg);
+}
+
+.statusIcon {
+  width: var(--space-8);
+  height: var(--space-8);
+}
+
+.closeNote {
+  margin: var(--space-3) 0 0;
+  color: var(--text-muted);
+  font: var(--type-small);
+  text-align: center;
 }
