@@ -14,6 +14,16 @@ const RESEND_COOLDOWN_MS = 60 * 1000;
 const REGISTRATION_NOTICE_COOLDOWN_MS = 60 * 1000;
 const REGISTRATION_NOTICE_MESSAGE_TYPE = 'registration-attempt-notice';
 
+function describeThrown(value: unknown): string {
+  if (value instanceof Error) return value.message;
+  if (typeof value === 'string') return value;
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
+}
+
 export class TokenInvalidError extends Error {}
 
 /**
@@ -145,9 +155,7 @@ export async function register(
             providerError:
               sendError === undefined
                 ? null
-                : sendError instanceof Error
-                  ? sendError.message
-                  : String(sendError),
+                : describeThrown(sendError),
           },
         });
       } catch (error) {
@@ -157,7 +165,7 @@ export async function register(
       if (sendError !== undefined) {
         console.error(`[auth] registration-attempt email to ${email} failed to send:`, sendError);
         captureAlert('email_send_failure', 'Registration-attempt email failed to send', {
-          error: sendError instanceof Error ? sendError.message : String(sendError),
+          error: describeThrown(sendError),
         });
       }
     }

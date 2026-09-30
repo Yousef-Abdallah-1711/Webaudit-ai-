@@ -10,13 +10,13 @@
 // own, no separate staleness check needed here.
 import Redis from 'ioredis';
 
-const workerId = process.env.WORKER_ID ?? '';
+const workerId = globalThis.process.env.WORKER_ID ?? '';
 if (workerId === '') {
-  console.error('docker-healthcheck: WORKER_ID is not set — cannot name this replica\'s heartbeat key.');
-  process.exit(1);
+  globalThis.console.error('docker-healthcheck: WORKER_ID is not set — cannot name this replica\'s heartbeat key.');
+  globalThis.process.exit(1);
 }
 
-const redis = new Redis(process.env.REDIS_URL ?? 'redis://127.0.0.1:6379', {
+const redis = new Redis(globalThis.process.env.REDIS_URL ?? 'redis://127.0.0.1:6379', {
   maxRetriesPerRequest: 1,
   connectTimeout: 3000,
   lazyConnect: true,
@@ -26,7 +26,7 @@ try {
   await redis.connect();
   const value = await redis.get(`worker:heartbeat:${workerId}`);
   await redis.quit();
-  process.exit(value !== null ? 0 : 1);
+  globalThis.process.exit(value !== null ? 0 : 1);
 } catch {
-  process.exit(1);
+  globalThis.process.exit(1);
 }

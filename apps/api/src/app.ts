@@ -182,12 +182,18 @@ function isBodyParserError(err: unknown): err is BodyParserError {
 }
 
 /** Keep secret-shaped route parameters out of monitoring context. */
+// Express's own types declare `Request.route: any`; this narrows it to the one shape this function actually reads.
+interface ExpressRouteShape {
+  readonly path: string | readonly string[];
+}
+
 export function monitoringPath(req: Request): string {
   const pathSegments = req.path.split('/');
-  const routePaths = req.route
-    ? Array.isArray(req.route.path)
-      ? req.route.path
-      : [req.route.path]
+  const route = req.route as ExpressRouteShape | undefined;
+  const routePaths: readonly string[] = route
+    ? Array.isArray(route.path)
+      ? route.path
+      : [route.path]
     : [];
 
   for (const routePath of routePaths) {

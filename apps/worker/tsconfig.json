@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "composite": false
+    "composite": false,
+    "allowJs": true
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "docker-healthcheck.mjs"],
   "exclude": ["node_modules", "dist", "prisma/generated"]
 }

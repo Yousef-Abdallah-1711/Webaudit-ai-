@@ -35,6 +35,10 @@ export default tseslint.config(
       // cannot parse them and reports a parse error rather than a finding.
       // Same category as the parked worktrees above.
       'scripts/domain-*.mjs',
+      // Same class as scripts/domain-*.mjs above: an ad-hoc, uncommitted operator
+      // script outside any tsconfig, not part of any deployable unit.
+      'scripts/smtp-test-send.mts',
+      'scripts/smtp-test-sink.mjs',
       // T217 — SC-017's hostile fixture. Deliberately plain JS, not covered
       // by apps/sandbox-runner/tsconfig.json's include (`src/**/*.ts`,
       // `tests/**/*.ts` only), for the same reason: each export is a STRING
