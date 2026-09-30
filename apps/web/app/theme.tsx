@@ -36,6 +36,53 @@ function waRead(key: string, fallback: string): string {
   }
 }
 
+function browserLanguages(): readonly string[] {
+  if (typeof navigator === 'undefined') return [];
+  if (Array.isArray(navigator.languages) && navigator.languages.length > 0) {
+    return navigator.languages.map((language) => String(language));
+  }
+  return navigator.language ? [String(navigator.language)] : [];
+}
+
+/** Resolve the browser's ordered language preferences using the server matcher's rules. */
+export function resolveBrowserLocale(
+  preferredLanguages: readonly string[] = browserLanguages(),
+): Locale {
+  for (const preferredLanguage of preferredLanguages) {
+    const language = preferredLanguage.trim().toLowerCase();
+    if (locales.includes(language as Locale)) return language as Locale;
+
+    const baseLanguage = language.split('-')[0];
+    if (locales.includes(baseLanguage as Locale)) return baseLanguage as Locale;
+  }
+  return defaultLocale;
+}
+
+function readCookieLocale(): Locale | undefined {
+  if (!isBrowser) return undefined;
+  const cookie = document.cookie
+    .split(';')
+    .map((entry) => entry.trim())
+    .find((entry) => entry.startsWith('wa-lang='));
+  if (!cookie) return undefined;
+
+  try {
+    const value = decodeURIComponent(cookie.slice('wa-lang='.length));
+    return locales.includes(value as Locale) ? (value as Locale) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function initialLocale(): Locale {
+  if (!isBrowser) return defaultLocale;
+
+  const storedLocale = waRead('wa-lang', '');
+  if (locales.includes(storedLocale as Locale)) return storedLocale as Locale;
+
+  return readCookieLocale() ?? resolveBrowserLocale();
+}
+
 interface Store<T extends string> {
   v: T;
   subs: Set<() => void>;
@@ -75,7 +122,7 @@ const waTheme = createStore<Theme>('wa-theme', 'light', (value) => {
   document.documentElement.setAttribute('data-theme', value);
 });
 
-const waLang = createStore<Lang>('wa-lang', 'en', (value) => {
+const waLang = createStore<Lang>('wa-lang', initialLocale(), (value) => {
   const html = document.documentElement;
   html.lang = value;
   html.dir = localeMetadata[value].direction;
@@ -128,7 +175,36 @@ export function ThemeScript(): React.ReactElement {
     .map(([code]) => code);
   const script = `(function(){try{
     var t=localStorage.getItem('wa-theme')||'light';
-    var l=localStorage.getItem('wa-lang')||'en';
+    var l=localStorage.getItem('wa-lang');
+    var localeCodes=${JSON.stringify(locales)};
+    var defaultLocale=${JSON.stringify(defaultLocale)};
+    function isLocale(value){return localeCodes.indexOf(value)!==-1;}
+    function cookieLocale(){
+      var entries=document.cookie.split(';');
+      for(var i=0;i<entries.length;i++){
+        var entry=entries[i].trim();
+        if(entry.indexOf('wa-lang=')===0){
+          try{return decodeURIComponent(entry.slice('wa-lang='.length));}catch(e){return '';}
+        }
+      }
+      return '';
+    }
+    if(!isLocale(l)){
+      var c=cookieLocale();
+      l=isLocale(c)?c:'';
+    }
+    if(!isLocale(l)){
+      var preferences=(typeof navigator!=='undefined'&&Array.isArray(navigator.languages)&&navigator.languages.length)
+        ?navigator.languages
+        :(typeof navigator!=='undefined'&&navigator.language?[navigator.language]:[]);
+      l=defaultLocale;
+      for(var j=0;j<preferences.length;j++){
+        var language=String(preferences[j]).trim().toLowerCase();
+        if(isLocale(language)){l=language;break;}
+        var baseLanguage=language.split('-')[0];
+        if(isLocale(baseLanguage)){l=baseLanguage;break;}
+      }
+    }
     var h=document.documentElement;
     h.setAttribute('data-theme',t);
     var rtlLocales=${JSON.stringify(rtlLocaleCodes)};

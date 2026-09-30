@@ -11,8 +11,23 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
-import { I18nProvider, LangToggle, ThemeScript, ThemeToggle } from '../../app/theme';
+import { createRequire } from 'node:module';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  I18nProvider,
+  LangToggle,
+  resolveBrowserLocale,
+  ThemeScript,
+  ThemeToggle,
+} from '../../app/theme';
+
+interface TestDom {
+  window: Window & { eval(source: string): unknown };
+}
+
+const { JSDOM } = createRequire(import.meta.url)('jsdom') as {
+  JSDOM: new (markup: string, options: { runScripts: 'outside-only'; url: string }) => TestDom;
+};
 
 function render(element: React.ReactElement): string {
   return renderToStaticMarkup(createElement(I18nProvider, null, element));
@@ -78,5 +93,146 @@ describe('ThemeScript', () => {
     expect(html).toContain('wa-theme');
     expect(html).toContain('wa-lang');
     expect(html).toContain('data-theme');
+  });
+});
+
+describe('browser locale detection', () => {
+  let dom: TestDom | undefined;
+
+  afterEach(() => {
+    dom?.window.close();
+    dom = undefined;
+    vi.unstubAllGlobals();
+    vi.resetModules();
+  });
+
+  function installBrowser(
+    languages: string[] | undefined,
+    language: string,
+    storedLocale?: string,
+  ): TestDom {
+    dom?.window.close();
+    const browser = new JSDOM('<!doctype html><html><head></head><body></body></html>', {
+      runScripts: 'outside-only',
+      url: 'http://localhost/',
+    });
+    Object.defineProperty(browser.window.navigator, 'languages', {
+      configurable: true,
+      value: languages,
+    });
+    Object.defineProperty(browser.window.navigator, 'language', {
+      configurable: true,
+      value: language,
+    });
+    if (storedLocale) browser.window.localStorage.setItem('wa-lang', storedLocale);
+    vi.stubGlobal('window', browser.window);
+    vi.stubGlobal('document', browser.window.document);
+    vi.stubGlobal('navigator', browser.window.navigator);
+    vi.stubGlobal('localStorage', browser.window.localStorage);
+    dom = browser;
+    return browser;
+  }
+
+  it('matches preference-ordered browser languages with exact then base matching', () => {
+    installBrowser(['ar-SA', 'en'], 'en-US');
+    expect(resolveBrowserLocale()).toBe('ar');
+    expect(resolveBrowserLocale(['ar'])).toBe('ar');
+    expect(resolveBrowserLocale(['fr-CA'])).toBe('en');
+
+    installBrowser(undefined, 'EN-us');
+    expect(resolveBrowserLocale()).toBe('en');
+  });
+
+  it('uses the browser preference in the real waLang store initialization path', async () => {
+    const browser = installBrowser(['ar-SA'], 'ar-SA');
+    vi.resetModules();
+    const theme = await import('../../app/theme');
+    function LocaleProbe(): React.ReactElement {
+      const [locale] = theme.useLang();
+      return createElement('span', null, locale);
+    }
+
+    const html = renderToStaticMarkup(
+      createElement(theme.I18nProvider, null, createElement(LocaleProbe)),
+    );
+    expect(html).toContain('<span>ar</span>');
+    expect(browser.window.document.documentElement.lang).toBe('ar');
+  });
+
+  it('uses the same browser fallback in ThemeScript before paint', async () => {
+    const browser = installBrowser(['ar-SA'], 'ar-SA');
+    vi.resetModules();
+    const theme = await import('../../app/theme');
+    const markup = renderToStaticMarkup(createElement(theme.ThemeScript));
+    const script = /<script>([\s\S]*?)<\/script>/.exec(markup)?.[1];
+
+    expect(script).toBeDefined();
+    browser.window.eval(script!);
+    expect(browser.window.document.documentElement.lang).toBe('ar');
+    expect(browser.window.document.documentElement.dir).toBe('rtl');
+
+    const singleLanguageBrowser = installBrowser(undefined, 'ar-EG');
+    vi.resetModules();
+    const fallbackTheme = await import('../../app/theme');
+    const fallbackMarkup = renderToStaticMarkup(createElement(fallbackTheme.ThemeScript));
+    const fallbackScript = /<script>([\s\S]*?)<\/script>/.exec(fallbackMarkup)?.[1];
+    singleLanguageBrowser.window.eval(fallbackScript!);
+    expect(singleLanguageBrowser.window.document.documentElement.lang).toBe('ar');
+  });
+
+  it('keeps English as the fallback and gives stored wa-lang priority', async () => {
+    const englishBrowser = installBrowser(['en-US'], 'en-US');
+    vi.resetModules();
+    const englishTheme = await import('../../app/theme');
+    const englishMarkup = renderToStaticMarkup(createElement(englishTheme.ThemeScript));
+    const englishScript = /<script>([\s\S]*?)<\/script>/.exec(englishMarkup)?.[1];
+    englishBrowser.window.eval(englishScript!);
+    expect(englishBrowser.window.document.documentElement.lang).toBe('en');
+
+    function EnglishLocaleProbe(): React.ReactElement {
+      const [locale] = englishTheme.useLang();
+      return createElement('span', null, locale);
+    }
+    const englishStoreMarkup = renderToStaticMarkup(
+      createElement(englishTheme.I18nProvider, null, createElement(EnglishLocaleProbe)),
+    );
+    expect(englishStoreMarkup).toContain('<span>en</span>');
+
+    const storedBrowser = installBrowser(['ar-SA'], 'ar-SA', 'en');
+    vi.resetModules();
+    const storedTheme = await import('../../app/theme');
+    const storedMarkup = renderToStaticMarkup(createElement(storedTheme.ThemeScript));
+    const storedScript = /<script>([\s\S]*?)<\/script>/.exec(storedMarkup)?.[1];
+    storedBrowser.window.eval(storedScript!);
+    expect(storedBrowser.window.document.documentElement.lang).toBe('en');
+
+    function LocaleProbe(): React.ReactElement {
+      const [locale] = storedTheme.useLang();
+      return createElement('span', null, locale);
+    }
+    const storeMarkup = renderToStaticMarkup(
+      createElement(storedTheme.I18nProvider, null, createElement(LocaleProbe)),
+    );
+    expect(storeMarkup).toContain('<span>en</span>');
+  });
+
+  it('keeps a cookie locale ahead of the browser preference', async () => {
+    const browser = installBrowser(['en-US'], 'en-US');
+    browser.window.document.cookie = 'wa-lang=ar; Path=/';
+    vi.resetModules();
+    const theme = await import('../../app/theme');
+    const markup = renderToStaticMarkup(createElement(theme.ThemeScript));
+    const script = /<script>([\s\S]*?)<\/script>/.exec(markup)?.[1];
+    browser.window.eval(script!);
+    expect(browser.window.document.documentElement.lang).toBe('ar');
+
+    function LocaleProbe(): React.ReactElement {
+      const [locale] = theme.useLang();
+      return createElement('span', null, locale);
+    }
+    const storeMarkup = renderToStaticMarkup(
+      createElement(theme.I18nProvider, null, createElement(LocaleProbe)),
+    );
+    expect(storeMarkup).toContain('<span>ar</span>');
   });
 });
