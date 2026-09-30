@@ -3,8 +3,8 @@
 /**
  * Ported from design-system/ui_kits/marketing/Public.jsx (T240).
  *
- * `useT()` is a hook, so anything that calls it — every component here —
- * has to be a Client Component.
+ * Client-side auth state and next-intl hooks, along with the interactive
+ * theme/language controls, keep this shared public shell client-rendered.
  *
  * `Wordmark`, `PublicHeader`, `PublicFooter`, `PublicPage` — one file, same
  * as the source. Static styling moved to `Public.module.css` (raw px/hex
@@ -25,8 +25,9 @@
  */
 import type { ReactElement } from 'react';
 import { PRODUCT_NAME } from '@webaudit/config';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
-import { LangToggle, ThemeToggle, useT } from '../../app/theme';
+import { LangToggle, ThemeToggle } from '../../app/theme';
 import { useAuth } from '../auth/AuthProvider';
 import type { StringKey } from '../../lib/strings';
 import styles from './Public.module.css';
@@ -55,7 +56,8 @@ export interface PublicHeaderProps {
 }
 
 export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
-  const [t] = useT();
+  const tCommon = useTranslations('common');
+  const tNavigation = useTranslations('navigation');
   const { status, isOperator } = useAuth();
 
   return (
@@ -73,7 +75,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
                 active === key ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
               }
             >
-              {t(key)}
+              {tNavigation(key)}
             </a>
           ))}
         </nav>
@@ -83,21 +85,21 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
           {status === 'anonymous' && (
             <>
               <Button variant="ghost" size="sm" href="/login">
-                {t('signin')}
+                {tCommon('signin')}
               </Button>
               <Button size="sm" href="/signup">
-                {t('start_free')}
+                {tCommon('start_free')}
               </Button>
             </>
           )}
           {status === 'authenticated' && (
             <>
               <Button variant="ghost" size="sm" href="/scan">
-                {t('foot_dashboard')}
+                {tNavigation('foot_dashboard')}
               </Button>
               {isOperator && (
                 <Button size="sm" href="/admin">
-                  {t('foot_admin')}
+                  {tNavigation('foot_admin')}
                 </Button>
               )}
             </>
@@ -137,23 +139,39 @@ const FOOTER_COLUMNS: readonly (readonly [StringKey, readonly (readonly [StringK
   ];
 
 export function PublicFooter(): ReactElement {
-  const [t] = useT();
+  const tDashboard = useTranslations('dashboard');
+  const tNavigation = useTranslations('navigation');
+  const tPublic = useTranslations('public');
+  const tScan = useTranslations('scan');
   const { status, isOperator } = useAuth();
+  const translateFooterItem = (key: StringKey): string => {
+    switch (key) {
+      case 'a_seo':
+      case 'credits':
+        return tScan(key);
+      case 'loop_eyebrow':
+        return tPublic(key);
+      case 'top_up':
+        return tDashboard(key);
+      default:
+        return tNavigation(key);
+    }
+  };
 
   return (
     <footer className={styles.footer}>
       <div className={styles.footerGrid}>
         <div>
           <Wordmark size={17} />
-          <p className={styles.footerTag}>{t('foot_tag')}</p>
+          <p className={styles.footerTag}>{tNavigation('foot_tag')}</p>
         </div>
         {FOOTER_COLUMNS.map(([heading, items]) => (
           <div key={heading}>
-            <div className={styles.footerColTitle}>{t(heading)}</div>
+            <div className={styles.footerColTitle}>{tNavigation(heading)}</div>
             <div className={styles.footerColLinks}>
               {items.map(([item, href]) => (
                 <a key={item} href={href}>
-                  {t(item)}
+                  {translateFooterItem(item)}
                 </a>
               ))}
             </div>
@@ -164,16 +182,16 @@ export function PublicFooter(): ReactElement {
         <span className={styles.footerCopy}>© 2026 {PRODUCT_NAME}</span>
         {status === 'authenticated' && (
           <a href="/scan" className={styles.footerLink}>
-            {t('foot_dashboard')}
+            {tNavigation('foot_dashboard')}
           </a>
         )}
         {status === 'authenticated' && isOperator && (
           <a href="/admin" className={styles.footerLink}>
-            {t('foot_admin')}
+            {tNavigation('foot_admin')}
           </a>
         )}
         <span dir="ltr" className={styles.footerZero}>
-          {t('foot_zero')}
+          {tNavigation('foot_zero')}
         </span>
       </div>
     </footer>
