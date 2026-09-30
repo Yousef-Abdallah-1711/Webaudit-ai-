@@ -59,19 +59,61 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
       );
       expect(trigger).not.toBeNull();
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(trigger?.hasAttribute('aria-controls')).toBe(false);
 
       await act(async () => {
         trigger?.click();
       });
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      expect(trigger?.getAttribute('aria-controls')).toBe('dashboard-account-menu');
       const menu = document.body.querySelector('[role="menu"]');
       expect(menu).not.toBeNull();
+      expect(document.getElementById(trigger?.getAttribute('aria-controls') ?? '')).toBe(menu);
       expect(menu?.querySelectorAll('[role="menuitem"]')).toHaveLength(3);
       expect(menu?.querySelector('a[href="/settings"]')?.textContent).toBe('Profile');
       expect(menu?.querySelector('a[href="/billing"]')?.textContent).toBe('Billing and plans');
       expect(menu?.textContent).toContain('Sign out');
     } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('focuses the first account menu item after the menu becomes visible', async () => {
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    const focusVisibility: string[] = [];
+    const originalFocus = HTMLElement.prototype.focus;
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus').mockImplementation(function (
+      this: HTMLElement,
+      options?: FocusOptions,
+    ) {
+      if (this.getAttribute('role') === 'menuitem') {
+        focusVisibility.push(
+          (this.closest('[role="menu"]') as HTMLElement | null)?.style.visibility ?? '',
+        );
+      }
+      originalFocus.call(this, options);
+    });
+
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Account menu"]',
+      );
+      trigger?.focus();
+      await act(async () => {
+        trigger?.click();
+      });
+
+      const firstMenuItem = document.body.querySelector<HTMLElement>('[role="menuitem"]');
+      expect(firstMenuItem).not.toBeNull();
+      expect(focusVisibility).toEqual(['visible']);
+      expect(document.activeElement).toBe(firstMenuItem);
+    } finally {
+      focusSpy.mockRestore();
       mounted.unmount();
     }
   });
@@ -96,6 +138,7 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
       });
       expect(document.body.querySelector('[role="menu"]')).toBeNull();
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(trigger);
 
       await act(async () => {
         trigger?.click();
@@ -105,6 +148,33 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
         document.dispatchEvent(new Event('pointerdown', { bubbles: true }));
       });
       expect(document.body.querySelector('[role="menu"]')).toBeNull();
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('closes the account menu on Tab and restores focus before tab order continues', async () => {
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Account menu"]',
+      );
+      await act(async () => {
+        trigger?.click();
+      });
+
+      await act(async () => {
+        document.body
+          .querySelector('[role="menu"]')
+          ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      });
+
+      expect(document.body.querySelector('[role="menu"]')).toBeNull();
+      expect(document.activeElement).toBe(trigger);
     } finally {
       mounted.unmount();
     }
@@ -232,6 +302,10 @@ describe('AppShell — mobile sidebar drawer', () => {
       });
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      const closeButton = document.getElementById('dashboard-sidebar-mobile-close');
+      const mainCol = document.querySelector(`.${styles.mainCol}`);
+      expect(document.activeElement).toBe(closeButton);
+      expect(mainCol?.hasAttribute('inert')).toBe(true);
       expect(document.querySelector(`.${styles.mobileBackdrop}`)).not.toBeNull();
       expect(document.body.style.overflow).toBe('hidden');
 
@@ -240,11 +314,57 @@ describe('AppShell — mobile sidebar drawer', () => {
       });
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(trigger);
+      expect(mainCol?.hasAttribute('inert')).toBe(false);
       expect(document.querySelector(`.${styles.mobileBackdrop}`)).toBeNull();
       expect(document.body.style.overflow).toBe(originalOverflow);
     } finally {
       mounted.unmount();
       document.body.style.overflow = originalOverflow;
+    }
+  });
+
+  it('restores focus to the mobile trigger when the drawer closes from its close button', async () => {
+    const mounted = await mountShell();
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Open navigation menu"]',
+      );
+      await act(async () => {
+        trigger?.click();
+      });
+
+      await act(async () => {
+        document.getElementById('dashboard-sidebar-mobile-close')?.click();
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(trigger);
+      expect(document.querySelector(`.${styles.mainCol}`)?.hasAttribute('inert')).toBe(false);
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('restores focus to the mobile trigger when the drawer closes from Escape', async () => {
+    const mounted = await mountShell();
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Open navigation menu"]',
+      );
+      await act(async () => {
+        trigger?.click();
+      });
+
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(trigger);
+      expect(document.querySelector(`.${styles.mainCol}`)?.hasAttribute('inert')).toBe(false);
+    } finally {
+      mounted.unmount();
     }
   });
 

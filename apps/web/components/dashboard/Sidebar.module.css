@@ -286,8 +286,9 @@
   color: var(--text-strong);
 }
 .accountMenuItem:focus-visible {
-  outline: var(--border-width) solid var(--accent-ring);
-  outline-offset: calc(-1 * var(--border-width));
+  /* One CSS pixel, derived from the design system's 4px base spacing token. */
+  outline: calc(var(--space-1) / 4) solid var(--text-primary);
+  outline-offset: calc(var(--space-1) / -4);
 }
 .avatar {
   width: 30px;

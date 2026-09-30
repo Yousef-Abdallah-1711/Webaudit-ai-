@@ -33,6 +33,14 @@ describe('AdminShell', () => {
     expect(html).toContain('page body');
   });
 
+  it('lets admin content inherit the document direction', () => {
+    const html = render(createElement(AdminShell, {}, 'page body'));
+    const main = html.match(/<main\b[^>]*>/)?.[0];
+
+    expect(main).toBeDefined();
+    expect(main).not.toMatch(/\sdir=/);
+  });
+
   it('marks the current route active in the sidebar', () => {
     vi.mocked(usePathname).mockReturnValue('/admin/queue');
     const html = render(createElement(AdminShell, {}, 'x'));
@@ -69,6 +77,7 @@ describe('Table', () => {
     expect(html).toContain('Target');
     expect(html).toContain('acme.com');
     expect(html).toContain('shopfront.io');
+    expect(html.match(/<div dir="auto" class="[^"]*">/g)).toHaveLength(4);
   });
 
   it('renders zero rows without crashing', () => {

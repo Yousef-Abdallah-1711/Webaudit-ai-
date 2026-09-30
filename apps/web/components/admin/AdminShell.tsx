@@ -243,7 +243,7 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
             <ThemeToggle />
           </span>
         </div>
-        <main dir="ltr" className={styles.main}>
+        <main className={styles.main}>
           <div className={styles.mainInner}>{children}</div>
         </main>
       </div>
@@ -303,7 +303,7 @@ export function Table({ cols, rows }: TableProps): React.ReactElement {
           style={{ gridTemplateColumns }}
         >
           {row.map((cell, j) => (
-            <div key={j} className={styles.tableCell}>
+            <div key={j} dir="auto" className={styles.tableCell}>
               {cell}
             </div>
           ))}

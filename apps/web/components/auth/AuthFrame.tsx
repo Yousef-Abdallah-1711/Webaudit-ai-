@@ -13,8 +13,6 @@ import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import { Card, Input, type InputProps } from '../ui';
 import { PublicPage } from '../public';
-import { useLang } from '../../app/theme';
-import { localeMetadata } from '../../i18n/locales';
 import styles from './AuthFrame.module.css';
 
 export interface AuthFrameProps {
@@ -25,14 +23,9 @@ export interface AuthFrameProps {
 }
 
 export function AuthFrame({ title, lead, children, foot }: AuthFrameProps): React.ReactElement {
-  const [lang] = useLang();
-
   return (
     <PublicPage tint="var(--surface-raised)">
-      <div
-        dir={localeMetadata[lang].direction === 'rtl' ? 'ltr' : undefined}
-        className={styles.wrap}
-      >
+      <div className={styles.wrap}>
         <div className={styles.inner}>
           <Card padding={30}>
             {title !== undefined && <h1 className={styles.title}>{title}</h1>}
@@ -51,10 +44,15 @@ export interface FieldProps extends InputProps {
 }
 
 export function Field({ label, ...rest }: FieldProps): React.ReactElement {
+  const inputProps = {
+    ...rest,
+    ...(rest.type === 'email' ? { dir: 'ltr' as const } : {}),
+  };
+
   return (
     <label className={styles.field}>
       <div className={styles.fieldLabel}>{label}</div>
-      <Input {...rest} />
+      <Input {...inputProps} />
     </label>
   );
 }

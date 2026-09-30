@@ -234,6 +234,7 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       }}
       aria-label={`Switch to ${localeMetadata[next].label}`}
       title={localeMetadata[next].label}
+      lang={next}
       className={classes}
     >
       <svg

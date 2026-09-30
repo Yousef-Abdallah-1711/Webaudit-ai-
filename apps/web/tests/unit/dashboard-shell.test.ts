@@ -92,16 +92,12 @@ describe('AppShell', () => {
     expect(html).toContain('page body');
   });
 
-  it('pins dir="ltr" for an untranslated view under Arabic, but not for "scan"', () => {
-    // theme.tsx defaults to English at module load in this Node test
-    // environment (no window/localStorage) — dir only differs from the
-    // default when lang is genuinely 'ar', which nothing here sets, so both
-    // branches render without an explicit dir here. What this test actually
-    // pins down is that AppShell does not crash deriving `activeKey` from a
-    // route with no path segments at all.
-    setPathname('/');
+  it('lets dashboard content inherit the document direction on every route', () => {
+    setPathname('/fixes');
     const html = render(createElement(AppShell, {}, 'x'));
-    expect(html).toContain('<main');
+    const main = html.match(/<main[^>]*>/)?.[0];
+    expect(main).toBeDefined();
+    expect(main).not.toContain('dir=');
   });
 });
 

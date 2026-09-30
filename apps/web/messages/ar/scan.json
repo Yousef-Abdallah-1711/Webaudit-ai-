@@ -35,6 +35,8 @@
   "credits": "رصيد",
   "url_ph": "موقعك.com",
   "progress_eyebrow": "التدقيق المباشر",
+  "progress_no_scan_title": "لا يوجد تدقيق قيد التنفيذ",
+  "progress_no_scan_meta": "ابدأ تدقيقًا جديدًا لمتابعة تقدّمه المباشر هنا.",
   "progress_not_found": "لم يُعثر عليه",
   "progress_loading": "جارٍ التحميل…",
   "progress_load_error": "تعذّر تحميل هذا التدقيق.",

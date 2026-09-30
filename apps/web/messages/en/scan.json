@@ -35,6 +35,8 @@
   "credits": "credits",
   "url_ph": "yoursite.com",
   "progress_eyebrow": "Live scan",
+  "progress_no_scan_title": "No scan in progress",
+  "progress_no_scan_meta": "Start a new scan to see live progress here.",
   "progress_not_found": "Not found",
   "progress_loading": "Loading…",
   "progress_load_error": "This scan could not be loaded.",

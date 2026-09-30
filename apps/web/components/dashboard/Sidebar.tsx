@@ -51,10 +51,9 @@ import { createPortal } from 'react-dom';
 import { useFormatter, useTranslations } from 'next-intl';
 import { PRODUCT_NAME } from '@webaudit/config';
 import type enDashboard from '../../messages/en/dashboard.json';
-import { localeMetadata } from '../../i18n/locales';
 import { Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
-import { LangToggle, ThemeToggle, useLang } from '../../app/theme';
+import { LangToggle, ThemeToggle } from '../../app/theme';
 import {
   getMe,
   getOutstandingIssueCount,
@@ -105,10 +104,6 @@ const NAV_GROUPS: readonly (readonly [DashboardKey, readonly NavEntry[]])[] = [
     ],
   ],
 ];
-
-/** Views whose copy is translated. Everything else stays pinned to LTR
- * rather than being mirrored by the global dir=rtl — the source's own note. */
-const TRANSLATED = new Set(['scan']);
 
 function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -174,6 +169,7 @@ export function Sidebar({
     left: number;
     top: number;
   } | null>(null);
+  const focusAccountMenuOnOpenRef = useRef(false);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const contentOpen = open || mobileOpen;
@@ -234,6 +230,7 @@ export function Sidebar({
   const closeAccountMenu = (restoreFocus = false): void => {
     setAccountMenuOpen(false);
     setAccountMenuPosition(null);
+    focusAccountMenuOnOpenRef.current = false;
     if (restoreFocus) profileButtonRef.current?.focus();
   };
 
@@ -242,6 +239,7 @@ export function Sidebar({
       closeAccountMenu();
       return;
     }
+    focusAccountMenuOnOpenRef.current = true;
     setAccountMenuOpen(true);
   };
 
@@ -268,7 +266,7 @@ export function Sidebar({
       event.preventDefault();
       menuItems[nextIndex]?.focus();
     } else if (event.key === 'Tab') {
-      closeAccountMenu();
+      closeAccountMenu(true);
     }
   };
 
@@ -297,7 +295,6 @@ export function Sidebar({
         left,
         top: Math.min(maxTop, Math.max(gap, desiredTop)),
       });
-      menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     };
 
     const onPointerDown = (event: PointerEvent): void => {
@@ -325,6 +322,18 @@ export function Sidebar({
       document.removeEventListener('keydown', onKeyDown);
     };
   }, [accountMenuOpen]);
+
+  useEffect(() => {
+    if (!accountMenuOpen || accountMenuPosition === null || !focusAccountMenuOnOpenRef.current) {
+      return;
+    }
+
+    const firstMenuItem = accountMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+    if (!firstMenuItem) return;
+
+    firstMenuItem.focus();
+    focusAccountMenuOnOpenRef.current = false;
+  }, [accountMenuOpen, accountMenuPosition]);
 
   const sidebarClasses = [
     styles.sidebar,
@@ -355,6 +364,7 @@ export function Sidebar({
               setOpen(!open);
             }
           }}
+          id="dashboard-sidebar-mobile-close"
           aria-label={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
           title={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
           className={styles.toggleBtn}
@@ -439,7 +449,7 @@ export function Sidebar({
           aria-label={t('account_menu')}
           aria-haspopup="menu"
           aria-expanded={accountMenuOpen}
-          aria-controls="dashboard-account-menu"
+          aria-controls={accountMenuOpen ? 'dashboard-account-menu' : undefined}
           title={contentOpen ? undefined : t('account_menu')}
           onClick={toggleAccountMenu}
         >
@@ -513,13 +523,8 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
   const [open, setOpen] = useState(true);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const t = useTranslations('dashboard');
-  const [lang] = useLang();
-  const pathname = usePathname();
-  const activeKey = pathname.split('/').filter(Boolean)[0];
-  const bodyDir =
-    localeMetadata[lang].direction === 'rtl' && !TRANSLATED.has(activeKey ?? '')
-      ? 'ltr'
-      : undefined;
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDrawerWasOpenRef = useRef(false);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
@@ -539,6 +544,18 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
     return () => {
       document.body.style.overflow = previousOverflow;
     };
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      mobileDrawerWasOpenRef.current = true;
+      document.getElementById('dashboard-sidebar-mobile-close')?.focus();
+      return;
+    }
+
+    if (!mobileDrawerWasOpenRef.current) return;
+    mobileDrawerWasOpenRef.current = false;
+    mobileTriggerRef.current?.focus();
   }, [mobileDrawerOpen]);
 
   useEffect(() => {
@@ -567,8 +584,9 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
           onClick={() => setMobileDrawerOpen(false)}
         />
       )}
-      <div className={styles.mainCol}>
+      <div className={styles.mainCol} inert={mobileDrawerOpen}>
         <button
+          ref={mobileTriggerRef}
           type="button"
           className={`${styles.toggleBtn} ${styles.mobileMenuTrigger}`}
           aria-label={t('mobile_open_menu')}
@@ -578,7 +596,7 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
         >
           <Icon name="menu" />
         </button>
-        <main dir={bodyDir} className={styles.main}>
+        <main className={styles.main}>
           <div className={styles.mainInner}>{children}</div>
         </main>
       </div>
