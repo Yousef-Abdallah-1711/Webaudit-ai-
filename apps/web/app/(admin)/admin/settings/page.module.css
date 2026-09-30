@@ -24,7 +24,7 @@
 }
 
 .switch {
-  margin-left: auto;
+  margin-inline-start: auto;
   width: 36px;
   height: 20px;
   position: relative;
@@ -40,15 +40,15 @@
 .switchKnob {
   position: absolute;
   top: 2px;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 16px;
   height: 16px;
   border-radius: var(--radius-pill);
   background: #fff;
-  transition: left 150ms var(--easing);
+  transition: inset-inline-start 150ms var(--easing);
 }
 .switchKnobOn {
-  left: 18px;
+  inset-inline-start: 18px;
 }
 
 .note {
@@ -64,7 +64,7 @@
   font: var(--type-small);
 }
 .limitValue {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
 }
 

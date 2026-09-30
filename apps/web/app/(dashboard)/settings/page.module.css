@@ -65,15 +65,15 @@
 .switchKnob {
   position: absolute;
   top: 2px;
-  left: 2px;
+  inset-inline-start: 2px;
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
   background: #fff;
-  transition: left 150ms var(--easing);
+  transition: inset-inline-start 150ms var(--easing);
 }
 .switchKnobOn {
-  left: 16px;
+  inset-inline-start: 16px;
 }
 
 .connectedRow {

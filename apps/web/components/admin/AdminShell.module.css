@@ -123,7 +123,7 @@
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 400;
-  text-align: left;
+  text-align: start;
   text-decoration: none;
   cursor: pointer;
   background: transparent;

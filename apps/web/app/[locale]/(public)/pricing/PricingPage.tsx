@@ -18,6 +18,7 @@
 import { Badge, Button, Eyebrow } from '../../../../components/ui';
 import { PublicPage } from '../../../../components/public';
 import { useLang } from '../../../theme';
+import { localeMetadata } from '../../../../i18n/locales';
 import styles from './page.module.css';
 
 interface Tier {
@@ -126,7 +127,7 @@ export function CostTable(): React.ReactElement {
 
 export default function PricingPage(): React.ReactElement {
   const [lang] = useLang();
-  const dir = lang === 'ar' ? 'ltr' : undefined;
+  const dir = localeMetadata[lang].direction === 'rtl' ? 'ltr' : undefined;
 
   return (
     <PublicPage active="nav_pricing">

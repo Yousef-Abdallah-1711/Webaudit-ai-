@@ -41,6 +41,7 @@
  */
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
+import { localeMetadata } from '../../i18n/locales';
 import { Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { LangToggle, ThemeToggle, useT } from '../../app/theme';
@@ -325,7 +326,10 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
   const [, lang] = useT();
   const pathname = usePathname();
   const activeKey = pathname.split('/').filter(Boolean)[0];
-  const bodyDir = lang === 'ar' && !TRANSLATED.has(activeKey ?? '') ? 'ltr' : undefined;
+  const bodyDir =
+    localeMetadata[lang].direction === 'rtl' && !TRANSLATED.has(activeKey ?? '')
+      ? 'ltr'
+      : undefined;
 
   return (
     <div className={styles.shellRoot}>

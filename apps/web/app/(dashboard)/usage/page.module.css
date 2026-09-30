@@ -57,7 +57,7 @@
   font: var(--type-small);
 }
 .areaRowValue {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
 }
 .areaBar {
@@ -85,7 +85,7 @@
   font: var(--type-small);
 }
 .refundValue {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: 13px;
   color: var(--sev-resolved);

@@ -1,6 +1,6 @@
 export const localeMetadata = {
-  en: { label: 'English', direction: 'ltr' },
-  ar: { label: 'العربية', direction: 'rtl' },
+  en: { label: 'English', shortLabel: 'EN', direction: 'ltr' },
+  ar: { label: 'العربية', shortLabel: 'ع', direction: 'rtl' },
 } as const;
 
 export type Locale = keyof typeof localeMetadata;

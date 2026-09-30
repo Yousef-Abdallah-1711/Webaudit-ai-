@@ -125,7 +125,7 @@
   font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 400;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
   background: transparent;
   color: var(--text-secondary);
@@ -262,7 +262,7 @@
 }
 .profileText {
   overflow: hidden;
-  text-align: left;
+  text-align: start;
 }
 .profileName {
   font-size: 13px;

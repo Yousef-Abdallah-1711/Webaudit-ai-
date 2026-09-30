@@ -10,7 +10,7 @@
 
 .prefix {
   position: absolute;
-  left: 12px;
+  inset-inline-start: 12px;
   top: 0;
   height: 48px;
   display: flex;
@@ -41,8 +41,8 @@
 }
 
 .withPrefix {
-  /* 64px measured left inset — see Input.d.ts. */
-  padding-left: 64px;
+  /* 64px measured inline-start inset — see Input.d.ts. */
+  padding-inline-start: 64px;
 }
 
 .invalid {

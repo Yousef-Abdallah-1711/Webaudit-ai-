@@ -67,13 +67,13 @@
   font: var(--type-small);
 }
 .drewFrom {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   font-family: var(--font-mono);
   font-size: 11px; /* no --type-* token equals 11px; excepted (Finding 15) */
   color: var(--text-muted);
 }
 .moveAmount {
-  margin-left: auto;
+  margin-inline-start: auto;
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: 13px; /* no --type-* token equals 13px; excepted (Finding 15) */

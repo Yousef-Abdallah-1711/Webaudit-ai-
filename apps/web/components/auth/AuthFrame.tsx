@@ -14,6 +14,7 @@ import { useTranslations } from 'next-intl';
 import { Card, Input, type InputProps } from '../ui';
 import { PublicPage } from '../public';
 import { useLang } from '../../app/theme';
+import { localeMetadata } from '../../i18n/locales';
 import styles from './AuthFrame.module.css';
 
 export interface AuthFrameProps {
@@ -28,7 +29,10 @@ export function AuthFrame({ title, lead, children, foot }: AuthFrameProps): Reac
 
   return (
     <PublicPage tint="var(--surface-raised)">
-      <div dir={lang === 'ar' ? 'ltr' : undefined} className={styles.wrap}>
+      <div
+        dir={localeMetadata[lang].direction === 'rtl' ? 'ltr' : undefined}
+        className={styles.wrap}
+      >
         <div className={styles.inner}>
           <Card padding={30}>
             {title !== undefined && <h1 className={styles.title}>{title}</h1>}

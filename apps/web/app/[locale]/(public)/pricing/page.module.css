@@ -94,7 +94,7 @@
   font: var(--type-body);
 }
 .costValue {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
   font-size: 14px;
 }

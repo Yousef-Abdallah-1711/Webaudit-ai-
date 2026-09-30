@@ -60,7 +60,7 @@ describe('ThemeToggle', () => {
 describe('LangToggle', () => {
   it('defaults to English: offers Arabic next, shows the "ع" glyph', () => {
     const html = render(createElement(LangToggle, {}));
-    expect(html).toContain('aria-label="Switch to Arabic"');
+    expect(html).toContain('aria-label="Switch to العربية"');
     expect(html).toContain('<span>ع</span>');
   });
 

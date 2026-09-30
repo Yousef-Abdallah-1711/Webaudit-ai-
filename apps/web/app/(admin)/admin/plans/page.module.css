@@ -20,7 +20,7 @@
   font: var(--type-small);
 }
 .scheduleValue {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-family: var(--font-mono);
 }
 

@@ -23,6 +23,7 @@ import { useEffect, useReducer } from 'react';
 import { NextIntlClientProvider, useMessages } from 'next-intl';
 import { type Lang, type StringKey } from '../lib/strings';
 import { messagesByLocale } from '../i18n/messages';
+import { defaultLocale, localeMetadata, locales } from '../i18n/locales';
 import styles from './theme.module.css';
 
 const isBrowser = typeof window !== 'undefined';
@@ -78,7 +79,7 @@ const waTheme = createStore<Theme>('wa-theme', 'light', (value) => {
 const waLang = createStore<Lang>('wa-lang', 'en', (value) => {
   const html = document.documentElement;
   html.lang = value;
-  html.dir = value === 'ar' ? 'rtl' : 'ltr';
+  html.dir = localeMetadata[value].direction;
   document.cookie = `wa-lang=${encodeURIComponent(value)}; Path=/; Max-Age=31536000; SameSite=Lax`;
 });
 
@@ -143,12 +144,16 @@ export function I18nProvider({ children }: Readonly<{ children: React.ReactNode 
  * paint. Render once in the root layout's `<head>`.
  */
 export function ThemeScript(): React.ReactElement {
+  const rtlLocaleCodes = Object.entries(localeMetadata)
+    .filter(([, metadata]) => metadata.direction === 'rtl')
+    .map(([code]) => code);
   const script = `(function(){try{
     var t=localStorage.getItem('wa-theme')||'light';
     var l=localStorage.getItem('wa-lang')||'en';
     var h=document.documentElement;
     h.setAttribute('data-theme',t);
-    h.lang=l;h.dir=l==='ar'?'rtl':'ltr';
+    var rtlLocales=${JSON.stringify(rtlLocaleCodes)};
+    h.lang=l;h.dir=rtlLocales.indexOf(l)!==-1?'rtl':'ltr';
   }catch(e){}})();`;
   return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }
@@ -215,7 +220,7 @@ export interface LangToggleProps {
 
 export function LangToggle({ label = false }: LangToggleProps): React.ReactElement {
   const [lang, setLang] = useLang();
-  const next: Lang = lang === 'ar' ? 'en' : 'ar';
+  const next: Lang = locales.find((locale) => locale !== lang) ?? defaultLocale;
 
   const classes = [styles.toggle, styles.langToggle, label ? styles.labeled : undefined]
     .filter(Boolean)
@@ -227,8 +232,8 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       onClick={() => {
         setLang(next);
       }}
-      aria-label={`Switch to ${next === 'ar' ? 'Arabic' : 'English'}`}
-      title={next === 'ar' ? 'العربية' : 'English'}
+      aria-label={`Switch to ${localeMetadata[next].label}`}
+      title={localeMetadata[next].label}
       className={classes}
     >
       <svg
@@ -243,7 +248,7 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       >
         <path d={GLOBE_PATH} />
       </svg>
-      <span>{lang === 'ar' ? 'EN' : 'ع'}</span>
+      <span>{localeMetadata[next].shortLabel}</span>
     </button>
   );
 }

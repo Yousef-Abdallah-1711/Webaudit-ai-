@@ -31,7 +31,7 @@
 
 .dismiss {
   position: absolute;
-  right: 14px;
+  inset-inline-end: 14px;
   background: none;
   border: 0;
   color: #fff;
