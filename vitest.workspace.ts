@@ -36,6 +36,8 @@ export default defineWorkspace([
         '{apps,packages}/*/tests/*.test.ts',
       ],
       environment: 'node',
+      // Give Prisma-backed resetDb() hooks room for transient local-Postgres stalls in long sequential runs.
+      hookTimeout: 30_000,
       env: {
         AI_MODE: 'fixtures',
         // Keep Vitest queues isolated from any live development worker. The
