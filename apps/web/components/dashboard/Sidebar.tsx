@@ -151,9 +151,16 @@ function NavItem({
 export interface SidebarProps {
   open: boolean;
   setOpen: (open: boolean) => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
-export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
+export function Sidebar({
+  open,
+  setOpen,
+  mobileOpen = false,
+  onMobileClose = () => {},
+}: SidebarProps): React.ReactElement {
   const t = useTranslations('dashboard');
   const pathname = usePathname();
   const router = useRouter();
@@ -162,11 +169,13 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
   const [plans, setPlans] = useState<readonly Plan[]>([]);
   const [outstandingIssues, setOutstandingIssues] = useState<number | null>(null);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
-  const [accountMenuPosition, setAccountMenuPosition] = useState<{ left: number; top: number } | null>(
-    null,
-  );
+  const [accountMenuPosition, setAccountMenuPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
+  const contentOpen = open || mobileOpen;
 
   useEffect(() => {
     let cancelled = false;
@@ -249,7 +258,8 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
     let nextIndex: number | undefined;
 
     if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % menuItems.length;
-    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+    if (event.key === 'ArrowUp')
+      nextIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
     if (event.key === 'Home') nextIndex = 0;
     if (event.key === 'End') nextIndex = menuItems.length - 1;
 
@@ -315,34 +325,42 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
     };
   }, [accountMenuOpen]);
 
-  const sidebarClasses = [styles.sidebar, open ? styles.sidebarOpen : undefined]
+  const sidebarClasses = [
+    styles.sidebar,
+    contentOpen ? styles.sidebarOpen : undefined,
+    mobileOpen ? styles.sidebarMobileOpen : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
-  const headClasses = [styles.sidebarHead, open ? styles.sidebarHeadOpen : undefined]
+  const headClasses = [styles.sidebarHead, contentOpen ? styles.sidebarHeadOpen : undefined]
     .filter(Boolean)
     .join(' ');
-  const navScrollClasses = [styles.navScroll, open ? styles.navScrollOpen : undefined]
+  const navScrollClasses = [styles.navScroll, contentOpen ? styles.navScrollOpen : undefined]
     .filter(Boolean)
     .join(' ');
-  const footClasses = [styles.sidebarFoot, open ? styles.sidebarFootOpen : undefined]
+  const footClasses = [styles.sidebarFoot, contentOpen ? styles.sidebarFootOpen : undefined]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <aside className={sidebarClasses}>
+    <aside id="dashboard-sidebar" className={sidebarClasses}>
       <div className={headClasses}>
         <button
           type="button"
           onClick={() => {
-            setOpen(!open);
+            if (mobileOpen) {
+              onMobileClose();
+            } else {
+              setOpen(!open);
+            }
           }}
-          aria-label={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
-          title={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
+          aria-label={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
+          title={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
           className={styles.toggleBtn}
         >
           <Icon name="menu" size={19} />
         </button>
-        {open && (
+        {contentOpen && (
           <div dir="ltr" className={styles.wordmark}>
             <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
           </div>
@@ -352,7 +370,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
       <div className={navScrollClasses}>
         {NAV_GROUPS.map(([groupLabel, items]) => (
           <div key={groupLabel} className={styles.navGroup}>
-            {open ? (
+            {contentOpen ? (
               <div className={styles.navGroupLabel}>{t(groupLabel)}</div>
             ) : (
               <div className={styles.navGroupDivider} />
@@ -361,7 +379,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
               {items.map((item) => (
                 <NavItem
                   key={item.key}
-                  open={open}
+                  open={contentOpen}
                   active={isActive(pathname, item.href)}
                   label={t(item.label)}
                   icon={item.icon}
@@ -375,7 +393,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
       </div>
 
       <div className={footClasses}>
-        {open && (
+        {contentOpen && (
           <div className={styles.creditsBox}>
             <div className={styles.creditsRow}>
               <span className={styles.creditsValue}>
@@ -394,7 +412,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
             </a>
           </div>
         )}
-        {open && (
+        {contentOpen && (
           <div className={styles.toolsRow}>
             <div className={styles.toolsThemeToggle}>
               <ThemeToggle label />
@@ -407,7 +425,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
             )}
           </div>
         )}
-        {!open && (
+        {!contentOpen && (
           <div className={styles.closedTools}>
             <ThemeToggle compact />
           </div>
@@ -421,17 +439,17 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
           aria-haspopup="menu"
           aria-expanded={accountMenuOpen}
           aria-controls="dashboard-account-menu"
-          title={open ? undefined : t('account_menu')}
+          title={contentOpen ? undefined : t('account_menu')}
           onClick={toggleAccountMenu}
         >
           <div className={styles.avatar}>{me === null ? '—' : initialsFromEmail(me.email)}</div>
-          {open && (
+          {contentOpen && (
             <div className={styles.profileText}>
               <div className={styles.profileName}>{me === null ? '…' : me.email}</div>
               <div className={styles.profilePlan}>{currentPlanLabel}</div>
             </div>
           )}
-          {open && (
+          {contentOpen && (
             <span className={styles.profileChevron}>
               <Icon name="chevronRight" size={14} />
             </span>
@@ -492,6 +510,8 @@ export interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps): React.ReactElement {
   const [open, setOpen] = useState(true);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const t = useTranslations('dashboard');
   const [lang] = useLang();
   const pathname = usePathname();
   const activeKey = pathname.split('/').filter(Boolean)[0];
@@ -500,10 +520,63 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
       ? 'ltr'
       : undefined;
 
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const desktopViewport = window.matchMedia('(min-width: 40.0625rem)');
+    const closeOnDesktop = (): void => {
+      if (desktopViewport.matches) setMobileDrawerOpen(false);
+    };
+    closeOnDesktop();
+    desktopViewport.addEventListener('change', closeOnDesktop);
+    return () => desktopViewport.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMobileDrawerOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [mobileDrawerOpen]);
+
   return (
     <div className={styles.shellRoot}>
-      <Sidebar open={open} setOpen={setOpen} />
+      <Sidebar
+        open={open}
+        setOpen={setOpen}
+        mobileOpen={mobileDrawerOpen}
+        onMobileClose={() => setMobileDrawerOpen(false)}
+      />
+      {mobileDrawerOpen && (
+        <div
+          className={styles.mobileBackdrop}
+          aria-hidden="true"
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
       <div className={styles.mainCol}>
+        <button
+          type="button"
+          className={`${styles.toggleBtn} ${styles.mobileMenuTrigger}`}
+          aria-label={t('mobile_open_menu')}
+          aria-controls="dashboard-sidebar"
+          aria-expanded={mobileDrawerOpen}
+          onClick={() => setMobileDrawerOpen(true)}
+        >
+          <Icon name="menu" />
+        </button>
         <main dir={bodyDir} className={styles.main}>
           <div className={styles.mainInner}>{children}</div>
         </main>

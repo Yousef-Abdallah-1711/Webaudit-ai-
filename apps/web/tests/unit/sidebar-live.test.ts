@@ -15,6 +15,7 @@
 import { act, createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
+import styles from '../../components/dashboard/Sidebar.module.css';
 
 const { logoutMock, replaceMock } = vi.hoisted(() => ({
   logoutMock: vi.fn(),
@@ -203,6 +204,83 @@ describe('Sidebar — real identity, plan, and credit balance', () => {
       expect(mounted.html()).not.toContain('width: 77%');
     } finally {
       mounted.unmount();
+    }
+  });
+});
+
+describe('AppShell — mobile sidebar drawer', () => {
+  async function mountShell() {
+    const { AppShell } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    return renderClient(
+      createElement(AuthProvider, null, createElement(AppShell, null, 'dashboard page')),
+    );
+  }
+
+  it('opens from the translated mobile trigger and closes from the backdrop', async () => {
+    const mounted = await mountShell();
+    const originalOverflow = document.body.style.overflow;
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Open navigation menu"]',
+      );
+      expect(trigger).not.toBeNull();
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+
+      await act(async () => {
+        trigger?.click();
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      expect(document.querySelector(`.${styles.mobileBackdrop}`)).not.toBeNull();
+      expect(document.body.style.overflow).toBe('hidden');
+
+      await act(async () => {
+        document.querySelector<HTMLElement>(`.${styles.mobileBackdrop}`)?.click();
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.querySelector(`.${styles.mobileBackdrop}`)).toBeNull();
+      expect(document.body.style.overflow).toBe(originalOverflow);
+    } finally {
+      mounted.unmount();
+      document.body.style.overflow = originalOverflow;
+    }
+  });
+
+  it('closes on Escape and keeps the account menu portal usable while open', async () => {
+    const mounted = await mountShell();
+    const originalOverflow = document.body.style.overflow;
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Open navigation menu"]',
+      );
+      await act(async () => {
+        trigger?.click();
+      });
+
+      const accountTrigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Account menu"]',
+      );
+      expect(accountTrigger).not.toBeNull();
+      await act(async () => {
+        accountTrigger?.click();
+      });
+      const accountMenu = document.body.querySelector('[role="menu"]');
+      expect(accountMenu).not.toBeNull();
+      expect(accountMenu?.parentElement).toBe(document.body);
+      expect(accountMenu?.getAttribute('style')).toContain('visibility: visible');
+
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(document.querySelector(`.${styles.mobileBackdrop}`)).toBeNull();
+      expect(document.body.style.overflow).toBe(originalOverflow);
+    } finally {
+      mounted.unmount();
+      document.body.style.overflow = originalOverflow;
     }
   });
 });
