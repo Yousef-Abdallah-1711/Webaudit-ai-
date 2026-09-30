@@ -147,7 +147,7 @@
   color: var(--text-secondary);
 }
 
-@media (max-width: 40rem) {
+@media (max-width: 48.5rem) {
   .layout {
     grid-template-columns: 1fr;
   }
