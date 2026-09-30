@@ -56,7 +56,7 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
     return (
       <AuthFrame>
         <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
-          <Icon name="check" className={styles.statusIcon} />
+          <Icon name="check" className={styles.statusIcon ?? ''} />
         </div>
         <h1 className={styles.outcomeTitle}>{t('auth_verify_confirmed_title')}</h1>
         <p className={styles.outcomeLead}>{t('auth_verify_confirmed_lead')}</p>
@@ -81,7 +81,7 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
   return (
     <AuthFrame>
       <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
-        <Icon name="circleAlert" className={styles.statusIcon} />
+        <Icon name="circleAlert" className={styles.statusIcon ?? ''} />
       </div>
       <h1 className={styles.outcomeTitle}>{t('auth_verify_invalid_title')}</h1>
       <p className={styles.outcomeLead}>{t('auth_verify_invalid_lead')}</p>

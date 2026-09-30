@@ -16,7 +16,7 @@ import { useT } from '../../app/theme';
 import styles from './AuthFrame.module.css';
 
 export interface AuthFrameProps {
-  title: string;
+  title?: string;
   lead?: string;
   children?: ReactNode;
   foot?: ReactNode;
@@ -30,7 +30,7 @@ export function AuthFrame({ title, lead, children, foot }: AuthFrameProps): Reac
       <div dir={lang === 'ar' ? 'ltr' : undefined} className={styles.wrap}>
         <div className={styles.inner}>
           <Card padding={30}>
-            <h1 className={styles.title}>{title}</h1>
+            {title !== undefined && <h1 className={styles.title}>{title}</h1>}
             {lead !== undefined && <p className={styles.lead}>{lead}</p>}
             {children}
           </Card>
