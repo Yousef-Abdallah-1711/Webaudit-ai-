@@ -36,7 +36,7 @@ function ResetPageInner(): React.ReactElement {
       setDone(true);
     } catch (e) {
       if (e instanceof ApiError && e.status === 410) {
-        setError(t('verify_invalid_lead'));
+        setError(t('reset_invalid_lead'));
       } else {
         setError(t('error_generic'));
       }
