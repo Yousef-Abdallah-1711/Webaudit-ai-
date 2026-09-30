@@ -1,1 +1,21 @@
-{}
+{
+  "g_audits": "التدقيقات",
+  "g_account": "الحساب",
+  "n_scan": "تدقيق جديد",
+  "n_progress": "تدقيق مباشر",
+  "n_report": "التقرير",
+  "n_fixes": "الإصلاحات",
+  "n_readiness": "الجاهزية",
+  "n_usage": "الاستخدام",
+  "n_billing": "الفواتير والخطط",
+  "n_profile": "الملف الشخصي",
+  "credits_left": "رصيد متبقٍ",
+  "top_up": "شحن الرصيد",
+  "sidebar_collapse": "طيّ الشريط الجانبي",
+  "sidebar_expand": "توسيع الشريط الجانبي",
+  "admin_console": "وحدة المشغّل",
+  "account_menu": "قائمة الحساب",
+  "plan_free": "الخطة المجانية",
+  "plan_label": "خطة {plan}",
+  "menu_sign_out": "تسجيل الخروج"
+}

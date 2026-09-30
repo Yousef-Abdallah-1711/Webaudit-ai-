@@ -1,1 +1,21 @@
-{}
+{
+  "g_audits": "Audits",
+  "g_account": "Account",
+  "n_scan": "New scan",
+  "n_progress": "Live scan",
+  "n_report": "Report",
+  "n_fixes": "Fixes",
+  "n_readiness": "Readiness",
+  "n_usage": "Usage",
+  "n_billing": "Billing and plans",
+  "n_profile": "Profile",
+  "credits_left": "credits left",
+  "top_up": "Top up",
+  "sidebar_collapse": "Collapse sidebar",
+  "sidebar_expand": "Expand sidebar",
+  "admin_console": "Admin console",
+  "account_menu": "Account menu",
+  "plan_free": "Free plan",
+  "plan_label": "{plan} plan",
+  "menu_sign_out": "Sign out"
+}

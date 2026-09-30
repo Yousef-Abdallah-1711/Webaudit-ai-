@@ -39,13 +39,22 @@
  * `open`/`setOpen` (sidebar collapse) has no routing meaning — kept as
  * local state, same as the source.
  */
-import { usePathname } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
+import { PRODUCT_NAME } from '@webaudit/config';
+import type enDashboard from '../../messages/en/dashboard.json';
 import { localeMetadata } from '../../i18n/locales';
 import { Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
-import { LangToggle, ThemeToggle, useT } from '../../app/theme';
-import type { StringKey } from '../../lib/strings';
+import { LangToggle, ThemeToggle, useLang } from '../../app/theme';
 import {
   getMe,
   getOutstandingIssueCount,
@@ -55,6 +64,8 @@ import {
 } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
 import styles from './Sidebar.module.css';
+
+type DashboardKey = keyof typeof enDashboard;
 
 /** First letter of up to two "words" in the email's local part — real, deterministic, no invented name. */
 function initialsFromEmail(email: string): string {
@@ -67,20 +78,14 @@ function initialsFromEmail(email: string): string {
     .join('');
 }
 
-function planLabel(planId: string): string {
-  return planId.length === 0
-    ? 'Free plan'
-    : `${planId.charAt(0).toUpperCase()}${planId.slice(1)} plan`;
-}
-
 interface NavEntry {
   readonly key: string;
   readonly href: string;
-  readonly label: StringKey;
+  readonly label: DashboardKey;
   readonly icon: IconName;
 }
 
-const NAV_GROUPS: readonly (readonly [StringKey, readonly NavEntry[]])[] = [
+const NAV_GROUPS: readonly (readonly [DashboardKey, readonly NavEntry[]])[] = [
   [
     'g_audits',
     [
@@ -149,12 +154,19 @@ export interface SidebarProps {
 }
 
 export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('dashboard');
   const pathname = usePathname();
-  const { isOperator } = useAuth();
+  const router = useRouter();
+  const { isOperator, logout } = useAuth();
   const [me, setMe] = useState<CurrentUser | null>(null);
   const [plans, setPlans] = useState<readonly Plan[]>([]);
   const [outstandingIssues, setOutstandingIssues] = useState<number | null>(null);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [accountMenuPosition, setAccountMenuPosition] = useState<{ left: number; top: number } | null>(
+    null,
+  );
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +212,108 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
     totalCredits !== null && currentPlan !== undefined && currentPlan.monthlyCredits > 0
       ? Math.min(100, Math.max(0, (totalCredits / currentPlan.monthlyCredits) * 100))
       : 0;
+  const currentPlanLabel =
+    me === null
+      ? '…'
+      : me.plan.length === 0 || me.plan === 'free'
+        ? t('plan_free')
+        : t('plan_label', {
+            plan: `${me.plan.charAt(0).toUpperCase()}${me.plan.slice(1)}`,
+          });
+
+  const closeAccountMenu = (restoreFocus = false): void => {
+    setAccountMenuOpen(false);
+    setAccountMenuPosition(null);
+    if (restoreFocus) profileButtonRef.current?.focus();
+  };
+
+  const toggleAccountMenu = (): void => {
+    if (accountMenuOpen) {
+      closeAccountMenu();
+      return;
+    }
+    setAccountMenuOpen(true);
+  };
+
+  const signOut = async (): Promise<void> => {
+    closeAccountMenu();
+    await logout();
+    router.replace('/');
+  };
+
+  const handleAccountMenuKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
+    const menuItems = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    );
+    const currentIndex = menuItems.indexOf(document.activeElement as HTMLElement);
+    let nextIndex: number | undefined;
+
+    if (event.key === 'ArrowDown') nextIndex = (currentIndex + 1) % menuItems.length;
+    if (event.key === 'ArrowUp') nextIndex = (currentIndex - 1 + menuItems.length) % menuItems.length;
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = menuItems.length - 1;
+
+    if (nextIndex !== undefined) {
+      event.preventDefault();
+      menuItems[nextIndex]?.focus();
+    } else if (event.key === 'Tab') {
+      closeAccountMenu();
+    }
+  };
+
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+
+    const positionMenu = (): void => {
+      const trigger = profileButtonRef.current;
+      const menu = accountMenuRef.current;
+      if (!trigger || !menu) return;
+
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const tokenGap = Number.parseFloat(
+        window.getComputedStyle(document.documentElement).getPropertyValue('--space-2'),
+      );
+      const gap = Number.isFinite(tokenGap) ? tokenGap : 0;
+      const maxLeft = Math.max(gap, window.innerWidth - menuRect.width - gap);
+      const left = Math.min(maxLeft, Math.max(gap, triggerRect.right - menuRect.width));
+      const above = triggerRect.top - menuRect.height - gap;
+      const below = triggerRect.bottom + gap;
+      const desiredTop = above >= gap ? above : below;
+      const maxTop = Math.max(gap, window.innerHeight - menuRect.height - gap);
+
+      setAccountMenuPosition({
+        left,
+        top: Math.min(maxTop, Math.max(gap, desiredTop)),
+      });
+      menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    };
+
+    const onPointerDown = (event: PointerEvent): void => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (profileButtonRef.current?.contains(target) || accountMenuRef.current?.contains(target)) {
+        return;
+      }
+      closeAccountMenu();
+    };
+
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      closeAccountMenu(true);
+    };
+
+    positionMenu();
+    window.addEventListener('resize', positionMenu);
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('resize', positionMenu);
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [accountMenuOpen]);
 
   const sidebarClasses = [styles.sidebar, open ? styles.sidebarOpen : undefined]
     .filter(Boolean)
@@ -222,15 +336,15 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
           onClick={() => {
             setOpen(!open);
           }}
-          aria-label={open ? 'Collapse sidebar' : 'Expand sidebar'}
-          title={open ? 'Collapse sidebar' : 'Expand sidebar'}
+          aria-label={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
+          title={t(open ? 'sidebar_collapse' : 'sidebar_expand')}
           className={styles.toggleBtn}
         >
           <Icon name="menu" size={19} />
         </button>
         {open && (
-          <div className={styles.wordmark}>
-            Web<span className={styles.wordmarkAccent}>Audit</span> AI
+          <div dir="ltr" className={styles.wordmark}>
+            <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
           </div>
         )}
       </div>
@@ -287,7 +401,7 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
             </div>
             <LangToggle />
             {isOperator && (
-              <a href="/admin" title="Admin console" className={styles.adminLink}>
+              <a href="/admin" title={t('admin_console')} className={styles.adminLink}>
                 <Icon name="shield" size={16} />
               </a>
             )}
@@ -298,12 +412,23 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
             <ThemeToggle compact />
           </div>
         )}
-        <a href="/settings" className={styles.profileBtn}>
+        <button
+          ref={profileButtonRef}
+          type="button"
+          id="dashboard-account-trigger"
+          className={styles.profileBtn}
+          aria-label={t('account_menu')}
+          aria-haspopup="menu"
+          aria-expanded={accountMenuOpen}
+          aria-controls="dashboard-account-menu"
+          title={open ? undefined : t('account_menu')}
+          onClick={toggleAccountMenu}
+        >
           <div className={styles.avatar}>{me === null ? '—' : initialsFromEmail(me.email)}</div>
           {open && (
             <div className={styles.profileText}>
               <div className={styles.profileName}>{me === null ? '…' : me.email}</div>
-              <div className={styles.profilePlan}>{me === null ? '…' : planLabel(me.plan)}</div>
+              <div className={styles.profilePlan}>{currentPlanLabel}</div>
             </div>
           )}
           {open && (
@@ -311,8 +436,52 @@ export function Sidebar({ open, setOpen }: SidebarProps): React.ReactElement {
               <Icon name="chevronRight" size={14} />
             </span>
           )}
-        </a>
+        </button>
       </div>
+      {accountMenuOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={accountMenuRef}
+              id="dashboard-account-menu"
+              className={styles.accountMenu}
+              role="menu"
+              aria-labelledby="dashboard-account-trigger"
+              aria-orientation="vertical"
+              onKeyDown={handleAccountMenuKeyDown}
+              style={{
+                left: accountMenuPosition?.left ?? 0,
+                top: accountMenuPosition?.top ?? 0,
+                visibility: accountMenuPosition === null ? 'hidden' : 'visible',
+              }}
+            >
+              <a
+                href="/settings"
+                className={styles.accountMenuItem}
+                role="menuitem"
+                onClick={() => closeAccountMenu()}
+              >
+                {t('n_profile')}
+              </a>
+              <a
+                href="/billing"
+                className={styles.accountMenuItem}
+                role="menuitem"
+                onClick={() => closeAccountMenu()}
+              >
+                {t('n_billing')}
+              </a>
+              <button
+                type="button"
+                className={styles.accountMenuItem}
+                role="menuitem"
+                onClick={() => void signOut()}
+              >
+                {t('menu_sign_out')}
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
     </aside>
   );
 }
@@ -323,7 +492,7 @@ export interface AppShellProps {
 
 export function AppShell({ children }: AppShellProps): React.ReactElement {
   const [open, setOpen] = useState(true);
-  const [, lang] = useT();
+  const [lang] = useLang();
   const pathname = usePathname();
   const activeKey = pathname.split('/').filter(Boolean)[0];
   const bodyDir =

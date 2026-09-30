@@ -12,12 +12,18 @@
  * mocking `lib/api`'s `getMe`/`getPlans` so the fix is proven from the
  * actual fetch-and-render path, not by inspecting the source.
  */
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
 
+const { logoutMock, replaceMock } = vi.hoisted(() => ({
+  logoutMock: vi.fn(),
+  replaceMock: vi.fn(),
+}));
+
 vi.mock('next/navigation', () => ({
   usePathname: () => '/scan',
+  useRouter: () => ({ replace: replaceMock }),
 }));
 
 vi.mock('../../lib/api.js', () => ({
@@ -33,13 +39,98 @@ vi.mock('../../lib/api.js', () => ({
     plans: [{ id: 'free', name: 'Free', monthlyCredits: 50 }],
   }),
   getOutstandingIssueCount: vi.fn().mockResolvedValue({ count: 7 }),
-  logout: vi.fn(),
+  logout: logoutMock,
   refreshAccessToken: vi.fn(),
   setAccessToken: vi.fn(),
   subscribeToUnauthorized: vi.fn(() => () => undefined),
 }));
 
 describe('Sidebar — real identity, plan, and credit balance', () => {
+  it('opens an accessible account menu from the profile button', async () => {
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Account menu"]',
+      );
+      expect(trigger).not.toBeNull();
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+
+      await act(async () => {
+        trigger?.click();
+      });
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      const menu = document.body.querySelector('[role="menu"]');
+      expect(menu).not.toBeNull();
+      expect(menu?.querySelectorAll('[role="menuitem"]')).toHaveLength(3);
+      expect(menu?.querySelector('a[href="/settings"]')?.textContent).toBe('Profile');
+      expect(menu?.querySelector('a[href="/billing"]')?.textContent).toBe('Billing and plans');
+      expect(menu?.textContent).toContain('Sign out');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('closes the account menu on Escape and outside click', async () => {
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    try {
+      const trigger = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Account menu"]',
+      );
+      await act(async () => {
+        trigger?.click();
+      });
+      expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+
+      await act(async () => {
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      });
+      expect(document.body.querySelector('[role="menu"]')).toBeNull();
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+
+      await act(async () => {
+        trigger?.click();
+      });
+      expect(document.body.querySelector('[role="menu"]')).not.toBeNull();
+      await act(async () => {
+        document.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+      });
+      expect(document.body.querySelector('[role="menu"]')).toBeNull();
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('logs out and returns to the public home from the account menu', async () => {
+    logoutMock.mockClear();
+    replaceMock.mockClear();
+    const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
+    const { AuthProvider } = await import('../../components/auth/AuthProvider.js');
+    const mounted = await renderClient(
+      createElement(AuthProvider, null, createElement(Sidebar, { open: true, setOpen: () => {} })),
+    );
+    try {
+      await act(async () => {
+        document.querySelector<HTMLButtonElement>('button[aria-label="Account menu"]')?.click();
+      });
+      await act(async () => {
+        document.body.querySelector<HTMLButtonElement>('[role="menuitem"]:last-child')?.click();
+      });
+      expect(logoutMock).toHaveBeenCalledOnce();
+      expect(replaceMock).toHaveBeenCalledWith('/');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
   it('shows the real outstanding issue count instead of a fixed badge', async () => {
     const { Sidebar } = await import('../../components/dashboard/Sidebar.js');
     const { AuthProvider } = await import('../../components/auth/AuthProvider.js');

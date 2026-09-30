@@ -21,6 +21,7 @@ import { I18nProvider } from '../../app/theme';
 
 vi.mock('next/navigation', () => ({
   usePathname: vi.fn(() => '/'),
+  useRouter: vi.fn(() => ({ replace: vi.fn() })),
 }));
 
 function render(element: React.ReactElement): string {
