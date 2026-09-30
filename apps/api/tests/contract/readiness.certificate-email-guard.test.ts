@@ -114,6 +114,7 @@ function flakyMailer(failOnCall: number): { mailer: Mailer; sent: number[] } {
     sendPasswordReset: () => Promise.resolve(),
     sendPaymentConfirmation: () => Promise.resolve(),
     sendPaymentFailure: () => Promise.resolve(),
+    sendRegistrationAttemptNotice: () => Promise.resolve(),
     sendReadinessAchieved: () => {
       calls += 1;
       if (calls === failOnCall) {
