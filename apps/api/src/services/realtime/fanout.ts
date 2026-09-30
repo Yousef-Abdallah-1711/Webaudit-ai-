@@ -129,8 +129,11 @@ export async function startFanout(options: FanoutOptions): Promise<Fanout> {
     },
     handleMessage,
     async stop(): Promise<void> {
-      await options.subscriber.unsubscribe(SCAN_EVENTS_CHANNEL);
-      await options.subscriber.quit();
+      try {
+        await options.subscriber.unsubscribe(SCAN_EVENTS_CHANNEL);
+      } finally {
+        await options.subscriber.quit();
+      }
     },
   };
 }
