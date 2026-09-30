@@ -16,6 +16,7 @@
 import { execSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { mkdtempSync } from 'node:fs';
+import { createServer } from 'node:net';
 import path from 'node:path';
 import { PrismaClient } from '@webaudit/api/prisma-client';
 import { PLAN_TIERS } from '@webaudit/config';
@@ -31,6 +32,24 @@ const TEST_DB_URL =
 const WEB_DIR = new URL('../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const WEB_PORT = 4400;
 const API_PORT = 4401;
+
+async function waitForPortFree(port: number, timeoutMs = 5_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const free = await new Promise<boolean>((resolve) => {
+      const probe = createServer();
+      probe.once('error', () => resolve(false));
+      probe.listen(port, '127.0.0.1', () => {
+        probe.close(() => resolve(true));
+      });
+    });
+    if (free) return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  // Do not throw -- this is a best-effort safety net, not a hard requirement.
+  // If the port is still bound after the timeout, the next spec's own
+  // startApi() will surface a clear EADDRINUSE error instead of a silent hang.
+}
 
 export interface Stack {
   readonly apiBaseUrl: string;
@@ -208,6 +227,7 @@ export async function startStack(): Promise<Stack> {
       web.close();
       await worker.shutdown('e2e stack teardown');
       await api.shutdown('e2e stack teardown');
+      await waitForPortFree(API_PORT);
       await db.$disconnect();
     },
   };
