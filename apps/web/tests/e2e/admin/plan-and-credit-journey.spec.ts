@@ -79,8 +79,11 @@ test('assign a plan and grant credits through the real admin UI, then the user c
   await expect(confirmDialog).toContainText('pro');
   await confirmDialog.getByRole('button', { name: 'Confirm', exact: true }).click();
 
-  const detail = page.locator('dl');
-  await expect(detail).toContainText('pro', { timeout: 10_000 });
+  const detail = page
+    .getByText(`Actions for ${target.email}`, { exact: true })
+    .locator('..')
+    .locator('dl');
+  await expect(detail).toContainText(/pro/i, { timeout: 10_000 });
 
   // --- Grant credits: a real, visible balance change ---
   const balanceBefore = await stack.db.creditLot.aggregate({

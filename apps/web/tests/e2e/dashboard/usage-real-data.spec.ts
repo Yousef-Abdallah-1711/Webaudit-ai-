@@ -51,7 +51,7 @@ test('usage reflects a completed scan and exports the same real data', async ({ 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: enUsage.usage_export_csv }).click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('webaudit-usage.csv');
+  expect(download.suggestedFilename()).toBe('fahes-usage.csv');
   const csv = await readFile(await download.path(), 'utf8');
   expect(csv).toContain(enUsage.usage_csv_daily_spend);
   expect(csv).toContain(enUsage.usage_csv_area);
