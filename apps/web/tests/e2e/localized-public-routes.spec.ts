@@ -1,0 +1,89 @@
+/**
+ * Verifies the public locale-prefixed routes through a real production
+ * Next.js server. These pages are unauthenticated and need no API/database
+ * stack, so this follows the lightweight real-build pattern used by the
+ * neighboring public-page E2E specs.
+ */
+import { execSync } from 'node:child_process';
+import { test, expect } from '@playwright/test';
+import { startServer, type ServerHandle } from '../visual/harness.js';
+
+const REPO_ROOT = new URL('../../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
+const WEB_DIR = `${REPO_ROOT}apps/web`;
+const PORT = 4182;
+
+const ENGLISH_HERO_LEAD = 'Think your site is ready?';
+const ARABIC_HERO_LEAD = '\u062a\u0638\u0646 \u0623\u0646 \u0645\u0648\u0642\u0639\u0643 \u062c\u0627\u0647\u0632\u061f';
+const ENGLISH_PRICING_HEADING = 'Credits, not seats.';
+
+test.use({ locale: 'en-US' });
+
+let server: ServerHandle | undefined;
+
+test.beforeAll(async () => {
+  test.setTimeout(180_000);
+  execSync('npx next build', { cwd: WEB_DIR, stdio: 'ignore' });
+  server = await startServer(WEB_DIR, PORT);
+});
+
+test.afterAll(() => {
+  server?.close();
+});
+
+async function expectRoute(page: import('@playwright/test').Page, path: string): Promise<void> {
+  const runningServer = server;
+  if (!runningServer) throw new Error('The public routes server did not start');
+
+  const response = await page.goto(`${runningServer.url}${path}`, { waitUntil: 'networkidle' });
+
+  expect(response?.status()).toBe(200);
+  // Assert the requested URL survives navigation exactly as entered: no
+  // locale redirect to or from the default-locale unprefixed routes.
+  await expect(page).toHaveURL(new URL(path, runningServer.url).href);
+}
+
+async function expectLocale(page: import('@playwright/test').Page, locale: 'en' | 'ar') {
+  const html = page.locator('html');
+  await expect(html).toHaveAttribute('lang', locale);
+  // dir is applied by RootLayout's synchronous ThemeScript before paint.
+  // Read the browser DOM after navigation so this also covers that script.
+  await expect(html).toHaveAttribute('dir', locale === 'ar' ? 'rtl' : 'ltr');
+}
+
+async function expectCanonical(page: import('@playwright/test').Page, path: string): Promise<void> {
+  const canonical = page.locator('head link[rel="canonical"]');
+  await expect(canonical).toHaveCount(1);
+  const href = await canonical.getAttribute('href');
+  expect(href).not.toBeNull();
+  expect(new URL(href!, page.url()).pathname).toBe(path);
+}
+
+test('GET / renders English home copy and public metadata without redirecting', async ({ page }) => {
+  await expectRoute(page, '/');
+  await expectLocale(page, 'en');
+  await expect(page.getByText(ENGLISH_HERO_LEAD)).toBeVisible();
+  await expectCanonical(page, '/');
+  await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
+});
+
+test('GET /ar renders Arabic home copy and public metadata without redirecting', async ({ page }) => {
+  await expectRoute(page, '/ar');
+  await expectLocale(page, 'ar');
+  await expect(page.getByText(ARABIC_HERO_LEAD)).toBeVisible();
+  await expectCanonical(page, '/ar');
+  await expect(page.locator('head link[rel="alternate"][hreflang="en"]')).toHaveCount(1);
+});
+
+test('GET /pricing renders English pricing copy without redirecting', async ({ page }) => {
+  await expectRoute(page, '/pricing');
+  await expectLocale(page, 'en');
+  await expect(page.getByRole('heading', { name: ENGLISH_PRICING_HEADING })).toBeVisible();
+});
+
+test('GET /ar/pricing renders Arabic pricing copy without redirecting', async ({ page }) => {
+  await expectRoute(page, '/ar/pricing');
+  await expectLocale(page, 'ar');
+  // Require Arabic text in the pricing page body itself, rather than passing
+  // on the translated shared navigation while the pricing content stays English.
+  await expect(page.locator('main')).toContainText(/[\u0600-\u06FF]/);
+});

@@ -17,84 +17,152 @@
  */
 import { Badge, Button, Eyebrow } from '../../../../components/ui';
 import { PublicPage } from '../../../../components/public';
+import { useTranslations } from 'next-intl';
 import { useLang } from '../../../theme';
 import { localeMetadata } from '../../../../i18n/locales';
 import styles from './page.module.css';
 
+type CountedFeatureKey =
+  | 'pricing_feature_concurrent_audits'
+  | 'pricing_feature_retention_days'
+  | 'pricing_feature_retention_months';
+
+type StaticFeatureKey =
+  | 'pricing_feature_url_input'
+  | 'pricing_feature_readiness_pass'
+  | 'pricing_feature_repository_input'
+  | 'pricing_feature_load_generation'
+  | 'pricing_feature_everything_pro';
+
+type PricingFeature =
+  | { readonly key: CountedFeatureKey; readonly count: number }
+  | { readonly key: StaticFeatureKey };
+
 interface Tier {
-  readonly name: string;
-  readonly credits: string;
+  readonly nameKey:
+    | 'pricing_tier_free'
+    | 'pricing_tier_starter'
+    | 'pricing_tier_pro'
+    | 'pricing_tier_business';
+  readonly credits: number;
+  readonly creditsKey: 'pricing_credits_once' | 'pricing_credits_monthly';
   readonly price: string;
-  readonly feat: readonly string[];
-  readonly cta: string;
+  readonly feat: readonly PricingFeature[];
+  readonly ctaKey:
+    | 'pricing_cta_start_free'
+    | 'pricing_cta_choose_starter'
+    | 'pricing_cta_choose_pro'
+    | 'pricing_cta_choose_business';
   readonly pop: boolean;
 }
 
 const TIERS: readonly Tier[] = [
   {
-    name: 'Free',
-    credits: '50, once',
+    nameKey: 'pricing_tier_free',
+    credits: 50,
+    creditsKey: 'pricing_credits_once',
     price: '$0',
-    feat: ['1 concurrent audit', '7-day retention', 'URL input'],
-    cta: 'Start free',
+    feat: [
+      { key: 'pricing_feature_concurrent_audits', count: 1 },
+      { key: 'pricing_feature_retention_days', count: 7 },
+      { key: 'pricing_feature_url_input' },
+    ],
+    ctaKey: 'pricing_cta_start_free',
     pop: false,
   },
   {
-    name: 'Starter',
-    credits: '300 / mo',
+    nameKey: 'pricing_tier_starter',
+    credits: 300,
+    creditsKey: 'pricing_credits_monthly',
     price: '$29',
-    feat: ['1 concurrent audit', '30-day retention', 'Readiness pass'],
-    cta: 'Choose Starter',
+    feat: [
+      { key: 'pricing_feature_concurrent_audits', count: 1 },
+      { key: 'pricing_feature_retention_days', count: 30 },
+      { key: 'pricing_feature_readiness_pass' },
+    ],
+    ctaKey: 'pricing_cta_choose_starter',
     pop: false,
   },
   {
-    name: 'Pro',
-    credits: '1,200 / mo',
+    nameKey: 'pricing_tier_pro',
+    credits: 1_200,
+    creditsKey: 'pricing_credits_monthly',
     price: '$99',
-    feat: ['3 concurrent audits', '12-month retention', 'Repository input', 'Load generation'],
-    cta: 'Choose Pro',
+    feat: [
+      { key: 'pricing_feature_concurrent_audits', count: 3 },
+      { key: 'pricing_feature_retention_months', count: 12 },
+      { key: 'pricing_feature_repository_input' },
+      { key: 'pricing_feature_load_generation' },
+    ],
+    ctaKey: 'pricing_cta_choose_pro',
     pop: true,
   },
   {
-    name: 'Business',
-    credits: '4,000 / mo',
+    nameKey: 'pricing_tier_business',
+    credits: 4_000,
+    creditsKey: 'pricing_credits_monthly',
     price: '$299',
-    feat: ['6 concurrent audits', '24-month retention', 'Everything in Pro'],
-    cta: 'Choose Business',
+    feat: [
+      { key: 'pricing_feature_concurrent_audits', count: 6 },
+      { key: 'pricing_feature_retention_months', count: 24 },
+      { key: 'pricing_feature_everything_pro' },
+    ],
+    ctaKey: 'pricing_cta_choose_business',
     pop: false,
   },
 ];
 
-const COST_ROWS: readonly (readonly [string, string])[] = [
-  ['One audit area', '10–25'],
-  ['Full audit, all five, bundled', '80'],
-  ['Targeted re-check of one issue', '3'],
-  ['Production-readiness pass', '60'],
+interface CostRow {
+  readonly labelKey:
+    | 'pricing_cost_one_area'
+    | 'pricing_cost_full_audit'
+    | 'pricing_cost_targeted_recheck'
+    | 'pricing_cost_readiness_pass';
+  readonly credits: number | { readonly minimum: number; readonly maximum: number };
+}
+
+const COST_ROWS: readonly CostRow[] = [
+  { labelKey: 'pricing_cost_one_area', credits: { minimum: 10, maximum: 25 } },
+  { labelKey: 'pricing_cost_full_audit', credits: 80 },
+  { labelKey: 'pricing_cost_targeted_recheck', credits: 3 },
+  { labelKey: 'pricing_cost_readiness_pass', credits: 60 },
 ];
 
 export function TierGrid(): React.ReactElement {
+  const t = useTranslations('public');
+
   return (
     <div className={styles.tierGrid}>
-      {TIERS.map((t) => (
-        <div key={t.name} className={t.pop ? `${styles.tier} ${styles.tierPop}` : styles.tier}>
+      {TIERS.map((tier) => (
+        <div
+          key={tier.nameKey}
+          className={tier.pop ? `${styles.tier} ${styles.tierPop}` : styles.tier}
+        >
           <div className={styles.tierHead}>
-            <span className={styles.tierName}>{t.name}</span>
-            {t.pop && <Badge tone="accent">Most depth</Badge>}
+            <span className={styles.tierName}>{t(tier.nameKey)}</span>
+            {tier.pop && <Badge tone="accent">{t('pricing_badge_most_depth')}</Badge>}
           </div>
           <div>
-            <span className={styles.tierPrice}>{t.price}</span>
-            <span className={styles.tierPer}> / mo</span>
+            <span className={styles.tierPrice}>{tier.price}</span>
+            <span className={styles.tierPer}>{t('pricing_price_period_month')}</span>
           </div>
-          <div className={styles.tierCredits}>{t.credits}</div>
+          <div className={styles.tierCredits}>
+            {t(tier.creditsKey, { count: tier.credits })}
+          </div>
           <div className={styles.tierFeat}>
-            {t.feat.map((x) => (
-              <div key={x} className={styles.tierFeatItem}>
-                {x}
+            {tier.feat.map((feature) => (
+              <div
+                key={feature.key + ('count' in feature ? feature.count : '')}
+                className={styles.tierFeatItem}
+              >
+                {'count' in feature
+                  ? t(feature.key, { count: feature.count })
+                  : t(feature.key)}
               </div>
             ))}
           </div>
-          <Button variant={t.pop ? 'primary' : 'secondary'} fullWidth href="/signup">
-            {t.cta}
+          <Button variant={tier.pop ? 'primary' : 'secondary'} fullWidth href="/signup">
+            {t(tier.ctaKey)}
           </Button>
         </div>
       ))}
@@ -103,40 +171,41 @@ export function TierGrid(): React.ReactElement {
 }
 
 export function CostTable(): React.ReactElement {
+  const t = useTranslations('public');
+
   return (
     <div>
-      <Eyebrow tone="accent">What things cost</Eyebrow>
+      <Eyebrow tone="accent">{t('pricing_cost_eyebrow')}</Eyebrow>
       <div className={styles.costTable}>
-        {COST_ROWS.map(([label, credits], i) => (
+        {COST_ROWS.map((row, i) => (
           <div
-            key={label}
+            key={row.labelKey}
             className={i > 0 ? `${styles.costRow} ${styles.costRowBordered}` : styles.costRow}
           >
-            <span className={styles.costLabel}>{label}</span>
-            <span className={styles.costValue}>{credits} cr</span>
+            <span className={styles.costLabel}>{t(row.labelKey)}</span>
+            <span className={styles.costValue}>
+              {typeof row.credits === 'number'
+                ? t('pricing_cost_amount', { credits: row.credits })
+                : t('pricing_cost_range', row.credits)}
+            </span>
           </div>
         ))}
       </div>
-      <p className={styles.costNote}>
-        Top-ups are paid-plan only. Platform faults, provider outages and internal errors refund or
-        never debit.
-      </p>
+      <p className={styles.costNote}>{t('pricing_cost_note')}</p>
     </div>
   );
 }
 
 export default function PricingPage(): React.ReactElement {
+  const t = useTranslations('public');
   const [lang] = useLang();
   const dir = localeMetadata[lang].direction === 'rtl' ? 'ltr' : undefined;
 
   return (
     <PublicPage active="nav_pricing">
       <section dir={dir} className={styles.headSection}>
-        <h1 className={styles.h1}>Credits, not seats.</h1>
-        <p className={styles.lead}>
-          Plan credits expire at renewal. Purchased top-ups never expire, and expiring credits are
-          always spent first.
-        </p>
+        <h1 className={styles.h1}>{t('pricing_headline')}</h1>
+        <p className={styles.lead}>{t('pricing_lead')}</p>
       </section>
       <section dir={dir} className={styles.bodySection}>
         <div className={styles.tierWrap}>
