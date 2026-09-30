@@ -60,4 +60,6 @@
   --border-card: var(--border-default);
   --border-control: var(--border-subtle);
   --focus-ring: var(--accent-ring);
+  --text-on-surface-inverse: #fafafa;
+  --text-on-surface-inverse-muted: #9ca3af;
 }

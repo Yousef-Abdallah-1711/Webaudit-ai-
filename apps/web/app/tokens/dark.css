@@ -36,4 +36,6 @@
   --sev-info-bg: #242b36;
   --sev-resolved: #34d399;
   --sev-resolved-bg: #132a25;
+  --text-on-surface-inverse: #1f2937;
+  --text-on-surface-inverse-muted: #6b7280;
 }

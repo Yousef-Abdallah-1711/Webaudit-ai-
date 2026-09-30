@@ -202,13 +202,11 @@
   margin: 0;
   font: var(--type-h2);
   letter-spacing: var(--track-h2);
-  /* The source's own literal — FinalCta sits on --surface-inverse, which the
-     dark palette already resolves near-white, so this is not a token gap. */
-  color: #fafafa;
+  color: var(--text-on-surface-inverse);
 }
 .ctaLead {
   margin: 14px 0 28px;
   font: var(--type-body);
-  color: #9ca3af;
+  color: var(--text-on-surface-inverse-muted);
   text-wrap: pretty;
 }
