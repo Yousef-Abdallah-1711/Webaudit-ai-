@@ -48,7 +48,7 @@ import {
   type ReactNode,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
 import { PRODUCT_NAME } from '@webaudit/config';
 import type enDashboard from '../../messages/en/dashboard.json';
 import { localeMetadata } from '../../i18n/locales';
@@ -161,6 +161,7 @@ export function Sidebar({
   mobileOpen = false,
   onMobileClose = () => {},
 }: SidebarProps): React.ReactElement {
+  const format = useFormatter();
   const t = useTranslations('dashboard');
   const pathname = usePathname();
   const router = useRouter();
@@ -397,7 +398,7 @@ export function Sidebar({
           <div className={styles.creditsBox}>
             <div className={styles.creditsRow}>
               <span className={styles.creditsValue}>
-                {totalCredits === null ? '—' : totalCredits.toLocaleString()}
+                {totalCredits === null ? '—' : format.number(totalCredits)}
               </span>
               <span className={styles.creditsLabel}>{t('credits_left')}</span>
             </div>
