@@ -15,7 +15,7 @@
  * in page.module.css's `.wrap` instead. Re-add the prop if a future page
  * genuinely needs a different padding.
  *
- * Every hook here (`useT`, `useState`) requires this to be a Client
+ * Every hook here (`useTranslations`, `useState`) requires this to be a Client
  * Component — same reason as `Public.tsx`.
  */
 import { useState } from 'react';
@@ -30,8 +30,9 @@ import {
 } from '../../../components/ui';
 import { ModuleStatus, ScoreArc } from '../../../components/report';
 import { PublicPage } from '../../../components/public';
-import { useT } from '../../theme';
-import type { StringKey } from '../../../lib/strings';
+import { useTranslations } from 'next-intl';
+import type publicMessages from '../../../messages/en/public.json';
+type PublicKey = keyof typeof publicMessages;
 import styles from './page.module.css';
 
 interface WrapProps {
@@ -48,7 +49,7 @@ function Wrap({ tint, children }: WrapProps): React.ReactElement {
 }
 
 function Hero(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
   const [url, setUrl] = useState('');
 
   return (
@@ -85,14 +86,14 @@ function Hero(): React.ReactElement {
   );
 }
 
-const DIFFERENCE_CARDS: readonly (readonly [StringKey, StringKey])[] = [
+const DIFFERENCE_CARDS: readonly (readonly [PublicKey, PublicKey])[] = [
   ['diff_1t', 'diff_1d'],
   ['diff_2t', 'diff_2d'],
   ['diff_3t', 'diff_3d'],
 ];
 
 function Difference(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <Wrap tint="var(--surface-raised)">
@@ -110,7 +111,7 @@ function Difference(): React.ReactElement {
   );
 }
 
-const AREA_ROWS: readonly (readonly [StringKey, StringKey, number])[] = [
+const AREA_ROWS: readonly (readonly [PublicKey, PublicKey, number])[] = [
   ['a_perf', 'a_perf_d', 20],
   ['a_sec', 'a_sec_d', 25],
   ['a_des', 'a_des_d', 20],
@@ -119,7 +120,7 @@ const AREA_ROWS: readonly (readonly [StringKey, StringKey, number])[] = [
 ];
 
 function Areas(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <Wrap>
@@ -145,7 +146,7 @@ function Areas(): React.ReactElement {
 }
 
 function Proof(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <Wrap tint="var(--surface-sunken)">
@@ -162,7 +163,7 @@ function Proof(): React.ReactElement {
   );
 }
 
-const LOOP_STEPS: readonly (readonly [string, StringKey, StringKey])[] = [
+const LOOP_STEPS: readonly (readonly [string, PublicKey, PublicKey])[] = [
   ['01', 'loop_1t', 'loop_1d'],
   ['02', 'loop_2t', 'loop_2d'],
   ['03', 'loop_3t', 'loop_3d'],
@@ -170,7 +171,7 @@ const LOOP_STEPS: readonly (readonly [string, StringKey, StringKey])[] = [
 ];
 
 function Loop(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <Wrap>
@@ -192,7 +193,7 @@ function Loop(): React.ReactElement {
 }
 
 function FinalCta(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <section className={styles.cta}>
@@ -207,7 +208,7 @@ function FinalCta(): React.ReactElement {
 }
 
 export default function LandingPage(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('public');
 
   return (
     <div>

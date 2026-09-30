@@ -12,13 +12,12 @@
  * that the marketing page has no session for. The credit and retention
  * figures do match `packages/config`'s `PLAN_TIERS`.
  *
- * `useT()` (a hook) makes this a Client Component, same as
- * `app/(public)/page.tsx` — the source reads `lang` only to hold the
- * headline sections LTR under an Arabic layout.
+ * `useLang()` keeps this a Client Component so the existing language-based
+ * headline direction updates with the active language.
  */
 import { Badge, Button, Eyebrow } from '../../../../components/ui';
 import { PublicPage } from '../../../../components/public';
-import { useT } from '../../../theme';
+import { useLang } from '../../../theme';
 import styles from './page.module.css';
 
 interface Tier {
@@ -126,7 +125,7 @@ export function CostTable(): React.ReactElement {
 }
 
 export default function PricingPage(): React.ReactElement {
-  const [, lang] = useT();
+  const [lang] = useLang();
   const dir = lang === 'ar' ? 'ltr' : undefined;
 
   return (

@@ -18,13 +18,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
-import { useT } from '../../theme';
+import { useTranslations } from 'next-intl';
 import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import styles from './page.module.css';
 
 export default function RegisterPage(): React.ReactElement | null {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const router = useRouter();
   const { status } = useAuth();
   const [name, setName] = useState('');
@@ -51,7 +51,7 @@ export default function RegisterPage(): React.ReactElement | null {
       }
       router.push('/verify-email');
     } catch {
-      setError(t('auth_error_generic'));
+      setError(t('error_generic'));
     } finally {
       setSubmitting(false);
     }
@@ -61,17 +61,17 @@ export default function RegisterPage(): React.ReactElement | null {
 
   return (
     <AuthFrame
-      title={t('auth_register_title')}
-      lead={t('auth_register_lead')}
+      title={t('register_title')}
+      lead={t('register_lead')}
       foot={
         <span>
-          {t('auth_register_foot_lead')} <a href="/login">{t('auth_register_foot_link')}</a>
+          {t('register_foot_lead')} <a href="/login">{t('register_foot_link')}</a>
         </span>
       }
     >
       <div className={styles.stack}>
         <Field
-          label={t('auth_name')}
+          label={t('name')}
           placeholder="Khalid Ahmed"
           value={name}
           onChange={(e) => {
@@ -79,7 +79,7 @@ export default function RegisterPage(): React.ReactElement | null {
           }}
         />
         <Field
-          label={t('auth_work_email')}
+          label={t('work_email')}
           type="email"
           placeholder="you@company.com"
           value={email}
@@ -88,23 +88,23 @@ export default function RegisterPage(): React.ReactElement | null {
           }}
         />
         <Field
-          label={t('auth_password')}
+          label={t('password')}
           type="password"
-          placeholder={t('auth_password_hint')}
+          placeholder={t('password_hint')}
           value={password}
           onChange={(e) => {
             setPassword(e.target.value);
           }}
         />
-        <div className={styles.note}>{t('auth_register_note')}</div>
+        <div className={styles.note}>{t('register_note')}</div>
         {error !== null && <div className={styles.error}>{error}</div>}
         <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('auth_register_submit')}
+          {t('register_submit')}
         </Button>
       </div>
       <Divider />
       <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
-        {t('auth_github')}
+        {t('github')}
       </Button>
     </AuthFrame>
   );

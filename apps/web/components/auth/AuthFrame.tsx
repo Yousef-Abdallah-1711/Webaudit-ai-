@@ -10,9 +10,10 @@
  * input field wrapper, same "or" divider.
  */
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import { Card, Input, type InputProps } from '../ui';
 import { PublicPage } from '../public';
-import { useT } from '../../app/theme';
+import { useLang } from '../../app/theme';
 import styles from './AuthFrame.module.css';
 
 export interface AuthFrameProps {
@@ -23,7 +24,7 @@ export interface AuthFrameProps {
 }
 
 export function AuthFrame({ title, lead, children, foot }: AuthFrameProps): React.ReactElement {
-  const [, lang] = useT();
+  const [lang] = useLang();
 
   return (
     <PublicPage tint="var(--surface-raised)">
@@ -55,11 +56,11 @@ export function Field({ label, ...rest }: FieldProps): React.ReactElement {
 }
 
 export function Divider(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('auth');
   return (
     <div className={styles.divider}>
       <div className={styles.dividerLine} />
-      <span className={styles.dividerText}>{t('auth_or')}</span>
+      <span className={styles.dividerText}>{t('or')}</span>
       <div className={styles.dividerLine} />
     </div>
   );

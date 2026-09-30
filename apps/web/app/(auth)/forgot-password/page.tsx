@@ -10,12 +10,12 @@
 import { useState } from 'react';
 import { Button } from '../../../components/ui';
 import { AuthFrame, Field } from '../../../components/auth/AuthFrame';
-import { useT } from '../../theme';
+import { useTranslations } from 'next-intl';
 import { ApiError, forgotPassword } from '../../../lib/api';
 import styles from './page.module.css';
 
 export default function ForgotPage(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -36,22 +36,22 @@ export default function ForgotPage(): React.ReactElement {
   if (sent) {
     return (
       <AuthFrame
-        title={t('auth_forgot_title')}
-        lead={t('auth_forgot_sent_lead')}
-        foot={<a href="/login">{t('auth_forgot_foot_link')}</a>}
+        title={t('forgot_title')}
+        lead={t('forgot_sent_lead')}
+        foot={<a href="/login">{t('forgot_foot_link')}</a>}
       />
     );
   }
 
   return (
     <AuthFrame
-      title={t('auth_forgot_title')}
-      lead={t('auth_forgot_lead')}
-      foot={<a href="/login">{t('auth_forgot_foot_link')}</a>}
+      title={t('forgot_title')}
+      lead={t('forgot_lead')}
+      foot={<a href="/login">{t('forgot_foot_link')}</a>}
     >
       <div className={styles.stack}>
         <Field
-          label={t('auth_email')}
+          label={t('email')}
           type="email"
           placeholder="you@company.com"
           value={email}
@@ -60,7 +60,7 @@ export default function ForgotPage(): React.ReactElement {
           }}
         />
         <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('auth_forgot_submit')}
+          {t('forgot_submit')}
         </Button>
       </div>
     </AuthFrame>

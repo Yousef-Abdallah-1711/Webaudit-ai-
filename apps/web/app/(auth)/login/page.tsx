@@ -10,14 +10,14 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '../../../components/ui';
 import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
-import { useT } from '../../theme';
+import { useTranslations } from 'next-intl';
 import { ApiError, API_BASE } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { safeNextDestination } from '../../../components/auth/RouteGuard';
 import styles from './page.module.css';
 
 export default function LoginPage(): React.ReactElement | null {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const router = useRouter();
   const { status, login } = useAuth();
   const [email, setEmail] = useState('');
@@ -41,11 +41,11 @@ export default function LoginPage(): React.ReactElement | null {
       router.replace(next);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED') {
-        setError(t('auth_error_not_verified'));
+        setError(t('error_not_verified'));
       } else if (e instanceof ApiError && e.code === 'INVALID_CREDENTIALS') {
-        setError(t('auth_error_credentials'));
+        setError(t('error_credentials'));
       } else {
-        setError(t('auth_error_generic'));
+        setError(t('error_generic'));
       }
     } finally {
       setSubmitting(false);
@@ -56,18 +56,18 @@ export default function LoginPage(): React.ReactElement | null {
 
   return (
     <AuthFrame
-      title={t('auth_signin_title')}
-      lead={t('auth_signin_lead')}
+      title={t('signin_title')}
+      lead={t('signin_lead')}
       foot={
         <span>
-          {t('auth_signin_foot_lead')} <a href="/signup">{t('auth_signin_foot_link')}</a>{' '}
-          {t('auth_signin_foot_tail')}
+          {t('signin_foot_lead')} <a href="/signup">{t('signin_foot_link')}</a>{' '}
+          {t('signin_foot_tail')}
         </span>
       }
     >
       <div className={styles.stack}>
         <Field
-          label={t('auth_email')}
+          label={t('email')}
           type="email"
           placeholder="you@company.com"
           value={email}
@@ -77,16 +77,16 @@ export default function LoginPage(): React.ReactElement | null {
         />
         <div>
           <div className={styles.passwordRow}>
-            <span className={styles.passwordLabel}>{t('auth_password')}</span>
+            <span className={styles.passwordLabel}>{t('password')}</span>
             <a href="/forgot-password" className={styles.forgotLink}>
-              {t('auth_forgot_link')}
+              {t('forgot_link')}
             </a>
           </div>
           <Input
             type="password"
             placeholder="••••••••"
             value={password}
-            aria-label={t('auth_password')}
+            aria-label={t('password')}
             onChange={(e) => {
               setPassword(e.target.value);
             }}
@@ -94,12 +94,12 @@ export default function LoginPage(): React.ReactElement | null {
         </div>
         {error !== null && <div className={styles.error}>{error}</div>}
         <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('auth_signin_submit')}
+          {t('signin_submit')}
         </Button>
       </div>
       <Divider />
       <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
-        {t('auth_github')}
+        {t('github')}
       </Button>
     </AuthFrame>
   );

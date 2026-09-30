@@ -17,14 +17,14 @@ import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame } from '../../../components/auth/AuthFrame';
 import { Icon } from '../../../components/ui/icons/Icon';
-import { useT } from '../../theme';
+import { useTranslations } from 'next-intl';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
 import styles from './page.module.css';
 
 type Outcome = 'ready' | 'confirming' | 'confirmed' | 'invalid' | 'failed';
 
 function TokenOutcome({ token }: { token: string }): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const [outcome, setOutcome] = useState<Outcome>('ready');
 
   async function onConfirm(): Promise<void> {
@@ -43,11 +43,11 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
 
   if (outcome === 'ready' || outcome === 'confirming') {
     return (
-      <AuthFrame title={t('auth_verify_confirm_title')} lead={t('auth_verify_confirm_lead')}>
+      <AuthFrame title={t('verify_confirm_title')} lead={t('verify_confirm_lead')}>
         <Button fullWidth disabled={outcome === 'confirming'} onClick={() => void onConfirm()}>
           {outcome === 'confirming'
-            ? t('auth_verify_confirm_pending')
-            : t('auth_verify_confirm_button')}
+            ? t('verify_confirm_pending')
+            : t('verify_confirm_button')}
         </Button>
       </AuthFrame>
     );
@@ -58,22 +58,22 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
         <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
           <Icon name="check" className={styles.statusIcon ?? ''} />
         </div>
-        <h1 className={styles.outcomeTitle}>{t('auth_verify_confirmed_title')}</h1>
-        <p className={styles.outcomeLead}>{t('auth_verify_confirmed_lead')}</p>
+        <h1 className={styles.outcomeTitle}>{t('verify_confirmed_title')}</h1>
+        <p className={styles.outcomeLead}>{t('verify_confirmed_lead')}</p>
         <Button fullWidth href="/login">
-          {t('auth_verify_confirmed_submit')}
+          {t('verify_confirmed_submit')}
         </Button>
-        <p className={styles.closeNote}>{t('auth_verify_confirmed_close_note')}</p>
+        <p className={styles.closeNote}>{t('verify_confirmed_close_note')}</p>
       </AuthFrame>
     );
   }
   if (outcome === 'failed') {
     return (
       <AuthFrame>
-        <h1 className={styles.outcomeTitle}>{t('auth_verify_retry_title')}</h1>
-        <p className={styles.outcomeLead}>{t('auth_verify_retry_lead')}</p>
+        <h1 className={styles.outcomeTitle}>{t('verify_retry_title')}</h1>
+        <p className={styles.outcomeLead}>{t('verify_retry_lead')}</p>
         <Button fullWidth onClick={() => void onConfirm()}>
-          {t('auth_verify_retry_button')}
+          {t('verify_retry_button')}
         </Button>
       </AuthFrame>
     );
@@ -83,17 +83,17 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
       <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
         <Icon name="circleAlert" className={styles.statusIcon ?? ''} />
       </div>
-      <h1 className={styles.outcomeTitle}>{t('auth_verify_invalid_title')}</h1>
-      <p className={styles.outcomeLead}>{t('auth_verify_invalid_lead')}</p>
+      <h1 className={styles.outcomeTitle}>{t('verify_invalid_title')}</h1>
+      <p className={styles.outcomeLead}>{t('verify_invalid_lead')}</p>
       <Button fullWidth href="/signup">
-        {t('auth_verify_foot_link')}
+        {t('verify_foot_link')}
       </Button>
     </AuthFrame>
   );
 }
 
 function WaitingForClick({ email }: { email: string }): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const [sent, setSent] = useState(false);
 
   async function onResend(): Promise<void> {
@@ -111,17 +111,17 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
 
   return (
     <AuthFrame
-      title={t('auth_verify_title')}
-      lead={t('auth_verify_lead').replace('{email}', email || 'the email you registered with')}
+      title={t('verify_title')}
+      lead={t('verify_lead', { email: email || 'the email you registered with' })}
       foot={
         <span>
-          {t('auth_verify_foot_lead')} <a href="/signup">{t('auth_verify_foot_link')}</a>
+          {t('verify_foot_lead')} <a href="/signup">{t('verify_foot_link')}</a>
         </span>
       }
     >
       <div className={styles.emailBox}>{email || 'the email you registered with'}</div>
       <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
-        {sent ? t('auth_verify_confirmed_lead') : t('auth_verify_resend')}
+        {sent ? t('verify_confirmed_lead') : t('verify_resend')}
       </Button>
     </AuthFrame>
   );

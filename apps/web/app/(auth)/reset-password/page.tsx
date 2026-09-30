@@ -12,12 +12,12 @@ import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { AuthFrame, Field } from '../../../components/auth/AuthFrame';
-import { useT } from '../../theme';
+import { useTranslations } from 'next-intl';
 import { ApiError, resetPassword } from '../../../lib/api';
 import styles from './page.module.css';
 
 function ResetPageInner(): React.ReactElement {
-  const [t] = useT();
+  const t = useTranslations('auth');
   const token = useSearchParams().get('token') ?? '';
   const [pw, setPw] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -36,9 +36,9 @@ function ResetPageInner(): React.ReactElement {
       setDone(true);
     } catch (e) {
       if (e instanceof ApiError && e.status === 410) {
-        setError(t('auth_verify_invalid_lead'));
+        setError(t('verify_invalid_lead'));
       } else {
-        setError(t('auth_error_generic'));
+        setError(t('error_generic'));
       }
     } finally {
       setSubmitting(false);
@@ -47,9 +47,9 @@ function ResetPageInner(): React.ReactElement {
 
   if (done) {
     return (
-      <AuthFrame title={t('auth_reset_done_title')} lead={t('auth_reset_done_lead')}>
+      <AuthFrame title={t('reset_done_title')} lead={t('reset_done_lead')}>
         <Button fullWidth href="/login">
-          {t('auth_verify_confirmed_submit')}
+          {t('verify_confirmed_submit')}
         </Button>
       </AuthFrame>
     );
@@ -57,24 +57,24 @@ function ResetPageInner(): React.ReactElement {
 
   return (
     <AuthFrame
-      title={t('auth_reset_title')}
-      lead={t('auth_reset_lead')}
-      foot={<a href="/login">{t('auth_reset_foot_link')}</a>}
+      title={t('reset_title')}
+      lead={t('reset_lead')}
+      foot={<a href="/login">{t('reset_foot_link')}</a>}
     >
       <div className={styles.stack}>
         <Field
-          label={t('auth_new_password')}
+          label={t('new_password')}
           type="password"
-          placeholder={t('auth_password_hint')}
+          placeholder={t('password_hint')}
           value={pw}
           onChange={(e) => {
             setPw(e.target.value);
           }}
         />
         <Field
-          label={t('auth_confirm_password')}
+          label={t('confirm_password')}
           type="password"
-          placeholder={t('auth_repeat_it')}
+          placeholder={t('repeat_it')}
           value={confirm}
           onChange={(e) => {
             setConfirm(e.target.value);
@@ -94,14 +94,14 @@ function ResetPageInner(): React.ReactElement {
           >
             <path d={longEnough ? 'm4 12 5 5L20 6' : 'M5 12h14'} />
           </svg>
-          {t('auth_min_chars')}
+          {t('min_chars')}
         </div>
         {confirm !== '' && !matches && (
-          <div className={styles.error}>{t('auth_error_passwords_match')}</div>
+          <div className={styles.error}>{t('error_passwords_match')}</div>
         )}
         {error !== null && <div className={styles.error}>{error}</div>}
         <Button fullWidth disabled={!ok || submitting} onClick={() => void onSubmit()}>
-          {t('auth_reset_submit')}
+          {t('reset_submit')}
         </Button>
       </div>
     </AuthFrame>
