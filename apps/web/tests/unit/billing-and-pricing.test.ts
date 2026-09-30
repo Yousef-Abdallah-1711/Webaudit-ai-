@@ -13,7 +13,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import BillingPage from '../../app/(dashboard)/billing/page';
-import PricingPage, { TierGrid, CostTable } from '../../app/(public)/pricing/page';
+import PricingPage, { TierGrid, CostTable } from '../../app/[locale]/(public)/pricing/PricingPage';
 import { AuthProvider } from '../../components/auth/AuthProvider';
 import { I18nProvider } from '../../app/theme';
 

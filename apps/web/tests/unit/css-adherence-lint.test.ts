@@ -111,8 +111,8 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // 640px mobile breakpoint collapsing them to one column — a real,
   // measured horizontal-overflow bug found via manual testing, not a new
   // design decision.
-  'app/(public)/page.module.css': { hex: 2, px: 45 },
-  'app/(public)/pricing/page.module.css': { hex: 0, px: 23 },
+  'app/[locale]/(public)/page.module.css': { hex: 2, px: 45 },
+  'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   'app/theme.module.css': { hex: 0, px: 10 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
   'components/admin/format.module.css': { hex: 0, px: 2 },

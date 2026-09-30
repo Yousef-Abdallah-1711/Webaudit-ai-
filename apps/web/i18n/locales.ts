@@ -4,5 +4,5 @@ export const localeMetadata = {
 } as const;
 
 export type Locale = keyof typeof localeMetadata;
-export const locales = Object.keys(localeMetadata) as Locale[];
+export const locales = Object.keys(localeMetadata) as [Locale, ...Locale[]];
 export const defaultLocale: Locale = 'en';

@@ -16,9 +16,9 @@
  * `app/(public)/page.tsx` — the source reads `lang` only to hold the
  * headline sections LTR under an Arabic layout.
  */
-import { Badge, Button, Eyebrow } from '../../../components/ui';
-import { PublicPage } from '../../../components/public';
-import { useT } from '../../theme';
+import { Badge, Button, Eyebrow } from '../../../../components/ui';
+import { PublicPage } from '../../../../components/public';
+import { useT } from '../../../theme';
 import styles from './page.module.css';
 
 interface Tier {

@@ -27,11 +27,11 @@ import {
   PromoBar,
   StatRow,
   TwoToneHeading,
-} from '../../components/ui';
-import { ModuleStatus, ScoreArc } from '../../components/report';
-import { PublicPage } from '../../components/public';
-import { useT } from '../theme';
-import type { StringKey } from '../../lib/strings';
+} from '../../../components/ui';
+import { ModuleStatus, ScoreArc } from '../../../components/report';
+import { PublicPage } from '../../../components/public';
+import { useT } from '../../theme';
+import type { StringKey } from '../../../lib/strings';
 import styles from './page.module.css';
 
 interface WrapProps {

@@ -1,8 +1,10 @@
 import type { Metadata } from 'next';
 import { PRODUCT_NAME } from '@webaudit/config';
 import { JetBrains_Mono, Lexend_Deca } from 'next/font/google';
+import { getLocale } from 'next-intl/server';
 import { I18nProvider, ThemeScript } from './theme';
 import { AuthProvider } from '../components/auth/AuthProvider';
+import { defaultLocale, locales, type Locale } from '../i18n/locales';
 import './globals.css';
 
 /**
@@ -36,14 +38,17 @@ export const metadata: Metadata = {
   description: 'An honest audit of your software.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>): React.ReactElement {
+}>): Promise<React.ReactElement> {
+  const requestLocale = await getLocale().catch(() => defaultLocale);
+  const locale = locales.includes(requestLocale as Locale) ? requestLocale : defaultLocale;
+
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${lexendDeca.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
@@ -51,9 +56,10 @@ export default function RootLayout({
         {/*
          * T248 — applies `wa-theme`/`wa-lang` from localStorage before first
          * paint. `suppressHydrationWarning` above covers the `lang`/`dir`
-         * attributes this script may overwrite ahead of hydration; the theme
-         * component's own store re-derives the same value once the client
-         * bundle runs, so this is a same-frame no-op, not a second flip.
+         * attributes this script may overwrite ahead of hydration; the
+         * theme component's own store re-derives the same value once the
+         * client bundle runs, so this is a same-frame no-op, not a second
+         * flip.
          */}
         <ThemeScript />
       </head>

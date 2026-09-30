@@ -1,5 +1,9 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import createMiddleware from 'next-intl/middleware';
 import { defaultLocale, localeMetadata, type Locale } from './i18n/locales';
+import { routing } from './i18n/routing';
+
+const handleI18nRouting = createMiddleware(routing);
 
 function isLocale(value: string | undefined): value is Locale {
   return value !== undefined && Object.hasOwn(localeMetadata, value);
@@ -28,14 +32,16 @@ function detectLocale(request: NextRequest): Locale {
 }
 
 export function middleware(request: NextRequest): NextResponse {
-  const locale = detectLocale(request);
+  const prefixedLocale = request.nextUrl.pathname.match(/^\/(en|ar)(?:\/|$)/)?.[1];
+  const locale = prefixedLocale && isLocale(prefixedLocale) ? prefixedLocale : detectLocale(request);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-wa-locale', locale);
-  const response = NextResponse.next({ request: { headers: requestHeaders } });
+  const localizedRequest = new NextRequest(request, { headers: requestHeaders });
+  const response = handleI18nRouting(localizedRequest);
   response.headers.set('x-wa-locale', locale);
   return response;
 }
 
 export const config = {
-  matcher: ['/((?!api|_next|.*\\..*).*)'],
+  matcher: ['/', '/pricing', '/ar', '/ar/pricing'],
 };

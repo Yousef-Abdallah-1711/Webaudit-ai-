@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { PublicFooter, PublicHeader } from '../../components/public/Public.js';
 import { AuthProvider } from '../../components/auth/AuthProvider.js';
-import LandingPage from '../../app/(public)/page';
+import LandingPage from '../../app/[locale]/(public)/LandingPage';
 import { I18nProvider } from '../../app/theme';
 
 function hrefs(html: string): string[] {
