@@ -9,7 +9,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '../../../components/ui';
-import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
+import { Divider, Field } from '../../../components/auth/AuthFrame';
+import { AuthContextPanel, AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, API_BASE } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
@@ -55,52 +56,57 @@ export default function LoginPage(): React.ReactElement | null {
   if (status === 'authenticated') return null;
 
   return (
-    <AuthFrame
-      title={t('signin_title')}
-      lead={t('signin_lead')}
-      foot={
-        <span>
-          {t('signin_foot_lead')} <a href="/signup">{t('signin_foot_link')}</a>{' '}
-          {t('signin_foot_tail')}
-        </span>
-      }
-    >
-      <div className={styles.stack}>
-        <Field
-          label={t('email')}
-          type="email"
-          placeholder="you@company.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-          }}
-        />
-        <div>
-          <div className={styles.passwordRow}>
-            <span className={styles.passwordLabel}>{t('password')}</span>
-            <a href="/forgot-password" className={styles.forgotLink}>
-              {t('forgot_link')}
-            </a>
+    <AuthShell
+      form={
+        <AuthFormPanel
+          title={t('signin_title')}
+          lead={t('signin_lead')}
+          foot={
+            <span>
+              {t('signin_foot_lead')} <a href="/signup">{t('signin_foot_link')}</a>{' '}
+              {t('signin_foot_tail')}
+            </span>
+          }
+        >
+          <div className={styles.stack}>
+            <Field
+              label={t('email')}
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
+            />
+            <div>
+              <div className={styles.passwordRow}>
+                <span className={styles.passwordLabel}>{t('password')}</span>
+                <a href="/forgot-password" className={styles.forgotLink}>
+                  {t('forgot_link')}
+                </a>
+              </div>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                aria-label={t('password')}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                }}
+              />
+            </div>
+            {error !== null && <AuthStatus>{error}</AuthStatus>}
+            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+              {t('signin_submit')}
+            </Button>
           </div>
-          <Input
-            type="password"
-            placeholder="••••••••"
-            value={password}
-            aria-label={t('password')}
-            onChange={(e) => {
-              setPassword(e.target.value);
-            }}
-          />
-        </div>
-        {error !== null && <div className={styles.error}>{error}</div>}
-        <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('signin_submit')}
-        </Button>
-      </div>
-      <Divider />
-      <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
-        {t('github')}
-      </Button>
-    </AuthFrame>
+          <Divider />
+          <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
+            {t('github')}
+          </Button>
+        </AuthFormPanel>
+      }
+      context={<AuthContextPanel />}
+    />
   );
 }

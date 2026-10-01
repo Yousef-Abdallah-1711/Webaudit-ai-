@@ -17,7 +17,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
-import { AuthFrame, Divider, Field } from '../../../components/auth/AuthFrame';
+import { Divider, Field } from '../../../components/auth/AuthFrame';
+import { AuthContextPanel, AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
@@ -60,52 +61,57 @@ export default function RegisterPage(): React.ReactElement | null {
   if (status === 'authenticated') return null;
 
   return (
-    <AuthFrame
-      title={t('register_title')}
-      lead={t('register_lead')}
-      foot={
-        <span>
-          {t('register_foot_lead')} <a href="/login">{t('register_foot_link')}</a>
-        </span>
+    <AuthShell
+      form={
+        <AuthFormPanel
+          title={t('register_title')}
+          lead={t('register_lead')}
+          foot={
+            <span>
+              {t('register_foot_lead')} <a href="/login">{t('register_foot_link')}</a>
+            </span>
+          }
+        >
+          <div className={styles.stack}>
+            <Field
+              label={t('name')}
+              placeholder="Khalid Ahmed"
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+              }}
+            />
+            <Field
+              label={t('work_email')}
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
+            />
+            <Field
+              label={t('password')}
+              type="password"
+              placeholder={t('password_hint')}
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+              }}
+            />
+            <div className={styles.note}>{t('register_note')}</div>
+            {error !== null && <AuthStatus>{error}</AuthStatus>}
+            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+              {t('register_submit')}
+            </Button>
+          </div>
+          <Divider />
+          <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
+            {t('github')}
+          </Button>
+        </AuthFormPanel>
       }
-    >
-      <div className={styles.stack}>
-        <Field
-          label={t('name')}
-          placeholder="Khalid Ahmed"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-          }}
-        />
-        <Field
-          label={t('work_email')}
-          type="email"
-          placeholder="you@company.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-          }}
-        />
-        <Field
-          label={t('password')}
-          type="password"
-          placeholder={t('password_hint')}
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-          }}
-        />
-        <div className={styles.note}>{t('register_note')}</div>
-        {error !== null && <div className={styles.error}>{error}</div>}
-        <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('register_submit')}
-        </Button>
-      </div>
-      <Divider />
-      <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
-        {t('github')}
-      </Button>
-    </AuthFrame>
+      context={<AuthContextPanel />}
+    />
   );
 }
