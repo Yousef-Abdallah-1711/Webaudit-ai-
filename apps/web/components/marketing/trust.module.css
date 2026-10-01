@@ -1,0 +1,121 @@
+.section {
+  padding-block: var(--space-20);
+  padding-inline: var(--space-6);
+  background: var(--surface-page);
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+  align-items: start;
+  gap: clamp(var(--space-8), 8vw, var(--space-16));
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.header {
+  padding-block-start: var(--space-4);
+}
+
+.heading {
+  max-width: 11ch;
+  margin: 0;
+  color: var(--text-strong);
+  font: var(--type-h2);
+  letter-spacing: var(--track-h2);
+  text-wrap: balance;
+}
+
+.ledger {
+  margin: 0;
+  padding: 0;
+}
+
+.claim {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  gap: var(--space-6);
+  padding-block: var(--space-5);
+  border-block-start: var(--border-width) solid var(--border-default);
+}
+
+.claim:last-child {
+  border-block-end: var(--border-width) solid var(--border-default);
+}
+
+.claim dt {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--text-strong);
+  font: var(--type-body-bold);
+  text-wrap: balance;
+}
+
+.claim dd {
+  margin: 0;
+  color: var(--text-secondary);
+  font: var(--type-small);
+  text-wrap: pretty;
+}
+
+@media (max-width: 64rem) {
+  .inner {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: var(--space-8);
+  }
+}
+
+@media (max-width: 48rem) {
+  .section {
+    padding-block: var(--space-16);
+  }
+
+  .inner {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+    gap: var(--space-5);
+  }
+
+  .claim {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    padding-block: var(--space-4);
+  }
+}
+
+@media (max-width: 40rem) {
+  .section {
+    padding-block: var(--space-12);
+    padding-inline: var(--space-4);
+  }
+
+  .inner {
+    display: block;
+  }
+
+  .header {
+    padding-block-start: 0;
+  }
+
+  .heading {
+    max-width: 18ch;
+    font: var(--type-h2-mobile);
+    letter-spacing: var(--track-h2-mobile);
+  }
+
+  .ledger {
+    margin-block-start: var(--space-5);
+  }
+
+  .claim {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 23rem) {
+  .claim {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}

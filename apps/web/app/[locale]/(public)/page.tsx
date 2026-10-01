@@ -4,6 +4,10 @@ import { Hero } from '../../../components/marketing/hero';
 import { Proof } from '../../../components/marketing/proof';
 import { ProductionGap } from '../../../components/marketing/production-gap';
 import { Checks } from '../../../components/marketing/checks';
+import { ReportShowcase } from '../../../components/marketing/report-showcase';
+import { Readiness } from '../../../components/marketing/readiness';
+import { AiDevelopment } from '../../../components/marketing/ai-development';
+import { Trust } from '../../../components/marketing/trust';
 import LandingPage from './LandingPage';
 
 export async function generateMetadata({
@@ -22,6 +26,10 @@ export default function Page(): React.ReactElement {
       <Proof />
       <ProductionGap />
       <Checks />
+      <ReportShowcase />
+      <Readiness />
+      <AiDevelopment />
+      <Trust />
     </LandingPage>
   );
 }
