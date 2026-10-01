@@ -6,7 +6,7 @@
  * login` (`lib/api.ts`) — the source's `href="../app/index.html"` becomes a
  * router push to `/scan` on success.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '../../../components/ui';
 import { Divider, Field } from '../../../components/auth/AuthFrame';
@@ -25,6 +25,7 @@ export default function LoginPage(): React.ReactElement | null {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
   const next = safeNextDestination(
     typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('next'),
   );
@@ -53,6 +54,15 @@ export default function LoginPage(): React.ReactElement | null {
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true;
+    void onSubmit().finally(() => {
+      submissionLock.current = false;
+    });
+  }
+
   if (status === 'authenticated') return null;
 
   return (
@@ -68,10 +78,11 @@ export default function LoginPage(): React.ReactElement | null {
             </span>
           }
         >
-          <div className={styles.stack}>
+          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
             <Field
               label={t('email')}
               type="email"
+              autoComplete="email"
               placeholder="you@company.com"
               value={email}
               onChange={(e) => {
@@ -87,6 +98,7 @@ export default function LoginPage(): React.ReactElement | null {
               </div>
               <Input
                 type="password"
+                autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
                 aria-label={t('password')}
@@ -96,10 +108,10 @@ export default function LoginPage(): React.ReactElement | null {
               />
             </div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+            <Button type="submit" fullWidth disabled={submitting}>
               {t('signin_submit')}
             </Button>
-          </div>
+          </form>
           <Divider />
           <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
             {t('github')}

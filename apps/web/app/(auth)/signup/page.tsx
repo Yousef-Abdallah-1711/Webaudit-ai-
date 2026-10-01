@@ -14,7 +14,7 @@
  * unconditionally, which the API refused with a real `422` on every
  * registration that didn't fill in an optional field.
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { Divider, Field } from '../../../components/auth/AuthFrame';
@@ -33,6 +33,7 @@ export default function RegisterPage(): React.ReactElement | null {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   useEffect(() => {
     if (status === 'authenticated') router.replace('/scan');
@@ -58,6 +59,15 @@ export default function RegisterPage(): React.ReactElement | null {
     }
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true;
+    void onSubmit().finally(() => {
+      submissionLock.current = false;
+    });
+  }
+
   if (status === 'authenticated') return null;
 
   return (
@@ -72,9 +82,10 @@ export default function RegisterPage(): React.ReactElement | null {
             </span>
           }
         >
-          <div className={styles.stack}>
+          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
             <Field
               label={t('name')}
+              autoComplete="name"
               placeholder="Khalid Ahmed"
               value={name}
               onChange={(e) => {
@@ -84,6 +95,7 @@ export default function RegisterPage(): React.ReactElement | null {
             <Field
               label={t('work_email')}
               type="email"
+              autoComplete="email"
               placeholder="you@company.com"
               value={email}
               onChange={(e) => {
@@ -93,6 +105,7 @@ export default function RegisterPage(): React.ReactElement | null {
             <Field
               label={t('password')}
               type="password"
+              autoComplete="new-password"
               placeholder={t('password_hint')}
               value={password}
               onChange={(e) => {
@@ -117,10 +130,10 @@ export default function RegisterPage(): React.ReactElement | null {
             </div>
             <div className={styles.note}>{t('register_note')}</div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <Button fullWidth disabled={password.length < 12 || submitting} onClick={() => void onSubmit()}>
+            <Button type="submit" fullWidth disabled={password.length < 12 || submitting}>
               {t('register_submit')}
             </Button>
-          </div>
+          </form>
           <Divider />
           <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
             {t('github')}

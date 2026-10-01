@@ -7,7 +7,7 @@
  * signal) — the success state below is shown unconditionally after submit,
  * matching that contract rather than trying to infer one it does not give.
  */
-import { useState } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Button } from '../../../components/ui';
 import { Field } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
@@ -20,6 +20,7 @@ export default function ForgotPage(): React.ReactElement {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
 
   async function onSubmit(): Promise<void> {
     if (!email) return;
@@ -32,6 +33,15 @@ export default function ForgotPage(): React.ReactElement {
       setSubmitting(false);
       setSent(true);
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true;
+    void onSubmit().finally(() => {
+      submissionLock.current = false;
+    });
   }
 
   if (sent) {
@@ -56,20 +66,21 @@ export default function ForgotPage(): React.ReactElement {
           lead={t('forgot_lead')}
           foot={<a href="/login">{t('forgot_foot_link')}</a>}
         >
-          <div className={styles.stack}>
+          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
             <Field
               label={t('email')}
               type="email"
+              autoComplete="email"
               placeholder="you@company.com"
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
               }}
             />
-            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+            <Button type="submit" fullWidth disabled={submitting}>
               {t('forgot_submit')}
             </Button>
-          </div>
+          </form>
         </AuthFormPanel>
       }
     />

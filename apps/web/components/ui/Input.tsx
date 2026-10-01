@@ -13,6 +13,7 @@ export interface InputProps {
   /** Inline prefix, e.g. "https://" — reserves the measured 64px left padding */
   prefix?: string;
   placeholder?: string;
+  autoComplete?: string;
   value?: string;
   onChange?: ChangeEventHandler<HTMLInputElement>;
   type?: HTMLInputTypeAttribute;

@@ -8,7 +8,7 @@
  * checkmark did not need to express, since the source only ever rendered
  * the static mock, never two fields that could actually disagree.
  */
-import { Suspense, useState } from 'react';
+import { Suspense, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
 import { Field } from '../../../components/auth/AuthFrame';
@@ -25,6 +25,7 @@ function ResetPageInner(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const submissionLock = useRef(false);
   const longEnough = pw.length >= 12;
   const matches = pw === confirm && confirm !== '';
   const ok = longEnough && matches;
@@ -44,6 +45,15 @@ function ResetPageInner(): React.ReactElement {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+    event.preventDefault();
+    if (submissionLock.current) return;
+    submissionLock.current = true;
+    void onSubmit().finally(() => {
+      submissionLock.current = false;
+    });
   }
 
   if (done) {
@@ -68,10 +78,11 @@ function ResetPageInner(): React.ReactElement {
           lead={t('reset_lead')}
           foot={<a href="/login">{t('reset_foot_link')}</a>}
         >
-          <div className={styles.stack}>
+          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
             <Field
               label={t('new_password')}
               type="password"
+              autoComplete="new-password"
               placeholder={t('password_hint')}
               value={pw}
               onChange={(e) => {
@@ -81,6 +92,7 @@ function ResetPageInner(): React.ReactElement {
             <Field
               label={t('confirm_password')}
               type="password"
+              autoComplete="new-password"
               placeholder={t('repeat_it')}
               value={confirm}
               onChange={(e) => {
@@ -107,10 +119,10 @@ function ResetPageInner(): React.ReactElement {
               <div className={styles.error}>{t('error_passwords_match')}</div>
             )}
             {error !== null && <div className={styles.error}>{error}</div>}
-            <Button fullWidth disabled={!ok || submitting} onClick={() => void onSubmit()}>
+            <Button type="submit" fullWidth disabled={!ok || submitting}>
               {t('reset_submit')}
             </Button>
-          </div>
+          </form>
         </AuthFormPanel>
       }
     />
