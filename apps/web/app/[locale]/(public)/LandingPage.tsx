@@ -1,166 +1,27 @@
 'use client';
 
-/**
- * Ported from design-system/ui_kits/marketing/Landing.jsx (T240).
- *
- * One file, same as the source: `Wrap`, `Hero`, `Difference`, `Areas`,
- * `Proof`, `Loop`, `FinalCta`, composed by the default export. `Proof`
- * renders `<ScoreArc>`/`<ModuleStatus>` directly — this folds in T131/T132
- * ahead of Phase 3, by explicit user decision (see tasks.md).
- *
- * `Wrap`'s source signature is `({tint, children, pad='88px 24px'})`; `pad`
- * is dropped here. No call site in this file (or anywhere else yet) passes
- * a non-default value, and the default itself is a raw px string this
- * repo's adherence lint forbids in a .tsx file (T245) — the default lives
- * in page.module.css's `.wrap` instead. Re-add the prop if a future page
- * genuinely needs a different padding.
- *
- * Every hook here (`useTranslations`, `useState`) requires this to be a Client
- * Component — same reason as `Public.tsx`.
- */
-import { useState } from 'react';
-import { AREA_COST } from '@webaudit/config';
-import {
-  Button,
-  Card,
-  Eyebrow,
-  Input,
-  PromoBar,
-  StatRow,
-  TwoToneHeading,
-} from '../../../components/ui';
-import { ModuleStatus, ScoreArc } from '../../../components/report';
-import { PublicPage } from '../../../components/public';
 import { useTranslations } from 'next-intl';
+import type { ReactNode } from 'react';
+import { Button, Eyebrow, PromoBar } from '../../../components/ui';
+import { PublicPage } from '../../../components/public';
 import type publicMessages from '../../../messages/en/public.json';
-type PublicKey = keyof typeof publicMessages;
 import styles from './page.module.css';
 
+type PublicKey = keyof typeof publicMessages;
+
+interface LandingPageProps {
+  children: ReactNode;
+}
+
 interface WrapProps {
-  tint?: string;
   children?: React.ReactNode;
 }
 
-function Wrap({ tint, children }: WrapProps): React.ReactElement {
+function Wrap({ children }: WrapProps): React.ReactElement {
   return (
-    <section className={styles.wrap} style={tint !== undefined ? { background: tint } : undefined}>
+    <section className={styles.wrap}>
       <div className={styles.wrapInner}>{children}</div>
     </section>
-  );
-}
-
-function Hero(): React.ReactElement {
-  const t = useTranslations('public');
-  const [url, setUrl] = useState('');
-
-  return (
-    <section className={styles.hero}>
-      <div className={styles.heroWash} />
-      <div className={styles.heroInner}>
-        <TwoToneHeading lead={t('hero_lead')} accent={t('hero_accent')} />
-        <p className={styles.heroSub}>{t('hero_sub')}</p>
-        <div className={styles.heroForm}>
-          <div className={styles.heroInputWrap}>
-            <Input
-              prefix="https://"
-              placeholder={t('url_ph')}
-              value={url}
-              onChange={(e) => {
-                setUrl(e.target.value);
-              }}
-            />
-          </div>
-          <Button href="/signup">{t('hero_cta')}</Button>
-        </div>
-        <div className={styles.heroStats}>
-          <StatRow
-            align="center"
-            items={[
-              { value: '50', label: t('stat_credits') },
-              { value: '5', label: t('stat_areas') },
-              { value: '3', label: t('stat_recheck') },
-            ]}
-          />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const DIFFERENCE_CARDS: readonly (readonly [PublicKey, PublicKey])[] = [
-  ['diff_1t', 'diff_1d'],
-  ['diff_2t', 'diff_2d'],
-  ['diff_3t', 'diff_3d'],
-];
-
-function Difference(): React.ReactElement {
-  const t = useTranslations('public');
-
-  return (
-    <Wrap tint="var(--surface-raised)">
-      <Eyebrow tone="accent">{t('diff_eyebrow')}</Eyebrow>
-      <h2 className={styles.diffH2}>{t('diff_h2')}</h2>
-      <p className={styles.diffLead}>{t('diff_lead')}</p>
-      <div className={styles.diffGrid}>
-        {DIFFERENCE_CARDS.map(([title, body]) => (
-          <Card key={title} title={t(title)} padding={20}>
-            <p className={styles.diffCardText}>{t(body)}</p>
-          </Card>
-        ))}
-      </div>
-    </Wrap>
-  );
-}
-
-const AREA_ROWS: readonly (readonly [PublicKey, PublicKey, number])[] = [
-  ['a_perf', 'a_perf_d', AREA_COST.PERFORMANCE],
-  ['a_sec', 'a_sec_d', AREA_COST.SECURITY],
-  ['a_des', 'a_des_d', AREA_COST.UI],
-  ['a_test', 'a_test_d', AREA_COST.TESTING],
-  ['a_seo', 'a_seo_d', AREA_COST.SEO],
-];
-
-function Areas(): React.ReactElement {
-  const t = useTranslations('public');
-
-  return (
-    <Wrap>
-      <Eyebrow tone="accent">{t('areas_eyebrow')}</Eyebrow>
-      <h2 className={styles.areasH2}>{t('areas_h2')}</h2>
-      <div className={styles.areasList}>
-        {AREA_ROWS.map(([name, desc, credits], i) => (
-          <div
-            key={name}
-            className={i > 0 ? `${styles.areaRow} ${styles.areaRowBordered}` : styles.areaRow}
-          >
-            <div className={styles.areaName}>{t(name)}</div>
-            <div className={styles.areaDesc}>{t(desc)}</div>
-            <div dir="ltr" className={styles.areaCredits}>
-              {credits} cr
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className={styles.areasNote}>{t('areas_note')}</p>
-    </Wrap>
-  );
-}
-
-function Proof(): React.ReactElement {
-  const t = useTranslations('public');
-
-  return (
-    <Wrap tint="var(--surface-sunken)">
-      <div className={styles.proofRow}>
-        <ScoreArc score={84} delta={23} />
-        <div className={styles.proofModules}>
-          <ModuleStatus area={t('a_sec')} state="complete" issues={7} />
-          <ModuleStatus area={t('a_perf')} state="complete" issues={4} />
-          <ModuleStatus area={t('a_test')} state="degraded" detail="2 / 5" />
-        </div>
-      </div>
-      <p className={styles.proofNote}>{t('proof_note')}</p>
-    </Wrap>
   );
 }
 
@@ -208,17 +69,14 @@ function FinalCta(): React.ReactElement {
   );
 }
 
-export default function LandingPage(): React.ReactElement {
+export default function LandingPage({ children }: LandingPageProps): React.ReactElement {
   const t = useTranslations('public');
 
   return (
     <div>
       <PromoBar message={t('promo')} />
       <PublicPage active="nav_product">
-        <Hero />
-        <Difference />
-        <Proof />
-        <Areas />
+        {children}
         <Loop />
         <FinalCta />
       </PublicPage>

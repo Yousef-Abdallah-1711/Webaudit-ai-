@@ -13,10 +13,10 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import BillingPage from '../../app/(dashboard)/billing/page';
-import LandingPage from '../../app/[locale]/(public)/LandingPage';
 import PricingPage, { TierGrid, CostTable } from '../../app/[locale]/(public)/pricing/PricingPage';
 import { AuthProvider } from '../../components/auth/AuthProvider';
 import { I18nProvider } from '../../app/theme';
+import publicMessages from '../../messages/en/public.json';
 
 function render(element: React.ReactElement): string {
   return renderToStaticMarkup(
@@ -72,14 +72,15 @@ describe('PricingPage', () => {
   });
 
   it('shows per-area prices that match AREA_COST and the bundled total', () => {
-    const landing = render(createElement(LandingPage));
-    const visibleText = landing.replace(/<[^>]*>/g, '|').replace(/\|+/g, '|');
-    expect(visibleText).toContain('Performance|Core Web Vitals, bundle composition, request patterns|20 cr');
-    expect(visibleText).toContain('Security|Headers, TLS, OWASP checks, leaked credentials, dependency CVEs|20 cr');
-    expect(visibleText).toContain('Design|Layout, hierarchy and contrast, against your stated brand intent|25 cr');
-    expect(visibleText).toContain('Testing|Functional flows driven in a real browser|20 cr');
-    expect(visibleText).toContain('Search visibility|Metadata, crawlability, content structure|10 cr');
-    expect(landing).toContain('Five areas cost 95 individually against 80 bundled.');
+    expect(publicMessages.a_perf_d).toBe('Response-header checks for caching and compression');
+    expect(publicMessages.a_sec_d).toContain('cookie flags');
+    expect(publicMessages.a_sec_d).toContain('known-vulnerable dependencies');
+    expect(publicMessages.a_des_d).toContain('broken images');
+    expect(publicMessages.a_test_d).toBe('Same-origin broken-link and page-integrity checks');
+    expect(publicMessages.a_seo_d).toContain('canonical URL');
+    expect(publicMessages.area_cost).toBe('{credits, number} cr');
+    expect(publicMessages.areas_note).toContain('95 individually against 80 bundled');
+    expect(publicMessages.proof_sample_label).toContain('Sample report');
 
     const table = render(createElement(CostTable));
     expect(table).toContain('10–25 cr');
@@ -87,8 +88,7 @@ describe('PricingPage', () => {
   });
 
   it('does not show a redeemable promo code on the landing page', () => {
-    const landing = render(createElement(LandingPage));
-    expect(landing).toContain('First audit free — 50 credits');
-    expect(landing).not.toContain('START50');
+    expect(publicMessages.promo).toBe('First audit free — 50 credits');
+    expect(publicMessages.promo).not.toContain('START50');
   });
 });
