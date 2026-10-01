@@ -76,7 +76,13 @@ export function ScoreArc({
 
   return (
     <div className={styles.wrap} style={{ width: size }}>
-      <svg width={size} height={height} viewBox={`0 0 ${size} ${height}`}>
+      <svg
+        width={size}
+        height={height}
+        viewBox={`0 0 ${size} ${height}`}
+        role="img"
+        aria-label={`${label ?? t('report_health_score')}: ${score}${delta !== null ? `, ${t('report_score_delta', { sign: delta >= 0 ? '+' : '', delta })}` : ''}`}
+      >
         <g transform={`rotate(135 ${size / 2} ${size / 2})`}>
           <circle
             cx={size / 2}

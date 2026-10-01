@@ -39,7 +39,7 @@ function Loop(): React.ReactElement {
 
   return (
     <Wrap>
-      <Eyebrow tone="accent">{t('loop_eyebrow')}</Eyebrow>
+      <Eyebrow tone="muted">{t('loop_eyebrow')}</Eyebrow>
       <h2 className={styles.loopH2}>{t('loop_h2')}</h2>
       <div className={styles.loopGrid}>
         {LOOP_STEPS.map(([n, title, body]) => (

@@ -140,7 +140,7 @@
   padding-block: var(--space-3);
   padding-inline: var(--space-4);
   background: var(--surface-inverse);
-  color: var(--text-on-accent);
+  color: var(--text-on-surface-inverse);
 }
 
 .promptHeading h4 {
@@ -154,10 +154,10 @@
   min-height: var(--control-height);
   padding-block: var(--space-2);
   padding-inline: var(--space-3);
-  border: var(--border-width) solid var(--text-on-accent);
+  border: var(--border-width) solid var(--text-on-surface-inverse);
   border-radius: var(--radius-control);
   background: transparent;
-  color: var(--text-on-accent);
+  color: var(--text-on-surface-inverse);
   font: var(--type-small);
   font-weight: 600;
   cursor: pointer;

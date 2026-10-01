@@ -21,7 +21,7 @@ export async function Checks(): Promise<React.ReactElement> {
     <section id="areas" data-landing-section="areas" className={styles.section}>
       <div className={styles.inner}>
         <header className={styles.header}>
-          <Eyebrow tone="accent">{t('areas_eyebrow')}</Eyebrow>
+          <Eyebrow tone="muted">{t('areas_eyebrow')}</Eyebrow>
           <h2 className={styles.heading}>{t('areas_h2')}</h2>
           <p className={styles.intro}>{t('areas_intro')}</p>
         </header>

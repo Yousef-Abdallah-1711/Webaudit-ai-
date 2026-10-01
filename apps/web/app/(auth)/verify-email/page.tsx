@@ -128,16 +128,16 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
       form={
         <AuthFormPanel
           title={t('verify_title')}
-          lead={t('verify_lead', { email: email || 'the email you registered with' })}
+          lead={t('verify_lead', { email: email || t('verify_email_fallback') })}
           foot={
             <span>
               {t('verify_foot_lead')} <a href="/signup">{t('verify_foot_link')}</a>
             </span>
           }
         >
-          <div className={styles.emailBox}>{email || 'the email you registered with'}</div>
+          <div className={styles.emailBox}>{email || t('verify_email_fallback')}</div>
           <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
-            {sent ? t('verify_confirmed_lead') : t('verify_resend')}
+            {sent ? t('verify_resent') : t('verify_resend')}
           </Button>
         </AuthFormPanel>
       }

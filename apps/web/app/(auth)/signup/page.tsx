@@ -99,9 +99,25 @@ export default function RegisterPage(): React.ReactElement | null {
                 setPassword(e.target.value);
               }}
             />
+            <div className={password.length >= 12 ? styles.checkOk : styles.checkPending}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d={password.length >= 12 ? 'm4 12 5 5L20 6' : 'M5 12h14'} />
+              </svg>
+              {t('min_chars')}
+            </div>
             <div className={styles.note}>{t('register_note')}</div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+            <Button fullWidth disabled={password.length < 12 || submitting} onClick={() => void onSubmit()}>
               {t('register_submit')}
             </Button>
           </div>

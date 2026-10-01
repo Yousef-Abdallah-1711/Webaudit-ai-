@@ -81,6 +81,7 @@ export function ModuleStatus({
         strokeWidth="2.2"
         strokeLinecap="round"
         strokeLinejoin="round"
+        aria-hidden="true"
       >
         <path d={STATE_ICON_PATH[state]} />
       </svg>

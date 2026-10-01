@@ -17,7 +17,7 @@
 .forgotLink {
   margin-inline-start: auto;
   font: var(--type-small);
-  color: var(--accent);
+  color: var(--text-strong);
 }
 
 .error {

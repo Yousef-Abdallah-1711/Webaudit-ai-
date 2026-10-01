@@ -90,7 +90,7 @@
   "report_copied": "Copied",
   "report_prompt_text": "Fix the following performance issue.\n\nProblem: Cache policy is missing\nWhat was measured: The response did not include a Cache-Control header.\nWhere: GET https://shop.example/\nWhy it matters: Repeat visits may download the same page again instead of using a safe cached response.\nEvidence: {\"cache-control\":null}\n\nMake the smallest change that resolves this, and do not alter unrelated behaviour.\nWhen you are done, state what you changed so the fix can be re-checked.",
   "report_prompt_note": "The prompt is assembled from the finding by a deterministic rule. It remains available when AI interpretation is unavailable.",
-  "readiness_sample_label": "Illustrative readiness pass",
+  "readiness_sample_label": "Illustrative readiness decision",
   "readiness_h2": "A gate with named blockers.",
   "readiness_intro": "Every area must meet its published threshold, and the fresh audit must show no regressions against its baseline.",
   "readiness_status_pass": "Pass",

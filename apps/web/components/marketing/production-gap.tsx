@@ -18,7 +18,7 @@ export async function ProductionGap(): Promise<React.ReactElement> {
     <section id="difference" data-landing-section="difference" className={styles.section}>
       <div className={styles.inner}>
         <div className={styles.intro}>
-          <Eyebrow tone="accent">{t('gap_eyebrow')}</Eyebrow>
+          <Eyebrow tone="muted">{t('gap_eyebrow')}</Eyebrow>
           <h2 className={styles.heading}>{t('gap_h2')}</h2>
           <p className={styles.lead}>{t('gap_lead')}</p>
         </div>

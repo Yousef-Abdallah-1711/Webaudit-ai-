@@ -2,7 +2,7 @@
   padding-block: var(--space-20);
   padding-inline: var(--space-6);
   background: var(--surface-inverse);
-  color: var(--text-on-accent);
+  color: var(--text-on-surface-inverse);
 }
 
 .inner {
@@ -21,7 +21,7 @@
 
 .sampleLabel {
   margin: 0;
-  color: var(--text-on-accent);
+  color: var(--text-on-surface-inverse);
   font: var(--type-small);
   font-weight: 600;
 }
@@ -35,7 +35,7 @@
 
 .intro {
   margin-block: var(--space-4) 0;
-  color: var(--text-on-accent);
+  color: var(--text-on-surface-inverse);
   font: var(--type-body-lg);
   text-wrap: pretty;
 }

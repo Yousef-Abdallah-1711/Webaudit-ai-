@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 
 function hexToRgb(hex: string): readonly [number, number, number] {
   const n = Number.parseInt(hex.slice(1), 16);
@@ -27,6 +28,14 @@ function contrastRatio(hexA: string, hexB: string): number {
 const WCAG_AA_NORMAL_TEXT = 4.5;
 
 describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
+  it('light theme muted eyebrow text (#737373) on the white page meets AA', () => {
+    expect(contrastRatio('#737373', '#ffffff')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
+  it('dark theme muted eyebrow text (#a1a1aa) on the dark page meets AA', () => {
+    expect(contrastRatio('#a1a1aa', '#1f2937')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
   it('light theme --text-on-surface-inverse (#fafafa) on --surface-inverse (#1f2937) meets AA', () => {
     expect(contrastRatio('#fafafa', '#1f2937')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
   });
@@ -41,5 +50,24 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
 
   it('dark theme --text-on-surface-inverse-muted (#6b7280) on --surface-inverse (#fafafa) meets AA', () => {
     expect(contrastRatio('#6b7280', '#fafafa')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
+  it('inverse-surface marketing and auth text use the contrasting inverse token', () => {
+    const surfaces: readonly [URL, readonly string[]][] = [
+      [new URL('../../components/marketing/readiness.module.css', import.meta.url), ['.section', '.sampleLabel', '.intro']],
+      [new URL('../../components/auth/AuthShell.module.css', import.meta.url), ['.contextPanel', '.sampleLabel', '.contextIntro']],
+      [new URL('../../components/marketing/report-showcase.module.css', import.meta.url), ['.promptHeading', '.copyButton']],
+    ];
+
+    for (const [url, selectors] of surfaces) {
+      const stylesheet = readFileSync(url, 'utf8');
+      for (const selector of selectors) {
+        const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const rule = stylesheet.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1];
+        expect(rule, `${selector} rule exists in ${url.pathname}`).toBeDefined();
+        expect(rule).toContain('color: var(--text-on-surface-inverse)');
+        expect(rule).not.toContain('color: var(--text-on-accent)');
+      }
+    }
   });
 });
