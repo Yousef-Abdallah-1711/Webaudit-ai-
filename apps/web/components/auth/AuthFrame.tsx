@@ -1,13 +1,12 @@
 'use client';
 
 /**
- * T128 — the shared frame the 5 auth pages sit inside.
+ * T128 — shared auth form primitives (`Field` and `Divider`).
  *
  * Ported from `AuthFrame`/`Field`/`Divider` in `design-system/ui_kits/
- * marketing/AuthPages.jsx` — internal helpers in the source file rather than
- * separately documented components, but real ports rather than authored
- * fresh: same 420px card centered in a tinted `PublicPage`, same label-above-
- * input field wrapper, same "or" divider.
+ * marketing/AuthPages.jsx`. The page frame moved into `AuthShell`; these
+ * helpers remain together because they are small shared form primitives
+ * used across the auth routes.
  */
 import { useTranslations } from 'next-intl';
 import { Input, type InputProps } from '../ui';

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { PublicPage } from '../public';
 import styles from './AuthShell.module.css';
 
 export interface AuthShellProps {
@@ -11,16 +10,12 @@ export interface AuthShellProps {
 /** Shared split layout for the pre-authentication entry pages. */
 export function AuthShell({ form, context }: AuthShellProps): React.ReactElement {
   return (
-    <PublicPage tint="var(--surface-raised)">
-      <div
-        className={
-          context === undefined ? `${styles.layout} ${styles.singleColumn}` : styles.layout
-        }
-      >
-        <div className={styles.formSlot}>{form}</div>
-        {context !== undefined && <div className={styles.contextSlot}>{context}</div>}
-      </div>
-    </PublicPage>
+    <div
+      className={context === undefined ? `${styles.layout} ${styles.singleColumn}` : styles.layout}
+    >
+      <div className={styles.formSlot}>{form}</div>
+      {context !== undefined && <div className={styles.contextSlot}>{context}</div>}
+    </div>
   );
 }
 
@@ -58,14 +53,18 @@ export function AuthFormPanel({
   );
 }
 
-export interface AuthHeaderProps {
+export interface AuthContextHeaderProps {
   label: string;
   title: string;
   description: string;
 }
 
-/** Header for the illustrative product context, beneath the full public header. */
-export function AuthHeader({ label, title, description }: AuthHeaderProps): React.ReactElement {
+/** Heading for the illustrative product context panel. */
+export function AuthContextHeader({
+  label,
+  title,
+  description,
+}: AuthContextHeaderProps): React.ReactElement {
   return (
     <header className={styles.contextHeader}>
       <p className={styles.sampleLabel}>{label}</p>
@@ -102,7 +101,7 @@ export function AuthContextPanel(): React.ReactElement {
   const t = useTranslations('auth');
   return (
     <aside className={styles.contextPanel} aria-label={t('context_title')}>
-      <AuthHeader
+      <AuthContextHeader
         label={t('context_sample_label')}
         title={t('context_title')}
         description={t('context_intro')}

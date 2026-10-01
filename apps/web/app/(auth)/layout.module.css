@@ -1,0 +1,10 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background: var(--surface-raised);
+}
+
+.main {
+  flex: 1;
+}
