@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { Button, StatRow, TwoToneHeading } from '../ui';
+import containerStyles from './section-container.module.css';
 import styles from './hero.module.css';
 
 export async function Hero(): Promise<React.ReactElement> {
@@ -7,7 +8,7 @@ export async function Hero(): Promise<React.ReactElement> {
 
   return (
     <section id="hero" data-landing-section="hero" className={styles.hero}>
-      <div className={styles.heroInner}>
+      <div className={containerStyles.container}>
         <TwoToneHeading lead={t('hero_lead')} accent={t('hero_accent')} />
         <p className={styles.heroSub}>{t('hero_sub')}</p>
         <div className={styles.heroAction}>

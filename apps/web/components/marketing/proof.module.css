@@ -4,11 +4,6 @@
   background: var(--surface-sunken);
 }
 
-.proofInner {
-  max-width: var(--container-marketing);
-  margin-inline: auto;
-}
-
 .sampleLabel {
   display: table;
   margin: 0 0 var(--space-3);

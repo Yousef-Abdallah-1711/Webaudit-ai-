@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { AREA_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { Eyebrow } from '../ui';
+import containerStyles from './section-container.module.css';
 import styles from './checks.module.css';
 
 type PublicKey = keyof typeof enPublic;
@@ -19,7 +20,7 @@ export async function Checks(): Promise<React.ReactElement> {
 
   return (
     <section id="areas" data-landing-section="areas" className={styles.section}>
-      <div className={styles.inner}>
+      <div className={containerStyles.container}>
         <header className={styles.header}>
           <Eyebrow tone="muted">{t('areas_eyebrow')}</Eyebrow>
           <h2 className={styles.heading}>{t('areas_h2')}</h2>

@@ -4,11 +4,6 @@
   text-align: center;
 }
 
-.heroInner {
-  max-width: var(--container-marketing);
-  margin-inline: auto;
-}
-
 .heroSub {
   max-width: 62ch;
   margin: var(--space-5) auto 0;

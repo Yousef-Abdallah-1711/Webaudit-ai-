@@ -8,8 +8,10 @@ import { ReportShowcase } from '../../../components/marketing/report-showcase';
 import { Readiness } from '../../../components/marketing/readiness';
 import { AiDevelopment } from '../../../components/marketing/ai-development';
 import { Trust } from '../../../components/marketing/trust';
+import { Loop } from '../../../components/marketing/loop';
 import { PricingPreview } from '../../../components/marketing/pricing-preview';
 import { Faq } from '../../../components/marketing/faq';
+import { FinalCta } from '../../../components/marketing/final-cta';
 import LandingPage from './LandingPage';
 
 export async function generateMetadata({
@@ -23,7 +25,7 @@ export async function generateMetadata({
 
 export default function Page(): React.ReactElement {
   return (
-    <LandingPage pricingPreview={<PricingPreview />} faq={<Faq />}>
+    <LandingPage>
       <Hero />
       <Proof />
       <ProductionGap />
@@ -32,6 +34,10 @@ export default function Page(): React.ReactElement {
       <Readiness />
       <AiDevelopment />
       <Trust />
+      <Loop />
+      <PricingPreview />
+      <Faq />
+      <FinalCta />
     </LandingPage>
   );
 }

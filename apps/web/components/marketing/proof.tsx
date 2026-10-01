@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { ModuleStatus, ScoreArc } from '../report';
+import containerStyles from './section-container.module.css';
 import styles from './proof.module.css';
 
 export async function Proof(): Promise<React.ReactElement> {
@@ -12,7 +13,7 @@ export async function Proof(): Promise<React.ReactElement> {
       className={styles.proofSection}
       aria-label={t('proof_sample_label')}
     >
-      <div className={styles.proofInner}>
+      <div className={containerStyles.container}>
         <p className={styles.sampleLabel}>{t('proof_sample_label')}</p>
         <div className={styles.proofArtifact}>
           <div className={styles.proofRow}>

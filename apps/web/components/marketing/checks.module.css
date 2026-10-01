@@ -4,11 +4,6 @@
   background: var(--surface-page);
 }
 
-.inner {
-  max-width: var(--container-marketing);
-  margin-inline: auto;
-}
-
 .header {
   max-width: 58ch;
   margin-block-end: var(--space-8);
