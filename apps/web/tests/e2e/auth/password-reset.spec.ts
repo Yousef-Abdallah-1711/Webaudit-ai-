@@ -45,6 +45,15 @@ test('requesting, following, and completing a real reset link lets the account s
   await page.waitForURL(/\/scan$/);
 });
 
+test('pressing Enter in the email field submits the forgot-password form', async ({ page }) => {
+  await page.goto(`${stack.webBaseUrl}/forgot-password`);
+  await page.getByLabel('Email').fill(creds.email);
+  await page.getByLabel('Email').press('Enter');
+  await expect(
+    page.getByText('If that address has an account, a reset link is on its way.'),
+  ).toBeVisible({ timeout: 5_000 });
+});
+
 test('an already-used reset link is refused, not silently accepted twice', async ({ page }) => {
   await page.goto(`${stack.webBaseUrl}/forgot-password`);
   await page.getByLabel('Email').fill(creds.email);

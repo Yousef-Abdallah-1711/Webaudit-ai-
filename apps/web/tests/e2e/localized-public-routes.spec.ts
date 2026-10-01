@@ -13,7 +13,8 @@ const WEB_DIR = `${REPO_ROOT}apps/web`;
 const PORT = 4182;
 
 const ENGLISH_HERO_LEAD = 'Think your site is ready?';
-const ARABIC_HERO_LEAD = '\u062a\u0638\u0646 \u0623\u0646 \u0645\u0648\u0642\u0639\u0643 \u062c\u0627\u0647\u0632\u061f';
+const ARABIC_HERO_LEAD =
+  '\u062a\u0638\u0646 \u0623\u0646 \u0645\u0648\u0642\u0639\u0643 \u062c\u0627\u0647\u0632\u061f';
 const ENGLISH_PRICING_HEADING = 'Credits, not seats.';
 
 test.use({ locale: 'en-US' });
@@ -58,7 +59,9 @@ async function expectCanonical(page: import('@playwright/test').Page, path: stri
   expect(new URL(href!, page.url()).pathname).toBe(path);
 }
 
-test('GET / renders English home copy and public metadata without redirecting', async ({ page }) => {
+test('GET / renders English home copy and public metadata without redirecting', async ({
+  page,
+}) => {
   await expectRoute(page, '/');
   await expectLocale(page, 'en');
   await expect(page.getByText(ENGLISH_HERO_LEAD)).toBeVisible();
@@ -69,6 +72,80 @@ test('GET / renders English home copy and public metadata without redirecting', 
   for (const value of ['50', '5', '3']) await expect(hero).toContainText(value);
   await expectCanonical(page, '/');
   await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
+});
+
+test('home and pricing render the complete public marketing shell', async ({ page }) => {
+  for (const route of ['/', '/pricing']) {
+    await page.goto(`${server!.url}${route}`, { waitUntil: 'networkidle' });
+
+    const header = page.getByRole('banner');
+    await expect(
+      header.getByRole('link', { name: 'Product', exact: true }).first(),
+    ).toHaveAttribute('href', '/');
+    await expect(
+      header.getByRole('link', { name: 'Pricing', exact: true }).first(),
+    ).toHaveAttribute('href', '/pricing');
+
+    const footer = page.getByRole('contentinfo');
+    await expect(footer).toContainText('Measured before inferred. Green means verified.');
+    await expect(footer.getByRole('link', { name: 'Product', exact: true })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toHaveAttribute(
+      'href',
+      '/pricing',
+    );
+  }
+});
+
+test('every auth route renders only the minimal auth header and no public shell', async ({
+  page,
+}) => {
+  for (const route of [
+    '/login',
+    '/signup',
+    '/forgot-password',
+    '/reset-password',
+    '/verify-email',
+  ]) {
+    await page.goto(`${server!.url}${route}`, { waitUntil: 'networkidle' });
+
+    const header = page.getByRole('banner');
+    await expect(header.getByRole('link').first()).toHaveAttribute('href', '/');
+    await expect(header.getByRole('button')).toHaveCount(2);
+    await expect(header.getByRole('button').nth(0)).toHaveAttribute('aria-label', /^Switch to /);
+    await expect(header.getByRole('button').nth(1)).toHaveAttribute(
+      'aria-label',
+      'Switch to dark mode',
+    );
+    await expect(page.getByRole('link', { name: 'Product', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Pricing', exact: true })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Sign in', exact: true })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Start free', exact: true })).toHaveCount(0);
+    await expect(page.locator('[aria-controls="public-mobile-drawer"]')).toHaveCount(0);
+    await expect(page.locator('#public-mobile-drawer')).toHaveCount(0);
+    await expect(page.getByRole('contentinfo')).toHaveCount(0);
+  }
+});
+
+test('Arabic login keeps the context panel on the right and the form on the left', async ({
+  page,
+}) => {
+  const runningServer = server;
+  if (!runningServer) throw new Error('The public routes server did not start');
+  await page.context().addCookies([{ name: 'wa-lang', value: 'ar', url: runningServer.url }]);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${runningServer.url}/login`, { waitUntil: 'networkidle' });
+
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+  const contextPanel = page.getByRole('complementary');
+  const formPanel = page.getByRole('heading', { name: /sign in|تسجيل الدخول/i }).locator('..');
+  const contextBox = await contextPanel.boundingBox();
+  const formBox = await formPanel.boundingBox();
+  expect(contextBox).not.toBeNull();
+  expect(formBox).not.toBeNull();
+  expect(contextBox!.x).toBeGreaterThan(formBox!.x);
 });
 
 test('Arabic accessible labels follow wa-lang on public and auth routes', async ({ page }) => {
@@ -86,7 +163,9 @@ test('Arabic accessible labels follow wa-lang on public and auth routes', async 
   await expect(page.getByRole('button', { name: 'التبديل إلى English' })).toBeVisible();
 });
 
-test('GET /ar renders Arabic home copy and public metadata without redirecting', async ({ page }) => {
+test('GET /ar renders Arabic home copy and public metadata without redirecting', async ({
+  page,
+}) => {
   await expectRoute(page, '/ar');
   await expectLocale(page, 'ar');
   await expect(page.getByText(ARABIC_HERO_LEAD)).toBeVisible();

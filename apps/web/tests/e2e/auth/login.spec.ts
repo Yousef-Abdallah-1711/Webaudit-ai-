@@ -20,6 +20,14 @@ test('correct credentials reach the dashboard', async ({ page }) => {
   await page.waitForURL(/\/scan$/);
 });
 
+test('pressing Enter in the password field submits the login form', async ({ page }) => {
+  await page.goto(`${stack.webBaseUrl}/login`);
+  await page.getByLabel('Email').fill(creds.email);
+  await page.getByLabel('Password').fill(creds.password);
+  await page.getByLabel('Password').press('Enter');
+  await page.waitForURL(/\/scan$/);
+});
+
 test('wrong password shows the real, specific error — not a generic network failure', async ({
   page,
 }) => {

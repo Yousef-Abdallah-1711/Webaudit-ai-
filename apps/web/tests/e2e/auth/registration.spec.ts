@@ -25,7 +25,22 @@ test('a new account registers through the real form and lands on the verify-emai
   expect(user?.emailVerifiedAt).toBeNull();
 });
 
-test('registering the same address twice shows the uniform verification response', async ({ page }) => {
+test('pressing Enter in the password field submits a valid signup form', async ({ page }) => {
+  const email = 'enter-signup@example.com';
+  await page.goto(`${stack.webBaseUrl}/signup`);
+  await page.getByLabel('Work email').fill(email);
+  await page.getByLabel('Password').fill('valid-password-1234');
+  await page.getByLabel('Password').press('Enter');
+  await page.waitForURL(`${stack.webBaseUrl}/verify-email`);
+
+  const user = await stack.db.user.findUnique({ where: { email } });
+  expect(user).not.toBeNull();
+  expect(user?.emailVerifiedAt).toBeNull();
+});
+
+test('registering the same address twice shows the uniform verification response', async ({
+  page,
+}) => {
   const email = 'duplicate-signup@example.com';
   await page.goto(`${stack.webBaseUrl}/signup`);
   await page.getByLabel('Work email').fill(email);
