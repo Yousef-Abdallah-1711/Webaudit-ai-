@@ -24,60 +24,167 @@
 .headerInner {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: var(--space-6);
   max-width: 1120px;
-  height: 64px;
+  height: var(--control-height);
   margin: 0 auto;
-  padding: 0 24px;
+  padding-inline: var(--space-6);
 }
 .nav {
   display: flex;
-  gap: 22px;
+  gap: var(--space-4);
 }
 .navLink {
+  padding-block: var(--space-2);
+  color: var(--text-secondary);
   font-size: 14px;
   font-weight: 400;
-  color: var(--text-secondary);
   text-decoration: none;
   transition: var(--transition-color);
 }
-.navLinkActive {
-  font-weight: 600;
+.navLink:hover,
+.mobileNavLink:hover {
   color: var(--text-strong);
+}
+.navLink:focus-visible,
+.mobileNavLink:focus-visible,
+.mobileMenuTrigger:focus-visible,
+.mobileDrawerClose:focus-visible,
+.footerColLinks a:focus-visible,
+.footerLink:focus-visible {
+  outline: 1px solid var(--accent-ring);
+  outline-offset: 2px;
+}
+.navLinkActive {
+  color: var(--text-strong);
+  font-weight: 600;
 }
 .headerActions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   margin-inline-start: auto;
 }
+.mobileMenuTrigger,
+.mobileBackdrop,
+.mobileDrawer {
+  display: none;
+}
 
-/* Found via manual testing at the 390px mobile viewport: the vendored
- * source (design-system/ui_kits/marketing/Public.jsx) has no mobile
- * treatment for this header at all — the nav links pushed the sign-in/
- * start-free actions off-screen, causing horizontal overflow. 640px matches
- * the breakpoint already used elsewhere in this codebase (ScanForm.module
- * .css, reports/[id]/page.module.css) rather than inventing a new one; the
- * secondary nav links are hidden rather than collapsed into a new
- * hamburger-menu component, since no such component exists in the vendored
- * design to port ("port, never author") and the primary actions (sign in,
- * start free) are what a mobile visitor actually needs. */
 @media (max-width: 640px) {
-  .nav {
+  .nav,
+  .headerActions {
     display: none;
   }
   .headerInner {
-    gap: 12px;
-    padding: 0 16px;
+    gap: var(--space-3);
+    padding-inline: var(--space-4);
   }
-  /* Hiding .nav alone (297px of headerActions: lang toggle, theme toggle,
-   * two buttons) still didn't fit next to the wordmark at 390px — measured
-   * directly, not assumed. The lang/theme toggles are the least essential
-   * controls for a mobile visitor arriving to sign in or start a free
-   * audit; hidden here, they stay reachable from every dashboard page's
-   * own sidebar toggle once signed in. */
-  .headerActions button[aria-label^='Switch to'] {
-    display: none;
+  .mobileMenuTrigger {
+    display: grid;
+    place-items: center;
+    width: var(--control-height);
+    height: var(--control-height);
+    margin-inline-start: auto;
+    padding: 0;
+    border: 0;
+    color: var(--text-strong);
+    background: transparent;
+    cursor: pointer;
+  }
+  .menuIcon,
+  .menuIcon::before,
+  .menuIcon::after {
+    display: block;
+    width: var(--space-5);
+    height: var(--border-width);
+    background: currentColor;
+  }
+  .menuIcon {
+    position: relative;
+  }
+  .menuIcon::before,
+  .menuIcon::after {
+    position: absolute;
+    inset-inline-start: 0;
+    content: '';
+  }
+  .menuIcon::before {
+    inset-block-start: calc(-1 * var(--space-6));
+  }
+  .menuIcon::after {
+    inset-block-start: var(--space-6);
+  }
+  .mobileBackdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    padding: 0;
+    border: 0;
+    background: color-mix(in srgb, var(--text-strong) 42%, transparent);
+  }
+  .mobileDrawer {
+    display: flex;
+    position: fixed;
+    inset-inline-start: 0;
+    inset-block: 0;
+    z-index: 2;
+    width: min(20rem, 88vw);
+    flex-direction: column;
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-5);
+    overflow-y: auto;
+    visibility: hidden;
+    border-inline-end: var(--border-width) solid var(--border-default);
+    background: var(--surface-page);
+    transform: translateX(-100%);
+    transition:
+      transform var(--duration) var(--easing),
+      visibility 0s linear var(--duration);
+  }
+  :global(html[dir='rtl']) .mobileDrawer {
+    transform: translateX(100%);
+  }
+  .mobileDrawerOpen {
+    visibility: visible;
+    transform: translateX(0);
+    transition-delay: 0s, 0s;
+  }
+  :global(html[dir='rtl']) .mobileDrawer.mobileDrawerOpen {
+    transform: translateX(0);
+  }
+  .mobileDrawerClose {
+    align-self: flex-end;
+    width: var(--control-height);
+    height: var(--control-height);
+    padding: 0;
+    border: 0;
+    color: var(--text-strong);
+    background: transparent;
+    font: var(--type-h3);
+    cursor: pointer;
+  }
+  .mobileNav,
+  .mobileDrawerActions {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .mobileNavLink {
+    padding-block: var(--space-3);
+    color: var(--text-secondary);
+    font: var(--type-body);
+    text-decoration: none;
+  }
+  .mobileDrawerControls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .mobileDrawerActions {
+    margin-block-start: auto;
   }
 }
 
@@ -88,68 +195,68 @@
 .footerGrid {
   display: grid;
   grid-template-columns: 1.6fr repeat(3, 1fr);
-  gap: 32px;
+  gap: var(--space-8);
   max-width: 1120px;
   margin: 0 auto;
-  padding: 48px 24px 24px;
+  padding: var(--space-12) var(--space-6) var(--space-6);
 }
-/* Same real, measured gap as the header above: the vendored source's fixed
- * 4-column grid has no mobile treatment, so the last column overflowed the
- * viewport at 390px. A single column at the same 640px breakpoint used
- * throughout this fix keeps every link readable rather than squeezed. */
 @media (max-width: 640px) {
   .footerGrid {
     grid-template-columns: 1fr;
-    gap: 24px;
+    gap: var(--space-6);
+    padding: var(--space-8) var(--space-4) var(--space-6);
   }
 }
 .footerTag {
   max-width: 34ch;
-  margin: 12px 0 0;
+  margin: var(--space-3) 0 0;
   font: var(--type-small);
   color: var(--text-secondary);
   text-wrap: pretty;
 }
 .footerColTitle {
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
+  color: var(--text-muted);
   font: var(--type-eyebrow);
   font-size: 11px;
   letter-spacing: var(--track-eyebrow);
   text-transform: uppercase;
-  color: var(--text-muted);
 }
 .footerColLinks {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .footerColLinks a {
-  font: var(--type-small);
   color: var(--text-secondary);
+  font: var(--type-small);
   text-decoration: none;
+}
+.footerColLinks a:hover {
+  color: var(--text-strong);
 }
 .footerBottom {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 18px;
+  gap: var(--space-4);
   max-width: 1120px;
   margin: 0 auto;
-  padding: 20px 24px 32px;
+  padding: var(--space-5) var(--space-6) var(--space-8);
   border-top: var(--border-width) solid var(--border-default);
 }
 .footerCopy {
-  font: var(--type-small);
   color: var(--text-muted);
+  font: var(--type-small);
 }
 .footerLink {
   font: var(--type-small);
 }
 .footerZero {
   margin-inline-start: auto;
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--text-muted);
 }
 
 .page {

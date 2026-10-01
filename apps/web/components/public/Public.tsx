@@ -12,18 +12,17 @@
  * nav's active-vs-inactive weight/colour and the footer's per-column data
  * stay dynamic, matching the source.
  *
- * Link targets translated from the source's static-preview `.html` files to
- * real routes: `index.html` → `/`, `Pricing.html` → `/pricing` (T193, not
- * yet built — a live link to a page that 404s until then, same as the
- * source linking to a sibling static file that may not exist yet either),
- * `Login.html`/`Register.html` → `/login`/`/register` (T128, same). The
- * source's own `nav_docs`/`nav_changelog` and every footer column link were
- * already `#` placeholders — left as `#`. The dashboard/admin footer links
- * point at `../app/` and `../admin/` in the source, i.e. the other two
- * deployable units this repo hasn't decided route paths for yet (T241/T243)
- * — left as `#` rather than guessing a path those tasks might not choose.
+ * Public navigation and footer links use existing product routes only.
+ * Documentation/changelog destinations do not exist, and readiness is
+ * authenticated, so neither is exposed as an anonymous footer destination.
  */
-import type { ReactElement } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactElement,
+} from 'react';
 import { PRODUCT_NAME } from '@webaudit/config';
 import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
@@ -34,20 +33,17 @@ import styles from './Public.module.css';
 
 type PublicNavKey = keyof Pick<
   typeof messagesByLocale.en.navigation,
-  'nav_product' | 'nav_pricing' | 'nav_docs' | 'nav_changelog'
+  'nav_product' | 'nav_pricing'
 >;
 type FooterHeadingKey = keyof Pick<
   typeof messagesByLocale.en.navigation,
-  'foot_product' | 'foot_pricing' | 'foot_company'
+  'foot_product' | 'foot_pricing' | 'foot_account'
 >;
 type FooterItemKey =
-  | keyof Pick<typeof messagesByLocale.en.scan, 'a_seo' | 'credits'>
-  | keyof Pick<typeof messagesByLocale.en.public, 'loop_eyebrow'>
-  | keyof Pick<typeof messagesByLocale.en.dashboard, 'top_up'>
-  | keyof Pick<
-      typeof messagesByLocale.en.navigation,
-      'n_readiness' | 'foot_pricing' | 'nav_docs' | 'nav_changelog' | 'foot_zero'
-    >;
+  | keyof Pick<typeof messagesByLocale.en.common, 'signin' | 'start_free'>
+  | keyof Pick<typeof messagesByLocale.en.navigation, 'nav_product' | 'foot_pricing'>
+  | keyof Pick<typeof messagesByLocale.en.scan, 'credits'>
+  | keyof Pick<typeof messagesByLocale.en.dashboard, 'top_up'>;
 
 export interface WordmarkProps {
   size?: number;
@@ -64,8 +60,6 @@ export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
 const NAV: readonly (readonly [href: string, key: PublicNavKey])[] = [
   ['/', 'nav_product'],
   ['/pricing', 'nav_pricing'],
-  ['/pricing', 'nav_docs'],
-  ['/pricing', 'nav_changelog'],
 ];
 
 export interface PublicHeaderProps {
@@ -76,10 +70,74 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
   const tCommon = useTranslations('common');
   const tNavigation = useTranslations('navigation');
   const { status, isOperator } = useAuth();
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const mobileTriggerRef = useRef<HTMLButtonElement>(null);
+  const mobileDrawerRef = useRef<HTMLElement>(null);
+  const drawerWasOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
+    const desktopViewport = window.matchMedia('(min-width: 40.0625rem)');
+    const closeOnDesktop = (): void => {
+      if (desktopViewport.matches) setMobileDrawerOpen(false);
+    };
+    closeOnDesktop();
+    desktopViewport.addEventListener('change', closeOnDesktop);
+    return () => desktopViewport.removeEventListener('change', closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      drawerWasOpenRef.current = true;
+      mobileDrawerRef.current?.querySelector<HTMLElement>('[data-drawer-initial-focus]')?.focus();
+      return;
+    }
+
+    if (!drawerWasOpenRef.current) return;
+    drawerWasOpenRef.current = false;
+    mobileTriggerRef.current?.focus();
+  }, [mobileDrawerOpen]);
+
+  useEffect(() => {
+    if (!mobileDrawerOpen) return;
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMobileDrawerOpen(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [mobileDrawerOpen]);
+
+  const trapDrawerFocus = (event: ReactKeyboardEvent<HTMLElement>): void => {
+    if (event.key !== 'Tab') return;
+    const focusable = mobileDrawerRef.current?.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable?.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first?.focus();
+    }
+  };
 
   return (
     <header className={styles.header}>
-      <div className={styles.headerInner}>
+      <div className={styles.headerInner} inert={mobileDrawerOpen}>
         <a href="/" className={styles.wordmarkLink}>
           <Wordmark />
         </a>
@@ -88,6 +146,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
             <a
               key={key}
               href={href}
+              aria-current={active === key ? 'page' : undefined}
               className={
                 active === key ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink
               }
@@ -122,22 +181,116 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
             </>
           )}
         </div>
+        <button
+          ref={mobileTriggerRef}
+          type="button"
+          className={styles.mobileMenuTrigger}
+          aria-label={tNavigation(mobileDrawerOpen ? 'mobile_close_menu' : 'mobile_open_menu')}
+          aria-controls="public-mobile-drawer"
+          aria-expanded={mobileDrawerOpen}
+          onClick={() => setMobileDrawerOpen((isOpen) => !isOpen)}
+        >
+          <span aria-hidden="true" className={styles.menuIcon} />
+        </button>
       </div>
+      {mobileDrawerOpen && (
+        <button
+          type="button"
+          className={styles.mobileBackdrop}
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => setMobileDrawerOpen(false)}
+        />
+      )}
+      <section
+        ref={mobileDrawerRef}
+        id="public-mobile-drawer"
+        className={
+          mobileDrawerOpen
+            ? `${styles.mobileDrawer} ${styles.mobileDrawerOpen}`
+            : styles.mobileDrawer
+        }
+        role="dialog"
+        aria-modal={mobileDrawerOpen || undefined}
+        aria-label={tNavigation('mobile_navigation')}
+        aria-hidden={!mobileDrawerOpen}
+        inert={!mobileDrawerOpen}
+        onKeyDown={trapDrawerFocus}
+      >
+        <button
+          type="button"
+          className={styles.mobileDrawerClose}
+          aria-label={tNavigation('mobile_close_menu')}
+          data-drawer-initial-focus
+          onClick={() => setMobileDrawerOpen(false)}
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+        <nav className={styles.mobileNav} aria-label={tNavigation('mobile_navigation')}>
+          {NAV.map(([href, key]) => (
+            <a
+              key={key}
+              href={href}
+              className={
+                active === key
+                  ? `${styles.mobileNavLink} ${styles.navLinkActive}`
+                  : styles.mobileNavLink
+              }
+              aria-current={active === key ? 'page' : undefined}
+              onClick={() => setMobileDrawerOpen(false)}
+            >
+              {tNavigation(key)}
+            </a>
+          ))}
+        </nav>
+        <div className={styles.mobileDrawerControls}>
+          <LangToggle label />
+          <ThemeToggle label />
+        </div>
+        <div className={styles.mobileDrawerActions}>
+          {status === 'anonymous' && (
+            <>
+              <Button
+                variant="ghost"
+                href="/login"
+                fullWidth
+                onClick={() => setMobileDrawerOpen(false)}
+              >
+                {tCommon('signin')}
+              </Button>
+              <Button href="/signup" fullWidth onClick={() => setMobileDrawerOpen(false)}>
+                {tCommon('start_free')}
+              </Button>
+            </>
+          )}
+          {status === 'authenticated' && (
+            <>
+              <Button
+                variant="ghost"
+                href="/scan"
+                fullWidth
+                onClick={() => setMobileDrawerOpen(false)}
+              >
+                {tNavigation('foot_dashboard')}
+              </Button>
+              {isOperator && (
+                <Button href="/admin" fullWidth onClick={() => setMobileDrawerOpen(false)}>
+                  {tNavigation('foot_admin')}
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+      </section>
     </header>
   );
 }
 
-const FOOTER_COLUMNS: readonly (
-  readonly [FooterHeadingKey, readonly (readonly [FooterItemKey, string])[]]
-)[] = [
-  [
-    'foot_product',
-    [
-      ['a_seo', '/'],
-      ['loop_eyebrow', '/'],
-      ['n_readiness', '/readiness'],
-    ],
-  ],
+const FOOTER_COLUMNS: readonly (readonly [
+  FooterHeadingKey,
+  readonly (readonly [FooterItemKey, string])[],
+])[] = [
+  ['foot_product', [['nav_product', '/']]],
   [
     'foot_pricing',
     [
@@ -147,32 +300,32 @@ const FOOTER_COLUMNS: readonly (
     ],
   ],
   [
-    'foot_company',
+    'foot_account',
     [
-      ['nav_docs', '/pricing'],
-      ['nav_changelog', '/pricing'],
-      ['foot_zero', '/'],
+      ['signin', '/login'],
+      ['start_free', '/signup'],
     ],
   ],
 ];
 
 export function PublicFooter(): ReactElement {
+  const tCommon = useTranslations('common');
   const tDashboard = useTranslations('dashboard');
   const tNavigation = useTranslations('navigation');
-  const tPublic = useTranslations('public');
   const tScan = useTranslations('scan');
   const { status, isOperator } = useAuth();
   const translateFooterItem = (key: FooterItemKey): string => {
     switch (key) {
-      case 'a_seo':
+      case 'signin':
+      case 'start_free':
+        return tCommon(key);
+      case 'nav_product':
+      case 'foot_pricing':
+        return tNavigation(key);
       case 'credits':
         return tScan(key);
-      case 'loop_eyebrow':
-        return tPublic(key);
       case 'top_up':
         return tDashboard(key);
-      default:
-        return tNavigation(key);
     }
   };
 
