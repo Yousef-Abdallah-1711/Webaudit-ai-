@@ -12,7 +12,11 @@ export interface AuthShellProps {
 export function AuthShell({ form, context }: AuthShellProps): React.ReactElement {
   return (
     <PublicPage tint="var(--surface-raised)">
-      <div className={styles.layout}>
+      <div
+        className={
+          context === undefined ? `${styles.layout} ${styles.singleColumn}` : styles.layout
+        }
+      >
         <div className={styles.formSlot}>{form}</div>
         {context !== undefined && <div className={styles.contextSlot}>{context}</div>}
       </div>
@@ -21,19 +25,31 @@ export function AuthShell({ form, context }: AuthShellProps): React.ReactElement
 }
 
 export interface AuthFormPanelProps {
-  title: string;
-  lead: string;
-  children: ReactNode;
+  title?: string;
+  lead?: string;
+  children?: ReactNode;
   foot?: ReactNode;
 }
 
-export function AuthFormPanel({ title, lead, children, foot }: AuthFormPanelProps): React.ReactElement {
+export function AuthFormPanel({
+  title,
+  lead,
+  children,
+  foot,
+}: AuthFormPanelProps): React.ReactElement {
   return (
-    <section className={styles.formPanel} aria-labelledby="auth-form-title">
+    <section
+      className={styles.formPanel}
+      {...(title !== undefined ? { 'aria-labelledby': 'auth-form-title' } : {})}
+    >
       <div className={styles.formInner}>
         <div className={styles.formSurface}>
-          <h1 id="auth-form-title" className={styles.formTitle}>{title}</h1>
-          <p className={styles.formLead}>{lead}</p>
+          {title !== undefined && (
+            <h1 id="auth-form-title" className={styles.formTitle}>
+              {title}
+            </h1>
+          )}
+          {lead !== undefined && <p className={styles.formLead}>{lead}</p>}
           {children}
         </div>
         {foot !== undefined && <div className={styles.formFoot}>{foot}</div>}
@@ -66,7 +82,10 @@ type ContextAreaKey =
   | 'context_design'
   | 'context_testing'
   | 'context_search';
-const STATUS_COPY: Record<ReadinessStatus, 'context_status_pass' | 'context_status_blocked' | 'context_status_warning'> = {
+const STATUS_COPY: Record<
+  ReadinessStatus,
+  'context_status_pass' | 'context_status_blocked' | 'context_status_warning'
+> = {
   pass: 'context_status_pass',
   blocked: 'context_status_blocked',
   warning: 'context_status_warning',
@@ -118,5 +137,9 @@ export interface AuthStatusProps {
 }
 
 export function AuthStatus({ children }: AuthStatusProps): React.ReactElement {
-  return <div className={styles.statusMessage} role="alert" aria-live="assertive">{children}</div>;
+  return (
+    <div className={styles.statusMessage} role="alert" aria-live="assertive">
+      {children}
+    </div>
+  );
 }

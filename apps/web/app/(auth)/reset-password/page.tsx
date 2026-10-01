@@ -11,7 +11,8 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
-import { AuthFrame, Field } from '../../../components/auth/AuthFrame';
+import { Field } from '../../../components/auth/AuthFrame';
+import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, resetPassword } from '../../../lib/api';
 import styles from './page.module.css';
@@ -47,64 +48,72 @@ function ResetPageInner(): React.ReactElement {
 
   if (done) {
     return (
-      <AuthFrame title={t('reset_done_title')} lead={t('reset_done_lead')}>
-        <Button fullWidth href="/login">
-          {t('verify_confirmed_submit')}
-        </Button>
-      </AuthFrame>
+      <AuthShell
+        form={
+          <AuthFormPanel title={t('reset_done_title')} lead={t('reset_done_lead')}>
+            <Button fullWidth href="/login">
+              {t('verify_confirmed_submit')}
+            </Button>
+          </AuthFormPanel>
+        }
+      />
     );
   }
 
   return (
-    <AuthFrame
-      title={t('reset_title')}
-      lead={t('reset_lead')}
-      foot={<a href="/login">{t('reset_foot_link')}</a>}
-    >
-      <div className={styles.stack}>
-        <Field
-          label={t('new_password')}
-          type="password"
-          placeholder={t('password_hint')}
-          value={pw}
-          onChange={(e) => {
-            setPw(e.target.value);
-          }}
-        />
-        <Field
-          label={t('confirm_password')}
-          type="password"
-          placeholder={t('repeat_it')}
-          value={confirm}
-          onChange={(e) => {
-            setConfirm(e.target.value);
-          }}
-        />
-        <div className={longEnough ? styles.checkOk : styles.checkPending}>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d={longEnough ? 'm4 12 5 5L20 6' : 'M5 12h14'} />
-          </svg>
-          {t('min_chars')}
-        </div>
-        {confirm !== '' && !matches && (
-          <div className={styles.error}>{t('error_passwords_match')}</div>
-        )}
-        {error !== null && <div className={styles.error}>{error}</div>}
-        <Button fullWidth disabled={!ok || submitting} onClick={() => void onSubmit()}>
-          {t('reset_submit')}
-        </Button>
-      </div>
-    </AuthFrame>
+    <AuthShell
+      form={
+        <AuthFormPanel
+          title={t('reset_title')}
+          lead={t('reset_lead')}
+          foot={<a href="/login">{t('reset_foot_link')}</a>}
+        >
+          <div className={styles.stack}>
+            <Field
+              label={t('new_password')}
+              type="password"
+              placeholder={t('password_hint')}
+              value={pw}
+              onChange={(e) => {
+                setPw(e.target.value);
+              }}
+            />
+            <Field
+              label={t('confirm_password')}
+              type="password"
+              placeholder={t('repeat_it')}
+              value={confirm}
+              onChange={(e) => {
+                setConfirm(e.target.value);
+              }}
+            />
+            <div className={longEnough ? styles.checkOk : styles.checkPending}>
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d={longEnough ? 'm4 12 5 5L20 6' : 'M5 12h14'} />
+              </svg>
+              {t('min_chars')}
+            </div>
+            {confirm !== '' && !matches && (
+              <div className={styles.error}>{t('error_passwords_match')}</div>
+            )}
+            {error !== null && <div className={styles.error}>{error}</div>}
+            <Button fullWidth disabled={!ok || submitting} onClick={() => void onSubmit()}>
+              {t('reset_submit')}
+            </Button>
+          </div>
+        </AuthFormPanel>
+      }
+    />
   );
 }
 

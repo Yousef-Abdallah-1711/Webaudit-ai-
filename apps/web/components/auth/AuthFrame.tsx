@@ -9,35 +9,9 @@
  * fresh: same 420px card centered in a tinted `PublicPage`, same label-above-
  * input field wrapper, same "or" divider.
  */
-import type { ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { Card, Input, type InputProps } from '../ui';
-import { PublicPage } from '../public';
+import { Input, type InputProps } from '../ui';
 import styles from './AuthFrame.module.css';
-
-export interface AuthFrameProps {
-  title?: string;
-  lead?: string;
-  children?: ReactNode;
-  foot?: ReactNode;
-}
-
-export function AuthFrame({ title, lead, children, foot }: AuthFrameProps): React.ReactElement {
-  return (
-    <PublicPage tint="var(--surface-raised)">
-      <div className={styles.wrap}>
-        <div className={styles.inner}>
-          <Card padding={30}>
-            {title !== undefined && <h1 className={styles.title}>{title}</h1>}
-            {lead !== undefined && <p className={styles.lead}>{lead}</p>}
-            {children}
-          </Card>
-          {foot !== undefined && <div className={styles.foot}>{foot}</div>}
-        </div>
-      </div>
-    </PublicPage>
-  );
-}
 
 export interface FieldProps extends InputProps {
   label: string;

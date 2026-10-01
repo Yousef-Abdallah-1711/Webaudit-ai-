@@ -15,7 +15,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
-import { AuthFrame } from '../../../components/auth/AuthFrame';
+import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { Icon } from '../../../components/ui/icons/Icon';
 import { useTranslations } from 'next-intl';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
@@ -43,52 +43,66 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
 
   if (outcome === 'ready' || outcome === 'confirming') {
     return (
-      <AuthFrame title={t('verify_confirm_title')} lead={t('verify_confirm_lead')}>
-        <Button fullWidth disabled={outcome === 'confirming'} onClick={() => void onConfirm()}>
-          {outcome === 'confirming'
-            ? t('verify_confirm_pending')
-            : t('verify_confirm_button')}
-        </Button>
-      </AuthFrame>
+      <AuthShell
+        form={
+          <AuthFormPanel title={t('verify_confirm_title')} lead={t('verify_confirm_lead')}>
+            <Button fullWidth disabled={outcome === 'confirming'} onClick={() => void onConfirm()}>
+              {outcome === 'confirming' ? t('verify_confirm_pending') : t('verify_confirm_button')}
+            </Button>
+          </AuthFormPanel>
+        }
+      />
     );
   }
   if (outcome === 'confirmed') {
     return (
-      <AuthFrame>
-        <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
-          <Icon name="check" className={styles.statusIcon ?? ''} />
-        </div>
-        <h1 className={styles.outcomeTitle}>{t('verify_confirmed_title')}</h1>
-        <p className={styles.outcomeLead}>{t('verify_confirmed_lead')}</p>
-        <Button fullWidth href="/login">
-          {t('verify_confirmed_submit')}
-        </Button>
-        <p className={styles.closeNote}>{t('verify_confirmed_close_note')}</p>
-      </AuthFrame>
+      <AuthShell
+        form={
+          <AuthFormPanel>
+            <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
+              <Icon name="check" className={styles.statusIcon ?? ''} />
+            </div>
+            <h1 className={styles.outcomeTitle}>{t('verify_confirmed_title')}</h1>
+            <p className={styles.outcomeLead}>{t('verify_confirmed_lead')}</p>
+            <Button fullWidth href="/login">
+              {t('verify_confirmed_submit')}
+            </Button>
+            <p className={styles.closeNote}>{t('verify_confirmed_close_note')}</p>
+          </AuthFormPanel>
+        }
+      />
     );
   }
   if (outcome === 'failed') {
     return (
-      <AuthFrame>
-        <h1 className={styles.outcomeTitle}>{t('verify_retry_title')}</h1>
-        <p className={styles.outcomeLead}>{t('verify_retry_lead')}</p>
-        <Button fullWidth onClick={() => void onConfirm()}>
-          {t('verify_retry_button')}
-        </Button>
-      </AuthFrame>
+      <AuthShell
+        form={
+          <AuthFormPanel>
+            <h1 className={styles.outcomeTitle}>{t('verify_retry_title')}</h1>
+            <p className={styles.outcomeLead}>{t('verify_retry_lead')}</p>
+            <Button fullWidth onClick={() => void onConfirm()}>
+              {t('verify_retry_button')}
+            </Button>
+          </AuthFormPanel>
+        }
+      />
     );
   }
   return (
-    <AuthFrame>
-      <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
-        <Icon name="circleAlert" className={styles.statusIcon ?? ''} />
-      </div>
-      <h1 className={styles.outcomeTitle}>{t('verify_invalid_title')}</h1>
-      <p className={styles.outcomeLead}>{t('verify_invalid_lead')}</p>
-      <Button fullWidth href="/signup">
-        {t('verify_foot_link')}
-      </Button>
-    </AuthFrame>
+    <AuthShell
+      form={
+        <AuthFormPanel>
+          <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
+            <Icon name="circleAlert" className={styles.statusIcon ?? ''} />
+          </div>
+          <h1 className={styles.outcomeTitle}>{t('verify_invalid_title')}</h1>
+          <p className={styles.outcomeLead}>{t('verify_invalid_lead')}</p>
+          <Button fullWidth href="/signup">
+            {t('verify_foot_link')}
+          </Button>
+        </AuthFormPanel>
+      }
+    />
   );
 }
 
@@ -110,20 +124,24 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
   }
 
   return (
-    <AuthFrame
-      title={t('verify_title')}
-      lead={t('verify_lead', { email: email || 'the email you registered with' })}
-      foot={
-        <span>
-          {t('verify_foot_lead')} <a href="/signup">{t('verify_foot_link')}</a>
-        </span>
+    <AuthShell
+      form={
+        <AuthFormPanel
+          title={t('verify_title')}
+          lead={t('verify_lead', { email: email || 'the email you registered with' })}
+          foot={
+            <span>
+              {t('verify_foot_lead')} <a href="/signup">{t('verify_foot_link')}</a>
+            </span>
+          }
+        >
+          <div className={styles.emailBox}>{email || 'the email you registered with'}</div>
+          <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
+            {sent ? t('verify_confirmed_lead') : t('verify_resend')}
+          </Button>
+        </AuthFormPanel>
       }
-    >
-      <div className={styles.emailBox}>{email || 'the email you registered with'}</div>
-      <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
-        {sent ? t('verify_confirmed_lead') : t('verify_resend')}
-      </Button>
-    </AuthFrame>
+    />
   );
 }
 

@@ -9,7 +9,8 @@
  */
 import { useState } from 'react';
 import { Button } from '../../../components/ui';
-import { AuthFrame, Field } from '../../../components/auth/AuthFrame';
+import { Field } from '../../../components/auth/AuthFrame';
+import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, forgotPassword } from '../../../lib/api';
 import styles from './page.module.css';
@@ -35,34 +36,42 @@ export default function ForgotPage(): React.ReactElement {
 
   if (sent) {
     return (
-      <AuthFrame
-        title={t('forgot_title')}
-        lead={t('forgot_sent_lead')}
-        foot={<a href="/login">{t('forgot_foot_link')}</a>}
+      <AuthShell
+        form={
+          <AuthFormPanel
+            title={t('forgot_title')}
+            lead={t('forgot_sent_lead')}
+            foot={<a href="/login">{t('forgot_foot_link')}</a>}
+          />
+        }
       />
     );
   }
 
   return (
-    <AuthFrame
-      title={t('forgot_title')}
-      lead={t('forgot_lead')}
-      foot={<a href="/login">{t('forgot_foot_link')}</a>}
-    >
-      <div className={styles.stack}>
-        <Field
-          label={t('email')}
-          type="email"
-          placeholder="you@company.com"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-          }}
-        />
-        <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
-          {t('forgot_submit')}
-        </Button>
-      </div>
-    </AuthFrame>
+    <AuthShell
+      form={
+        <AuthFormPanel
+          title={t('forgot_title')}
+          lead={t('forgot_lead')}
+          foot={<a href="/login">{t('forgot_foot_link')}</a>}
+        >
+          <div className={styles.stack}>
+            <Field
+              label={t('email')}
+              type="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+              }}
+            />
+            <Button fullWidth disabled={submitting} onClick={() => void onSubmit()}>
+              {t('forgot_submit')}
+            </Button>
+          </div>
+        </AuthFormPanel>
+      }
+    />
   );
 }

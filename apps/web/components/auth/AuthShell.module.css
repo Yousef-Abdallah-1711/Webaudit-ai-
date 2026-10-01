@@ -11,6 +11,13 @@
   padding-inline: var(--space-6);
 }
 
+.singleColumn {
+  grid-template-areas: 'form';
+  grid-template-columns: minmax(0, 1fr);
+  width: min(100%, 42rem);
+  min-height: 36rem;
+}
+
 .formSlot {
   grid-area: form;
   display: flex;
@@ -243,4 +250,8 @@
   :global(html[dir='rtl']) .layout {
     grid-template-areas: 'form' 'context';
   }
+}
+
+:global(html[dir='rtl']) .layout.singleColumn {
+  grid-template-areas: 'form';
 }
