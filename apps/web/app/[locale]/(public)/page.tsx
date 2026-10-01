@@ -8,6 +8,8 @@ import { ReportShowcase } from '../../../components/marketing/report-showcase';
 import { Readiness } from '../../../components/marketing/readiness';
 import { AiDevelopment } from '../../../components/marketing/ai-development';
 import { Trust } from '../../../components/marketing/trust';
+import { PricingPreview } from '../../../components/marketing/pricing-preview';
+import { Faq } from '../../../components/marketing/faq';
 import LandingPage from './LandingPage';
 
 export async function generateMetadata({
@@ -21,7 +23,7 @@ export async function generateMetadata({
 
 export default function Page(): React.ReactElement {
   return (
-    <LandingPage>
+    <LandingPage pricingPreview={<PricingPreview />} faq={<Faq />}>
       <Hero />
       <Proof />
       <ProductionGap />

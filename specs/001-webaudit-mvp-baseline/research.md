@@ -603,6 +603,32 @@ component's own module note are the three records that make the exception visibl
 
 ---
 
+## R20. Original landing pricing preview and FAQ — a documented exception
+
+Wave 5 adds two sections to the mapped landing screen. The existing marketing kit's `Landing.jsx`,
+the `1 Home page.html` reference, and `_ds_manifest.json` contain no pricing-preview or FAQ section;
+the kit's credit summary is only a hero statistic. The user explicitly authorized original sections
+and specified their content, hierarchy constraints, responsive widths, localization, and claims.
+
+The pricing preview uses a free-allocation line, a compact bundle-cost comparison, and a small text
+link to `/pricing`. It imports `AREA_COST`, `FULL_AUDIT_COST`, `FREE_ALLOCATION`, and `REVERIFY_COST`
+from `@webaudit/config`; FAQ answers that repeat those figures receive the same constants as
+translation values. It does not surface the unresolved vendored tier-dollar placeholders.
+
+The FAQ uses native `<details>/<summary>` so each answer remains keyboard-operable and discoverable
+without client state. Its questions are limited to established read-only, retention, generic audit,
+readiness, free-allocation, and targeted re-check facts. Both sections use existing design tokens
+and intentionally use distinct compositions: a free-credit line with inline cost arithmetic, and a
+two-column question-and-disclosure list. No decorative wash is added; the existing final CTA wash
+remains the page's single closing accent.
+
+This entry, `design/screen-map.md`'s exception row, and the two component module notes record the
+exception. There is no section-specific reference artboard for pixel comparison; the landing
+redesign is instead rendered and checked in the Wave 5 Playwright run at 1440, 1024, 768, 390, and
+360px in both locales. A reviewed artboard should replace this original layout when available.
+
+---
+
 ## Open items carried into planning
 
 Four items are recorded rather than resolved. The first two are amendments to documents this

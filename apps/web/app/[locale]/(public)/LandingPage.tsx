@@ -11,6 +11,8 @@ type PublicKey = keyof typeof publicMessages;
 
 interface LandingPageProps {
   children: ReactNode;
+  pricingPreview: ReactNode;
+  faq: ReactNode;
 }
 
 interface WrapProps {
@@ -19,7 +21,7 @@ interface WrapProps {
 
 function Wrap({ children }: WrapProps): React.ReactElement {
   return (
-    <section className={styles.wrap}>
+    <section id="loop" data-landing-section="loop" className={styles.wrap}>
       <div className={styles.wrapInner}>{children}</div>
     </section>
   );
@@ -58,7 +60,7 @@ function FinalCta(): React.ReactElement {
   const t = useTranslations('public');
 
   return (
-    <section className={styles.cta}>
+    <section id="final-cta" data-landing-section="final-cta" className={styles.cta}>
       <div className={styles.ctaWash} />
       <div className={styles.ctaInner}>
         <h2 className={styles.ctaH2}>{t('cta_h2')}</h2>
@@ -69,7 +71,7 @@ function FinalCta(): React.ReactElement {
   );
 }
 
-export default function LandingPage({ children }: LandingPageProps): React.ReactElement {
+export default function LandingPage({ children, pricingPreview, faq }: LandingPageProps): React.ReactElement {
   const t = useTranslations('public');
 
   return (
@@ -78,6 +80,8 @@ export default function LandingPage({ children }: LandingPageProps): React.React
       <PublicPage active="nav_product">
         {children}
         <Loop />
+        {pricingPreview}
+        {faq}
         <FinalCta />
       </PublicPage>
     </div>

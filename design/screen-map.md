@@ -123,6 +123,7 @@ gap still gets asked about, not guessed.
 | --- | --- | --- |
 | Annotated screenshot | T143 | No artboard existed anywhere in `design-system/` (confirmed by a full content search, including `_ds_manifest.json`). User authorized an original design on 2026-08-27, built from existing tokens and `IssueCard`'s severity/attribution visual language — see `research.md`'s decision record. Replace with a real artboard if one is ever produced. |
 | Design intent questionnaire | T201 | No artboard existed anywhere in `design-system/` — referenced in the app kit but never a dedicated screen. User authorized a minimal, functional original design on 2026-09-03 — explicitly *not* claiming full visual design adherence — built only from `Card`/`Button`/`Input` (T237) and `var(--space-*)`/`var(--type-*)`/`var(--text-*)`/`var(--sev-*)` tokens, nothing invented beyond layout. See `research.md`'s R19. Replace with a real artboard if one is ever produced. |
+| Landing pricing preview and FAQ | Wave 5 | The Landing route is mapped, but its approved kit/reference and manifest contain no pricing-preview or FAQ section. The user explicitly authorized these original sections with specific content and design constraints. They use existing tokens; the preview derives amounts from `@webaudit/config`, and the FAQ uses native `<details>/<summary>`. See `research.md` R20. Replace the layout if a reviewed artboard is produced. |
 
 ## Viewports
 
