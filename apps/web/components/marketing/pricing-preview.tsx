@@ -1,6 +1,6 @@
 /* Wave 5's original section design is documented in design/screen-map.md and research.md R20. */
 import { getTranslations } from 'next-intl/server';
-import { AREA_COST, FULL_AUDIT_COST, FREE_ALLOCATION, REVERIFY_COST } from '@webaudit/config';
+import { ALL_AREAS, AREA_COST, FULL_AUDIT_COST, FREE_ALLOCATION, REVERIFY_COST } from '@webaudit/config';
 import styles from './pricing-preview.module.css';
 
 const INDIVIDUAL_AREAS_COST = Object.values(AREA_COST).reduce((total, cost) => total + cost, 0);
@@ -34,10 +34,10 @@ export async function PricingPreview(): Promise<React.ReactElement> {
         <div className={styles.costs}>
           <p className={styles.bundleMath}>
             <span className={styles.costNumber} dir="ltr">{INDIVIDUAL_AREAS_COST}</span>
-            <span>{t('pricing_preview_separate')}</span>
+            <span>{t('pricing_preview_separate', { areaCount: ALL_AREAS.length })}</span>
             <span className={styles.arrow} aria-hidden="true">→</span>
             <span className={styles.costNumber} dir="ltr">{FULL_AUDIT_COST}</span>
-            <span>{t('pricing_preview_bundle')}</span>
+            <span>{t('pricing_preview_bundle', { areaCount: ALL_AREAS.length })}</span>
           </p>
           <p className={styles.recheck}>
             <span className={styles.costNumber} dir="ltr">{REVERIFY_COST}</span>

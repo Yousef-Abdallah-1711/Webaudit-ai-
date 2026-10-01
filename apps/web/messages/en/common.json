@@ -5,5 +5,8 @@
   "top_up": "Top up",
   "credits": "credits",
   "theme_dark": "Dark",
-  "theme_light": "Light"
+  "theme_light": "Light",
+  "theme_switch_to_light": "Switch to light mode",
+  "theme_switch_to_dark": "Switch to dark mode",
+  "switch_to_language": "Switch to {language}"
 }

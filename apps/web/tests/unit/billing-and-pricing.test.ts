@@ -79,7 +79,9 @@ describe('PricingPage', () => {
     expect(publicMessages.a_test_d).toBe('Same-origin broken-link and page-integrity checks');
     expect(publicMessages.a_seo_d).toContain('canonical URL');
     expect(publicMessages.area_cost).toBe('{credits, number} cr');
-    expect(publicMessages.areas_note).toContain('95 individually against 80 bundled');
+    expect(publicMessages.areas_note).toContain(
+      '{individualCost, number} individually against {fullAuditCost, number} bundled',
+    );
     expect(publicMessages.proof_sample_label).toContain('Sample report');
 
     const table = render(createElement(CostTable));
@@ -88,7 +90,7 @@ describe('PricingPage', () => {
   });
 
   it('does not show a redeemable promo code on the landing page', () => {
-    expect(publicMessages.promo).toBe('First audit free — 50 credits');
+    expect(publicMessages.promo).toBe('First audit free — {freeCredits, number} credits');
     expect(publicMessages.promo).not.toContain('START50');
   });
 });

@@ -11,6 +11,7 @@ import styles from './PromoBar.module.css';
 
 export interface PromoBarProps {
   message: string;
+  dismissLabel: string;
   code?: string;
   dark?: boolean;
   onDismiss?: () => void;
@@ -18,6 +19,7 @@ export interface PromoBarProps {
 
 export function PromoBar({
   message,
+  dismissLabel,
   code,
   dark = false,
   onDismiss,
@@ -37,7 +39,7 @@ export function PromoBar({
           setGone(true);
           onDismiss?.();
         }}
-        aria-label="Dismiss"
+        aria-label={dismissLabel}
         className={styles.dismiss}
       >
         ×

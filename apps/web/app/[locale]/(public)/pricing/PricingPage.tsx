@@ -18,6 +18,14 @@
 import { Badge, Button, Eyebrow } from '../../../../components/ui';
 import { PublicPage } from '../../../../components/public';
 import { useTranslations } from 'next-intl';
+import {
+  ALL_AREAS,
+  AREA_COST,
+  FULL_AUDIT_COST,
+  PLAN_TIERS,
+  READINESS_PASS_COST,
+  REVERIFY_COST,
+} from '@webaudit/config';
 import { useLang } from '../../../theme';
 import { localeMetadata } from '../../../../i18n/locales';
 import styles from './page.module.css';
@@ -56,10 +64,20 @@ interface Tier {
   readonly pop: boolean;
 }
 
+type PlanTierId = (typeof PLAN_TIERS)[number]['id'];
+
+const PLAN_CREDITS = Object.fromEntries(
+  PLAN_TIERS.map(({ id, monthlyCredits }) => [id, monthlyCredits]),
+) as Record<PlanTierId, number>;
+
+const AREA_COST_VALUES = Object.values(AREA_COST);
+const MIN_AREA_COST = Math.min(...AREA_COST_VALUES);
+const MAX_AREA_COST = Math.max(...AREA_COST_VALUES);
+
 const TIERS: readonly Tier[] = [
   {
     nameKey: 'pricing_tier_free',
-    credits: 50,
+    credits: PLAN_CREDITS.free,
     creditsKey: 'pricing_credits_once',
     price: '$0',
     feat: [
@@ -72,7 +90,7 @@ const TIERS: readonly Tier[] = [
   },
   {
     nameKey: 'pricing_tier_starter',
-    credits: 300,
+    credits: PLAN_CREDITS.starter,
     creditsKey: 'pricing_credits_monthly',
     price: '$29',
     feat: [
@@ -85,7 +103,7 @@ const TIERS: readonly Tier[] = [
   },
   {
     nameKey: 'pricing_tier_pro',
-    credits: 1_200,
+    credits: PLAN_CREDITS.pro,
     creditsKey: 'pricing_credits_monthly',
     price: '$99',
     feat: [
@@ -99,7 +117,7 @@ const TIERS: readonly Tier[] = [
   },
   {
     nameKey: 'pricing_tier_business',
-    credits: 4_000,
+    credits: PLAN_CREDITS.business,
     creditsKey: 'pricing_credits_monthly',
     price: '$299',
     feat: [
@@ -122,10 +140,10 @@ interface CostRow {
 }
 
 const COST_ROWS: readonly CostRow[] = [
-  { labelKey: 'pricing_cost_one_area', credits: { minimum: 10, maximum: 25 } },
-  { labelKey: 'pricing_cost_full_audit', credits: 80 },
-  { labelKey: 'pricing_cost_targeted_recheck', credits: 3 },
-  { labelKey: 'pricing_cost_readiness_pass', credits: 60 },
+  { labelKey: 'pricing_cost_one_area', credits: { minimum: MIN_AREA_COST, maximum: MAX_AREA_COST } },
+  { labelKey: 'pricing_cost_full_audit', credits: FULL_AUDIT_COST },
+  { labelKey: 'pricing_cost_targeted_recheck', credits: REVERIFY_COST },
+  { labelKey: 'pricing_cost_readiness_pass', credits: READINESS_PASS_COST },
 ];
 
 export function TierGrid(): React.ReactElement {
@@ -182,7 +200,11 @@ export function CostTable(): React.ReactElement {
             key={row.labelKey}
             className={i > 0 ? `${styles.costRow} ${styles.costRowBordered}` : styles.costRow}
           >
-            <span className={styles.costLabel}>{t(row.labelKey)}</span>
+            <span className={styles.costLabel}>
+              {row.labelKey === 'pricing_cost_full_audit'
+                ? t(row.labelKey, { areaCount: ALL_AREAS.length })
+                : t(row.labelKey)}
+            </span>
             <span className={styles.costValue}>
               {typeof row.credits === 'number'
                 ? t('pricing_cost_amount', { credits: row.credits })

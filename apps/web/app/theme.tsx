@@ -288,8 +288,8 @@ export function ThemeToggle({
       onClick={() => {
         setTheme(dark ? 'light' : 'dark');
       }}
-      aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={dark ? 'Light' : 'Dark'}
+      aria-label={dark ? t('theme_switch_to_light') : t('theme_switch_to_dark')}
+      title={dark ? t('theme_light') : t('theme_dark')}
       className={classes}
     >
       <svg
@@ -316,6 +316,7 @@ export interface LangToggleProps {
 
 export function LangToggle({ label = false }: LangToggleProps): React.ReactElement {
   const [lang, setLang] = useLang();
+  const t = useTranslations('common');
   const next: Lang = locales.find((locale) => locale !== lang) ?? defaultLocale;
 
   const classes = [styles.toggle, styles.langToggle, label ? styles.labeled : undefined]
@@ -328,7 +329,7 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       onClick={() => {
         setLang(next);
       }}
-      aria-label={`Switch to ${localeMetadata[next].label}`}
+      aria-label={t('switch_to_language', { language: localeMetadata[next].label })}
       title={localeMetadata[next].label}
       lang={next}
       className={classes}

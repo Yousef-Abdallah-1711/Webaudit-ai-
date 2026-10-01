@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { Eyebrow } from '../ui';
 import containerStyles from './section-container.module.css';
@@ -39,7 +40,9 @@ export async function Loop(): Promise<React.ReactElement> {
               {n}
             </div>
             <div className={styles.loopTitle}>{t(title)}</div>
-            <div className={styles.loopDesc}>{t(body)}</div>
+            <div className={styles.loopDesc}>
+              {body === 'loop_3d' ? t(body, { reverifyCost: REVERIFY_COST }) : t(body)}
+            </div>
           </div>
         ))}
       </div>

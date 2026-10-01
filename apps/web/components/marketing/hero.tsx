@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { ALL_AREAS, FREE_ALLOCATION, REVERIFY_COST } from '@webaudit/config';
 import { Button, StatRow, TwoToneHeading } from '../ui';
 import containerStyles from './section-container.module.css';
 import styles from './hero.module.css';
@@ -24,9 +25,9 @@ export async function Hero(): Promise<React.ReactElement> {
           <StatRow
             align="center"
             items={[
-              { value: '50', label: t('stat_credits') },
-              { value: '5', label: t('stat_areas') },
-              { value: '3', label: t('stat_recheck') },
+              { value: String(FREE_ALLOCATION), label: t('stat_credits') },
+              { value: String(ALL_AREAS.length), label: t('stat_areas') },
+              { value: String(REVERIFY_COST), label: t('stat_recheck') },
             ]}
           />
         </div>

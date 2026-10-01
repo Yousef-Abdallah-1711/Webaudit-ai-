@@ -62,8 +62,28 @@ test('GET / renders English home copy and public metadata without redirecting', 
   await expectRoute(page, '/');
   await expectLocale(page, 'en');
   await expect(page.getByText(ENGLISH_HERO_LEAD)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Switch to العربية' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Dismiss' })).toBeVisible();
+  const hero = page.locator('[data-landing-section="hero"]');
+  for (const value of ['50', '5', '3']) await expect(hero).toContainText(value);
   await expectCanonical(page, '/');
   await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
+});
+
+test('Arabic accessible labels follow wa-lang on public and auth routes', async ({ page }) => {
+  const runningServer = server;
+  if (!runningServer) throw new Error('The public routes server did not start');
+  await page.context().addCookies([{ name: 'wa-lang', value: 'ar', url: runningServer.url }]);
+
+  await page.goto(`${runningServer.url}/ar`, { waitUntil: 'networkidle' });
+  await expect(page.getByRole('button', { name: 'التبديل إلى الوضع الداكن' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'التبديل إلى English' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'إغلاق' })).toBeVisible();
+
+  await page.goto(`${runningServer.url}/login`, { waitUntil: 'networkidle' });
+  await expect(page.getByRole('button', { name: 'التبديل إلى الوضع الداكن' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'التبديل إلى English' })).toBeVisible();
 });
 
 test('GET /ar renders Arabic home copy and public metadata without redirecting', async ({ page }) => {
@@ -78,6 +98,13 @@ test('GET /pricing renders English pricing copy without redirecting', async ({ p
   await expectRoute(page, '/pricing');
   await expectLocale(page, 'en');
   await expect(page.getByRole('heading', { name: ENGLISH_PRICING_HEADING })).toBeVisible();
+  const pricing = page.locator('main');
+  for (const credits of ['50', '300', '1,200', '4,000']) {
+    await expect(pricing).toContainText(credits);
+  }
+  for (const cost of ['10–25 cr', '80 cr', '3 cr', '60 cr']) {
+    await expect(pricing).toContainText(cost);
+  }
 });
 
 test('GET /ar/pricing renders Arabic pricing copy without redirecting', async ({ page }) => {

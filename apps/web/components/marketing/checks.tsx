@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import { AREA_COST } from '@webaudit/config';
+import { ALL_AREAS, AREA_COST, FULL_AUDIT_COST, SUM_OF_AREAS } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { Eyebrow } from '../ui';
 import containerStyles from './section-container.module.css';
@@ -22,7 +22,7 @@ export async function Checks(): Promise<React.ReactElement> {
     <section id="areas" data-landing-section="areas" className={styles.section}>
       <div className={containerStyles.container}>
         <header className={styles.header}>
-          <Eyebrow tone="muted">{t('areas_eyebrow')}</Eyebrow>
+          <Eyebrow tone="muted">{t('areas_eyebrow', { areaCount: ALL_AREAS.length })}</Eyebrow>
           <h2 className={styles.heading}>{t('areas_h2')}</h2>
           <p className={styles.intro}>{t('areas_intro')}</p>
         </header>
@@ -39,7 +39,13 @@ export async function Checks(): Promise<React.ReactElement> {
             </li>
           ))}
         </ul>
-        <p className={styles.note}>{t('areas_note')}</p>
+        <p className={styles.note}>
+          {t('areas_note', {
+            areaCount: ALL_AREAS.length,
+            individualCost: SUM_OF_AREAS,
+            fullAuditCost: FULL_AUDIT_COST,
+          })}
+        </p>
       </div>
     </section>
   );

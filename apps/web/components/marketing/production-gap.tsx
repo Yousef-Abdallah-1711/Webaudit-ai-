@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { Eyebrow } from '../ui';
 import styles from './production-gap.module.css';
@@ -39,7 +40,9 @@ export async function ProductionGap(): Promise<React.ReactElement> {
               </svg>
               <div>
                 <h3 className={styles.title}>{t(title)}</h3>
-                <p className={styles.body}>{t(body)}</p>
+                <p className={styles.body}>
+                  {body === 'gap_2d' ? t(body, { reverifyCost: REVERIFY_COST }) : t(body)}
+                </p>
               </div>
             </li>
           ))}

@@ -330,9 +330,9 @@ export default tseslint.config(
         },
         {
           selector:
-            "JSXOpeningElement[name.name='PromoBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:message|code|dark|onDismiss|key|ref|className|style|children)$/]",
+            "JSXOpeningElement[name.name='PromoBar'] > JSXAttribute > JSXIdentifier[name!=/^(?:message|dismissLabel|code|dark|onDismiss|key|ref|className|style|children)$/]",
           message:
-            "<PromoBar> doesn't accept that prop. Declared props: message, code, dark, onDismiss.",
+            "<PromoBar> doesn't accept that prop. Declared props: message, dismissLabel, code, dark, onDismiss.",
         },
         {
           selector:

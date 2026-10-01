@@ -161,16 +161,22 @@ describe('StatRow', () => {
 describe('PromoBar', () => {
   it('renders the message, and the code chip only when given', () => {
     const withCode = render(
-      createElement(PromoBar, { message: 'First audit free', code: 'START50' }),
+      createElement(PromoBar, {
+        message: 'First audit free',
+        dismissLabel: 'Dismiss',
+        code: 'START50',
+      }),
     );
-    const withoutCode = render(createElement(PromoBar, { message: 'First audit free' }));
+    const withoutCode = render(
+      createElement(PromoBar, { message: 'First audit free', dismissLabel: 'Dismiss' }),
+    );
     expect(withCode).toContain('First audit free');
     expect(withCode).toContain('START50');
     expect(withoutCode).not.toContain('<code');
   });
 
   it('has a dismiss control labelled for assistive tech', () => {
-    const html = render(createElement(PromoBar, { message: 'x' }));
+    const html = render(createElement(PromoBar, { message: 'x', dismissLabel: 'Dismiss' }));
     expect(html).toContain('aria-label="Dismiss"');
   });
 });

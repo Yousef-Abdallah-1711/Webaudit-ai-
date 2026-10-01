@@ -5,5 +5,8 @@
   "top_up": "إضافة رصيد",
   "credits": "رصيد",
   "theme_dark": "داكن",
-  "theme_light": "فاتح"
+  "theme_light": "فاتح",
+  "theme_switch_to_light": "التبديل إلى الوضع الفاتح",
+  "theme_switch_to_dark": "التبديل إلى الوضع الداكن",
+  "switch_to_language": "التبديل إلى {language}"
 }
