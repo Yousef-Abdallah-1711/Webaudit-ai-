@@ -7,7 +7,7 @@
 'use client';
 
 import { useState } from 'react';
-import styles from './PromoBar.module.css';
+import { cn } from '../../lib/cn';
 
 export interface PromoBarProps {
   message: string;
@@ -27,12 +27,23 @@ export function PromoBar({
   const [gone, setGone] = useState(false);
   if (gone) return null;
 
-  const classes = [styles.bar, dark ? styles.dark : undefined].filter(Boolean).join(' ');
+  const classes = cn(
+    // eslint-disable-next-line no-restricted-syntax -- preserve the existing 13px promotional label size
+    'relative flex items-center justify-center gap-3 bg-promo-bg px-4 py-2.5 font-sans text-[13px] font-medium uppercase tracking-[0.6px] text-white',
+    dark && 'bg-promo-bg-dark',
+  );
+  const dismissClasses = // eslint-disable-next-line no-restricted-syntax -- preserve the source dismiss control inset and glyph size
+    'absolute end-[14px] cursor-pointer border-0 bg-transparent text-[16px] leading-none text-white opacity-80';
 
   return (
     <div className={classes}>
       <span>{message}</span>
-      {code !== undefined && <code className={styles.code}>{code}</code>}
+      {code !== undefined && (
+        // eslint-disable-next-line no-restricted-syntax -- preserve the existing 3px code-chip inset
+        <code className="rounded-control bg-[rgba(0,0,0,0.22)] px-2 py-[3px] font-mono normal-case tracking-normal">
+          {code}
+        </code>
+      )}
       <button
         type="button"
         onClick={() => {
@@ -40,7 +51,7 @@ export function PromoBar({
           onDismiss?.();
         }}
         aria-label={dismissLabel}
-        className={styles.dismiss}
+        className={dismissClasses}
       >
         ×
       </button>

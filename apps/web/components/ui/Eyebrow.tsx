@@ -1,6 +1,6 @@
 /** Ported from design-system/components/core/Eyebrow.jsx (T237). */
 import type { ReactNode } from 'react';
-import styles from './Eyebrow.module.css';
+import { cn } from '../../lib/cn';
 
 export interface EyebrowProps {
   tone?: 'muted' | 'accent';
@@ -8,8 +8,10 @@ export interface EyebrowProps {
 }
 
 export function Eyebrow({ tone = 'muted', children }: EyebrowProps): React.ReactElement {
-  const classes = [styles.eyebrow, tone === 'accent' ? styles.accent : undefined]
-    .filter(Boolean)
-    .join(' ');
+  const classes = cn(
+    // eslint-disable-next-line no-restricted-syntax -- existing Eyebrow overrides the shared 15.2px token to 12px
+    'type-eyebrow text-[12px] uppercase text-text-muted',
+    tone === 'accent' && 'text-accent',
+  );
   return <div className={classes}>{children}</div>;
 }

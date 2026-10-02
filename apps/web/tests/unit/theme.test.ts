@@ -60,12 +60,13 @@ describe('ThemeToggle', () => {
     expect(without).not.toContain('<span>');
   });
 
-  it('gives compact a distinct class from the default size', () => {
-    const compact = /class="([^"]+)"/.exec(
-      render(createElement(ThemeToggle, { compact: true })),
-    )?.[1];
-    const normal = /class="([^"]+)"/.exec(render(createElement(ThemeToggle, {})))?.[1];
-    expect(compact).not.toBe(normal);
+  it('uses the compact dimensions only when requested', () => {
+    const compact = render(createElement(ThemeToggle, { compact: true }));
+    const normal = render(createElement(ThemeToggle, {}));
+    expect(compact).toContain('h-[30px]');
+    expect(compact).toContain('w-[30px]');
+    expect(normal).toContain('h-9');
+    expect(normal).not.toContain('h-[30px]');
   });
 
   it('hides the decorative icon from assistive tech', () => {

@@ -6,7 +6,7 @@
  * component can enforce; noted here so a reviewer of a page that uses this
  * twice knows to ask why.
  */
-import styles from './TwoToneHeading.module.css';
+import { cn } from '../../lib/cn';
 
 export interface TwoToneHeadingProps {
   /** First clause, rendered in --text-primary */
@@ -25,15 +25,15 @@ export function TwoToneHeading({
   align = 'center',
   as: Tag = 'h1',
 }: TwoToneHeadingProps): React.ReactElement {
-  const classes = [
-    styles.heading,
-    level === 'display' ? styles.display : styles.h2,
-    align === 'left' ? styles.left : styles.center,
-  ].join(' ');
+  const classes = cn(
+    'm-0 text-text-primary [text-wrap:pretty]',
+    level === 'display' ? 'type-display' : 'type-h2',
+    align === 'left' ? 'text-start' : 'text-center',
+  );
 
   return (
     <Tag className={classes}>
-      {lead} <span className={styles.accent}>{accent}</span>
+      {lead} <span className="text-accent">{accent}</span>
     </Tag>
   );
 }

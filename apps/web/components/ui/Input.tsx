@@ -7,7 +7,7 @@
  * nothing else", which `:focus` alone is enough to express.
  */
 import type { ChangeEventHandler, HTMLInputTypeAttribute } from 'react';
-import styles from './Input.module.css';
+import { cn } from '../../lib/cn';
 
 export interface InputProps {
   /** Inline prefix, e.g. "https://" — reserves the measured 64px left padding */
@@ -40,21 +40,22 @@ export function Input({
   readOnly = false,
   ...rest
 }: InputProps): React.ReactElement {
-  const wrapClasses = [styles.wrap, fullWidth ? styles.fullWidth : undefined]
-    .filter(Boolean)
-    .join(' ');
-  const fieldClasses = [
-    styles.field,
-    prefix !== undefined ? styles.withPrefix : undefined,
-    invalid ? styles.invalid : undefined,
-    mono ? styles.mono : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const wrapClasses = cn('relative', fullWidth && 'w-full');
+  const fieldClasses = cn(
+    // eslint-disable-next-line no-restricted-syntax -- 14px is the existing Input text size
+    'box-border h-12 w-full rounded-control border border-hairline border-border-subtle bg-surface-field px-3 py-1 font-sans text-[14px] text-text-primary outline-none transition-colors focus:shadow-focus',
+    prefix !== undefined && 'ps-16',
+    invalid && 'border-sev-critical',
+    mono && 'font-mono',
+  );
 
   return (
     <div className={wrapClasses}>
-      {prefix !== undefined && <span className={styles.prefix}>{prefix}</span>}
+      {prefix !== undefined && (
+        <span className="pointer-events-none absolute start-3 top-0 flex h-12 items-center font-mono type-small text-text-muted">
+          {prefix}
+        </span>
+      )}
       <input
         type={type}
         placeholder={placeholder}

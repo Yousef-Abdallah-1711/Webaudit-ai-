@@ -113,7 +113,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // design decision.
   'app/[locale]/(public)/page.module.css': { hex: 2, px: 45 },
   'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
-  'app/theme.module.css': { hex: 0, px: 10 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
   'components/admin/format.module.css': { hex: 0, px: 2 },
   'components/auth/AuthFrame.module.css': { hex: 0, px: 10 },
@@ -134,13 +133,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'components/scan/InputTabs.module.css': { hex: 0, px: 20 },
   'components/scan/ScanForm.module.css': { hex: 0, px: 15 },
   'components/scan/ScanProgress.module.css': { hex: 0, px: 3 },
-  'components/ui/Badge.module.css': { hex: 3, px: 5 },
-  'components/ui/Button.module.css': { hex: 0, px: 10 },
-  'components/ui/Card.module.css': { hex: 0, px: 5 },
-  'components/ui/Eyebrow.module.css': { hex: 0, px: 1 },
-  'components/ui/Input.module.css': { hex: 0, px: 7 },
-  'components/ui/PromoBar.module.css': { hex: 2, px: 9 },
-  'components/ui/StatRow.module.css': { hex: 0, px: 1 },
 };
 
 describe('CSS Modules raw hex/px is a ratchet, not an unmonitored gap', () => {

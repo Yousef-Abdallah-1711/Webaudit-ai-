@@ -1,15 +1,12 @@
 /**
  * Ported from design-system/components/core/Button.jsx (T237).
  *
- * Two changes from the source, both required by the task rather than chosen:
- * hover moved from a `useState` + `onMouseEnter`/`onMouseLeave` pair to CSS
- * `:hover`, and the per-variant/per-size inline style objects moved to
- * `Button.module.css`. Neither changes what renders — see the module's own
- * doc comment for the one thing the `.prompt.md` requires that the source's
- * inline styles never state: hover is a colour step only.
+ * Hover is a colour step only, as required by Button.prompt.md. Its existing
+ * :hover:not(:disabled) behavior is represented with Tailwind's arbitrary
+ * selector variant so both button and anchor renderings retain it.
  */
 import type { CSSProperties, MouseEventHandler, ReactNode } from 'react';
-import styles from './Button.module.css';
+import { cn } from '../../lib/cn';
 
 export interface ButtonProps {
   /** primary = accent fill; secondary = bordered white; ghost = text only; inverse = white on dark */
@@ -30,16 +27,21 @@ export interface ButtonProps {
 }
 
 const VARIANT_CLASS: Record<NonNullable<ButtonProps['variant']>, string> = {
-  primary: styles.primary!,
-  secondary: styles.secondary!,
-  ghost: styles.ghost!,
-  inverse: styles.inverse!,
+  primary: 'bg-accent text-text-on-accent [&:hover:not(:disabled)]:bg-accent-hover',
+  secondary:
+    'bg-surface-page text-text-primary border-border-default [&:hover:not(:disabled)]:bg-surface-raised',
+  ghost:
+    'bg-transparent text-text-secondary [&:hover:not(:disabled)]:bg-surface-raised [&:hover:not(:disabled)]:text-text-strong',
+  inverse: 'bg-surface-page text-text-primary [&:hover:not(:disabled)]:bg-surface-raised',
 };
 
 const SIZE_CLASS: Record<NonNullable<ButtonProps['size']>, string | undefined> = {
-  sm: styles.sm,
+  // The source uses a 36px intrinsic small-control height absent from the spacing tokens.
+  // eslint-disable-next-line no-restricted-syntax -- preserve the existing component size
+  sm: 'h-[36px] px-4 text-[14px]',
   md: undefined,
-  lg: styles.lg,
+  // eslint-disable-next-line no-restricted-syntax -- preserve the existing component size
+  lg: 'h-[56px] px-10 text-[16px]',
 };
 
 export function Button({
@@ -56,15 +58,14 @@ export function Button({
   style,
   ...rest
 }: ButtonProps): React.ReactElement {
-  const classes = [
-    styles.base,
+  const classes = cn(
+    // eslint-disable-next-line no-restricted-syntax -- 14px is the existing Button label size
+    'box-border inline-flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control border border-hairline border-transparent px-8 font-sans text-[14px] font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-[0.45]',
     VARIANT_CLASS[variant],
     SIZE_CLASS[size],
-    fullWidth ? styles.fullWidth : undefined,
+    fullWidth && 'w-full',
     className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  );
 
   if (href !== undefined) {
     return (

@@ -7,7 +7,7 @@
  * static CSS Module classes that could not express them.
  */
 import type { CSSProperties, ReactNode } from 'react';
-import styles from './Card.module.css';
+import { cn } from '../../lib/cn';
 
 export interface CardProps {
   title?: ReactNode;
@@ -34,7 +34,10 @@ export function Card({
   style,
   ...rest
 }: CardProps): React.ReactElement {
-  const classes = [styles.card, elevated ? styles.elevated : undefined].filter(Boolean).join(' ');
+  const classes = cn(
+    'rounded-card border border-hairline border-border-card bg-surface-card shadow-none',
+    elevated && 'shadow-card',
+  );
 
   return (
     <div
@@ -46,10 +49,17 @@ export function Card({
       }}
       {...rest}
     >
-      {eyebrow !== undefined && <div className={styles.eyebrow}>{eyebrow}</div>}
-      {title !== undefined && <div className={styles.title}>{title}</div>}
+      {eyebrow !== undefined && (
+        // eslint-disable-next-line no-restricted-syntax -- Card eyebrow overrides the shared 15.2px token to 12px today
+        <div className="type-eyebrow mb-2 text-[12px] uppercase text-text-muted">{eyebrow}</div>
+      )}
+      {title !== undefined && <div className="type-card-title mb-3 text-text-strong">{title}</div>}
       {children}
-      {footer !== undefined && <div className={styles.footer}>{footer}</div>}
+      {footer !== undefined && (
+        <div className="mt-4 border-t border-hairline border-border-default pt-4 type-small text-text-secondary">
+          {footer}
+        </div>
+      )}
     </div>
   );
 }

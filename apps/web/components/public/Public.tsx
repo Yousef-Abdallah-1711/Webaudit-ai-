@@ -51,8 +51,9 @@ export interface WordmarkProps {
 
 export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
   return (
-    <div dir="ltr" className={styles.wordmark} style={{ fontSize: size }}>
-      <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
+    // eslint-disable-next-line no-restricted-syntax -- preserve the exact wordmark tracking from Public.module.css
+    <div dir="ltr" className="inline-block whitespace-nowrap font-bold tracking-[-0.4px] text-text-strong" style={{ fontSize: size }}>
+      <span className="text-accent">{PRODUCT_NAME}</span>
     </div>
   );
 }

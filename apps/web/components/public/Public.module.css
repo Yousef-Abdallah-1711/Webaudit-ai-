@@ -1,15 +1,5 @@
 /* Ported from design-system/ui_kits/marketing/Public.jsx (T240). */
 
-.wordmark {
-  display: inline-block;
-  white-space: nowrap;
-  font-weight: 700;
-  letter-spacing: -0.4px;
-  color: var(--text-strong);
-}
-.wordmarkAccent {
-  color: var(--accent);
-}
 .wordmarkLink {
   text-decoration: none;
 }

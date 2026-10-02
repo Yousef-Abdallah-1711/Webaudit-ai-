@@ -24,7 +24,7 @@ import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { messagesByLocale } from '../i18n/messages';
 import { defaultLocale, localeMetadata, locales, type Lang, type Locale } from '../i18n/locales';
-import styles from './theme.module.css';
+import { cn } from '../lib/cn';
 
 const isBrowser = typeof window !== 'undefined';
 const InitialLocaleContext = createContext<Locale | undefined>(undefined);
@@ -274,14 +274,14 @@ export function ThemeToggle({
   const dark = theme === 'dark';
   const t = useTranslations('common');
 
-  const classes = [
-    styles.toggle,
-    styles.themeToggle,
-    compact ? styles.compact : undefined,
-    label ? styles.labeled : undefined,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const classes = cn(
+    // eslint-disable-next-line no-restricted-syntax -- preserve the source toggle's 13px label size
+    'flex box-border cursor-pointer items-center justify-center rounded-control border border-hairline border-transparent bg-transparent font-sans text-[13px] text-text-secondary transition-colors hover:bg-surface-raised',
+    'h-9 w-9 gap-2 p-0',
+    // eslint-disable-next-line no-restricted-syntax -- compact control is the existing 30px size
+    compact && 'h-[30px] w-[30px]',
+    label && 'w-full border-border-default px-3',
+  );
 
   return (
     <button
@@ -321,9 +321,11 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
   const t = useTranslations('common');
   const next: Lang = locales.find((locale) => locale !== lang) ?? defaultLocale;
 
-  const classes = [styles.toggle, styles.langToggle, label ? styles.labeled : undefined]
-    .filter(Boolean)
-    .join(' ');
+  const classes = cn(
+    // eslint-disable-next-line no-restricted-syntax -- preserve the source toggle's 13px label size
+    'flex box-border h-9 w-auto cursor-pointer items-center justify-center gap-[7px] rounded-control border border-hairline border-transparent bg-transparent px-3 font-sans text-[13px] font-medium text-text-secondary transition-colors hover:bg-surface-raised',
+    label && 'w-full border-border-default',
+  );
 
   return (
     <button

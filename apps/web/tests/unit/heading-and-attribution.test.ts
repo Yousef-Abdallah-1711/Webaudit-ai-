@@ -11,7 +11,6 @@ import { describe, expect, it } from 'vitest';
 import { I18nProvider } from '../../app/theme';
 import { TwoToneHeading } from '../../components/ui';
 import { AttributionMark, SeverityBadge } from '../../components/report';
-import twoToneStyles from '../../components/ui/TwoToneHeading.module.css';
 import severityStyles from '../../components/report/SeverityBadge.module.css';
 import attributionStyles from '../../components/report/AttributionMark.module.css';
 import enReports from '../../messages/en/reports.json';
@@ -38,11 +37,11 @@ describe('TwoToneHeading', () => {
     expect(h3).toMatch(/^<h3/);
   });
 
-  it('level=display and level=h2 get different classes', () => {
+  it('uses the mapped display and h2 typography utilities', () => {
     const display = render(createElement(TwoToneHeading, { lead: 'a', accent: 'b' }));
     const h2 = render(createElement(TwoToneHeading, { lead: 'a', accent: 'b', level: 'h2' }));
-    expect(display).toContain(twoToneStyles.display);
-    expect(h2).toContain(twoToneStyles.h2);
+    expect(display).toContain('type-display');
+    expect(h2).toContain('type-h2');
   });
 });
 

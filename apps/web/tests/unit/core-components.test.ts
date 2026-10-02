@@ -1,12 +1,9 @@
 /**
  * T237 — the 7 core components, rendered and asserted rather than trusted.
  *
- * `renderToStaticMarkup` rather than jsdom or Testing Library: none of these
- * components need an event loop or a real DOM to prove what they render, and
- * every module import already goes through the ported CSS Modules pipeline
- * that the manual `next build`/`next dev` verification for this task
- * confirmed generates real class names from real `var(--token)` CSS — these
- * tests exist to keep that true across a later edit, not to re-prove it.
+ * `renderToStaticMarkup` rather than jsdom or Testing Library: these
+ * components do not need an event loop or a real DOM to verify their props,
+ * markup, and semantic Tailwind utility selection.
  *
  * What is NOT covered here, and why: `Button`'s hover-is-a-colour-step-only
  * constraint (`Button.prompt.md`) is a CSS `:hover` rule with nothing to
@@ -19,8 +16,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Badge, Button, Card, Eyebrow, Input, PromoBar, StatRow } from '../../components/ui';
-import badgeStyles from '../../components/ui/Badge.module.css';
-import eyebrowStyles from '../../components/ui/Eyebrow.module.css';
+// Tailwind utility assertions cover the migrated visual states without coupling tests to CSS Module hashes.
 
 function render(element: React.ReactElement): string {
   return renderToStaticMarkup(element);
@@ -41,13 +37,25 @@ describe('Button', () => {
     expect(html).not.toContain('<button');
   });
 
-  it('gives every variant a distinct class', () => {
-    const variants = ['primary', 'secondary', 'ghost', 'inverse'] as const;
-    const classes = variants.map((variant) => {
+  it('uses the mapped surface and text colors for each variant', () => {
+    const variants = [
+      ['primary', 'bg-accent', 'text-text-on-accent'],
+      ['secondary', 'bg-surface-page', 'text-text-primary'],
+      ['ghost', 'bg-transparent', 'text-text-secondary'],
+      ['inverse', 'bg-surface-page', 'text-text-primary'],
+    ] as const;
+    for (const [variant, background, color] of variants) {
       const html = render(createElement(Button, { variant }, 'x'));
-      return /class="([^"]+)"/.exec(html)?.[1];
-    });
-    expect(new Set(classes).size).toBe(variants.length);
+      expect(html).toContain(background);
+      expect(html).toContain(color);
+    }
+  });
+
+  it('merges caller utilities with its own base classes', () => {
+    const html = render(createElement(Button, { className: 'px-2' }, 'x'));
+    expect(html).toContain('px-2');
+    expect(html).toContain('bg-accent');
+    expect(html).not.toContain('px-8');
   });
 
   it('marks a disabled button disabled and drops the click handler', () => {
@@ -64,7 +72,7 @@ describe('Input', () => {
     expect(without).not.toContain('span');
   });
 
-  it('applies the invalid class exactly when invalid is true', () => {
+  it('uses the critical border color exactly when invalid is true', () => {
     // InputProps.d.ts: "Red hairline border; pair with a message, never colour
     // alone" — the class carries the colour; a caller supplies the message.
     // The <input> itself, not the wrapping <div> — both have a class attribute
@@ -72,7 +80,8 @@ describe('Input', () => {
     const inputTag = (html: string): string | undefined => /<input[^>]*>/.exec(html)?.[0];
     const invalid = inputTag(render(createElement(Input, { invalid: true })));
     const valid = inputTag(render(createElement(Input, { invalid: false })));
-    expect(invalid).not.toBe(valid);
+    expect(invalid).toContain('border-sev-critical');
+    expect(valid).not.toContain('border-sev-critical');
   });
 });
 
@@ -80,9 +89,9 @@ describe('Card', () => {
   it('omits eyebrow, title, and footer when none are given', () => {
     const html = render(createElement(Card, {}, 'body only'));
     expect(html).toContain('body only');
-    expect(html).not.toContain('Card_eyebrow');
-    expect(html).not.toContain('Card_title');
-    expect(html).not.toContain('Card_footer');
+    expect(html).not.toContain('type-eyebrow');
+    expect(html).not.toContain('type-card-title');
+    expect(html).not.toContain('border-t');
   });
 
   it('renders the numeric padding prop as an inline style, not a class', () => {
@@ -104,24 +113,28 @@ describe('Badge', () => {
     // clickable-adjacent" — the default has to be something else for that
     // rule to mean anything.
     const html = render(createElement(Badge, {}, 'x'));
-    expect(html).not.toContain(badgeStyles.accent);
-    expect(html).toContain(badgeStyles.neutral);
+    expect(html).not.toContain('bg-accent');
+    expect(html).toContain('bg-surface-raised');
   });
 
-  it('gives every tone a distinct class', () => {
-    const tones = ['neutral', 'accent', 'success', 'inverse'] as const;
-    const classes = tones.map((tone) => {
+  it('uses the mapped colors for each tone', () => {
+    const tones = [
+      ['neutral', 'bg-surface-raised'],
+      ['accent', 'bg-[#fff3ec]'],
+      ['success', 'bg-sev-resolved-bg'],
+      ['inverse', 'bg-surface-inverse'],
+    ] as const;
+    for (const [tone, background] of tones) {
       const html = render(createElement(Badge, { tone }, 'x'));
-      return /class="([^"]+)"/.exec(html)?.[1];
-    });
-    expect(new Set(classes).size).toBe(tones.length);
+      expect(html).toContain(background);
+    }
   });
 
   it('pill defaults true; pill={false} gives the square radius class', () => {
     const pill = render(createElement(Badge, {}, 'x'));
     const square = render(createElement(Badge, { pill: false }, 'x'));
-    expect(pill).toContain(badgeStyles.pill);
-    expect(square).toContain(badgeStyles.square);
+    expect(pill).toContain('rounded-pill');
+    expect(square).toContain('rounded-none');
   });
 });
 
@@ -129,8 +142,8 @@ describe('Eyebrow', () => {
   it('is muted by default and accent only when asked', () => {
     const muted = render(createElement(Eyebrow, {}, 'x'));
     const accent = render(createElement(Eyebrow, { tone: 'accent' }, 'x'));
-    expect(muted).not.toContain(eyebrowStyles.accent);
-    expect(accent).toContain(eyebrowStyles.accent);
+    expect(muted).not.toContain('text-accent');
+    expect(accent).toContain('text-accent');
   });
 });
 

@@ -1,6 +1,6 @@
 /** Ported from design-system/components/core/StatRow.jsx (T237). */
 import { Fragment, type ReactNode } from 'react';
-import styles from './StatRow.module.css';
+import { cn } from '../../lib/cn';
 
 export interface StatRowItem {
   value: ReactNode;
@@ -13,21 +13,22 @@ export interface StatRowProps {
 }
 
 export function StatRow({ items = [], align = 'left' }: StatRowProps): React.ReactElement {
-  const classes = [styles.row, align === 'center' ? styles.center : undefined]
-    .filter(Boolean)
-    .join(' ');
+  const classes = cn(
+    'type-small flex flex-wrap items-center gap-2.5 text-text-secondary',
+    align === 'center' && 'justify-center',
+  );
 
   return (
     <div className={classes}>
       {items.map((it, i) => (
         <Fragment key={i}>
           {i > 0 && (
-            <span aria-hidden="true" className={styles.separator}>
+            <span aria-hidden="true" className="text-border-default">
               ·
             </span>
           )}
           <span>
-            <strong className={styles.value}>{it.value}</strong> {it.label}
+            <strong className="font-bold text-text-strong">{it.value}</strong> {it.label}
           </span>
         </Fragment>
       ))}

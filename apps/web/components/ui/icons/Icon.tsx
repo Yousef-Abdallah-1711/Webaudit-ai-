@@ -16,7 +16,7 @@
  * decorative glyph from assistive tech is correct markup, not a design
  * decision requiring the same restraint.
  */
-import styles from './Icon.module.css';
+import { cn } from '../../../lib/cn';
 import { ICON_PATHS, type IconName } from './paths';
 
 export interface IconProps {
@@ -32,7 +32,7 @@ export function Icon({
   strokeWidth = 1.9,
   className,
 }: IconProps): React.ReactElement {
-  const classes = [styles.icon, className].filter(Boolean).join(' ');
+  const classes = cn('shrink-0', className);
 
   return (
     <svg
