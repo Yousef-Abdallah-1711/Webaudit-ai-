@@ -40,7 +40,7 @@ const styles = {
   headerInner: cn('flex items-center gap-6 max-w-public-shell h-control my-0 mx-auto px-6 max-[640px]:gap-3 max-[640px]:px-4'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   nav: cn('flex gap-4 max-[640px]:hidden'),
-  navLink: cn('py-2 text-text-secondary text-sm font-normal no-underline transition-colors hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2'),
+  navLink: cn('py-2 text-text-secondary text-[0.875rem] font-normal no-underline transition-colors hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   mobileNavLink: cn('hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 max-[640px]:py-3 max-[640px]:text-text-secondary max-[640px]:type-body max-[640px]:tracking-normal max-[640px]:no-underline'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
@@ -76,7 +76,7 @@ const styles = {
   //  preserve the component-specific intrinsic value where no configured utility token matches
   footerBottom: cn('flex flex-wrap items-center gap-4 max-w-public-shell my-0 mx-auto pt-5 px-6 pb-8 border-x-0 border-b-0 border-border-default border-t-hairline border-solid'),
   footerCopy: cn('text-text-muted type-small'),
-  footerZero: cn('ms-auto text-text-muted font-mono text-xs'),
+  footerZero: cn('ms-auto text-text-muted font-mono text-[0.75rem]'),
   page: cn('flex min-h-screen flex-col bg-surface-page'),
   pageMain: cn('flex-1'),
 };

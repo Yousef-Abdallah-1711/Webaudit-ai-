@@ -6,7 +6,7 @@ import { cn } from '../../lib/cn';
 const styles = {
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
   proofSection: cn('py-12 px-6 bg-surface-sunken max-[768px]:py-8 max-[640px]:py-6 max-[640px]:px-4'),
-  sampleLabel: cn('table mb-3 mt-0 py-2 px-3 border-border-default border-hairline border-solid bg-surface-page text-text-primary text-sm leading-5 font-semibold'),
+  sampleLabel: cn('table mb-3 mt-0 py-2 px-3 border-border-default border-hairline border-solid bg-surface-page text-text-primary type-small leading-5 !font-semibold'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   proofArtifact: cn('py-6 px-6 border-border-default border-hairline border-solid bg-surface-page max-[640px]:py-4 max-[640px]:px-3'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px

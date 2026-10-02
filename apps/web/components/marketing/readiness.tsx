@@ -10,7 +10,7 @@ const styles = {
   inner: cn('grid grid-cols-[minmax(0,_0.85fr)_minmax(0,_1.15fr)] items-start gap-[clamp(var(--space-8),_7vw,_var(--space-16))] max-w-6xl mx-auto max-[1024px]:grid-cols-[minmax(0,_0.75fr)_minmax(0,_1.25fr)] max-[1024px]:gap-8 max-[768px]:grid-cols-[minmax(0,_0.9fr)_minmax(0,_1.1fr)] max-[768px]:gap-5 max-[640px]:block'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
   header: cn('max-w-[35rem] pt-4 max-[640px]:pt-0'),
-  sampleLabel: cn('m-0 text-text-on-surface-inverse text-sm leading-5 font-semibold'),
+  sampleLabel: cn('m-0 text-text-on-surface-inverse type-small leading-5 !font-semibold'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   heading: cn('mt-5 mb-0 type-h2  text-balance max-[640px]:mt-3 '),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
@@ -18,14 +18,14 @@ const styles = {
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
   decision: cn('min-w-0 py-5 px-5 bg-surface-page text-text-primary max-[768px]:px-4 max-[640px]:mt-6 max-[640px]:py-4 max-[640px]:px-3'),
   gate: cn('flex items-center justify-between flex-wrap gap-3 pb-4 border-x-0 border-t-0 border-border-default border-b-hairline border-solid'),
-  gateLabel: cn('text-text-secondary text-sm leading-5 font-semibold'),
+  gateLabel: cn('text-text-secondary type-small leading-5 !font-semibold'),
   gateValue: cn('text-sev-high type-card-title tracking-[0.02em]'),
   modules: cn('m-0 p-0 list-none'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
   module: cn('flex items-center justify-between gap-3 min-w-0 py-3 border-x-0 border-t-0 border-border-default border-b-hairline border-solid max-[368px]:items-start'),
   moduleName: cn('min-w-0 text-text-primary type-body break-words'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  status: cn('flex-none py-1 px-2 rounded-pill text-sm leading-5 font-semibold max-[368px]:whitespace-normal max-[368px]:text-end'),
+  status: cn('flex-none py-1 px-2 rounded-pill type-small leading-5 !font-semibold max-[368px]:whitespace-normal max-[368px]:text-end'),
   pass: cn('bg-sev-resolved-bg text-sev-resolved'),
   blocked: cn('bg-sev-high-bg text-sev-high'),
   warning: cn('bg-sev-medium-bg text-sev-medium'),

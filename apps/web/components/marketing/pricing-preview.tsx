@@ -26,7 +26,7 @@ const styles = {
   recheck: cn('flex items-baseline flex-wrap gap-2 m-0 text-text-secondary type-small'),
   costNumber: cn('text-text-strong type-card-title tabular-nums'),
   arrow: cn('px-1 text-accent type-body-bold'),
-  detailsLink: cn('inline-flex items-center gap-2 min-h-control text-text-primary text-sm leading-5 font-bold underline decoration-border-default underline-offset-1 hover:text-accent-hover hover:decoration-current focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1'),
+  detailsLink: cn('inline-flex items-center gap-2 min-h-control text-text-primary type-small leading-5 !font-bold underline decoration-border-default underline-offset-1 hover:text-accent-hover hover:decoration-current focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1'),
 };
 
 const INDIVIDUAL_AREAS_COST = Object.values(AREA_COST).reduce((total, cost) => total + cost, 0);

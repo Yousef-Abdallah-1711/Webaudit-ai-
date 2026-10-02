@@ -30,7 +30,7 @@ export function Badge({
   children,
 }: BadgeProps): React.ReactElement {
   const classes = cn(
-    'inline-flex items-center gap-1.5 whitespace-nowrap border border-hairline px-2.5 py-1 text-xs font-medium leading-4',
+    'inline-flex items-center gap-1.5 whitespace-nowrap border border-hairline px-2.5 py-1 text-[0.75rem] font-medium leading-4',
     TONE_CLASS[tone],
     pill ? 'rounded-pill' : 'rounded-none',
     mono ? 'font-mono' : 'font-sans',

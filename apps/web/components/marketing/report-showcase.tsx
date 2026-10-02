@@ -11,7 +11,7 @@ const styles = {
   inner: cn('grid grid-cols-[minmax(0,_0.72fr)_minmax(0,_1.28fr)] items-start gap-[clamp(var(--space-8),_6vw,_var(--space-16))] max-w-6xl mx-auto max-[1024px]:grid-cols-[minmax(0,_0.8fr)_minmax(0,_1.2fr)] max-[1024px]:gap-8 max-[768px]:grid-cols-[minmax(0,_1fr)_minmax(0,_1.35fr)] max-[768px]:gap-5 max-[640px]:block'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   intro: cn('sticky top-8 max-[640px]:static'),
-  sampleLabel: cn('table m-0 py-2 px-3 border-border-default border-hairline border-solid text-text-primary text-sm leading-5 font-semibold'),
+  sampleLabel: cn('table m-0 py-2 px-3 border-border-default border-hairline border-solid text-text-primary type-small leading-5 !font-semibold'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   heading: cn('mt-5 mb-0 type-h2  text-balance max-[640px]:mt-3 '),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
@@ -20,22 +20,22 @@ const styles = {
   finding: cn('min-w-0 py-6 px-6 border-border-default border-hairline border-solid bg-surface-sunken max-[768px]:py-5 max-[768px]:px-4 max-[640px]:mt-6 max-[640px]:py-4 max-[640px]:px-3'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
   findingMeta: cn('flex flex-wrap items-center gap-2 max-[368px]:items-start max-[368px]:flex-col'),
-  severity: cn('inline-flex items-center min-h-6 px-2 rounded-pill text-sm leading-5 font-semibold bg-sev-medium-bg text-sev-medium'),
-  area: cn('inline-flex items-center min-h-6 px-2 rounded-pill text-sm leading-5 font-semibold border-border-default border-hairline border-solid bg-surface-page text-text-secondary'),
+  severity: cn('inline-flex items-center min-h-6 px-2 rounded-pill type-small leading-5 !font-semibold bg-sev-medium-bg text-sev-medium'),
+  area: cn('inline-flex items-center min-h-6 px-2 rounded-pill type-small leading-5 !font-semibold border-border-default border-hairline border-solid bg-surface-page text-text-secondary'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px
   findingTitle: cn('mt-4 mb-0 text-text-strong type-card-title text-balance max-[768px]:type-body-bold'),
   locationRow: cn('flex flex-wrap items-baseline gap-y-2 gap-x-4 mt-4'),
-  fieldLabel: cn('text-text-muted text-sm leading-5 font-semibold'),
-  location: cn('min-w-0 text-text-code font-mono text-sm break-words'),
-  evidenceValue: cn('min-w-0 text-text-code font-mono text-sm break-words'),
+  fieldLabel: cn('text-text-muted type-small leading-5 !font-semibold'),
+  location: cn('min-w-0 text-text-code font-mono text-[0.875rem] break-words'),
+  evidenceValue: cn('min-w-0 text-text-code font-mono text-[0.875rem] break-words'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
   description: cn('mt-4 mb-0 text-text-primary type-body text-pretty max-[640px]:tracking-normal'),
   evidence: cn('flex flex-wrap items-baseline gap-y-2 gap-x-4 mt-4 pt-4 border-x-0 border-b-0 border-border-default border-t-hairline border-solid'),
   prompt: cn('mt-5 bg-surface-page'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  promptHeading: cn('flex items-center justify-between gap-3 py-3 px-4 bg-surface-inverse text-text-on-surface-inverse [&>h4]:m-0 [&>h4]:text-sm [&>h4]:leading-5 [&>h4]:font-semibold max-[368px]:items-start max-[368px]:flex-col max-[368px]:items-start'),
+  promptHeading: cn('flex items-center justify-between gap-3 py-3 px-4 bg-surface-inverse text-text-on-surface-inverse [&>h4]:m-0 [&>h4]:type-small [&>h4]:leading-5 [&>h4]:!font-semibold max-[368px]:items-start max-[368px]:flex-col max-[368px]:items-start'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  copyButton: cn('flex-none min-h-control py-2 px-3 border-text-on-surface-inverse border-hairline border-solid rounded-control bg-transparent text-text-on-surface-inverse text-sm leading-5 font-semibold cursor-pointer hover:bg-text-primary focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1 max-[368px]:self-start'),
+  copyButton: cn('flex-none min-h-control py-2 px-3 border-text-on-surface-inverse border-hairline border-solid rounded-control bg-transparent text-text-on-surface-inverse type-small leading-5 !font-semibold cursor-pointer hover:bg-text-primary focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1 max-[368px]:self-start'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
   promptText: cn(specialStyles.promptText, 'max-h-88 m-0 py-4 px-4 text-text-primary font-mono text-[0.8125rem] leading-[1.65] overflow-auto break-words whitespace-pre-wrap max-[640px]:max-h-72 max-[640px]:px-3'),
   promptNote: cn('mt-3 mb-0 text-text-secondary type-small text-pretty'),

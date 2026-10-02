@@ -33,7 +33,7 @@ const styles = {
   name: cn('m-0 text-text-strong type-card-title text-balance max-[768px]:type-body-bold max-[640px]:type-body-bold'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
   performanceName: cn('type-h3 max-[640px]:type-body-bold'),
-  cost: cn('flex-none text-text-muted text-sm leading-5 font-mono'),
+  cost: cn('flex-none text-text-muted type-small leading-5 !font-mono'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
   description: cn('max-w-[52ch] mt-6 mb-0 text-text-secondary type-small text-pretty max-[640px]:mt-3'),
   //  preserve the component-specific intrinsic value where no configured utility token matches

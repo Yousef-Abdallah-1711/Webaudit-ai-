@@ -14,7 +14,7 @@ const styles = {
   loopGrid: cn('grid grid-cols-4 gap-3 max-[640px]:grid-cols-1'),
   //  preserve the component-specific intrinsic value where no configured utility token matches
   loopStep: cn('pt-[calc(var(--space-3)_+_(var(--space-1)_/_2))] border-x-0 border-b-0 border-t-[calc(var(--space-1)_-_(var(--space-1)_/_4))] border-solid border-t-accent'),
-  loopNum: cn('font-mono text-xs text-text-strong'),
+  loopNum: cn('font-mono text-[0.75rem] text-text-strong'),
   //  preserve the component-specific intrinsic value where no configured utility token matches
   loopTitle: cn('my-[calc(var(--space-2)_-_(var(--space-1)_/_2))] mx-0 text-[calc(var(--space-4)_+_(var(--space-1)_/_4))] font-semibold'),
   loopDesc: cn('type-small text-text-secondary text-pretty'),

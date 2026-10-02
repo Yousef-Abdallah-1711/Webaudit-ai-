@@ -16,8 +16,8 @@ const styles = {
   context: cn('max-w-[58ch] m-0 text-text-secondary type-body text-pretty max-[640px]:type-body max-[640px]:tracking-normal'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
   steps: cn('flex items-center gap-3 mt-5 max-[368px]:items-start max-[368px]:flex-col'),
-  step: cn('flex items-center gap-2 min-w-0 text-text-primary text-sm leading-5 font-semibold'),
-  stepMark: cn('grid flex-none w-8 aspect-square place-items-center border-border-default border-hairline border-solid bg-surface-page text-text-muted font-mono text-xs'),
+  step: cn('flex items-center gap-2 min-w-0 text-text-primary type-small leading-5 !font-semibold'),
+  stepMark: cn('grid flex-none w-8 aspect-square place-items-center border-border-default border-hairline border-solid bg-surface-page text-text-muted font-mono text-[0.75rem]'),
   verifyMark: cn('bg-accent text-text-on-accent'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
   connector: cn(specialStyles.connector, 'flex-none text-text-muted type-body-lg max-[368px]:ps-2 max-[368px]:rotate-90'),
