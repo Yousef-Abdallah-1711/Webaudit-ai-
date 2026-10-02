@@ -24,6 +24,9 @@ const config = {
       screens: {
         'auth-collapse': '1023.984px',
         'auth-compact': '368px',
+        'account-collapse': '776.02px',
+        'billing-collapse': '900.02px',
+        'usage-collapse': '640.02px',
       },
       colors: {
         accent: 'var(--accent)',

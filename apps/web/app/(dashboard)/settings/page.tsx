@@ -31,7 +31,29 @@ import {
 } from '../../../lib/api';
 import { useTheme } from '../../theme';
 import { useAuth } from '../../../components/auth/AuthProvider';
-import styles from './page.module.css';
+
+const styles = {
+  layout: 'grid grid-cols-[1fr_20rem] items-start gap-5 max-account-collapse:grid-cols-1',
+  col: 'flex flex-col gap-4',
+  row: 'grid grid-cols-[12.5rem_1fr] items-start gap-5 border-0 border-t-hairline border-t-border-default border-solid py-[1.125rem] max-account-collapse:grid-cols-1',
+  rowLabel: 'font-sans text-[0.875rem] leading-5 font-semibold text-text-strong',
+  rowNote: 'mt-1 font-sans text-[0.8125rem] leading-5 font-normal text-pretty text-text-muted',
+  fieldWrap: 'max-w-[22.5rem]',
+  appearanceBtn: 'flex h-9 cursor-pointer items-center gap-2.5 rounded-control border border-hairline border-border-default border-solid bg-surface-page px-3.5 font-sans text-[0.875rem] text-text-primary',
+  switchTrack: 'relative h-[1.125rem] w-8 rounded-pill bg-border-default transition-colors',
+  switchTrackOn: '!bg-accent',
+  switchKnob: 'absolute start-0.5 top-0.5 h-3.5 w-3.5 rounded-pill bg-white transition-[inset-inline-start] duration-150 ease-[var(--easing)]',
+  switchKnobOn: 'start-4',
+  connectedRow: 'flex items-center gap-3',
+  mono: 'font-mono text-[0.8125rem] text-text-secondary',
+  tokensNote: 'font-mono text-[0.8125rem] text-text-muted',
+  deleteNote: 'm-0 mb-4 max-w-[62ch] text-pretty type-small text-text-secondary',
+  confirmLabel: 'mx-0 mb-3 grid max-w-[22.5rem] gap-1.5 type-small text-text-secondary',
+  deleteError: 'm-0 mb-3 type-small text-sev-critical',
+  planValue: 'type-h3 text-text-strong',
+  planSub: 'mx-0 my-1.5 mb-3.5 type-small text-text-secondary',
+  retentionText: 'm-0 type-small text-text-secondary',
+} as const;
 
 interface RowProps {
   label: string;

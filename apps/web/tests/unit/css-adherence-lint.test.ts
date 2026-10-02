@@ -93,15 +93,7 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // px 18 -> 23: Phase 4 (same master plan) — the email search row and the
   // recent-ledger/audit-trail lists on the detail view.
   'app/(admin)/admin/users/page.module.css': { hex: 0, px: 23 },
-  // px 24 -> 29: receipt rows and receipt metadata typography.
-  'app/(dashboard)/billing/page.module.css': { hex: 0, px: 29 },
-  // New receipt detail surface; its 12px/13px values are intentional and
-  // documented beside the declarations.
-  'app/(dashboard)/billing/receipts/[id]/page.module.css': { hex: 0, px: 2 },
   'app/(dashboard)/reports/[id]/page.module.css': { hex: 0, px: 14 },
-  // px 28 -> 32: delete-account confirmation label and error state.
-  'app/(dashboard)/settings/page.module.css': { hex: 1, px: 32 },
-  'app/(dashboard)/usage/page.module.css': { hex: 0, px: 20 },
   // px 43 -> 45: the two fixed-column grids (.diffGrid, .loopGrid) got a
   // 640px mobile breakpoint collapsing them to one column — a real,
   // measured horizontal-overflow bug found via manual testing, not a new

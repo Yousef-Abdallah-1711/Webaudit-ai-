@@ -6,7 +6,27 @@ import { PRODUCT_NAME } from '@webaudit/config';
 import { Button, Card } from '../../../components/ui';
 import { PageHead } from '../../../components/dashboard';
 import { getUsage, type UsageSummary } from '../../../lib/api';
-import styles from './page.module.css';
+
+const styles = {
+  statsGrid: 'mb-5 grid grid-cols-4 gap-4 max-usage-collapse:grid-cols-2',
+  statValue: 'type-h3 tabular-nums text-text-strong',
+  statSub: 'mt-1.5 type-small text-text-secondary',
+  chartRow: 'mt-2 flex h-[9.375rem] items-end gap-1',
+  chartBar: 'min-h-0.5 flex-1 bg-border-default',
+  chartBarActive: '!bg-accent',
+  chartLegend: 'mt-2.5 flex justify-between font-mono text-[0.6875rem] text-text-muted',
+  twoCol: 'mt-4 grid grid-cols-2 gap-4 max-usage-collapse:grid-cols-1',
+  areaRow: 'border-0 border-t-hairline border-t-border-default border-solid py-[0.5625rem]',
+  areaRowHead: 'flex type-small',
+  areaRowValue: 'mx-0 ms-auto font-mono',
+  areaBar: 'mt-1.5 h-1 bg-surface-sunken',
+  areaBarFill: 'h-full',
+  refundRow: 'flex gap-3 border-0 border-t-hairline border-t-border-default border-solid py-[0.6875rem]',
+  refundDate: 'w-14 font-mono text-[0.75rem] text-text-muted',
+  refundReason: 'type-small',
+  refundValue: 'mx-0 ms-auto font-mono text-[0.8125rem] text-sev-resolved',
+  refundNote: 'm-0 mt-3.5 type-small text-text-muted',
+} as const;
 
 const AREA_COLORS: Record<string, string> = {
   SECURITY: 'var(--sev-critical)',

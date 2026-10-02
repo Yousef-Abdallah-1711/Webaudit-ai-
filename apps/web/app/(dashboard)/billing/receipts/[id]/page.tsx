@@ -5,7 +5,10 @@ import { useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../../../components/dashboard';
 import { ApiError, getReceiptHtml } from '../../../../../lib/api';
-import styles from './page.module.css';
+const styles = {
+  error: 'm-0 mb-3 type-small text-sev-critical',
+  frame: 'min-h-[47.5rem] w-full rounded-card border border-hairline border-border-default border-solid bg-surface-page',
+} as const;
 
 export default function BillingReceiptPage(): React.ReactElement {
   const t = useTranslations('billing');

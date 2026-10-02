@@ -39,7 +39,36 @@ import {
   type Plan,
   type SubscribablePlanId,
 } from '../../../lib/api';
-import styles from './page.module.css';
+const styles = {
+  layout: 'grid grid-cols-[1fr_20rem] items-start gap-5 max-billing-collapse:grid-cols-1',
+  mainCol: 'flex flex-col gap-4',
+  sideCol: 'flex flex-col gap-4',
+  notice: 'm-0 mb-3 type-small text-sev-resolved',
+  error: 'm-0 mb-3 type-small text-sev-critical',
+  balanceGrid: 'grid grid-cols-2 gap-5',
+  balanceValue: 'type-h3 tabular-nums text-text-strong',
+  balanceLabel: 'mt-1 font-sans text-[0.875rem] leading-5 font-semibold text-text-strong',
+  balanceNote: 'mx-0 mt-1.5 mb-0 type-small text-text-muted',
+  moveRow: 'flex gap-3 border-0 border-t-hairline border-t-border-default border-solid py-[0.6875rem]',
+  moveDate: 'w-24 shrink-0 font-mono text-[0.75rem] text-text-muted',
+  moveReason: 'type-small',
+  drewFrom: 'mx-0 ms-2 font-mono text-[0.6875rem] text-text-muted',
+  moveAmount: 'mx-0 ms-auto shrink-0 font-mono text-[0.8125rem] text-text-secondary',
+  moveAmountUp: '!text-sev-resolved',
+  receiptRow: 'flex items-center justify-between gap-3 border-0 border-t-hairline border-t-border-default border-solid py-[0.6875rem] text-inherit no-underline',
+  receiptKind: 'block font-sans text-[0.875rem] leading-5 font-bold text-text-strong',
+  receiptMeta: 'mt-0.5 block font-mono text-[0.75rem] text-text-muted',
+  receiptAmount: 'shrink-0 font-mono text-[0.8125rem] text-text-secondary',
+  tierGrid: 'mt-1 grid grid-cols-2 gap-3 max-billing-collapse:grid-cols-1',
+  tier: 'flex flex-col gap-2.5 rounded-card border border-hairline border-border-default border-solid bg-surface-page p-4',
+  tierNow: '!border-accent',
+  tierHead: 'flex items-center gap-2',
+  tierName: 'text-[0.9375rem] font-bold',
+  tierCredits: 'font-mono text-[0.75rem] text-text-secondary',
+  tierFeat: 'flex flex-1 flex-col gap-1 type-small text-text-primary',
+  planName: 'type-h3 text-text-strong',
+  topUpInput: 'my-2.5 h-9 w-full rounded-control border border-hairline border-border-default border-solid bg-surface-page px-3 font-mono text-[0.875rem] text-text-primary',
+} as const;
 
 const SUBSCRIBABLE = new Set<string>(['starter', 'pro', 'business']);
 
