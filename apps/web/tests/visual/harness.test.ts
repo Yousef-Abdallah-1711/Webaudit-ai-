@@ -224,9 +224,8 @@ describe('apps/web vs. design-system/reference-pages/, at both viewports', () =>
  * of these pages inherits `PublicHeader`'s pre-existing lack of a mobile
  * nav treatment (no `@media` query, no collapse — `Public.tsx`'s own T240
  * module note; the `it.todo` for the Home page above documents the same
- * root cause). That is not an AuthFrame defect — `AuthFrame.module.css`'s
- * `.inner` already carries the source's own `max-width: 100%` — it is the
- * shared header overflowing regardless of what page it sits above, which
+ * root cause). That is not an auth form primitive defect; it is the shared
+ * header overflowing regardless of what page it sits above, which
  * "port, never author" says is not this task's call to invent a fix for.
  * A handful of the desktop-1440 comparisons also land a little over the
  * 0.5% bar (roughly 1.5-3%) even once the dimension mismatch is fixed —

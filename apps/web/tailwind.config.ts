@@ -21,6 +21,10 @@ const config = {
   theme: {
     fontSize: {},
     extend: {
+      screens: {
+        'auth-collapse': '1023.984px',
+        'auth-compact': '368px',
+      },
       colors: {
         accent: 'var(--accent)',
         'accent-hover': 'var(--accent-hover)',
@@ -106,6 +110,7 @@ const config = {
       maxWidth: {
         marketing: 'var(--container-marketing)',
         'public-shell': '70rem',
+        'app-shell': 'var(--container-app)',
       },
       width: {
         control: 'var(--control-height)',

@@ -53,20 +53,10 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
   });
 
   it('inverse-surface marketing and auth text use the contrasting inverse token', () => {
-    const cssSurfaces: readonly [URL, readonly string[]][] = [
-      [new URL('../../components/auth/AuthShell.module.css', import.meta.url), ['.contextPanel', '.sampleLabel', '.contextIntro']],
-    ];
-
-    for (const [url, selectors] of cssSurfaces) {
-      const stylesheet = readFileSync(url, 'utf8');
-      for (const selector of selectors) {
-        const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const rule = stylesheet.match(new RegExp(`${escapedSelector}\\s*\\{([^}]*)\\}`))?.[1];
-        expect(rule, `${selector} rule exists in ${url.pathname}`).toBeDefined();
-        expect(rule).toContain('color: var(--text-on-surface-inverse)');
-        expect(rule).not.toContain('color: var(--text-on-accent)');
-      }
-    }
+    const authSource = readFileSync(new URL('../../components/auth/AuthShell.tsx', import.meta.url), 'utf8');
+    expect(authSource).toContain('bg-surface-inverse');
+    expect(authSource.match(/text-text-on-surface-inverse/g)?.length).toBeGreaterThanOrEqual(3);
+    expect(authSource).not.toContain('text-text-on-accent');
 
     const utilitySurfaces: readonly [URL, readonly string[]][] = [
       [new URL('../../components/marketing/readiness.tsx', import.meta.url), ['section', 'sampleLabel', 'intro']],

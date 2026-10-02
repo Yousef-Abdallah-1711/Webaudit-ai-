@@ -13,7 +13,6 @@ import { Field } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, forgotPassword } from '../../../lib/api';
-import styles from './page.module.css';
 
 export default function ForgotPage(): React.ReactElement {
   const t = useTranslations('auth');
@@ -66,7 +65,7 @@ export default function ForgotPage(): React.ReactElement {
           lead={t('forgot_lead')}
           foot={<a href="/login">{t('forgot_foot_link')}</a>}
         >
-          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
             <Field
               label={t('email')}
               type="email"

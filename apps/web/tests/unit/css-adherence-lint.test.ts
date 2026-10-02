@@ -93,11 +93,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // px 18 -> 23: Phase 4 (same master plan) — the email search row and the
   // recent-ledger/audit-trail lists on the detail view.
   'app/(admin)/admin/users/page.module.css': { hex: 0, px: 23 },
-  'app/(auth)/forgot-password/page.module.css': { hex: 0, px: 1 },
-  'app/(auth)/login/page.module.css': { hex: 0, px: 2 },
-  'app/(auth)/reset-password/page.module.css': { hex: 0, px: 2 },
-  'app/(auth)/signup/page.module.css': { hex: 0, px: 1 },
-  'app/(auth)/verify-email/page.module.css': { hex: 0, px: 4 },
   // px 24 -> 29: receipt rows and receipt metadata typography.
   'app/(dashboard)/billing/page.module.css': { hex: 0, px: 29 },
   // New receipt detail surface; its 12px/13px values are intentional and
@@ -115,7 +110,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
   'components/admin/format.module.css': { hex: 0, px: 2 },
-  'components/auth/AuthFrame.module.css': { hex: 0, px: 10 },
   'components/dashboard/Sidebar.module.css': { hex: 1, px: 62 },
   'components/fixes/FixesBoard.module.css': { hex: 0, px: 3 },
   'components/fixes/IssueRow.module.css': { hex: 0, px: 17 },

@@ -19,7 +19,6 @@ import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { Icon } from '../../../components/ui/icons/Icon';
 import { useTranslations } from 'next-intl';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
-import styles from './page.module.css';
 
 type Outcome = 'ready' | 'confirming' | 'confirmed' | 'invalid' | 'failed';
 
@@ -59,15 +58,24 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
       <AuthShell
         form={
           <AuthFormPanel>
-            <div className={`${styles.statusBadge} ${styles.successBadge}`} aria-hidden="true">
-              <Icon name="check" className={styles.statusIcon ?? ''} />
+            <div
+              className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-sev-resolved-bg text-sev-resolved"
+              aria-hidden="true"
+            >
+              <Icon name="check" className="h-8 w-8" />
             </div>
-            <h1 className={styles.outcomeTitle}>{t('verify_confirmed_title')}</h1>
-            <p className={styles.outcomeLead}>{t('verify_confirmed_lead')}</p>
+            <h1 className="m-0 mb-2 type-card-title text-text-strong">
+              {t('verify_confirmed_title')}
+            </h1>
+            <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+              {t('verify_confirmed_lead')}
+            </p>
             <Button fullWidth href="/login">
               {t('verify_confirmed_submit')}
             </Button>
-            <p className={styles.closeNote}>{t('verify_confirmed_close_note')}</p>
+            <p className="m-0 mt-3 text-center type-small text-text-muted">
+              {t('verify_confirmed_close_note')}
+            </p>
           </AuthFormPanel>
         }
       />
@@ -78,8 +86,10 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
       <AuthShell
         form={
           <AuthFormPanel>
-            <h1 className={styles.outcomeTitle}>{t('verify_retry_title')}</h1>
-            <p className={styles.outcomeLead}>{t('verify_retry_lead')}</p>
+            <h1 className="m-0 mb-2 type-card-title text-text-strong">{t('verify_retry_title')}</h1>
+            <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+              {t('verify_retry_lead')}
+            </p>
             <Button fullWidth onClick={() => void onConfirm()}>
               {t('verify_retry_button')}
             </Button>
@@ -92,11 +102,18 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
     <AuthShell
       form={
         <AuthFormPanel>
-          <div className={`${styles.statusBadge} ${styles.neutralBadge}`} aria-hidden="true">
-            <Icon name="circleAlert" className={styles.statusIcon ?? ''} />
+          <div
+            className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-sev-info-bg text-sev-info"
+            aria-hidden="true"
+          >
+            <Icon name="circleAlert" className="h-8 w-8" />
           </div>
-          <h1 className={styles.outcomeTitle}>{t('verify_invalid_title')}</h1>
-          <p className={styles.outcomeLead}>{t('verify_invalid_lead')}</p>
+          <h1 className="m-0 mb-2 type-card-title text-text-strong">
+            {t('verify_invalid_title')}
+          </h1>
+          <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+            {t('verify_invalid_lead')}
+          </p>
           <Button fullWidth href="/signup">
             {t('verify_foot_link')}
           </Button>
@@ -135,7 +152,9 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
             </span>
           }
         >
-          <div className={styles.emailBox}>{email || t('verify_email_fallback')}</div>
+          <div className="mb-5 border-solid border-hairline border-border-default bg-surface-sunken p-4 font-mono type-small text-text-zinc">
+            {email || t('verify_email_fallback')}
+          </div>
           <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
             {sent ? t('verify_resent') : t('verify_resend')}
           </Button>

@@ -15,7 +15,6 @@ import { useTranslations } from 'next-intl';
 import { ApiError, API_BASE } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { safeNextDestination } from '../../../components/auth/RouteGuard';
-import styles from './page.module.css';
 
 export default function LoginPage(): React.ReactElement | null {
   const t = useTranslations('auth');
@@ -78,7 +77,7 @@ export default function LoginPage(): React.ReactElement | null {
             </span>
           }
         >
-          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
             <Field
               label={t('email')}
               type="email"
@@ -90,9 +89,9 @@ export default function LoginPage(): React.ReactElement | null {
               }}
             />
             <div>
-              <div className={styles.passwordRow}>
-                <span className={styles.passwordLabel}>{t('password')}</span>
-                <a href="/forgot-password" className={styles.forgotLink}>
+              <div className="mb-1.5 flex">
+                <span className="type-small !font-medium">{t('password')}</span>
+                <a href="/forgot-password" className="ms-auto type-small text-text-strong">
                   {t('forgot_link')}
                 </a>
               </div>

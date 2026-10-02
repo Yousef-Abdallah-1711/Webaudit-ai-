@@ -1,0 +1,14 @@
+/* Retained because Tailwind utilities cannot express the ancestor html[dir="rtl"] selector. */
+:global(html[dir='rtl']) .rtlLayout {
+  grid-template-areas: 'context form';
+}
+
+@media (max-width: 63.999rem) {
+  :global(html[dir='rtl']) .rtlLayout {
+    grid-template-areas: 'form' 'context';
+  }
+}
+
+:global(html[dir='rtl']) .rtlLayout.rtlSingleColumn {
+  grid-template-areas: 'form';
+}

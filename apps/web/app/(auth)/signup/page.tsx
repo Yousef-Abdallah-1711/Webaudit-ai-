@@ -22,7 +22,6 @@ import { AuthContextPanel, AuthFormPanel, AuthShell, AuthStatus } from '../../..
 import { useTranslations } from 'next-intl';
 import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
-import styles from './page.module.css';
 
 export default function RegisterPage(): React.ReactElement | null {
   const t = useTranslations('auth');
@@ -82,7 +81,7 @@ export default function RegisterPage(): React.ReactElement | null {
             </span>
           }
         >
-          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
             <Field
               label={t('name')}
               autoComplete="name"
@@ -112,7 +111,9 @@ export default function RegisterPage(): React.ReactElement | null {
                 setPassword(e.target.value);
               }}
             />
-            <div className={password.length >= 12 ? styles.checkOk : styles.checkPending}>
+            <div
+              className={`flex items-center gap-2 type-small ${password.length >= 12 ? 'text-sev-resolved' : 'text-text-muted'}`}
+            >
               <svg
                 width="14"
                 height="14"
@@ -128,7 +129,7 @@ export default function RegisterPage(): React.ReactElement | null {
               </svg>
               {t('min_chars')}
             </div>
-            <div className={styles.note}>{t('register_note')}</div>
+            <div className="type-small text-text-muted">{t('register_note')}</div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
             <Button type="submit" fullWidth disabled={password.length < 12 || submitting}>
               {t('register_submit')}

@@ -15,7 +15,6 @@ import { Field } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, resetPassword } from '../../../lib/api';
-import styles from './page.module.css';
 
 function ResetPageInner(): React.ReactElement {
   const t = useTranslations('auth');
@@ -78,7 +77,7 @@ function ResetPageInner(): React.ReactElement {
           lead={t('reset_lead')}
           foot={<a href="/login">{t('reset_foot_link')}</a>}
         >
-          <form className={styles.stack} noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
             <Field
               label={t('new_password')}
               type="password"
@@ -99,7 +98,9 @@ function ResetPageInner(): React.ReactElement {
                 setConfirm(e.target.value);
               }}
             />
-            <div className={longEnough ? styles.checkOk : styles.checkPending}>
+            <div
+              className={`flex items-center gap-2 type-small ${longEnough ? 'text-sev-resolved' : 'text-text-muted'}`}
+            >
               <svg
                 width="14"
                 height="14"
@@ -116,9 +117,9 @@ function ResetPageInner(): React.ReactElement {
               {t('min_chars')}
             </div>
             {confirm !== '' && !matches && (
-              <div className={styles.error}>{t('error_passwords_match')}</div>
+              <div className="type-small text-sev-critical">{t('error_passwords_match')}</div>
             )}
-            {error !== null && <div className={styles.error}>{error}</div>}
+            {error !== null && <div className="type-small text-sev-critical">{error}</div>}
             <Button type="submit" fullWidth disabled={!ok || submitting}>
               {t('reset_submit')}
             </Button>

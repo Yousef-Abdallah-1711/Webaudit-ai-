@@ -10,7 +10,6 @@
  */
 import { useTranslations } from 'next-intl';
 import { Input, type InputProps } from '../ui';
-import styles from './AuthFrame.module.css';
 
 export interface FieldProps extends InputProps {
   label: string;
@@ -23,8 +22,8 @@ export function Field({ label, ...rest }: FieldProps): React.ReactElement {
   };
 
   return (
-    <label className={styles.field}>
-      <div className={styles.fieldLabel}>{label}</div>
+    <label className="block">
+      <div className="mb-1.5 type-small !font-medium text-text-primary">{label}</div>
       <Input {...inputProps} />
     </label>
   );
@@ -33,10 +32,10 @@ export function Field({ label, ...rest }: FieldProps): React.ReactElement {
 export function Divider(): React.ReactElement {
   const t = useTranslations('auth');
   return (
-    <div className={styles.divider}>
-      <div className={styles.dividerLine} />
-      <span className={styles.dividerText}>{t('or')}</span>
-      <div className={styles.dividerLine} />
+    <div className="my-5 flex items-center gap-3">
+      <div className="h-px flex-1 bg-border-default" />
+      <span className="type-small text-text-muted">{t('or')}</span>
+      <div className="h-px flex-1 bg-border-default" />
     </div>
   );
 }
