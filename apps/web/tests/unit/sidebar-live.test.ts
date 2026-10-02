@@ -15,7 +15,6 @@
 import { act, createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
-import styles from '../../components/dashboard/Sidebar.module.css';
 
 const { logoutMock, replaceMock } = vi.hoisted(() => ({
   logoutMock: vi.fn(),
@@ -303,20 +302,20 @@ describe('AppShell — mobile sidebar drawer', () => {
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('true');
       const closeButton = document.getElementById('dashboard-sidebar-mobile-close');
-      const mainCol = document.querySelector(`.${styles.mainCol}`);
+      const mainCol = document.querySelector('#dashboard-sidebar')?.parentElement?.lastElementChild;
       expect(document.activeElement).toBe(closeButton);
       expect(mainCol?.hasAttribute('inert')).toBe(true);
-      expect(document.querySelector(`.${styles.mobileBackdrop}`)).not.toBeNull();
+      expect(document.querySelector('#dashboard-sidebar + div[aria-hidden="true"]')).not.toBeNull();
       expect(document.body.style.overflow).toBe('hidden');
 
       await act(async () => {
-        document.querySelector<HTMLElement>(`.${styles.mobileBackdrop}`)?.click();
+        document.querySelector<HTMLElement>('#dashboard-sidebar + div[aria-hidden="true"]')?.click();
       });
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
       expect(document.activeElement).toBe(trigger);
       expect(mainCol?.hasAttribute('inert')).toBe(false);
-      expect(document.querySelector(`.${styles.mobileBackdrop}`)).toBeNull();
+      expect(document.querySelector('#dashboard-sidebar + div[aria-hidden="true"]')).toBeNull();
       expect(document.body.style.overflow).toBe(originalOverflow);
     } finally {
       mounted.unmount();
@@ -340,7 +339,9 @@ describe('AppShell — mobile sidebar drawer', () => {
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
       expect(document.activeElement).toBe(trigger);
-      expect(document.querySelector(`.${styles.mainCol}`)?.hasAttribute('inert')).toBe(false);
+      expect(
+        document.querySelector('#dashboard-sidebar')?.parentElement?.lastElementChild?.hasAttribute('inert'),
+      ).toBe(false);
     } finally {
       mounted.unmount();
     }
@@ -362,7 +363,9 @@ describe('AppShell — mobile sidebar drawer', () => {
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
       expect(document.activeElement).toBe(trigger);
-      expect(document.querySelector(`.${styles.mainCol}`)?.hasAttribute('inert')).toBe(false);
+      expect(
+        document.querySelector('#dashboard-sidebar')?.parentElement?.lastElementChild?.hasAttribute('inert'),
+      ).toBe(false);
     } finally {
       mounted.unmount();
     }
@@ -396,7 +399,7 @@ describe('AppShell — mobile sidebar drawer', () => {
       });
 
       expect(trigger?.getAttribute('aria-expanded')).toBe('false');
-      expect(document.querySelector(`.${styles.mobileBackdrop}`)).toBeNull();
+      expect(document.querySelector('#dashboard-sidebar + div[aria-hidden="true"]')).toBeNull();
       expect(document.body.style.overflow).toBe(originalOverflow);
     } finally {
       mounted.unmount();

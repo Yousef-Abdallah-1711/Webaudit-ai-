@@ -110,7 +110,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
   'components/admin/format.module.css': { hex: 0, px: 2 },
-  'components/dashboard/Sidebar.module.css': { hex: 1, px: 62 },
   'components/fixes/FixesBoard.module.css': { hex: 0, px: 3 },
   'components/fixes/IssueRow.module.css': { hex: 0, px: 17 },
   // px 23 -> 28: the same real, measured mobile-overflow fix — a 640px

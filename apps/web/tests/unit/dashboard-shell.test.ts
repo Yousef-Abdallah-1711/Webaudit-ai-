@@ -16,7 +16,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePathname } from 'next/navigation';
 import { AppShell, PageHead, Sidebar } from '../../components/dashboard';
 import { AuthProvider } from '../../components/auth/AuthProvider';
-import sidebarStyles from '../../components/dashboard/Sidebar.module.css';
 import { I18nProvider } from '../../app/theme';
 
 vi.mock('next/navigation', () => ({
@@ -42,16 +41,16 @@ describe('Sidebar', () => {
   it('marks the nav item matching the current route active, and no other', () => {
     setPathname('/scan');
     const html = render(createElement(Sidebar, { open: true, setOpen: () => {} }));
-    // "New scan" (scan) should be the only nav link carrying the active class.
+    // "New scan" (scan) should be the only nav link carrying the active marker utility.
     const links = [...html.matchAll(/<a[^>]*class="([^"]*)"[^>]*>/g)].map((m) => m[1] ?? '');
-    const activeLinks = links.filter((cls) => cls.includes('navItemActive'));
+    const activeLinks = links.filter((cls) => cls.includes('shadow-[inset_0.125rem_0_0_var(--accent)]'));
     expect(activeLinks).toHaveLength(1);
   });
 
   it('matches a nested route under the same prefix', () => {
     setPathname('/scan/123/status');
     const html = render(createElement(Sidebar, { open: true, setOpen: () => {} }));
-    const activeLinks = [...html.matchAll(/<a[^>]*class="([^"]*navItemActive[^"]*)"/g)];
+    const activeLinks = [...html.matchAll(/<a[^>]*class="([^"]*shadow-\[inset_0\.125rem_0_0_var\(--accent\)\][^"]*)"/g)];
     expect(activeLinks.length).toBeGreaterThan(0);
   });
 
@@ -63,13 +62,13 @@ describe('Sidebar', () => {
   it('hides nav labels and the wordmark when collapsed', () => {
     const open = render(createElement(Sidebar, { open: true, setOpen: () => {} }));
     const closed = render(createElement(Sidebar, { open: false, setOpen: () => {} }));
-    expect(open).toContain(sidebarStyles.wordmark);
-    expect(closed).not.toContain(sidebarStyles.wordmark);
+    expect(open).toContain('whitespace-nowrap text-[1rem] font-bold');
+    expect(closed).not.toContain('whitespace-nowrap text-[1rem] font-bold');
     // Collapsed: the label moves to `title` (a tooltip), not a visible
     // `<span>` — `title="New scan"` is expected to survive; the styled
     // label span is what must disappear.
-    expect(open).toContain(sidebarStyles.navItemLabel);
-    expect(closed).not.toContain(sidebarStyles.navItemLabel);
+    expect(open).toContain('overflow-hidden whitespace-nowrap');
+    expect(closed).not.toContain('overflow-hidden whitespace-nowrap');
   });
 
   it('shows the credit balance box and top-up control only when open', () => {

@@ -62,7 +62,76 @@ import {
   type Plan,
 } from '../../lib/api';
 import { useAuth } from '../auth/AuthProvider';
-import styles from './Sidebar.module.css';
+
+// Tailwind classes ported from Sidebar.module.css. Component-specific values
+// remain arbitrary utilities where the shared spacing/type tokens have no match.
+const styles = {
+  shellRoot: 'flex min-h-screen bg-surface-sunken',
+  mainCol: 'min-w-0 flex-1',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint
+  main: 'px-8 pt-8 pb-16 max-[640px]:pt-16',
+  mainInner: 'mx-auto max-w-app-shell',
+  sidebarClosed: 'w-[3.75rem]',
+  sidebarOpen: 'w-[15.5rem]',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint and drawer transform
+  sidebarMobileClosed: 'max-[640px]:translate-x-[-100%] max-[640px]:rtl:translate-x-full',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint
+  sidebarMobileOpen: 'max-[640px]:translate-x-0',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint and mobile drawer sizing
+  sidebar: 'sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-0 border-e-hairline border-e-border-default border-solid bg-surface-raised transition-[width] duration-150 ease-[var(--easing)] max-[640px]:fixed max-[640px]:start-0 max-[640px]:inset-y-0 max-[640px]:h-auto max-[640px]:w-[min(15.5rem,85vw)] max-[640px]:z-[950] max-[640px]:transition-transform max-[640px]:duration-150 max-[640px]:ease-[var(--easing)]',
+  sidebarHead: 'flex h-[3.75rem] shrink-0 items-center gap-2',
+  sidebarHeadClosed: 'justify-center p-0',
+  sidebarHeadOpen: 'justify-start px-3 py-0',
+  toggleBtn: 'grid h-[2.125rem] w-[2.125rem] shrink-0 cursor-pointer place-items-center rounded-control border-0 bg-transparent text-text-secondary transition-colors duration-150 ease-[var(--easing)]',
+  wordmark: 'whitespace-nowrap text-[1rem] font-bold tracking-[-0.01875rem] text-text-strong',
+  wordmarkAccent: 'text-accent',
+  navScroll: 'flex-1 overflow-y-auto py-[0.375rem]',
+  navScrollClosed: 'px-2',
+  navScrollOpen: 'px-[0.625rem]',
+  navGroup: 'mb-4',
+  navGroupLabel: 'px-3 pb-[0.375rem] font-sans text-[0.625rem] leading-5 tracking-[var(--track-eyebrow)] text-text-muted font-bold uppercase',
+  navGroupDivider: 'mx-[0.375rem] mb-2 h-px bg-border-default',
+  navList: 'flex flex-col gap-0.5',
+  navItem: 'flex h-[2.375rem] w-full cursor-pointer items-center gap-[0.6875rem] rounded-control border-0 p-0 text-start font-sans text-[0.875rem] leading-6 transition-colors duration-150 ease-[var(--easing)]',
+  navItemClosed: 'justify-center p-0',
+  navItemOpen: 'justify-start px-3',
+  navItemInactive: 'bg-transparent font-normal text-text-secondary shadow-none hover:bg-white/55',
+  // The 2px inset marker is component-specific and uses the exact measured source value.
+  navItemActive: 'bg-surface-page font-semibold text-text-strong shadow-[inset_0.125rem_0_0_var(--accent)] hover:bg-surface-page rtl:shadow-[inset_-0.125rem_0_0_var(--accent)]',
+  navItemLabel: 'overflow-hidden whitespace-nowrap',
+  navItemBadge: 'ms-auto font-mono text-[0.6875rem] text-sev-critical',
+  // Top border only; border-0 explicitly clears the other three sides.
+  sidebarFoot: 'shrink-0 border-0 border-t-hairline border-t-border-default border-solid',
+  sidebarFootClosed: 'px-2 py-3',
+  sidebarFootOpen: 'p-3',
+  creditsBox: 'mb-3 rounded-card border border-hairline border-border-default bg-surface-page p-3',
+  creditsRow: 'flex items-baseline gap-1.5',
+  creditsValue: 'font-mono text-[0.9375rem] font-bold text-text-strong',
+  creditsLabel: 'font-sans text-[0.75rem] font-normal leading-5 text-text-secondary',
+  creditsBar: 'mt-2 h-1 bg-surface-sunken',
+  creditsBarFill: 'h-full w-0 bg-accent',
+  topUpBtn: 'mt-2.5 h-[1.875rem] w-full cursor-pointer rounded-control border border-hairline border-border-default bg-surface-page font-sans text-[0.75rem] leading-6',
+  toolsRow: 'mb-3 flex gap-2',
+  toolsThemeToggle: 'flex-1',
+  adminLink: 'grid h-9 w-9 place-items-center rounded-control border border-hairline border-border-default text-text-secondary',
+  closedTools: 'mb-2.5 grid place-items-center gap-1.5',
+  profileBtn: 'flex w-full cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 text-start text-inherit [font:inherit]',
+  accountMenu: 'fixed z-[1000] flex max-w-[calc(100vw_-_var(--space-8))] flex-col min-w-[calc(var(--space-16)_*_3)] rounded-card border border-hairline border-border-default bg-surface-page p-1 text-text-primary',
+  accountMenuItem: 'flex min-h-10 w-full cursor-pointer items-center border-0 bg-transparent px-3 text-start type-small text-text-primary no-underline transition-colors duration-150 ease-[var(--easing)] hover:bg-surface-sunken hover:text-text-strong focus-visible:bg-surface-sunken focus-visible:text-text-strong focus-visible:outline focus-visible:outline-hairline focus-visible:outline-text-primary focus-visible:outline-offset-[-0.0625rem]',
+  avatar: 'grid h-[1.875rem] w-[1.875rem] shrink-0 place-items-center rounded-pill bg-surface-inverse text-[0.75rem] font-semibold text-text-on-accent',
+  profileText: 'overflow-hidden text-start',
+  profileName: 'whitespace-nowrap text-[0.8125rem] font-semibold text-text-strong',
+  profilePlan: 'whitespace-nowrap text-[0.6875rem] text-text-muted',
+  profileChevron: 'ms-auto text-text-muted',
+  pageHead: 'mb-6 flex flex-wrap items-end gap-4',
+  pageHeadTitle: 'mt-2 mb-0 type-h3 text-text-strong',
+  pageHeadMeta: 'mt-1.5 font-mono text-[0.8125rem] text-text-secondary',
+  pageHeadActions: 'ms-auto flex gap-2.5',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint and overlay color
+  mobileBackdrop: 'hidden max-[640px]:fixed max-[640px]:inset-0 max-[640px]:z-[900] max-[640px]:block max-[640px]:border-0 max-[640px]:bg-[color-mix(in_srgb,var(--text-strong)_42%,transparent)] max-[640px]:p-0',
+  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint
+  mobileMenuTrigger: 'hidden max-[640px]:fixed max-[640px]:start-2 max-[640px]:top-2 max-[640px]:z-[850] max-[640px]:grid max-[640px]:bg-surface-raised',
+};
 
 type DashboardKey = keyof typeof enDashboard;
 
@@ -128,8 +197,8 @@ function NavItem({
 }: NavItemProps): React.ReactElement {
   const classes = [
     styles.navItem,
-    open ? styles.navItemOpen : undefined,
-    active ? styles.navItemActive : undefined,
+    open ? styles.navItemOpen : styles.navItemClosed,
+    active ? styles.navItemActive : styles.navItemInactive,
   ]
     .filter(Boolean)
     .join(' ');
@@ -337,18 +406,27 @@ export function Sidebar({
 
   const sidebarClasses = [
     styles.sidebar,
-    contentOpen ? styles.sidebarOpen : undefined,
-    mobileOpen ? styles.sidebarMobileOpen : undefined,
+    contentOpen ? styles.sidebarOpen : styles.sidebarClosed,
+    mobileOpen ? styles.sidebarMobileOpen : styles.sidebarMobileClosed,
   ]
     .filter(Boolean)
     .join(' ');
-  const headClasses = [styles.sidebarHead, contentOpen ? styles.sidebarHeadOpen : undefined]
+  const headClasses = [
+    styles.sidebarHead,
+    contentOpen ? styles.sidebarHeadOpen : styles.sidebarHeadClosed,
+  ]
     .filter(Boolean)
     .join(' ');
-  const navScrollClasses = [styles.navScroll, contentOpen ? styles.navScrollOpen : undefined]
+  const navScrollClasses = [
+    styles.navScroll,
+    contentOpen ? styles.navScrollOpen : styles.navScrollClosed,
+  ]
     .filter(Boolean)
     .join(' ');
-  const footClasses = [styles.sidebarFoot, contentOpen ? styles.sidebarFootOpen : undefined]
+  const footClasses = [
+    styles.sidebarFoot,
+    contentOpen ? styles.sidebarFootOpen : styles.sidebarFootClosed,
+  ]
     .filter(Boolean)
     .join(' ');
 
