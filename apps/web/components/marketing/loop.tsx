@@ -2,8 +2,23 @@ import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { Eyebrow } from '../ui';
-import containerStyles from './section-container.module.css';
-import styles from './loop.module.css';
+
+import { cn } from '../../lib/cn';
+
+const styles = {
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  wrap: cn('py-[calc(var(--space-16)_+_var(--space-6))] px-6 bg-surface-page'),
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  loopH2: cn('mt-3 mx-0 mb-[calc(var(--space-5)_+_var(--space-2))] type-h2'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
+  loopGrid: cn('grid grid-cols-4 gap-3 max-[640px]:grid-cols-1'),
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  loopStep: cn('pt-[calc(var(--space-3)_+_(var(--space-1)_/_2))] border-x-0 border-b-0 border-t-[calc(var(--space-1)_-_(var(--space-1)_/_4))] border-solid border-t-accent'),
+  loopNum: cn('font-mono text-xs text-text-strong'),
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  loopTitle: cn('my-[calc(var(--space-2)_-_(var(--space-1)_/_2))] mx-0 text-[calc(var(--space-4)_+_(var(--space-1)_/_4))] font-semibold'),
+  loopDesc: cn('type-small text-text-secondary text-pretty'),
+};
 
 type PublicKey = keyof typeof enPublic;
 
@@ -14,7 +29,7 @@ interface WrapProps {
 function Wrap({ children }: WrapProps): React.ReactElement {
   return (
     <section id="loop" data-landing-section="loop" className={styles.wrap}>
-      <div className={containerStyles.container}>{children}</div>
+      <div className={cn('max-w-marketing mx-auto')}>{children}</div>
     </section>
   );
 }

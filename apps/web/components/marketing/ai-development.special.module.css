@@ -1,0 +1,9 @@
+:global([dir='rtl']) .connector {
+  transform: scaleX(-1);
+}
+
+@media (max-width: 23rem) {
+  :global([dir='rtl']) .connector {
+    transform: rotate(-90deg);
+  }
+}

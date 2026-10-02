@@ -1,0 +1,45 @@
+@media (max-width: 640px) {
+  .mobileDrawer {
+    transform: translateX(-100%);
+    transition:
+      transform var(--duration) var(--easing),
+      visibility 0s linear var(--duration);
+  }
+
+  .mobileDrawerOpen {
+    transform: translateX(0);
+    transition-delay: 0s, 0s;
+  }
+
+  .menuIcon,
+  .menuIcon::before,
+  .menuIcon::after {
+    display: block;
+    width: var(--space-5);
+    height: var(--border-width);
+    background: currentColor;
+  }
+
+  .menuIcon::before,
+  .menuIcon::after {
+    position: absolute;
+    inset-inline-start: 0;
+    content: '';
+  }
+
+  .menuIcon::before {
+    inset-block-start: calc(-1 * var(--space-6));
+  }
+
+  .menuIcon::after {
+    inset-block-start: var(--space-6);
+  }
+
+  :global(html[dir='rtl']) .mobileDrawer {
+    transform: translateX(100%);
+  }
+
+  :global(html[dir='rtl']) .mobileDrawer.mobileDrawerOpen {
+    transform: translateX(0);
+  }
+}

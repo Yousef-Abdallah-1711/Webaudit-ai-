@@ -71,6 +71,9 @@ const config = {
       borderWidth: {
         hairline: 'var(--border-width)',
       },
+      outlineWidth: {
+        hairline: 'var(--border-width)',
+      },
       borderRadius: {
         none: 'var(--radius-none)',
         control: 'var(--radius-control)',
@@ -99,6 +102,20 @@ const config = {
       fontFamily: {
         sans: ['var(--font-sans)'],
         mono: ['var(--font-mono)'],
+      },
+      maxWidth: {
+        marketing: 'var(--container-marketing)',
+        'public-shell': '70rem',
+      },
+      width: {
+        control: 'var(--control-height)',
+      },
+      height: {
+        control: 'var(--control-height)',
+        hairline: 'var(--border-width)',
+      },
+      minHeight: {
+        control: 'var(--control-height)',
       },
     },
   },

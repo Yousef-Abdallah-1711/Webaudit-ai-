@@ -53,13 +53,11 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
   });
 
   it('inverse-surface marketing and auth text use the contrasting inverse token', () => {
-    const surfaces: readonly [URL, readonly string[]][] = [
-      [new URL('../../components/marketing/readiness.module.css', import.meta.url), ['.section', '.sampleLabel', '.intro']],
+    const cssSurfaces: readonly [URL, readonly string[]][] = [
       [new URL('../../components/auth/AuthShell.module.css', import.meta.url), ['.contextPanel', '.sampleLabel', '.contextIntro']],
-      [new URL('../../components/marketing/report-showcase.module.css', import.meta.url), ['.promptHeading', '.copyButton']],
     ];
 
-    for (const [url, selectors] of surfaces) {
+    for (const [url, selectors] of cssSurfaces) {
       const stylesheet = readFileSync(url, 'utf8');
       for (const selector of selectors) {
         const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -67,6 +65,20 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
         expect(rule, `${selector} rule exists in ${url.pathname}`).toBeDefined();
         expect(rule).toContain('color: var(--text-on-surface-inverse)');
         expect(rule).not.toContain('color: var(--text-on-accent)');
+      }
+    }
+
+    const utilitySurfaces: readonly [URL, readonly string[]][] = [
+      [new URL('../../components/marketing/readiness.tsx', import.meta.url), ['section', 'sampleLabel', 'intro']],
+      [new URL('../../components/marketing/report-showcase.tsx', import.meta.url), ['promptHeading', 'copyButton']],
+    ];
+    for (const [url, classes] of utilitySurfaces) {
+      const source = readFileSync(url, 'utf8');
+      for (const className of classes) {
+        const line = source.split('\n').find((candidate) => candidate.includes(`${className}: cn(`));
+        expect(line, `${className} utility exists in ${url.pathname}`).toBeDefined();
+        expect(line).toContain('text-text-on-surface-inverse');
+        expect(line).not.toContain('text-on-accent');
       }
     }
   });

@@ -7,10 +7,10 @@
  * theme/language controls, keep this shared public shell client-rendered.
  *
  * `Wordmark`, `PublicHeader`, `PublicFooter`, `PublicPage` — one file, same
- * as the source. Static styling moved to `Public.module.css` (raw px/hex
- * inline style objects fail this repo's adherence lint, T245); the header
- * nav's active-vs-inactive weight/colour and the footer's per-column data
- * stay dynamic, matching the source.
+ * as the source. Static styling uses Tailwind utility strings; only menu
+ * pseudo-elements and direction-specific transforms remain in a small CSS
+ * Module. The header nav's active-vs-inactive weight/colour and the footer's
+ * per-column data stay dynamic, matching the source.
  *
  * Public navigation and footer links use existing product routes only.
  * Documentation/changelog destinations do not exist, and readiness is
@@ -29,7 +29,57 @@ import { Button } from '../ui';
 import { LangToggle, ThemeToggle } from '../../app/theme';
 import { useAuth } from '../auth/AuthProvider';
 import type { messagesByLocale } from '../../i18n/messages';
-import styles from './Public.module.css';
+
+import specialStyles from './Public.special.module.css';
+import { cn } from '../../lib/cn';
+
+const styles = {
+  wordmarkLink: cn('no-underline'),
+  header: cn('sticky top-0 z-20 bg-surface-page border-x-0 border-t-0 border-border-default border-b-hairline border-solid'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
+  headerInner: cn('flex items-center gap-6 max-w-public-shell h-control my-0 mx-auto px-6 max-[640px]:gap-3 max-[640px]:px-4'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  nav: cn('flex gap-4 max-[640px]:hidden'),
+  navLink: cn('py-2 text-text-secondary text-sm font-normal no-underline transition-colors hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileNavLink: cn('hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 max-[640px]:py-3 max-[640px]:text-text-secondary max-[640px]:type-body max-[640px]:tracking-normal max-[640px]:no-underline'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileMenuTrigger: cn('focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 hidden max-[640px]:grid max-[640px]:place-items-center max-[640px]:w-control max-[640px]:h-control max-[640px]:ms-auto max-[640px]:p-0 max-[640px]:border-0 max-[640px]:text-text-strong max-[640px]:bg-transparent max-[640px]:cursor-pointer'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileDrawerClose: cn('focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 max-[640px]:self-end max-[640px]:w-control max-[640px]:h-control max-[640px]:p-0 max-[640px]:border-0 max-[640px]:text-text-strong max-[640px]:bg-transparent max-[640px]:type-h3 max-[640px]:cursor-pointer'),
+  footerColLinks: cn('[&>a]:focus-visible:outline [&>a]:focus-visible:outline-1 [&>a]:focus-visible:outline-accent-ring [&>a]:focus-visible:outline-offset-2 flex flex-col gap-2 [&>a]:text-text-secondary [&>a]:type-small [&>a]:no-underline [&>a]:hover:text-text-strong'),
+  footerLink: cn('focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 type-small'),
+  navLinkActive: cn('text-text-strong font-semibold'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  headerActions: cn('flex items-center gap-2 ms-auto max-[640px]:hidden'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the intrinsic overlay stacking index 1
+  mobileBackdrop: cn('hidden max-[640px]:block max-[640px]:fixed max-[640px]:inset-0 max-[640px]:z-[1] max-[640px]:p-0 max-[640px]:border-0 max-[640px]:bg-[color-mix(in_srgb,var(--text-strong)_42%,transparent)]'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the intrinsic drawer size and stacking index 2, which have no configured equivalent
+  mobileDrawer: cn(specialStyles.mobileDrawer, 'hidden max-[640px]:flex max-[640px]:fixed max-[640px]:start-0 max-[640px]:inset-y-0 max-[640px]:z-[2] max-[640px]:w-[min(20rem,88vw)] max-[640px]:flex-col max-[640px]:gap-6 max-[640px]:py-6 max-[640px]:px-5 max-[640px]:overflow-y-auto max-[640px]:invisible max-[640px]:border-0 max-[640px]:border-border-default max-[640px]:border-e-hairline max-[640px]:border-solid max-[640px]:bg-surface-page'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
+  menuIcon: cn(specialStyles.menuIcon, 'max-[640px]:block max-[640px]:w-5 max-[640px]:h-hairline max-[640px]:bg-current max-[640px]:relative'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileDrawerOpen: cn(specialStyles.mobileDrawerOpen, 'max-[640px]:visible '),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileNav: cn('max-[640px]:flex max-[640px]:flex-col max-[640px]:gap-2'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileDrawerActions: cn('max-[640px]:flex max-[640px]:flex-col max-[640px]:gap-2 max-[640px]:mt-auto'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
+  mobileDrawerControls: cn('max-[640px]:flex max-[640px]:flex-wrap max-[640px]:items-center max-[640px]:gap-2'),
+  footer: cn('bg-surface-raised border-x-0 border-b-0 border-border-default border-t-hairline border-solid'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve this component-specific grid track ratio; no predefined grid utility matches it; preserve the component-specific intrinsic value where no configured utility token matches
+  footerGrid: cn('grid grid-cols-[1.6fr_repeat(3,_1fr)] gap-8 max-w-public-shell my-0 mx-auto pt-12 px-6 pb-6 max-[640px]:grid-cols-1 max-[640px]:gap-6 max-[640px]:pt-8 max-[640px]:px-4 max-[640px]:pb-6'),
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  footerTag: cn('max-w-[34ch] mt-3 mb-0 type-small text-text-secondary text-pretty'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the component-specific intrinsic value where no configured utility token matches
+  footerColTitle: cn('mb-3 text-text-muted type-eyebrow text-[11px] uppercase'),
+  //  preserve the component-specific intrinsic value where no configured utility token matches
+  footerBottom: cn('flex flex-wrap items-center gap-4 max-w-public-shell my-0 mx-auto pt-5 px-6 pb-8 border-x-0 border-b-0 border-border-default border-t-hairline border-solid'),
+  footerCopy: cn('text-text-muted type-small'),
+  footerZero: cn('ms-auto text-text-muted font-mono text-xs'),
+  page: cn('flex min-h-screen flex-col bg-surface-page'),
+  pageMain: cn('flex-1'),
+};
 
 type PublicNavKey = keyof Pick<
   typeof messagesByLocale.en.navigation,
@@ -51,7 +101,7 @@ export interface WordmarkProps {
 
 export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
   return (
-    // eslint-disable-next-line no-restricted-syntax -- preserve the exact wordmark tracking from Public.module.css
+    // eslint-disable-next-line no-restricted-syntax -- preserve the exact legacy wordmark tracking
     <div dir="ltr" className="inline-block whitespace-nowrap font-bold tracking-[-0.4px] text-text-strong" style={{ fontSize: size }}>
       <span className="text-accent">{PRODUCT_NAME}</span>
     </div>

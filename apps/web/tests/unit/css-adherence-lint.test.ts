@@ -123,6 +123,9 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // breakpoint hiding the nav/lang/theme toggle and collapsing the footer
   // grid to one column.
   'components/public/Public.module.css': { hex: 0, px: 28 },
+  // Retained public drawer pseudo-elements and RTL transforms still need the
+  // original 640px media query after the rest of Public's styling moved to Tailwind.
+  'components/public/Public.special.module.css': { hex: 0, px: 2 },
   'components/report/AnnotatedScreenshot.module.css': { hex: 0, px: 6 },
   'components/report/AttributionMark.module.css': { hex: 0, px: 3 },
   'components/report/IssueCard.module.css': { hex: 0, px: 13 },
