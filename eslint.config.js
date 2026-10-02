@@ -64,7 +64,15 @@ export default tseslint.config(
       parserOptions: {
         // Root-level config files belong to no tsconfig; allowDefaultProject
         // lets the type-aware service parse them anyway.
-        projectService: { allowDefaultProject: ['*.js', '*.mjs', '*.ts'] },
+        projectService: {
+          allowDefaultProject: [
+            '*.js',
+            '*.mjs',
+            '*.ts',
+            'apps/web/postcss.config.mjs',
+            'apps/web/tailwind.config.ts',
+          ],
+        },
         tsconfigRootDir: import.meta.dirname,
       },
     },

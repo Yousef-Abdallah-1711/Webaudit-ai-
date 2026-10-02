@@ -15,6 +15,10 @@
 @import './tokens/radius.css';
 @import './tokens/typography.css';
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /**
  * T126's other half. `typography.css` defines `--type-display-mobile` etc.
  * alongside the desktop values and nothing ever selects them — CLAUDE.md
@@ -41,16 +45,64 @@
   }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+  }
 }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
+@layer utilities {
+  .type-display {
+    font: var(--type-display);
+    letter-spacing: var(--track-display);
+  }
+
+  .type-h2 {
+    font: var(--type-h2);
+    letter-spacing: var(--track-h2);
+  }
+
+  .type-h3 {
+    font: var(--type-h3);
+  }
+
+  .type-card-title {
+    font: var(--type-card-title);
+  }
+
+  .type-lead {
+    font: var(--type-lead);
+  }
+
+  .type-body-lg {
+    font: var(--type-body-lg);
+  }
+
+  .type-body {
+    font: var(--type-body);
+    letter-spacing: var(--track-body, normal);
+  }
+
+  .type-body-bold {
+    font: var(--type-body-bold);
+  }
+
+  .type-small {
+    font: var(--type-small);
+  }
+
+  .type-eyebrow {
+    font: var(--type-eyebrow);
+    letter-spacing: var(--track-eyebrow);
+  }
 }
 
 body {
