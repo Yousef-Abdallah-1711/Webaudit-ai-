@@ -21,6 +21,7 @@
  */
 import { createContext, useContext, useEffect, useReducer, useState } from 'react';
 import { NextIntlClientProvider, useTranslations } from 'next-intl';
+import { useRouter } from 'next/navigation';
 import { messagesByLocale } from '../i18n/messages';
 import { defaultLocale, localeMetadata, locales, type Lang, type Locale } from '../i18n/locales';
 import styles from './theme.module.css';
@@ -316,6 +317,7 @@ export interface LangToggleProps {
 
 export function LangToggle({ label = false }: LangToggleProps): React.ReactElement {
   const [lang, setLang] = useLang();
+  const router = useRouter();
   const t = useTranslations('common');
   const next: Lang = locales.find((locale) => locale !== lang) ?? defaultLocale;
 
@@ -328,6 +330,7 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       type="button"
       onClick={() => {
         setLang(next);
+        router.refresh();
       }}
       aria-label={t('switch_to_language', { language: localeMetadata[next].label })}
       title={localeMetadata[next].label}

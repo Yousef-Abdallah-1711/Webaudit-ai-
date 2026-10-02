@@ -74,6 +74,22 @@ test('GET / renders English home copy and public metadata without redirecting', 
   await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
 });
 
+test('language toggle refreshes server-rendered home sections', async ({ page }) => {
+  await expectRoute(page, '/');
+  const hero = page.locator('[data-landing-section="hero"]');
+  const loop = page.locator('[data-landing-section="loop"]');
+  await expect(hero).toContainText(ENGLISH_HERO_LEAD);
+  await expect(loop).toContainText('Red to green, one check at a time.');
+
+  await page.getByRole('button', { name: 'Switch to العربية' }).first().click();
+
+  await expectLocale(page, 'ar');
+  await expect(hero).toContainText(ARABIC_HERO_LEAD);
+  await expect(hero).not.toContainText(ENGLISH_HERO_LEAD);
+  await expect(loop).toContainText('من الأحمر إلى الأخضر، فحصاً بعد فحص.');
+  await expect(loop).not.toContainText('Red to green, one check at a time.');
+});
+
 test('home and pricing render the complete public marketing shell', async ({ page }) => {
   for (const route of ['/', '/pricing']) {
     await page.goto(`${server!.url}${route}`, { waitUntil: 'networkidle' });

@@ -11,7 +11,8 @@
  */
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import BillingPage from '../../app/(dashboard)/billing/page';
 import PricingPage, { TierGrid, CostTable } from '../../app/[locale]/(public)/pricing/PricingPage';
 import { AuthProvider } from '../../components/auth/AuthProvider';

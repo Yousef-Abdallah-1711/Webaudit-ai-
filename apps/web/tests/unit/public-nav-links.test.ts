@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import { PublicFooter, PublicHeader } from '../../components/public/Public.js';
 import { AuthProvider } from '../../components/auth/AuthProvider.js';
 import { I18nProvider } from '../../app/theme';
