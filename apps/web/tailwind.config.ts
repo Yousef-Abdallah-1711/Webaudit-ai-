@@ -17,6 +17,10 @@ const config = {
     'type-body-bold',
     'type-small',
     'type-eyebrow',
+    'bg-surface-marketing',
+    'bg-surface-marketing-dark',
+    'bg-gradient-brand-subtle',
+    'rounded-marketing-shell',
   ],
   theme: {
     fontSize: {},
@@ -49,6 +53,8 @@ const config = {
         'surface-raised': 'var(--surface-raised)',
         'surface-sunken': 'var(--surface-sunken)',
         'surface-inverse': 'var(--surface-inverse)',
+        'surface-marketing': 'var(--surface-marketing)',
+        'surface-marketing-dark': 'var(--surface-marketing-dark)',
         'surface-card': 'var(--surface-card)',
         'surface-section': 'var(--surface-section)',
         'surface-field': 'var(--surface-field)',
@@ -72,6 +78,7 @@ const config = {
       },
       backgroundImage: {
         'gradient-cta': 'var(--gradient-cta)',
+        'gradient-brand-subtle': 'var(--gradient-brand-subtle)',
         'wash-br': 'var(--wash-br)',
         'wash-tl': 'var(--wash-tl)',
       },
@@ -86,6 +93,7 @@ const config = {
         control: 'var(--radius-control)',
         card: 'var(--radius-card)',
         pill: 'var(--radius-pill)',
+        'marketing-shell': 'var(--radius-marketing-shell)',
       },
       boxShadow: {
         card: 'var(--shadow-card)',

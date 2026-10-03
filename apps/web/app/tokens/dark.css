@@ -22,6 +22,8 @@
   --surface-raised: #273444;
   --surface-sunken: #18212f;
   --surface-inverse: #fafafa;
+  /* Warm public-page canvas stays distinct from the invariant marketing hero surface. */
+  --surface-marketing: #1c1916;
   --border-subtle: #374151;
   --border-default: #3f4a5a;
   --sev-critical: #f87171;

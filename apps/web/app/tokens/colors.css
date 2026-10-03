@@ -16,6 +16,10 @@
   --surface-raised: #fafafa;
   --surface-sunken: #f9fafb;
   --surface-inverse: #1f2937;
+  /* Warm neutral public-page canvas; dark mode uses a matching warm charcoal. */
+  --surface-marketing: #f7f3ee;
+  /* Invariant warm espresso hero surface; paired with the orange brand identity. */
+  --surface-marketing-dark: #302019;
   /* Borders — hairline, sub-pixel */
   --border-subtle: #e5e5e5;
   --border-default: #e5e7eb;
@@ -25,6 +29,7 @@
   --promo-bg-dark: #047857;
   /* Gradients — the only decorative fills in the system */
   --gradient-cta: linear-gradient(to right, #f97316, #ef4444); /* @kind color */
+  --gradient-brand-subtle: linear-gradient(135deg, #f67850, #ef5d38, #e65331); /* @kind color */
   --wash-br: linear-gradient(
     to bottom right,
     rgba(234, 88, 12, 0.4),
