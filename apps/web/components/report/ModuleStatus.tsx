@@ -16,7 +16,26 @@
  * to a CSS class would silently break that guard.
  */
 import { useTranslations } from 'next-intl';
-import styles from './ModuleStatus.module.css';
+const styles = {
+  box: 'flex items-center gap-3 px-4 py-[0.875rem] bg-[var(--state-bg)] border border-solid border-hairline border-border-default font-sans min-w-0 overflow-hidden',
+  compact: '!block !px-3 !py-2.5',
+  stateWaiting: '[--state-fg:var(--text-muted)] [--state-bg:var(--surface-raised)]',
+  stateRunning: '[--state-fg:var(--accent)] [--state-bg:rgb(255,243,236)]',
+  stateComplete: '[--state-fg:var(--sev-resolved)] [--state-bg:var(--sev-resolved-bg)]',
+  stateDegraded: '[--state-fg:var(--sev-medium)] [--state-bg:var(--sev-medium-bg)] !border-s-[0.1875rem] border-s-sev-medium',
+  stateNotApplicable: '[--state-fg:var(--text-muted)] [--state-bg:var(--surface-sunken)]',
+  icon: 'inline-flex shrink-0 text-[var(--state-fg)]',
+  area: 'min-w-0 flex-[0_1_auto] overflow-hidden text-ellipsis whitespace-nowrap text-[0.9375rem] font-semibold text-text-strong',
+  word: 'shrink-0 whitespace-nowrap text-[0.8125rem] font-bold text-[var(--state-fg)]',
+  detail: 'min-w-0 flex-[1_1_auto] overflow-hidden text-ellipsis whitespace-nowrap text-[0.8125rem] text-text-secondary',
+  issues: 'ms-auto shrink-0 font-mono text-[0.8125rem] text-text-secondary',
+  compactRow: 'flex items-center gap-2 min-w-0',
+  compactArea: 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[0.875rem] font-semibold text-text-strong',
+  compactIssues: 'ms-auto shrink-0 font-mono text-[0.75rem] text-text-secondary',
+  compactMeta: 'flex gap-1.5 mt-[0.1875rem] ps-[1.4375rem] min-w-0',
+  compactWord: 'shrink-0 text-[0.75rem] font-bold text-[var(--state-fg)]',
+  compactDetail: 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[0.75rem] text-text-secondary',
+} as const;
 
 export interface ModuleStatusProps {
   /** Area name, e.g. "Security" */
@@ -32,11 +51,11 @@ export interface ModuleStatusProps {
 type State = NonNullable<ModuleStatusProps['state']>;
 
 const STATE_CLASS: Record<State, string> = {
-  waiting: styles.stateWaiting!,
-  running: styles.stateRunning!,
-  complete: styles.stateComplete!,
-  degraded: styles.stateDegraded!,
-  'not-applicable': styles.stateNotApplicable!,
+  waiting: styles.stateWaiting,
+  running: styles.stateRunning,
+  complete: styles.stateComplete,
+  degraded: styles.stateDegraded,
+  'not-applicable': styles.stateNotApplicable,
 };
 
 const STATE_ICON_PATH: Record<State, string> = {

@@ -17,7 +17,17 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { SeverityBadge, type SeverityBadgeProps } from './SeverityBadge';
 import { AttributionMark, type AttributionMarkProps } from './AttributionMark';
-import styles from './IssueCard.module.css';
+const styles = {
+  card: 'bg-surface-card border border-solid border-hairline border-border-default !border-s-[0.1875rem] border-s-transparent rounded-card px-5 py-[1.125rem] font-sans',
+  head: 'flex items-center gap-[0.625rem] mb-[0.625rem] flex-wrap',
+  area: 'font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  attribution: 'ms-auto',
+  title: 'text-[1.0625rem] font-semibold text-text-strong mb-1.5',
+  location: 'font-mono text-[0.8125rem] text-text-zinc mb-[0.625rem] break-all',
+  description: 'm-0 mb-[0.875rem] font-sans text-[0.875rem] leading-5 font-normal text-text-secondary max-w-[62ch] text-pretty',
+  copyBtn: 'h-9 px-4 rounded-control border border-solid border-hairline border-border-default bg-surface-page text-text-primary font-sans text-[0.875rem] font-medium cursor-pointer transition-colors',
+  copyBtnCopied: '!bg-sev-resolved-bg !text-sev-resolved',
+} as const;
 
 const SEVERITY_RULE: Record<NonNullable<SeverityBadgeProps['level']>, string> = {
   critical: 'var(--sev-critical)',

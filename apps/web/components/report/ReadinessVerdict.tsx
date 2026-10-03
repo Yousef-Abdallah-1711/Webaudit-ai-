@@ -15,7 +15,29 @@
  */
 
 import { useTranslations } from 'next-intl';
-import styles from './ReadinessVerdict.module.css';
+const styles = {
+  panel: 'border border-solid border-hairline border-border-default rounded-card overflow-hidden font-sans',
+  go: '!border-sev-resolved',
+  noGo: '!border-sev-critical',
+  head: 'px-6 py-[1.375rem] border-solid border-x-0 border-t-0 border-b-hairline border-b-border-default',
+  goHead: 'bg-sev-resolved-bg',
+  noGoHead: 'bg-sev-critical-bg',
+  eyebrow: 'font-sans text-[0.75rem] leading-5 font-bold tracking-[var(--track-eyebrow)] uppercase mb-2',
+  goEyebrow: 'text-sev-resolved',
+  noGoEyebrow: 'text-sev-critical',
+  title: 'type-h3 text-text-strong',
+  score: 'mt-1.5 font-mono text-[0.875rem] leading-5 text-text-secondary',
+  body: 'px-6 py-[1.125rem] bg-surface-page',
+  area: 'flex items-center gap-[0.625rem] py-2',
+  areaBordered: 'border-solid border-x-0 border-t-0 border-b-hairline border-b-border-default',
+  tickPass: 'text-sev-resolved inline-flex',
+  tickFail: 'text-sev-critical inline-flex',
+  areaName: 'text-[0.9375rem] text-text-primary',
+  areaScore: 'ms-auto font-mono text-[0.8125rem] text-text-secondary',
+  blockers: 'mt-4',
+  blockersTitle: 'mb-2 font-sans text-[0.875rem] leading-5 font-bold text-sev-critical',
+  blocker: 'py-1 font-sans text-[0.875rem] leading-5 font-normal text-text-primary',
+} as const;
 
 export interface ReadinessVerdictProps {
   verdict?: 'go' | 'no-go';
@@ -40,8 +62,10 @@ export function ReadinessVerdict({
 
   return (
     <div className={go ? `${styles.panel} ${styles.go}` : `${styles.panel} ${styles.noGo}`}>
-      <div className={styles.head}>
-        <div className={styles.eyebrow}>{t('report_readiness_heading')}</div>
+      <div className={go ? `${styles.head} ${styles.goHead}` : `${styles.head} ${styles.noGoHead}`}>
+        <div className={go ? `${styles.eyebrow} ${styles.goEyebrow}` : `${styles.eyebrow} ${styles.noGoEyebrow}`}>
+          {t('report_readiness_heading')}
+        </div>
         <div className={styles.title}>
           {go ? t('report_readiness_go') : t('report_readiness_no_go')}
         </div>

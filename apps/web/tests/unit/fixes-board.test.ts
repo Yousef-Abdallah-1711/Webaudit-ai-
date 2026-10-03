@@ -46,7 +46,8 @@ describe('IssueRow', () => {
   it('an open issue shows the "I fixed this — 3 cr" button, enabled', () => {
     const html = render(createElement(IssueRow, { issue: issue(), onAssertFixed: () => {} }));
     expect(html).toContain(enFixes.fixes_button_assert);
-    expect(html).not.toContain('disabled');
+    const buttonMarkup = /<button\b[^>]*>/.exec(html)?.[0] ?? '';
+    expect(buttonMarkup.replace(/\sclass="[^"]*"/, '')).not.toMatch(/\sdisabled(?:\s|=|>)/);
   });
 
   it('an issue being re-checked shows "Re-checking…" and is disabled', () => {

@@ -93,7 +93,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // px 18 -> 23: Phase 4 (same master plan) — the email search row and the
   // recent-ledger/audit-trail lists on the detail view.
   'app/(admin)/admin/users/page.module.css': { hex: 0, px: 23 },
-  'app/(dashboard)/reports/[id]/page.module.css': { hex: 0, px: 14 },
   // px 43 -> 45: the two fixed-column grids (.diffGrid, .loopGrid) got a
   // 640px mobile breakpoint collapsing them to one column — a real,
   // measured horizontal-overflow bug found via manual testing, not a new
@@ -102,8 +101,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   'components/admin/AdminShell.module.css': { hex: 13, px: 64 },
   'components/admin/format.module.css': { hex: 0, px: 2 },
-  'components/fixes/FixesBoard.module.css': { hex: 0, px: 3 },
-  'components/fixes/IssueRow.module.css': { hex: 0, px: 17 },
   // px 23 -> 28: the same real, measured mobile-overflow fix — a 640px
   // breakpoint hiding the nav/lang/theme toggle and collapsing the footer
   // grid to one column.
@@ -111,16 +108,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
   // Retained public drawer pseudo-elements and RTL transforms still need the
   // original 640px media query after the rest of Public's styling moved to Tailwind.
   'components/public/Public.special.module.css': { hex: 0, px: 2 },
-  'components/report/AnnotatedScreenshot.module.css': { hex: 0, px: 6 },
-  'components/report/AttributionMark.module.css': { hex: 0, px: 3 },
-  'components/report/IssueCard.module.css': { hex: 0, px: 13 },
-  'components/report/ModuleStatus.module.css': { hex: 1, px: 18 },
-  'components/report/ProgressRow.module.css': { hex: 0, px: 9 },
-  'components/report/ReadinessVerdict.module.css': { hex: 0, px: 11 },
-  'components/report/SeverityBadge.module.css': { hex: 0, px: 5 },
-  'components/scan/InputTabs.module.css': { hex: 0, px: 20 },
-  'components/scan/ScanForm.module.css': { hex: 0, px: 15 },
-  'components/scan/ScanProgress.module.css': { hex: 0, px: 3 },
 };
 
 describe('CSS Modules raw hex/px is a ratchet, not an unmonitored gap', () => {

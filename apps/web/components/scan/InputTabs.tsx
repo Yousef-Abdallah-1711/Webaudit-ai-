@@ -37,7 +37,25 @@ import {
   uploadArchive,
   type ConnectedRepository,
 } from '../../lib/api';
-import styles from './InputTabs.module.css';
+const styles = {
+  tabs: 'flex border-solid border-x-0 border-t-0 border-b-hairline border-b-border-default mb-5',
+  tab: 'bg-transparent border-0 border-solid border-b-2 border-b-transparent mb-[-0.0625rem] px-4 py-[0.625rem] font-sans text-[0.875rem] font-normal text-text-secondary cursor-pointer',
+  tabActive: '!border-b-accent !font-semibold !text-text-strong',
+  repoList: 'flex flex-col gap-[0.625rem]',
+  repoRow: 'flex items-center gap-[0.625rem] border border-solid border-hairline border-border-default rounded-control px-[0.875rem] py-3 cursor-pointer',
+  repoName: 'font-mono text-[0.875rem]',
+  repoTag: 'font-sans text-[0.875rem] leading-5 font-normal text-text-muted border border-solid border-hairline border-border-default rounded-control px-[0.375rem] py-0.5',
+  repoBranch: 'ms-auto font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  note: 'm-0 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  noteStrong: 'm-0 font-sans text-[0.875rem] leading-5 font-normal text-text-primary text-pretty',
+  unavailable: 'flex flex-col items-start gap-3 border border-solid border-hairline border-border-default rounded-card bg-surface-raised p-5',
+  dropzone: 'border border-dashed border-hairline border-border-default rounded-card p-9 text-center bg-surface-raised',
+  fileInput: 'hidden',
+  dropzoneTitle: 'text-[0.9375rem] font-semibold',
+  dropzoneNote: 'mt-1.5 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  refused: 'mt-3 mb-0 font-sans text-[0.875rem] leading-5 font-normal text-sev-critical text-pretty',
+  browse: 'mt-[0.875rem] bg-transparent border-0 p-0 font-sans text-[0.875rem] text-accent underline cursor-pointer',
+} as const;
 
 export type InputTab = 'url' | 'repo' | 'archive';
 

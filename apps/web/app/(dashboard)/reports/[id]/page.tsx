@@ -34,7 +34,20 @@ import {
   type Report,
   type ReportIssue,
 } from '../../../../lib/api';
-import styles from './page.module.css';
+const styles = {
+  grid: 'grid grid-cols-[16.25rem_1fr] gap-5 items-start [@media(max-width:40rem)]:grid-cols-1',
+  side: 'flex flex-col gap-4',
+  scoreWrap: 'grid place-items-center',
+  noScore: 'mt-2 font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  areasList: 'flex flex-col gap-1.5',
+  summaryText: 'm-0 font-sans text-[1rem] leading-6 font-normal text-text-primary max-w-[70ch] text-pretty',
+  statRow: 'mt-4',
+  tabs: 'flex gap-0.5 border-solid border-x-0 border-t-0 border-b-hairline border-b-border-default mb-4 flex-wrap',
+  tab: 'bg-transparent border-0 border-solid border-b-2 border-b-transparent mb-[-0.0625rem] px-[0.875rem] py-2.5 font-sans text-[0.875rem] font-normal text-text-secondary cursor-pointer',
+  tabActive: '!border-b-accent !font-semibold !text-text-strong',
+  issueList: 'flex flex-col gap-3',
+  empty: 'font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+} as const;
 
 const AREA_TABS = ['ALL', 'PERFORMANCE', 'SECURITY', 'UI', 'TESTING', 'SEO'] as const;
 

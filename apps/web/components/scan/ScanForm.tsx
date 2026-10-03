@@ -31,7 +31,22 @@ import type { ModuleType } from '@webaudit/types';
 import { Button, Card, Eyebrow } from '../ui';
 import { ApiError, createScan, createTarget, getPlans, quoteScan } from '../../lib/api';
 import { InputTabs, type InputSelection } from './InputTabs';
-import styles from './ScanForm.module.css';
+const styles = {
+  grid: 'grid grid-cols-[1fr_21.25rem] gap-5 items-start [@media(max-width:40rem)]:grid-cols-1',
+  areasSection: 'mt-7',
+  areasList: 'mt-3 border border-solid border-hairline border-border-default',
+  areaRow: 'flex items-center gap-3 px-4 py-[0.875rem] cursor-pointer',
+  areaRowTop: 'border-solid border-x-0 border-t-hairline border-b-0 border-border-default',
+  areaName: 'text-[0.9375rem] font-medium',
+  areaCost: 'ms-auto font-mono text-[0.8125rem] text-text-muted',
+  areasNote: 'mt-3 font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  costRow: 'flex items-baseline gap-2',
+  costValue: 'type-h2 tracking-[var(--track-h2)] tabular-nums',
+  costLabel: 'font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  bundled: 'mt-1.5 font-sans text-[0.875rem] leading-5 font-normal text-sev-resolved',
+  quoteNote: 'my-4 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary text-pretty',
+  error: 'mb-3 font-sans text-[0.875rem] leading-5 font-normal text-sev-critical',
+} as const;
 
 const AREA_LABEL_KEY: Readonly<Record<ModuleType, string>> = {
   PERFORMANCE: 'a_perf',

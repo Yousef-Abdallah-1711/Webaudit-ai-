@@ -96,7 +96,7 @@ describe('ReportPage — fixable gating (P6-T2)', () => {
       );
       expect(copyButtons).toHaveLength(1);
 
-      const fixableCard = copyButtons[0]!.closest('[class*="_card_"]');
+      const fixableCard = copyButtons[0]!.closest('[class*="bg-surface-card"]');
       expect(fixableCard?.textContent).toContain('Missing CSP header');
     } finally {
       mounted.unmount();

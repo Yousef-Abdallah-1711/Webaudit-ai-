@@ -21,7 +21,12 @@ import { StatRow } from '../ui';
 import { useTranslations } from 'next-intl';
 import { IssueRow } from './IssueRow';
 import type { FixesIssue } from '../../lib/api';
-import styles from './FixesBoard.module.css';
+const styles = {
+  stats: 'mb-4',
+  list: 'border border-solid border-hairline border-border-default bg-surface-page rounded-card overflow-hidden',
+  empty: 'm-0 border border-solid border-hairline border-border-default rounded-card p-6 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  note: 'mt-[0.875rem] font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+} as const;
 
 const SEVERITY_RANK: Readonly<Record<string, number>> = {
   CRITICAL: 0,

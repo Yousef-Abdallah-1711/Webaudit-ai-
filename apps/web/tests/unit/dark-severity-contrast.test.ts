@@ -4,11 +4,11 @@
  * `--sev-*` foreground read directly out of `apps/web/app/tokens/dark.css` (the port, not a
  * hand-copied literal — a future re-port that changes a value fails this test rather than a
  * comment going stale), checked against WCAG 2.1's contrast formula, against exactly the
- * background `SeverityBadge.module.css` actually pairs it with (`color: var(--sev-X)` on
+ * background the `SeverityBadge` Tailwind class map actually pairs it with (`text-sev-X` on
  * `background: var(--sev-X-bg)`), plus both surface tokens a badge can sit on
  * (`--surface-page`, `--surface-raised`).
  *
- * 12px/700-weight text (`SeverityBadge.module.css`'s own `.badge`) does not meet WCAG's "large
+ * 12px/700-weight text (`SeverityBadge`'s `.badge` utility set) does not meet WCAG's "large
  * text" exemption (18pt regular / 14pt bold), so 4.5:1 (AA, normal text) is the real bar — not
  * the looser 3:1 that would apply to large text or non-text UI components.
  */
@@ -17,6 +17,9 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const DARK_CSS_PATH = fileURLToPath(new URL('../../app/tokens/dark.css', import.meta.url));
+const BADGE_SOURCE_PATH = fileURLToPath(
+  new URL('../../components/report/SeverityBadge.tsx', import.meta.url),
+);
 
 function readTokens(): Record<string, string> {
   const css = readFileSync(DARK_CSS_PATH, 'utf8');
@@ -57,6 +60,7 @@ const SEVERITIES = ['critical', 'high', 'medium', 'low', 'info', 'resolved'] as 
 
 describe('dark-mode severity token contrast (WCAG AA, 4.5:1)', () => {
   const tokens = readTokens();
+  const badgeSource = readFileSync(BADGE_SOURCE_PATH, 'utf8');
 
   it('reads all six severity foreground/background pairs plus both surface tokens from the real port', () => {
     for (const sev of SEVERITIES) {
@@ -68,7 +72,8 @@ describe('dark-mode severity token contrast (WCAG AA, 4.5:1)', () => {
   });
 
   for (const sev of SEVERITIES) {
-    it(`--sev-${sev} on its own --sev-${sev}-bg (SeverityBadge.module.css's real pairing) meets AA`, () => {
+    it(`--sev-${sev} on its own --sev-${sev}-bg (SeverityBadge's real utility pairing) meets AA`, () => {
+      expect(badgeSource).toContain(`text-sev-${sev} bg-sev-${sev}-bg`);
       const fg = tokens[`sev-${sev}`] as string;
       const bg = tokens[`sev-${sev}-bg`] as string;
       expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);

@@ -14,7 +14,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { I18nProvider } from '../../app/theme';
 import { ModuleStatus, ScoreArc } from '../../components/report';
-import moduleStatusStyles from '../../components/report/ModuleStatus.module.css';
 import enReports from '../../messages/en/reports.json';
 
 function render(element: React.ReactElement): string {
@@ -73,8 +72,10 @@ describe('ModuleStatus', () => {
       createElement(ModuleStatus, { area: 'Testing', state: 'degraded', detail: '2 / 5' }),
     );
     const complete = render(createElement(ModuleStatus, { area: 'Security', state: 'complete' }));
-    expect(degraded).toContain(moduleStatusStyles.stateDegraded);
-    expect(complete).not.toContain(moduleStatusStyles.stateDegraded);
+    expect(degraded).toContain('border-s-[0.1875rem]');
+    expect(degraded).toContain('border-s-sev-medium');
+    expect(degraded).toContain('[--state-fg:var(--sev-medium)]');
+    expect(complete).not.toContain('border-s-sev-medium');
   });
 
   it('renders the issue count only when given, and the detail text only when given', () => {
@@ -105,7 +106,7 @@ describe('ModuleStatus', () => {
     const normal = render(
       createElement(ModuleStatus, { area: 'Testing', state: 'degraded', detail: 'x' }),
     );
-    expect(compact).toContain(moduleStatusStyles.compact);
-    expect(normal).not.toContain(moduleStatusStyles.compact);
+    expect(compact).toContain('block');
+    expect(normal).not.toContain('block px-3 py-2.5');
   });
 });

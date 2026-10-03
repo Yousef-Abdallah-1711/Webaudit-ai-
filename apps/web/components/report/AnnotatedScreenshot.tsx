@@ -37,7 +37,19 @@
 import { useTranslations } from 'next-intl';
 import type { SeverityBadgeProps } from './SeverityBadge';
 import { SeverityBadge } from './SeverityBadge';
-import styles from './AnnotatedScreenshot.module.css';
+const styles = {
+  wrapper: 'bg-surface-card border border-solid border-hairline border-border-card rounded-card overflow-hidden font-sans',
+  heading: 'type-card-title text-text-strong px-5 pt-5',
+  unavailable: 'm-5 px-5 py-8 border border-dashed border-hairline border-border-default rounded-card text-center text-text-muted font-sans text-[0.875rem] leading-5 font-normal',
+  frame: 'relative w-full leading-[0] mt-4',
+  image: 'block w-full h-auto',
+  pin: 'absolute -translate-x-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-pill border border-solid border-hairline border-current font-sans text-[0.75rem] font-bold',
+  legend: 'list-none m-0 p-5 flex flex-col gap-3',
+  legendItem: 'flex items-baseline flex-wrap gap-2',
+  legendNumber: 'inline-flex items-center justify-center w-5 h-5 rounded-pill bg-surface-sunken text-text-secondary text-[0.6875rem] font-bold',
+  legendTitle: 'font-semibold text-text-strong',
+  legendDescription: 'basis-full m-0 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+} as const;
 
 type Severity = NonNullable<SeverityBadgeProps['level']>;
 

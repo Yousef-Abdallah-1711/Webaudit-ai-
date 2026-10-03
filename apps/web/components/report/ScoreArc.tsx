@@ -17,7 +17,11 @@
  */
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import styles from './ScoreArc.module.css';
+const styles = {
+  wrap: 'text-center font-sans',
+  value: 'tabular-nums',
+  label: 'mt-[-0.25rem] font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+} as const;
 
 export interface ScoreArcProps {
   /** 0–100 */

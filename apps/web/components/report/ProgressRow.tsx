@@ -8,7 +8,16 @@
  * run indeterminately.
  */
 import { useTranslations } from 'next-intl';
-import styles from './ProgressRow.module.css';
+const styles = {
+  row: 'border border-solid border-hairline border-border-default bg-surface-page px-[1.125rem] py-4 font-sans',
+  head: 'flex items-baseline gap-3 mb-[0.625rem]',
+  phase: 'text-[0.9375rem] font-semibold text-text-strong',
+  count: 'font-mono text-[0.8125rem] text-text-secondary',
+  elapsed: 'ms-auto font-mono text-[0.8125rem] text-text-primary tabular-nums',
+  track: 'h-[0.375rem] bg-surface-sunken border border-solid border-hairline border-border-default overflow-hidden',
+  fill: 'h-full bg-accent transition-[width] duration-[var(--duration-land)] ease-[var(--easing-reveal)]',
+  safe: 'mt-[0.625rem] font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+} as const;
 
 export interface ProgressRowProps {
   /** m:ss, tabular numerals */

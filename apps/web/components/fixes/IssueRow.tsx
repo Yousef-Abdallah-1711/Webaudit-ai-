@@ -18,7 +18,22 @@
 import { SeverityBadge, type SeverityBadgeProps } from '../report';
 import { useFormatter, useTranslations } from 'next-intl';
 import type { FixesIssue } from '../../lib/api';
-import styles from './IssueRow.module.css';
+const styles = {
+  row: 'px-5 py-4 border-solid border-x-0 border-y-0 !border-s-[0.1875rem] border-s-transparent bg-surface-page font-sans',
+  rowBordered: 'border-solid border-x-0 !border-t-hairline border-b-0 border-t-border-default',
+  rowResolved: '!bg-sev-resolved-bg',
+  head: 'flex items-center gap-3 flex-wrap',
+  title: 'text-[0.9375rem] font-semibold text-text-strong',
+  actions: 'ms-auto flex items-center gap-3',
+  verified: 'font-mono text-[0.875rem] leading-5 text-sev-resolved',
+  regressed: 'font-mono text-[0.875rem] leading-5 text-sev-high',
+  assertBtn: 'h-9 px-[0.875rem] rounded-control border border-solid border-hairline border-border-default bg-surface-page text-text-primary font-sans text-[0.875rem] cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-default',
+  location: 'mt-2 font-mono text-[0.8125rem] text-text-zinc break-all',
+  unverifiable: 'mt-2.5 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  evidence: 'mt-2.5 bg-sev-critical-bg border border-solid border-hairline border-sev-critical rounded-control px-[0.875rem] py-3.5',
+  evidenceLabel: 'mb-1.5 font-sans text-[0.875rem] leading-5 font-bold text-sev-critical',
+  evidenceBody: 'm-0 font-mono text-[0.75rem] text-text-zinc whitespace-pre-wrap break-all',
+} as const;
 
 const SEVERITY_RULE: Record<NonNullable<SeverityBadgeProps['level']>, string> = {
   critical: 'var(--sev-critical)',

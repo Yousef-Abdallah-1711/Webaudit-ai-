@@ -8,7 +8,16 @@
  * of the next edit rather than the last one.
  */
 import { useTranslations } from 'next-intl';
-import styles from './SeverityBadge.module.css';
+const styles = {
+  badge: 'inline-flex items-center gap-1.5 border border-solid border-hairline border-current rounded-pill px-2.5 py-[0.1875rem] font-sans text-[0.75rem] font-bold leading-4',
+  count: 'font-medium opacity-75',
+  critical: 'text-sev-critical bg-sev-critical-bg',
+  high: 'text-sev-high bg-sev-high-bg',
+  medium: 'text-sev-medium bg-sev-medium-bg',
+  low: 'text-sev-low bg-sev-low-bg',
+  info: 'text-sev-info bg-sev-info-bg',
+  resolved: 'text-sev-resolved bg-sev-resolved-bg',
+} as const;
 
 type SeverityTranslationKey =
   | 'report_severity_badge_critical'
@@ -27,32 +36,32 @@ const LEVEL: Record<
   }
 > = {
   critical: {
-    className: styles.critical!,
+    className: styles.critical,
     textKey: 'report_severity_badge_critical',
     path: 'M12 2 1 21h22L12 2Zm0 6v6m0 3v.5',
   },
   high: {
-    className: styles.high!,
+    className: styles.high,
     textKey: 'report_severity_badge_high',
     path: 'M12 3v12m0 4v.5M4 20h16',
   },
   medium: {
-    className: styles.medium!,
+    className: styles.medium,
     textKey: 'report_severity_badge_medium',
     path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 5v5m0 3v.5',
   },
   low: {
-    className: styles.low!,
+    className: styles.low,
     textKey: 'report_severity_badge_low',
     path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm-4 9 3 3 5-6',
   },
   info: {
-    className: styles.info!,
+    className: styles.info,
     textKey: 'report_severity_badge_info',
     path: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 5v.5m0 3v5',
   },
   resolved: {
-    className: styles.resolved!,
+    className: styles.resolved,
     textKey: 'report_severity_badge_resolved',
     path: 'm4 12 5 5L20 6',
   },

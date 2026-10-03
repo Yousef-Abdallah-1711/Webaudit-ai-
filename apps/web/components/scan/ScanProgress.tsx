@@ -53,7 +53,10 @@ import { ModuleStatus, ProgressRow, type ModuleStatusProps } from '../report';
 import { getAccessToken, getScan } from '../../lib/api';
 import { connectRealtime } from '../../lib/realtime';
 import { UIQuestionnaire } from './UIQuestionnaire';
-import styles from './ScanProgress.module.css';
+const styles = {
+  stack: 'flex flex-col gap-[0.625rem] max-w-marketing',
+  done: 'mt-3',
+} as const;
 
 type UiState = ModuleStatusProps['state'];
 

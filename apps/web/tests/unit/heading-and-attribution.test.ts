@@ -11,8 +11,6 @@ import { describe, expect, it } from 'vitest';
 import { I18nProvider } from '../../app/theme';
 import { TwoToneHeading } from '../../components/ui';
 import { AttributionMark, SeverityBadge } from '../../components/report';
-import severityStyles from '../../components/report/SeverityBadge.module.css';
-import attributionStyles from '../../components/report/AttributionMark.module.css';
 import enReports from '../../messages/en/reports.json';
 
 function render(element: React.ReactElement): string {
@@ -69,7 +67,13 @@ describe('SeverityBadge', () => {
     // Direct regression guard for the .prompt.md's explicit "deliberately
     // different greens" — a shared class here would be the collapse it warns
     // against, however innocuous the CSS values might still look.
-    expect(severityStyles.resolved).not.toBe(severityStyles.low);
+    const resolved = render(createElement(SeverityBadge, { level: 'resolved' }));
+    const low = render(createElement(SeverityBadge, { level: 'low' }));
+    expect(resolved).toContain('text-sev-resolved');
+    expect(resolved).toContain('bg-sev-resolved-bg');
+    expect(low).toContain('text-sev-low');
+    expect(low).toContain('bg-sev-low-bg');
+    expect(resolved).not.toContain('text-sev-low');
   });
 
   it('label overrides the default word; a count is optional and trailing', () => {
@@ -95,8 +99,8 @@ describe('AttributionMark', () => {
     const html = render(createElement(AttributionMark, { kind: 'ai-judgment' }));
     expect(html).toContain(enReports.report_attribution_ai_judgment);
     expect(html).toContain(`title="${enReports.report_attribution_ai_judgment_title}"`);
-    expect(html).toContain(attributionStyles.aiJudgment);
-    expect(html).not.toContain(attributionStyles.measured);
+    expect(html).toContain('text-text-muted');
+    expect(html).not.toContain('text-sev-info');
   });
 
   it('is not hidden behind a <details>/hover-only affordance — plain visible markup', () => {

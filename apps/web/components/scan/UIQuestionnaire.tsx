@@ -66,7 +66,18 @@ import {
   submitQuestionnaire,
   type QuestionnaireQuestion,
 } from '../../lib/api';
-import styles from './UIQuestionnaire.module.css';
+const styles = {
+  deadline: 'mb-5 mt-0 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+  deadlineUrgent: '!text-sev-high font-semibold',
+  fields: 'flex flex-col gap-5',
+  field: 'flex flex-col gap-2',
+  label: 'font-sans text-[1rem] leading-6 font-semibold text-text-strong',
+  hint: 'm-0 font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  choices: 'flex flex-wrap gap-2',
+  actions: 'flex gap-3 mt-6',
+  error: 'mt-3 mb-0 font-sans text-[0.875rem] leading-5 font-normal text-sev-critical',
+  note: 'm-0 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
+} as const;
 
 function formatRemaining(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
