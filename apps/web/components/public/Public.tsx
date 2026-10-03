@@ -35,9 +35,9 @@ import { cn } from '../../lib/cn';
 
 const styles = {
   wordmarkLink: cn('no-underline'),
-  header: cn('sticky top-0 z-20 bg-surface-page border-x-0 border-t-0 border-border-default border-b-hairline border-solid'),
+  header: cn('sticky top-0 z-20 bg-transparent px-4 pt-3 pb-3'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  headerInner: cn('flex items-center gap-6 max-w-public-shell h-control my-0 mx-auto px-6 max-[640px]:gap-3 max-[640px]:px-4'),
+  headerInner: cn('flex items-center gap-6 max-w-public-shell h-control my-0 mx-auto px-4 rounded-card border border-hairline border-border-default border-solid bg-surface-raised shadow-card max-[640px]:gap-3 max-[640px]:px-3'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   nav: cn('flex gap-4 max-[640px]:hidden'),
   navLink: cn('py-2 text-text-secondary text-[0.875rem] font-normal no-underline transition-colors hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2'),
@@ -49,7 +49,8 @@ const styles = {
   mobileDrawerClose: cn('focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 max-[640px]:self-end max-[640px]:w-control max-[640px]:h-control max-[640px]:p-0 max-[640px]:border-0 max-[640px]:text-text-strong max-[640px]:bg-transparent max-[640px]:type-h3 max-[640px]:cursor-pointer'),
   footerColLinks: cn('[&>a]:focus-visible:outline [&>a]:focus-visible:outline-1 [&>a]:focus-visible:outline-accent-ring [&>a]:focus-visible:outline-offset-2 flex flex-col gap-2 [&>a]:text-text-secondary [&>a]:type-small [&>a]:no-underline [&>a]:hover:text-text-strong'),
   footerLink: cn('focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2 type-small'),
-  navLinkActive: cn('text-text-strong font-semibold'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source breakpoint at 640px and force the active style past the responsive body token
+  navLinkActive: cn('text-text-strong font-semibold max-[640px]:!text-text-strong max-[640px]:!font-semibold'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   headerActions: cn('flex items-center gap-2 ms-auto max-[640px]:hidden'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the intrinsic overlay stacking index 1
@@ -59,7 +60,7 @@ const styles = {
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
   menuIcon: cn(specialStyles.menuIcon, 'max-[640px]:block max-[640px]:w-5 max-[640px]:h-hairline max-[640px]:bg-current max-[640px]:relative'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  mobileDrawerOpen: cn(specialStyles.mobileDrawerOpen, 'max-[640px]:visible '),
+  mobileDrawerOpen: cn(specialStyles.mobileDrawerOpen, 'max-[640px]:!visible'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   mobileNav: cn('max-[640px]:flex max-[640px]:flex-col max-[640px]:gap-2'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
@@ -83,7 +84,7 @@ const styles = {
 
 type PublicNavKey = keyof Pick<
   typeof messagesByLocale.en.navigation,
-  'nav_product' | 'nav_pricing'
+  'nav_product' | 'nav_how_it_works' | 'nav_pricing'
 >;
 type FooterHeadingKey = keyof Pick<
   typeof messagesByLocale.en.navigation,
@@ -110,6 +111,7 @@ export function Wordmark({ size = 19 }: WordmarkProps): ReactElement {
 
 const NAV: readonly (readonly [href: string, key: PublicNavKey])[] = [
   ['/', 'nav_product'],
+  ['/#loop', 'nav_how_it_works'],
   ['/pricing', 'nav_pricing'],
 ];
 
@@ -207,8 +209,6 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
           ))}
         </nav>
         <div className={styles.headerActions}>
-          <LangToggle />
-          <ThemeToggle />
           {status === 'anonymous' && (
             <>
               <Button variant="ghost" size="sm" href="/login">
@@ -231,6 +231,8 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
               )}
             </>
           )}
+          <LangToggle />
+          <ThemeToggle />
         </div>
         <button
           ref={mobileTriggerRef}
