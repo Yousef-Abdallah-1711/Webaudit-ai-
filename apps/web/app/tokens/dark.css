@@ -1,4 +1,4 @@
-/* Ported verbatim from design-system/tokens/dark.css (T236a). Do not edit here; edit the source and re-port. */
+/* Originally ported from design-system/tokens/dark.css (T236a). This file is the authoritative runtime copy; design-system/ is a read-only design reference and is never imported at runtime. The production additions --text-on-surface-inverse and --text-on-surface-inverse-muted are intentional; preserve them during any future re-port instead of silently overwriting them from the design-system source. Dark severity verification remains protected by apps/web/tests/unit/dark-severity-contrast.test.ts. */
 /* [EXTENDED] Dark mode. DESIGN.md §9: severity hues lighten and desaturate rather than invert,
    so the scale keeps its order. Accent holds. Surfaces invert through the cloned neutrals,
    never to pure black. Contrast-verified (T228, Session 9, 2026-09-04): every --sev-* foreground
