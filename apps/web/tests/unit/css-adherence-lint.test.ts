@@ -38,17 +38,53 @@ function countRawValues(source: string): { hex: number; px: number } {
 
 /** Remaining recorded CSS Module counts, relative to `apps/web`. */
 const BASELINE: Record<string, { hex: number; px: number }> = {
-  'app/[locale]/(public)/page.module.css': { hex: 2, px: 45 },
-  // px 23 -> 28: the same real, measured mobile-overflow fix — a 640px
-  // breakpoint hiding the nav/lang/theme toggle and collapsing the footer
-  // grid to one column.
-  'components/public/Public.module.css': { hex: 0, px: 28 },
   // Retained public drawer pseudo-elements and RTL transforms still need the
   // original 640px media query after the rest of Public's styling moved to Tailwind.
   'components/public/Public.special.module.css': { hex: 0, px: 2 },
 };
 
+/** The only approved CSS Modules after the Tailwind migration (see exit report). */
+const CSS_MODULE_ALLOWLIST = [
+  'components/auth/AuthShell.special.module.css',
+  'components/marketing/ai-development.special.module.css',
+  'components/marketing/faq.special.module.css',
+  'components/marketing/report-showcase.special.module.css',
+  'components/public/Public.special.module.css',
+];
+
+function cssModuleAllowlistDrift(discovered: string[]): string[] {
+  const discoveredSet = new Set(discovered);
+  const expectedSet = new Set(CSS_MODULE_ALLOWLIST);
+  return [
+    ...discovered.filter((file) => !expectedSet.has(file)).map((file) => `unexpected: ${file}`),
+    ...CSS_MODULE_ALLOWLIST.filter((file) => !discoveredSet.has(file)).map(
+      (file) => `missing: ${file}`,
+    ),
+  ];
+}
+
 describe('CSS Modules raw hex/px is a ratchet, not an unmonitored gap', () => {
+  it('allows exactly the documented CSS Modules and requires an intentional exit-report update', () => {
+    const files: string[] = [];
+    findCssModules(WEB_ROOT, files);
+    const discovered = files.map((file) => relative(WEB_ROOT, file).split(sep).join('/'));
+    const drift = cssModuleAllowlistDrift(discovered);
+
+    expect(
+      drift,
+      'CSS Module set changed. Review docs/audits/tailwind-migration-css-module-exit-report.md and deliberately update this allowlist.',
+    ).toEqual([]);
+  });
+
+  it('the CSS Module allowlist rejects a throwaway sixth module', () => {
+    const drift = cssModuleAllowlistDrift([
+      ...CSS_MODULE_ALLOWLIST,
+      'components/experimental/Extra.module.css',
+    ]);
+
+    expect(drift).toContain('unexpected: components/experimental/Extra.module.css');
+  });
+
   it('never exceeds the recorded baseline, and never appears in a file with none recorded', () => {
     const files: string[] = [];
     findCssModules(WEB_ROOT, files);
