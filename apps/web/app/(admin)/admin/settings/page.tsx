@@ -8,7 +8,6 @@
 import { Card } from '../../../../components/ui';
 import { AHead } from '../../../../components/admin';
 import { getTranslations } from 'next-intl/server';
-import styles from './page.module.css';
 
 const FLAGS = [
   'settings_repository_input',
@@ -39,33 +38,50 @@ export default async function AdminSettingsPage(): Promise<React.ReactElement> {
   return (
     <div>
       <AHead eyebrow={t('group_governance')} title={t('settings')} meta={t('settings_meta')} />
-      <div className={styles.grid}>
+      <div className={'grid grid-cols-2 items-start gap-4 [@media(max-width:40rem)]:grid-cols-1'}>
         <Card padding={24} title={t('settings_feature_switches')}>
-          <p className={styles.note}>{t('settings_read_only_note')}</p>
+          <p className={'mt-[0.875rem] mb-[0.875rem] type-small text-text-muted'}>
+            {t('settings_read_only_note')}
+          </p>
           {FLAGS.map((key) => (
-            <div key={key} className={styles.flagRow}>
-              <span className={styles.flagLabel}>{t(key)}</span>
-              <span className={styles.limitValue}>{t('unavailable')}</span>
+            <div
+              key={key}
+              className={
+                'flex items-center gap-3 border-x-0 border-b-0 border-t-hairline border-solid border-border-default py-3'
+              }
+            >
+              <span className={'type-small'}>{t(key)}</span>
+              <span className={'ms-auto font-mono'}>{t('unavailable')}</span>
             </div>
           ))}
         </Card>
-        <div className={styles.rightCol}>
+        <div className={'flex flex-col gap-4'}>
           <Card padding={24} title={t('settings_limits')}>
             {LIMITS.map(([label, value]) => (
-              <div key={label} className={styles.limitRow}>
+              <div
+                key={label}
+                className={
+                  'flex border-x-0 border-b-0 border-t-hairline border-solid border-border-default py-2.5 type-small'
+                }
+              >
                 <span>{t(label)}</span>
-                <span className={styles.limitValue}>{t(value)}</span>
+                <span className={'ms-auto font-mono'}>{t(value)}</span>
               </div>
             ))}
           </Card>
           <Card padding={24} title={t('table_retention')}>
             {RETENTION.map(([label, value]) => (
-              <div key={label} className={styles.limitRow}>
+              <div
+                key={label}
+                className={
+                  'flex border-x-0 border-b-0 border-t-hairline border-solid border-border-default py-2.5 type-small'
+                }
+              >
                 <span>{t(label)}</span>
-                <span className={styles.limitValue}>{t(value)}</span>
+                <span className={'ms-auto font-mono'}>{t(value)}</span>
               </div>
             ))}
-            <p className={styles.retentionNote}>{t('settings_retention_note')}</p>
+            <p className={'mt-3 mb-0 type-small text-text-muted'}>{t('settings_retention_note')}</p>
           </Card>
         </div>
       </div>

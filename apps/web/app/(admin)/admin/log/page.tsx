@@ -18,7 +18,6 @@ import { useTranslations } from 'next-intl';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, Table } from '../../../../components/admin';
 import { ApiError, getAdminAuditLog, type AdminAuditLogEntry } from '../../../../lib/api';
-import styles from './page.module.css';
 
 const PAGE_SIZE = 50;
 
@@ -71,10 +70,12 @@ export default function AdminLogPage(): React.ReactElement {
         {...(total === null ? {} : { meta: t('audit_log_entries', { count: total }) })}
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
       <form
-        className={styles.filters}
+        className={
+          'mb-4 flex flex-wrap gap-2 [&_input]:min-h-10 [&_input]:min-w-[9.375rem] [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+        }
         onSubmit={(event) => {
           event.preventDefault();
           void load(0, false);
@@ -145,7 +146,7 @@ export default function AdminLogPage(): React.ReactElement {
           onClick={() => {
             void load(entries.length, true);
           }}
-          className={`${styles.loadMore}`}
+          className={`${'mt-3'}`}
         >
           {t('load_more')}
         </Button>

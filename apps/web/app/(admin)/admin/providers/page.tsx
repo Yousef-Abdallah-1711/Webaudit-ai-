@@ -9,7 +9,6 @@ import {
 } from '../../../../lib/api.js';
 import { Button, Card } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
-import styles from './page.module.css';
 
 export default function AdminProvidersPage(): React.ReactElement {
   const t = useTranslations('admin');
@@ -67,11 +66,19 @@ export default function AdminProvidersPage(): React.ReactElement {
         title={t('providers')}
         meta={t('providers_meta', { vendors })}
       />
-      <p className={styles.caveat}>{t('providers_caveat')}</p>
-      {loading && <p className={styles.status}>{t('providers_loading')}</p>}
-      {error && <p className={styles.error}>{error}</p>}
+      <p className={'mb-4 mt-0 type-small text-text-secondary'}>{t('providers_caveat')}</p>
+      {loading && (
+        <p className={'mb-4 mt-0 type-small text-text-secondary'}>{t('providers_loading')}</p>
+      )}
+      {error && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
       {vendors < 2 && !loading && (
-        <div className={styles.warning}>{t('providers_two_vendor_warning')}</div>
+        <div
+          className={
+            'mb-4 border border-hairline border-solid border-sev-critical bg-sev-critical-bg px-[1.125rem] py-3.5 type-small text-sev-critical'
+          }
+        >
+          {t('providers_two_vendor_warning')}
+        </div>
       )}
       <Table
         cols={[
@@ -89,13 +96,13 @@ export default function AdminProvidersPage(): React.ReactElement {
           vendor,
           <span
             key="status"
-            className={`${styles.health} ${isEnabled ? styles.healthHealthy : styles.healthDegraded}`}
+            className={`${'type-small !font-bold'} ${isEnabled ? 'text-sev-resolved' : 'text-sev-medium'}`}
           >
             {t(isEnabled ? 'status_enabled' : 'status_disabled')}
           </span>,
           num(t('number_value', { value: 0 })),
           num(t('number_value', { value: 0 })),
-          <span key="actions" className={styles.actions}>
+          <span key="actions" className={'flex gap-1.5'}>
             <Button
               variant="ghost"
               size="sm"
@@ -115,12 +122,12 @@ export default function AdminProvidersPage(): React.ReactElement {
           </span>,
         ])}
       />
-      <div className={styles.grid}>
+      <div className={'mt-4 grid grid-cols-2 gap-4 [@media(max-width:40rem)]:grid-cols-1'}>
         <Card padding={20} title={t('provider_schema_title')}>
-          <p className={styles.cardText}>{t('provider_schema_body')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('provider_schema_body')}</p>
         </Card>
         <Card padding={20} title={t('provider_exhaustion_title')}>
-          <p className={styles.cardText}>{t('provider_exhaustion_body')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('provider_exhaustion_body')}</p>
         </Card>
       </div>
     </div>

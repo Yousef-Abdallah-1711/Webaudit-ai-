@@ -5,12 +5,11 @@
  * matching how the source itself uses them — not JSX components.
  */
 import type { ReactNode } from 'react';
-import styles from './format.module.css';
 
 export function mono(s: ReactNode): ReactNode {
-  return <span className={styles.mono}>{s}</span>;
+  return <span className={'font-mono text-[0.8125rem]'}>{s}</span>;
 }
 
 export function num(s: ReactNode): ReactNode {
-  return <span className={styles.num}>{s}</span>;
+  return <span className={'font-mono text-[0.8125rem] tabular-nums'}>{s}</span>;
 }

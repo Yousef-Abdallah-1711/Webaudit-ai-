@@ -30,7 +30,6 @@ import {
   type AdminPlanInput,
   type AdminPlanRecord,
 } from '../../../../lib/api';
-import styles from './page.module.css';
 
 /**
  * Copied locally from `apps/web/app/(dashboard)/billing/page.tsx`'s
@@ -147,7 +146,7 @@ export default function AdminPlansPage(): React.ReactElement {
         }
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
       {form !== null && (
         <Card
@@ -158,8 +157,12 @@ export default function AdminPlansPage(): React.ReactElement {
               : t('create_plan')
           }
         >
-          <div className={styles.formGrid}>
-            <label className={styles.field}>
+          <div className={'grid grid-cols-3 gap-3 [@media(max-width:48rem)]:grid-cols-1'}>
+            <label
+              className={
+                'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+              }
+            >
               <span>{t('plan_id')}</span>
               <input
                 value={form.id}
@@ -167,14 +170,22 @@ export default function AdminPlansPage(): React.ReactElement {
                 onChange={(event) => setForm({ ...form, id: event.target.value })}
               />
             </label>
-            <label className={styles.field}>
+            <label
+              className={
+                'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+              }
+            >
               <span>{t('name')}</span>
               <input
                 value={form.name}
                 onChange={(event) => setForm({ ...form, name: event.target.value })}
               />
             </label>
-            <label className={styles.field}>
+            <label
+              className={
+                'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+              }
+            >
               <span>{t('monthly_credits')}</span>
               <input
                 type="number"
@@ -185,7 +196,11 @@ export default function AdminPlansPage(): React.ReactElement {
                 }
               />
             </label>
-            <label className={styles.field}>
+            <label
+              className={
+                'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+              }
+            >
               <span>{t('concurrent_scan_limit')}</span>
               <input
                 type="number"
@@ -196,7 +211,11 @@ export default function AdminPlansPage(): React.ReactElement {
                 }
               />
             </label>
-            <label className={styles.field}>
+            <label
+              className={
+                'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_input]:type-small'
+              }
+            >
               <span>{t('retention_days')}</span>
               <input
                 type="number"
@@ -207,7 +226,7 @@ export default function AdminPlansPage(): React.ReactElement {
                 }
               />
             </label>
-            <label className={styles.check}>
+            <label className={'flex items-center gap-1.5 type-small text-text-secondary'}>
               <input
                 type="checkbox"
                 checked={form.creditsRecur}
@@ -216,7 +235,7 @@ export default function AdminPlansPage(): React.ReactElement {
               {t('credits_recur_monthly')}
             </label>
           </div>
-          <div className={styles.formActions}>
+          <div className={'mt-4 flex gap-2'}>
             <Button size="sm" disabled={saving} onClick={() => void savePlan()}>
               {saving ? t('saving') : t('save_plan')}
             </Button>
@@ -274,7 +293,7 @@ export default function AdminPlansPage(): React.ReactElement {
         ])}
       />
 
-      <div className={styles.grid}>
+      <div className={'mt-[1.125rem] grid grid-cols-3 gap-4 [@media(max-width:40rem)]:grid-cols-1'}>
         <Card padding={20} title={t('credit_schedule')}>
           {[
             [t('credit_schedule_one_area'), t('credit_range', { minimum: 10, maximum: 25 })],
@@ -282,17 +301,22 @@ export default function AdminPlansPage(): React.ReactElement {
             [t('credit_schedule_recheck'), t('number_value', { value: 3 })],
             [t('entitlement_readiness_pass'), t('number_value', { value: 60 })],
           ].map(([a, b]) => (
-            <div key={a} className={styles.scheduleRow}>
+            <div
+              key={a}
+              className={
+                'flex border-x-0 border-b-0 border-t-hairline border-solid border-border-default py-2 type-small'
+              }
+            >
               <span>{a}</span>
-              <span className={styles.scheduleValue}>{b}</span>
+              <span className={'ms-auto font-mono'}>{b}</span>
             </div>
           ))}
         </Card>
         <Card padding={20} title={t('credit_lifetimes')}>
-          <p className={styles.cardText}>{t('credit_lifetimes_note')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('credit_lifetimes_note')}</p>
         </Card>
         <Card padding={20} title={t('top_ups')}>
-          <p className={styles.cardText}>{t('top_ups_note')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('top_ups_note')}</p>
         </Card>
       </div>
     </div>

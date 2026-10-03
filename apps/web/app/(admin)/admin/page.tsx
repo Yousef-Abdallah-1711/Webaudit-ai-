@@ -17,7 +17,6 @@
 import { Card } from '../../../components/ui';
 import { AHead, Stat } from '../../../components/admin';
 import { getTranslations } from 'next-intl/server';
-import styles from './page.module.css';
 
 const STATS = [
   ['stat_audits_completed', 'unavailable', 'overview_data_unavailable'],
@@ -33,18 +32,38 @@ export default async function AdminOverviewPage(): Promise<React.ReactElement> {
     <div>
       <AHead eyebrow={t('group_platform')} title={t('overview')} meta={t('overview_meta')} />
 
-      <div className={styles.statsGrid}>
+      <div
+        className={
+          'mb-[1.125rem] grid grid-cols-4 gap-4 [@media(max-width:40rem)]:grid-cols-2 [@media(max-width:40rem)]:[&>*]:min-w-0 [@media(max-width:40rem)]:[&>*]:[overflow-wrap:anywhere]'
+        }
+      >
         {STATS.map(([label, value, sub]) => (
           <Stat key={label} label={t(label)} value={t(value)} sub={t(sub)} />
         ))}
       </div>
 
-      <div className={styles.twoCol}>
+      <div
+        className={
+          'grid grid-cols-2 gap-4 [@media(max-width:40rem)]:grid-cols-1 [@media(max-width:40rem)]:[&>*]:min-w-0'
+        }
+      >
         <Card padding={22} title={t('overview_needs_attention')}>
-          <div className={styles.attentionDesc}>{t('overview_no_attention_items')}</div>
+          <div
+            className={
+              'mt-[0.1875rem] font-sans text-[0.8125rem] leading-5 font-normal text-text-secondary'
+            }
+          >
+            {t('overview_no_attention_items')}
+          </div>
         </Card>
         <Card padding={22} title={t('overview_area_health')}>
-          <div className={styles.attentionDesc}>{t('overview_area_health_unavailable')}</div>
+          <div
+            className={
+              'mt-[0.1875rem] font-sans text-[0.8125rem] leading-5 font-normal text-text-secondary'
+            }
+          >
+            {t('overview_area_health_unavailable')}
+          </div>
         </Card>
       </div>
     </div>

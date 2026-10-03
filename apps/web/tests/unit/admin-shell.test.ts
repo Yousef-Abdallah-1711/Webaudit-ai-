@@ -44,10 +44,22 @@ describe('AdminShell', () => {
   it('marks the current route active in the sidebar', () => {
     vi.mocked(usePathname).mockReturnValue('/admin/queue');
     const html = render(createElement(AdminShell, {}, 'x'));
-    // Only "Queue" should carry the active class for this route.
-    const activeLinks = [...html.matchAll(/<a[^>]*class="([^"]*navItemActive[^"]*)"/g)];
+    // Only the current route gets the accent inset rule and selected surface.
+    const activeLinks = [
+      ...html.matchAll(/<a[^>]*class="([^"]*shadow-\[inset_2px_0_0_var\(--accent\)\][^"]*)"/g),
+    ];
     expect(activeLinks).toHaveLength(1);
     expect(activeLinks[0]?.[0]).toContain('href="/admin/queue"');
+    expect(activeLinks[0]?.[1]).toContain('bg-white/10');
+  });
+
+  it('keeps the fixed operator rail and responsive RTL drawer classes', () => {
+    const html = render(createElement(AdminShell, {}, 'x'));
+    expect(html).toContain('bg-gray-800');
+    expect(html).toContain('[@media(max-width:40rem)]:-translate-x-full');
+    expect(html).toContain('[@media(max-width:40rem)]:rtl:translate-x-full');
+    expect(html).toContain('[@media(min-width:40.0625rem)]:!w-[15.5rem]');
+    expect(html).toContain('aria-expanded="false"');
   });
 });
 

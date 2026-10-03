@@ -15,7 +15,6 @@ import { useTranslations } from 'next-intl';
 import { Badge, Button } from '../../../../components/ui';
 import { AHead, mono, num, Table } from '../../../../components/admin';
 import { ApiError, getAdminScans, type AdminScanSummary } from '../../../../lib/api';
-import styles from './page.module.css';
 
 const PAGE_SIZE = 50;
 
@@ -75,7 +74,7 @@ export default function AdminScansPage(): React.ReactElement {
         {...(total === null ? {} : { meta: t('scans_total', { count: total }) })}
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
       <Table
         cols={[
@@ -112,7 +111,7 @@ export default function AdminScansPage(): React.ReactElement {
           onClick={() => {
             void load(scans.length, true);
           }}
-          className={`${styles.loadMore}`}
+          className={`${'mt-3'}`}
         >
           {t('load_more')}
         </Button>

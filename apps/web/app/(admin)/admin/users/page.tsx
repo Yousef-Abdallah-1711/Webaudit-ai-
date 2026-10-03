@@ -37,7 +37,6 @@ import {
   type AdminPlanRecord,
   type AdminAuditLogEntry,
 } from '../../../../lib/api';
-import styles from './page.module.css';
 
 const PAGE_SIZE = 50;
 
@@ -255,10 +254,12 @@ export default function AdminUsersPage(): React.ReactElement {
         {...(total === null ? {} : { meta: t('users_accounts', { count: total }) })}
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
       <form
-        className={styles.searchRow}
+        className={
+          'mb-3 flex items-center gap-2 [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary'
+        }
         onSubmit={onSearchSubmit}
         role="search"
         aria-label={t('search_users_aria')}
@@ -311,7 +312,7 @@ export default function AdminUsersPage(): React.ReactElement {
               {statusLabel(status)}
             </Badge>,
             t('date_value', { date: new Date(user.createdAt) }),
-            <span key="actions" className={styles.actions}>
+            <span key="actions" className={'flex flex-wrap gap-1.5'}>
               <Button
                 variant="ghost"
                 size="sm"
@@ -350,13 +351,17 @@ export default function AdminUsersPage(): React.ReactElement {
           size="sm"
           disabled={busy}
           onClick={onLoadMore}
-          className={`${styles.loadMore}`}
+          className={`${'mt-3'}`}
         >
           {t('load_more')}
         </Button>
       )}
 
-      <div className={styles.actionPanel}>
+      <div
+        className={
+          'mt-5 grid gap-2.5 border border-hairline border-solid border-border-default bg-surface-raised p-4 type-small [&_label]:grid [&_label]:gap-1 [&_label]:text-text-secondary [&_input]:min-h-10 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-2.5 [&_input]:text-text-primary [&_select]:min-h-10 [&_select]:rounded-control [&_select]:border [&_select]:border-hairline [&_select]:border-solid [&_select]:border-border-default [&_select]:bg-surface-page [&_select]:px-2.5 [&_select]:text-text-primary'
+        }
+      >
         <strong>
           {selectedUser === null
             ? t('user_actions')
@@ -364,7 +369,11 @@ export default function AdminUsersPage(): React.ReactElement {
         </strong>
 
         {detail !== null && (
-          <dl className={styles.detailSummary}>
+          <dl
+            className={
+              'm-0 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1 bg-surface-page p-3 type-small [&_dt]:text-text-secondary [&_dd]:m-0 [&_dd]:text-text-primary'
+            }
+          >
             <dt>{t('table_plan')}</dt>
             <dd>{planLabel(detail.planId)}</dd>
             <dt>{t('subscription_state')}</dt>
@@ -383,12 +392,16 @@ export default function AdminUsersPage(): React.ReactElement {
         )}
 
         {detail !== null && (
-          <div className={styles.ledger}>
+          <div
+            className={
+              'grid gap-1.5 border-x-0 border-b-0 border-t-hairline border-solid border-border-default pt-2 type-small'
+            }
+          >
             <strong>{t('recent_ledger')}</strong>
             {detail.recentLedger.length === 0 ? (
-              <p className={styles.muted}>{t('no_credit_transactions')}</p>
+              <p className={'m-0 text-text-secondary'}>{t('no_credit_transactions')}</p>
             ) : (
-              <ul className={styles.ledgerList}>
+              <ul className={'m-0 grid list-none gap-1 p-0 text-text-secondary'}>
                 {detail.recentLedger.map((entry) => (
                   <li key={entry.id}>
                     <Badge tone={entry.type === 'DEBIT' ? 'neutral' : 'success'}>
@@ -411,12 +424,16 @@ export default function AdminUsersPage(): React.ReactElement {
         )}
 
         {detail !== null && (
-          <div className={styles.ledger}>
+          <div
+            className={
+              'grid gap-1.5 border-x-0 border-b-0 border-t-hairline border-solid border-border-default pt-2 type-small'
+            }
+          >
             <strong>{t('audited_user_actions')}</strong>
             {auditEntries.length === 0 ? (
-              <p className={styles.muted}>{t('no_audited_actions')}</p>
+              <p className={'m-0 text-text-secondary'}>{t('no_audited_actions')}</p>
             ) : (
-              <ul className={styles.ledgerList}>
+              <ul className={'m-0 grid list-none gap-1 p-0 text-text-secondary'}>
                 {auditEntries.map((entry) => (
                   <li key={entry.id}>
                     <Badge tone="accent">{entry.action}</Badge>{' '}
@@ -431,7 +448,12 @@ export default function AdminUsersPage(): React.ReactElement {
           </div>
         )}
 
-        <form className={styles.subForm} onSubmit={onRequestGrantCredits}>
+        <form
+          className={
+            'grid gap-2.5 border-x-0 border-b-0 border-t-hairline border-solid border-border-default pt-2 [&_label]:grid [&_label]:gap-1 [&_label]:text-text-secondary'
+          }
+          onSubmit={onRequestGrantCredits}
+        >
           <strong>{t('grant_credits')}</strong>
           <label>
             {t('amount')}
@@ -470,7 +492,12 @@ export default function AdminUsersPage(): React.ReactElement {
           </Button>
         </form>
 
-        <form className={styles.subForm} onSubmit={onRequestAssignPlan}>
+        <form
+          className={
+            'grid gap-2.5 border-x-0 border-b-0 border-t-hairline border-solid border-border-default pt-2 [&_label]:grid [&_label]:gap-1 [&_label]:text-text-secondary'
+          }
+          onSubmit={onRequestAssignPlan}
+        >
           <strong>{t('assign_plan_no_payment')}</strong>
           <label>
             {t('table_plan')}
@@ -504,7 +531,13 @@ export default function AdminUsersPage(): React.ReactElement {
         </form>
 
         {pendingAction !== null && selectedUser !== null && (
-          <div className={styles.confirm} role="alertdialog" aria-label={t('confirm_action')}>
+          <div
+            className={
+              'grid gap-2.5 border border-hairline border-solid border-sev-critical bg-surface-raised p-3 type-small'
+            }
+            role="alertdialog"
+            aria-label={t('confirm_action')}
+          >
             {pendingAction.kind === 'grant' ? (
               <p>
                 {pendingAction.expiresAt !== null

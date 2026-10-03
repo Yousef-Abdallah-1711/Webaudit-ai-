@@ -43,7 +43,6 @@ import {
   uploadCapability,
   type AdminCapabilitySummary,
 } from '../../../../lib/api';
-import styles from './page.module.css';
 
 export default function AdminCapabilitiesPage(): React.ReactElement {
   const t = useTranslations('admin');
@@ -162,11 +161,22 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         }
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
-      {uploadResult !== null && <p className={styles.result}>{uploadResult}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
+      {uploadResult !== null && (
+        <p className={'mb-4 mt-0 type-small text-sev-resolved'}>{uploadResult}</p>
+      )}
 
-      <form className={styles.uploadForm} onSubmit={(event) => void onUpload(event)}>
-        <label className={styles.field}>
+      <form
+        className={
+          'mb-5 grid grid-cols-[1fr_160px_1.2fr_auto] items-end gap-3 border border-hairline border-solid border-border-default bg-surface-raised p-4 [@media(max-width:48rem)]:grid-cols-1'
+        }
+        onSubmit={(event) => void onUpload(event)}
+      >
+        <label
+          className={
+            'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-12 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-3 [&_input]:text-text-primary [&_input]:type-small'
+          }
+        >
           <span>{t('capability_name')}</span>
           <input
             value={uploadName}
@@ -174,7 +184,11 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
             placeholder={t('capability_name_placeholder')}
           />
         </label>
-        <label className={styles.field}>
+        <label
+          className={
+            'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-12 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-3 [&_input]:text-text-primary [&_input]:type-small'
+          }
+        >
           <span>{t('version')}</span>
           <input
             value={uploadVersion}
@@ -182,7 +196,11 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
             placeholder={t('version_placeholder')}
           />
         </label>
-        <label className={styles.field}>
+        <label
+          className={
+            'grid gap-1.5 type-small text-text-secondary [&_input]:min-h-12 [&_input]:rounded-control [&_input]:border [&_input]:border-hairline [&_input]:border-solid [&_input]:border-border-default [&_input]:bg-surface-page [&_input]:px-3 [&_input]:text-text-primary [&_input]:type-small'
+          }
+        >
           <span>{t('bundle')}</span>
           <input
             type="file"
@@ -216,9 +234,14 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
             <Badge key="state" tone={c.isEnabled ? 'success' : 'neutral'}>
               {t(c.isEnabled ? 'status_enabled' : 'status_disabled')}
             </Badge>,
-            <div key="plans" className={styles.planAccess}>
+            <div key="plans" className={'flex flex-wrap items-center gap-1.5'}>
               {plans.map((plan) => (
-                <label key={plan} className={styles.planOption}>
+                <label
+                  key={plan}
+                  className={
+                    'inline-flex items-center gap-[0.1875rem] type-small text-text-secondary'
+                  }
+                >
                   <input
                     type="checkbox"
                     checked={(planRestrictions[c.id] ?? []).includes(plan)}
@@ -258,7 +281,7 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         }
       />
 
-      <p className={styles.planLegend}>
+      <p className={'mt-3 mb-0 type-small text-text-secondary'}>
         {t('plan_access_legend', {
           free: planLabels.free,
           starter: planLabels.starter,
@@ -267,12 +290,12 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         })}
       </p>
 
-      <div className={styles.grid}>
+      <div className={'mt-4 grid grid-cols-[1fr_1fr] gap-4'}>
         <Card padding={20} title={t('disabling_safe_title')} accentRule="var(--sev-resolved)">
-          <p className={styles.cardText}>{t('disabling_safe_body')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('disabling_safe_body')}</p>
         </Card>
         <Card padding={20} title={t('uploads_sandboxed_title')} accentRule="var(--sev-high)">
-          <p className={styles.cardText}>{t('uploads_sandboxed_body')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>{t('uploads_sandboxed_body')}</p>
         </Card>
       </div>
     </div>

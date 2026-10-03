@@ -41,7 +41,6 @@ import {
   retryAdminQueueJob,
   type AdminJobSummary,
 } from '../../../../lib/api';
-import styles from './page.module.css';
 
 function stateTone(state: AdminJobSummary['state']): 'accent' | 'success' | 'neutral' {
   if (state === 'active') return 'accent';
@@ -116,7 +115,7 @@ export default function AdminQueuePage(): React.ReactElement {
         }
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
       <Table
         cols={[
@@ -137,7 +136,7 @@ export default function AdminQueuePage(): React.ReactElement {
           </Badge>,
           num(t('number_value', { value: job.attemptsMade })),
           num(t('time_value', { time: new Date(job.timestamp) })),
-          <span key="actions" className={styles.actions}>
+          <span key="actions" className={'flex gap-1.5'}>
             <Button
               variant="ghost"
               size="sm"
@@ -162,7 +161,7 @@ export default function AdminQueuePage(): React.ReactElement {
         ])}
       />
 
-      <p className={styles.note}>{t('queue_note')}</p>
+      <p className={'mt-3 type-small text-text-muted'}>{t('queue_note')}</p>
     </div>
   );
 }

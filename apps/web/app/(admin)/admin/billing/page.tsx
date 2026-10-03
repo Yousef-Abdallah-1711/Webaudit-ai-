@@ -38,7 +38,6 @@ import {
   getMarginReport,
   type MarginReport,
 } from '../../../../lib/api';
-import styles from './page.module.css';
 
 export default function AdminBillingPage(): React.ReactElement {
   const t = useTranslations('admin');
@@ -109,9 +108,9 @@ export default function AdminBillingPage(): React.ReactElement {
         }
       />
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
-      <div className={styles.statsGrid}>
+      <div className={'mb-[1.125rem] grid grid-cols-[repeat(4,1fr)] gap-4'}>
         <Stat
           label={t('credits_recognised')}
           value={report === null ? t('dash') : t('credits_value', { count: totalCharged })}
@@ -155,9 +154,11 @@ export default function AdminBillingPage(): React.ReactElement {
         }
       />
 
-      <div className={styles.noteCard}>
+      <div className={'mt-4'}>
         <Card padding={20} title={t('margin_no_percentage_title')}>
-          <p className={styles.note}>{report?.note ?? t('margin_no_percentage_note')}</p>
+          <p className={'m-0 type-small text-text-secondary'}>
+            {report?.note ?? t('margin_no_percentage_note')}
+          </p>
         </Card>
       </div>
     </div>

@@ -27,7 +27,7 @@
  * never author" so much as porting a source-level oversight.
  *
  * `Table`'s `cols[].width` is `number | '1fr'`, not the source's raw CSS
- * strings (`'120px'`) — this repo's raw-px lint rule (T245) forbids that
+ * strings (`'7.5rem'`) — this repo's raw-px lint rule (T245) forbids that
  * literal in a `.tsx` file, and T244's screens each declare several. `Table`
  * appends `px` itself, the same move as `Card`'s `padding: number` (T237).
  */
@@ -39,7 +39,6 @@ import { Badge, Card, Eyebrow } from '../ui';
 import { Icon, type IconName } from '../ui/icons';
 import { ThemeToggle } from '../../app/theme';
 import { useAuth } from '../auth/AuthProvider';
-import styles from './AdminShell.module.css';
 
 interface NavEntry {
   readonly key: string;
@@ -115,9 +114,11 @@ interface ANavItemProps {
 
 function ANavItem({ open, active, label, icon, href }: ANavItemProps): React.ReactElement {
   const classes = [
-    styles.navItem,
-    open ? styles.navItemOpen : undefined,
-    active ? styles.navItemActive : undefined,
+    'flex h-[2.375rem] w-full items-center justify-center gap-[0.6875rem] rounded-control border-0 bg-transparent p-0 text-start font-sans text-[0.875rem] font-normal text-gray-400 no-underline shadow-none cursor-pointer transition-colors hover:bg-white/5',
+    open ? 'justify-start px-3' : undefined,
+    active
+      ? 'border-0 bg-white/10 font-semibold text-text-on-accent shadow-[inset_2px_0_0_var(--accent)] hover:bg-white/10'
+      : undefined,
   ]
     .filter(Boolean)
     .join(' ');
@@ -125,7 +126,7 @@ function ANavItem({ open, active, label, icon, href }: ANavItemProps): React.Rea
   return (
     <a href={href} title={open ? undefined : label} className={classes}>
       <Icon name={icon} />
-      {open && <span className={styles.navItemLabel}>{label}</span>}
+      {open && <span className={'overflow-hidden whitespace-nowrap'}>{label}</span>}
     </a>
   );
 }
@@ -148,22 +149,34 @@ function AdminSidebar({
   const contentOpen = open || mobileOpen;
 
   const sidebarClasses = [
-    styles.sidebar,
-    contentOpen ? styles.sidebarOpen : undefined,
-    mobileOpen ? styles.sidebarMobileOpen : undefined,
+    'sticky top-0 flex h-screen w-[3.75rem] shrink-0 flex-col overflow-hidden border-y-0 border-s-0 border-e-hairline border-solid border-gray-700 bg-gray-800 transition-[width] duration-150 ease-[var(--easing)] [@media(max-width:40rem)]:fixed [@media(max-width:40rem)]:inset-s-0 [@media(max-width:40rem)]:inset-y-0 [@media(max-width:40rem)]:z-[950] [@media(max-width:40rem)]:h-auto [@media(max-width:40rem)]:!w-[min(15.5rem,85vw)] [@media(max-width:40rem)]:-translate-x-full [@media(max-width:40rem)]:transition-transform [@media(max-width:40rem)]:rtl:translate-x-full',
+    contentOpen ? '[@media(min-width:40.0625rem)]:!w-[15.5rem]' : undefined,
+    mobileOpen ? '[@media(max-width:40rem)]:translate-x-0' : undefined,
   ]
     .filter(Boolean)
     .join(' ');
-  const headClasses = [styles.sidebarHead, contentOpen ? styles.sidebarHeadOpen : undefined]
+  const headClasses = [
+    'flex h-[3.75rem] shrink-0 items-center justify-center gap-2 p-0',
+    contentOpen ? 'justify-start px-3' : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
-  const navScrollClasses = [styles.navScroll, contentOpen ? styles.navScrollOpen : undefined]
+  const navScrollClasses = [
+    'min-h-0 flex-1 overflow-y-auto px-2 py-1.5',
+    contentOpen ? 'px-2.5' : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
-  const footClasses = [styles.sidebarFoot, contentOpen ? styles.sidebarFootOpen : undefined]
+  const footClasses = [
+    'flex shrink-0 flex-col gap-2 border-x-0 border-b-0 border-t-hairline border-solid border-gray-700 px-2 py-3',
+    contentOpen ? 'px-3' : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
-  const footRowClasses = [styles.footRow, contentOpen ? styles.footRowOpen : undefined]
+  const footRowClasses = [
+    'flex items-center justify-center gap-2',
+    contentOpen ? 'justify-start' : undefined,
+  ]
     .filter(Boolean)
     .join(' ');
 
@@ -182,29 +195,45 @@ function AdminSidebar({
           id="admin-sidebar-mobile-close"
           aria-label={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
           title={t(mobileOpen || open ? 'sidebar_collapse' : 'sidebar_expand')}
-          className={styles.toggleBtn}
+          className={
+            'grid h-[2.125rem] w-[2.125rem] shrink-0 place-items-center rounded-control border-0 bg-transparent text-gray-400 cursor-pointer'
+          }
         >
           <Icon name="menu" size={19} />
         </button>
         {contentOpen && (
-          <div className={styles.brand}>
-            <div className={styles.wordmark}>
-              <span className={styles.wordmarkAccent}>{PRODUCT_NAME}</span>
+          <div className={'flex items-center gap-2 whitespace-nowrap'}>
+            <div
+              className={'text-[0.9375rem] font-bold tracking-[-0.01875rem] text-text-on-accent'}
+            >
+              <span className={'text-accent'}>{PRODUCT_NAME}</span>
             </div>
-            <span className={styles.operatorChip}>{t('operator')}</span>
+            <span
+              className={
+                'border border-hairline border-solid border-accent px-[0.3125rem] py-px font-mono text-[0.625rem] tracking-[0.0625rem] text-accent uppercase'
+              }
+            >
+              {t('operator')}
+            </span>
           </div>
         )}
       </div>
 
       <div className={navScrollClasses}>
         {NAV_GROUPS.map(([group, items]) => (
-          <div key={group} className={styles.navGroup}>
+          <div key={group} className={'mb-4'}>
             {contentOpen ? (
-              <div className={styles.navGroupLabel}>{t(group)}</div>
+              <div
+                className={
+                  'px-3 pb-1.5 font-sans text-[0.625rem] font-bold tracking-[0.09375rem] text-gray-500 uppercase'
+                }
+              >
+                {t(group)}
+              </div>
             ) : (
-              <div className={styles.navGroupDivider} />
+              <div className={'mx-1.5 mb-2 h-px bg-gray-700'} />
             )}
-            <div className={styles.navList}>
+            <div className={'flex flex-col gap-0.5'}>
               {items.map((item) => (
                 <ANavItem
                   key={item.key}
@@ -221,13 +250,21 @@ function AdminSidebar({
       </div>
 
       <div className={footClasses}>
-        {contentOpen && <div className={styles.recordedNote}>{t('actions_recorded')}</div>}
+        {contentOpen && (
+          <div className={'font-mono text-[0.6875rem] text-gray-500'}>{t('actions_recorded')}</div>
+        )}
         <div className={footRowClasses}>
-          <a href="/scan" title={t('back_dashboard')} className={styles.exitLink}>
+          <a
+            href="/scan"
+            title={t('back_dashboard')}
+            className={
+              'grid h-[2.125rem] w-[2.125rem] place-items-center rounded-control border border-hairline border-solid border-gray-700 text-gray-400 no-underline'
+            }
+          >
             <Icon name="logOut" size={16} />
           </a>
           {contentOpen && (
-            <a href="/" className={styles.publicSiteLink}>
+            <a href="/" className={'type-small text-gray-400 no-underline'}>
               {t('public_site')}
             </a>
           )}
@@ -293,7 +330,7 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
   }, [mobileDrawerOpen]);
 
   return (
-    <div className={styles.shellRoot}>
+    <div className={'flex min-h-screen bg-surface-sunken'}>
       <AdminSidebar
         open={open}
         setOpen={setOpen}
@@ -302,16 +339,18 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
       />
       {mobileDrawerOpen && (
         <div
-          className={styles.mobileBackdrop}
+          className={
+            'fixed inset-0 z-[900] hidden border-0 bg-[color-mix(in_srgb,var(--text-strong)_42%,transparent)] p-0 cursor-pointer [@media(max-width:40rem)]:block'
+          }
           aria-hidden="true"
           onClick={() => setMobileDrawerOpen(false)}
         />
       )}
-      <div className={styles.mainCol} inert={mobileDrawerOpen}>
+      <div className={'min-w-0 flex-1'} inert={mobileDrawerOpen}>
         <button
           ref={mobileTriggerRef}
           type="button"
-          className={`${styles.toggleBtn} ${styles.mobileMenuTrigger}`}
+          className={`${'grid h-[2.125rem] w-[2.125rem] shrink-0 place-items-center rounded-control border-0 bg-transparent text-gray-400 cursor-pointer'} ${'hidden [@media(max-width:40rem)]:fixed [@media(max-width:40rem)]:inset-s-2 [@media(max-width:40rem)]:top-16 [@media(max-width:40rem)]:z-[850] [@media(max-width:40rem)]:bg-surface-raised [@media(max-width:40rem)]:grid'}`}
           aria-label={t('mobile_open_menu')}
           aria-controls="admin-sidebar"
           aria-expanded={mobileDrawerOpen}
@@ -319,18 +358,30 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
         >
           <Icon name="menu" />
         </button>
-        <div className={styles.topBar}>
-          <span className={styles.topBarOperator}>
+        <div
+          className={
+            'flex h-[3.25rem] items-center gap-3 border-x-0 border-b-hairline border-t-0 border-solid border-border-default bg-surface-page px-6 [@media(max-width:40rem)]:h-auto [@media(max-width:40rem)]:min-h-12 [@media(max-width:40rem)]:flex-wrap [@media(max-width:40rem)]:gap-1 [@media(max-width:40rem)]:px-3 [@media(max-width:40rem)]:py-2 [@media(max-width:40rem)]:ps-[calc(var(--space-12)+var(--space-1))]'
+          }
+        >
+          <span
+            className={
+              'font-mono text-[0.75rem] text-text-muted [@media(max-width:40rem)]:min-w-0 [@media(max-width:40rem)]:flex-[1_1_100%] [@media(max-width:40rem)]:[overflow-wrap:anywhere]'
+            }
+          >
             {t('operator_header', { email: user?.email ?? t('unavailable') })}
           </span>
-          <span className={styles.topBarActions}>
+          <span
+            className={
+              'ms-auto flex items-center gap-2.5 [@media(max-width:40rem)]:flex-wrap [@media(max-width:40rem)]:gap-1'
+            }
+          >
             <Badge>{t('workers_unavailable')}</Badge>
             <Badge>{t('queue_unavailable')}</Badge>
             <ThemeToggle />
           </span>
         </div>
-        <main className={styles.main}>
-          <div className={styles.mainInner}>{children}</div>
+        <main className={'px-6 pt-7 pb-16'}>
+          <div className={'mx-auto max-w-app-shell'}>{children}</div>
         </main>
       </div>
     </div>
@@ -346,13 +397,15 @@ export interface AHeadProps {
 
 export function AHead({ eyebrow, title, meta, actions }: AHeadProps): React.ReactElement {
   return (
-    <div className={styles.head}>
+    <div className={'mb-[1.375rem] flex flex-wrap items-end gap-4'}>
       <div>
         <Eyebrow tone="accent">{eyebrow}</Eyebrow>
-        <h1 className={styles.headTitle}>{title}</h1>
-        {meta !== undefined && <div className={styles.headMeta}>{meta}</div>}
+        <h1 className={'mt-2 mb-0 type-h3 text-text-strong'}>{title}</h1>
+        {meta !== undefined && (
+          <div className={'mt-1.5 font-mono text-[0.8125rem] text-text-secondary'}>{meta}</div>
+        )}
       </div>
-      <div className={styles.headActions}>{actions}</div>
+      <div className={'ms-auto flex gap-2.5'}>{actions}</div>
     </div>
   );
 }
@@ -374,10 +427,24 @@ export function Table({ cols, rows }: TableProps): React.ReactElement {
     .join(' ');
 
   return (
-    <div className={styles.table}>
-      <div className={styles.tableHeadRow} style={{ gridTemplateColumns }}>
+    <div
+      className={
+        'overflow-x-auto overflow-y-hidden rounded-card border border-hairline border-solid border-border-default bg-surface-page'
+      }
+    >
+      <div
+        className={
+          'grid gap-4 border-x-0 border-b-hairline border-t-0 border-solid border-border-default bg-surface-raised px-5 py-3'
+        }
+        style={{ gridTemplateColumns }}
+      >
         {cols.map((col) => (
-          <span key={col.label} className={styles.tableHeadCell}>
+          <span
+            key={col.label}
+            className={
+              'font-sans text-[0.6875rem] font-bold tracking-[0.05rem] text-text-muted uppercase'
+            }
+          >
             {col.label}
           </span>
         ))}
@@ -385,11 +452,15 @@ export function Table({ cols, rows }: TableProps): React.ReactElement {
       {rows.map((row, i) => (
         <div
           key={i}
-          className={i > 0 ? `${styles.tableRow} ${styles.tableRowBordered}` : styles.tableRow}
+          className={
+            i > 0
+              ? `${'grid items-center gap-4 border-0 border-t-0 px-5 py-[0.8125rem]'} ${'border-x-0 border-b-0 border-t-hairline border-solid border-border-default'}`
+              : 'grid items-center gap-4 border-0 border-t-0 px-5 py-[0.8125rem]'
+          }
           style={{ gridTemplateColumns }}
         >
           {row.map((cell, j) => (
-            <div key={j} dir="auto" className={styles.tableCell}>
+            <div key={j} dir="auto" className={'min-w-0 overflow-hidden text-ellipsis type-small'}>
               {cell}
             </div>
           ))}
@@ -409,10 +480,13 @@ export interface StatProps {
 export function Stat({ label, value, sub, tone }: StatProps): React.ReactElement {
   return (
     <Card padding={20} eyebrow={label}>
-      <div className={styles.statValue} style={tone !== undefined ? { color: tone } : undefined}>
+      <div
+        className={'type-h3 tabular-nums text-text-strong'}
+        style={tone !== undefined ? { color: tone } : undefined}
+      >
         {value}
       </div>
-      {sub !== undefined && <div className={styles.statSub}>{sub}</div>}
+      {sub !== undefined && <div className={'mt-1.5 type-small text-text-secondary'}>{sub}</div>}
     </Card>
   );
 }
