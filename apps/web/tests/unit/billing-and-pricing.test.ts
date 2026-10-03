@@ -58,6 +58,39 @@ describe('PricingPage', () => {
     expect(html).toContain('Most depth');
   });
 
+  it('keeps the four tier border states and the cost rows distinct', () => {
+    const grid = render(createElement(TierGrid));
+    const tierClasses = [...grid.matchAll(/<div class="([^"]*)"/g)]
+      .map((match) => match[1] ?? '')
+      .filter((className) => className.includes('flex-col') && className.includes('rounded-card'));
+
+    expect(tierClasses).toHaveLength(4);
+    expect(tierClasses.filter((className) => className.includes('border-accent'))).toHaveLength(1);
+    expect(tierClasses.filter((className) => className.includes('border-border-default'))).toHaveLength(3);
+    expect(grid).toContain('text-[1.125rem] font-bold');
+    expect(grid).toContain('font-mono text-[0.8125rem] text-text-secondary');
+
+    const table = render(createElement(CostTable));
+    const rowClasses = [...table.matchAll(/<div class="([^"]*)">(?=<span class="type-body !tracking-normal">)/g)].map(
+      (match) => match[1] ?? '',
+    );
+    expect(rowClasses).toHaveLength(4);
+    expect(rowClasses[0]).not.toContain('border-t-hairline');
+    expect(rowClasses.slice(1).every((className) => className.includes('border-x-0 border-b-0 border-t-hairline'))).toBe(true);
+    expect(rowClasses.every((className) => className.includes('flex px-[1.125rem] py-3.5'))).toBe(true);
+    expect(table).toContain('ms-auto font-mono text-[0.875rem]');
+  });
+
+  it('preserves the original heading, lead, and inherited typography metrics', () => {
+    const html = render(createElement(PricingPage));
+    expect(html).toContain('class="px-6 pt-[4.5rem] pb-11 text-center"');
+    expect(html).toContain('class="m-0 type-display"');
+    expect(html).toContain(
+      'class="mx-auto mt-[1.125rem] mb-0 max-w-[56ch] type-lead text-text-secondary"',
+    );
+    expect(html).toContain('class="type-body !tracking-normal"');
+  });
+
   it('states the credit-lifetime rule in the lead', () => {
     const html = render(createElement(PricingPage));
     expect(html).toContain('Plan credits expire at renewal');

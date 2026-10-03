@@ -28,7 +28,6 @@ import {
 } from '@webaudit/config';
 import { useLang } from '../../../theme';
 import { localeMetadata } from '../../../../i18n/locales';
-import styles from './page.module.css';
 
 type CountedFeatureKey =
   | 'pricing_feature_concurrent_audits'
@@ -150,28 +149,29 @@ export function TierGrid(): React.ReactElement {
   const t = useTranslations('public');
 
   return (
-    <div className={styles.tierGrid}>
+    // eslint-disable-next-line no-restricted-syntax -- preserve source CSS breakpoints at 900px and 720px
+    <div className="grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[720px]:grid-cols-1">
       {TIERS.map((tier) => (
         <div
           key={tier.nameKey}
-          className={tier.pop ? `${styles.tier} ${styles.tierPop}` : styles.tier}
+          className={`flex flex-col gap-3.5 rounded-card bg-surface-page p-6 border border-hairline border-solid ${tier.pop ? 'border-accent' : 'border-border-default'}`}
         >
-          <div className={styles.tierHead}>
-            <span className={styles.tierName}>{t(tier.nameKey)}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[1.125rem] font-bold">{t(tier.nameKey)}</span>
             {tier.pop && <Badge tone="accent">{t('pricing_badge_most_depth')}</Badge>}
           </div>
           <div>
-            <span className={styles.tierPrice}>{tier.price}</span>
-            <span className={styles.tierPer}>{t('pricing_price_period_month')}</span>
+            <span className="type-h3">{tier.price}</span>
+            <span className="type-small text-text-muted">{t('pricing_price_period_month')}</span>
           </div>
-          <div className={styles.tierCredits}>
+          <div className="font-mono text-[0.8125rem] text-text-secondary">
             {t(tier.creditsKey, { count: tier.credits })}
           </div>
-          <div className={styles.tierFeat}>
+          <div className="flex flex-1 flex-col gap-2 border-x-0 border-b-0 border-t-hairline border-solid border-border-default pt-3.5">
             {tier.feat.map((feature) => (
               <div
                 key={feature.key + ('count' in feature ? feature.count : '')}
-                className={styles.tierFeatItem}
+                className="type-small text-text-primary"
               >
                 {'count' in feature
                   ? t(feature.key, { count: feature.count })
@@ -194,18 +194,18 @@ export function CostTable(): React.ReactElement {
   return (
     <div>
       <Eyebrow tone="accent">{t('pricing_cost_eyebrow')}</Eyebrow>
-      <div className={styles.costTable}>
+      <div className="mt-3 border border-hairline border-solid border-border-default">
         {COST_ROWS.map((row, i) => (
           <div
             key={row.labelKey}
-            className={i > 0 ? `${styles.costRow} ${styles.costRowBordered}` : styles.costRow}
+            className={`flex px-[1.125rem] py-3.5 ${i > 0 ? 'border-x-0 border-b-0 border-t-hairline border-solid border-border-default' : ''}`}
           >
-            <span className={styles.costLabel}>
+            <span className="type-body !tracking-normal">
               {row.labelKey === 'pricing_cost_full_audit'
                 ? t(row.labelKey, { areaCount: ALL_AREAS.length })
                 : t(row.labelKey)}
             </span>
-            <span className={styles.costValue}>
+            <span className="ms-auto font-mono text-[0.875rem]">
               {typeof row.credits === 'number'
                 ? t('pricing_cost_amount', { credits: row.credits })
                 : t('pricing_cost_range', row.credits)}
@@ -213,7 +213,7 @@ export function CostTable(): React.ReactElement {
           </div>
         ))}
       </div>
-      <p className={styles.costNote}>{t('pricing_cost_note')}</p>
+      <p className="mt-3.5 type-small text-text-muted">{t('pricing_cost_note')}</p>
     </div>
   );
 }
@@ -225,15 +225,15 @@ export default function PricingPage(): React.ReactElement {
 
   return (
     <PublicPage active="nav_pricing">
-      <section dir={dir} className={styles.headSection}>
-        <h1 className={styles.h1}>{t('pricing_headline')}</h1>
-        <p className={styles.lead}>{t('pricing_lead')}</p>
+      <section dir={dir} className="px-6 pt-[4.5rem] pb-11 text-center">
+        <h1 className="m-0 type-display">{t('pricing_headline')}</h1>
+        <p className="mx-auto mt-[1.125rem] mb-0 max-w-[56ch] type-lead text-text-secondary">{t('pricing_lead')}</p>
       </section>
-      <section dir={dir} className={styles.bodySection}>
-        <div className={styles.tierWrap}>
+      <section dir={dir} className="px-6 pb-20">
+        <div className="mx-auto max-w-public-shell">
           <TierGrid />
         </div>
-        <div className={styles.costWrap}>
+        <div className="mx-auto mt-14 max-w-marketing">
           <CostTable />
         </div>
       </section>

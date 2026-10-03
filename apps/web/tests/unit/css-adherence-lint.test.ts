@@ -39,7 +39,6 @@ function countRawValues(source: string): { hex: number; px: number } {
 /** Remaining recorded CSS Module counts, relative to `apps/web`. */
 const BASELINE: Record<string, { hex: number; px: number }> = {
   'app/[locale]/(public)/page.module.css': { hex: 2, px: 45 },
-  'app/[locale]/(public)/pricing/page.module.css': { hex: 0, px: 23 },
   // px 23 -> 28: the same real, measured mobile-overflow fix — a 640px
   // breakpoint hiding the nav/lang/theme toggle and collapsing the footer
   // grid to one column.
