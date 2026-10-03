@@ -75,6 +75,8 @@ export type InputSelection =
 export interface InputTabsProps {
   /** Null whenever the open tab has nothing usable in it yet. */
   readonly onChange: (selection: InputSelection | null) => void;
+  /** Optional URL to seed the URL tab with, for a one-time public-hero handoff. */
+  readonly initialUrl?: string;
 }
 
 /** Never fetched twice for the same mount, and never before the tab is opened. */
@@ -90,10 +92,10 @@ type ArchiveState =
   | { readonly status: 'staged'; readonly fileName: string; readonly fileCount: number }
   | { readonly status: 'refused'; readonly message: string };
 
-export function InputTabs({ onChange }: InputTabsProps): React.ReactElement {
+export function InputTabs({ onChange, initialUrl }: InputTabsProps): React.ReactElement {
   const t = useTranslations('scan');
   const [tab, setTab] = useState<InputTab>('url');
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(initialUrl ?? '');
   const [repos, setRepos] = useState<RepoState>({ status: 'idle' });
   const [chosenRepo, setChosenRepo] = useState<string | null>(null);
   const [archive, setArchive] = useState<ArchiveState>({ status: 'idle' });

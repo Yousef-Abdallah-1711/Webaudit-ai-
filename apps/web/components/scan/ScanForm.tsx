@@ -59,9 +59,11 @@ const AREA_LABEL_KEY: Readonly<Record<ModuleType, string>> = {
 export interface ScanFormProps {
   /** Fired once the target, quote, and scan have all been created. */
   onStart?: (scanId: string) => void;
+  /** Optional URL to seed the URL tab; omitted callers retain the empty default. */
+  initialUrl?: string;
 }
 
-export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
+export function ScanForm({ onStart, initialUrl }: ScanFormProps): React.ReactElement {
   const t = useTranslations('scan');
   const [selection, setSelection] = useState<InputSelection | null>(null);
   const [selected, setSelected] = useState<readonly ModuleType[]>(ALL_AREAS);
@@ -141,7 +143,10 @@ export function ScanForm({ onStart }: ScanFormProps): React.ReactElement {
   return (
     <div className={styles.grid}>
       <Card padding={24}>
-        <InputTabs onChange={onSelectionChange} />
+        <InputTabs
+          onChange={onSelectionChange}
+          {...(initialUrl === undefined ? {} : { initialUrl })}
+        />
 
         <div className={styles.areasSection}>
           <Eyebrow>{t('areas_label')}</Eyebrow>

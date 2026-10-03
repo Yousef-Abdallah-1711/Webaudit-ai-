@@ -10,22 +10,38 @@
  * the onboarding E2E journey (a fresh user clicking "Sign in" landed on
  * dead UI), fixed alongside it rather than filed for later.
  */
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PageHead } from '../../../components/dashboard';
 import { ScanForm } from '../../../components/scan/ScanForm';
+import { readAndClearHeroScanUrl } from '../../../lib/hero-scan-handoff';
 
 export default function ScanPage(): React.ReactElement {
   const router = useRouter();
   const t = useTranslations('scan');
+  const handoffRead = useRef(false);
+  const [handoff, setHandoff] = useState<{ ready: false } | { ready: true; url: string | undefined }>(
+    { ready: false },
+  );
+
+  useEffect(() => {
+    if (handoffRead.current) return;
+    handoffRead.current = true;
+    setHandoff({ ready: true, url: readAndClearHeroScanUrl() ?? undefined });
+  }, []);
+
   return (
     <div>
       <PageHead eyebrow={t('scan_eyebrow')} title={t('scan_title')} />
-      <ScanForm
-        onStart={(scanId) => {
-          router.push(`/scan/${scanId}`);
-        }}
-      />
+      {handoff.ready && (
+        <ScanForm
+          {...(handoff.url === undefined ? {} : { initialUrl: handoff.url })}
+          onStart={(scanId) => {
+            router.push(`/scan/${scanId}`);
+          }}
+        />
+      )}
     </div>
   );
 }
