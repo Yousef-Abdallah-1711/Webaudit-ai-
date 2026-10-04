@@ -14,6 +14,7 @@ export interface PromoBarProps {
   dismissLabel: string;
   code?: string;
   dark?: boolean;
+  className?: string;
   onDismiss?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function PromoBar({
   dismissLabel,
   code,
   dark = false,
+  className,
   onDismiss,
 }: PromoBarProps): React.ReactElement | null {
   const [gone, setGone] = useState(false);
@@ -31,6 +33,7 @@ export function PromoBar({
     // eslint-disable-next-line no-restricted-syntax -- preserve the existing 13px promotional label size
     'relative flex items-center justify-center gap-3 bg-promo-bg px-4 py-2.5 font-sans text-[13px] font-medium uppercase tracking-[0.6px] text-white',
     dark && 'bg-promo-bg-dark',
+    className,
   );
   const dismissClasses = // eslint-disable-next-line no-restricted-syntax -- preserve the source dismiss control inset and glyph size
     'absolute end-[14px] cursor-pointer border-0 bg-transparent text-[16px] leading-none text-white opacity-80';

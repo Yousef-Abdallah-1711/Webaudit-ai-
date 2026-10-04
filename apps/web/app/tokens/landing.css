@@ -1,0 +1,41 @@
+/* Application-owned geometry for the approved H15 landing composition. */
+:root {
+  --container-landing-frame: 1500px;
+  --container-landing-hero: 1180px;
+  --height-landing-header: 54px;
+  --height-landing-promo: 34px;
+  --height-landing-hero: 430px;
+  --height-landing-control: 43px;
+  --size-landing-core: 280px;
+  --offset-landing-core-top: 75px;
+  --offset-landing-core-inline: 13%;
+  --offset-landing-copy-y: 11px;
+  --space-landing-inset-x: 60px;
+  --space-landing-inset-y: 54px;
+  --space-landing-scanner-gap: 18px;
+  --space-landing-control-x: 22px;
+  --space-landing-input-x: 13px;
+  --offset-landing-scanner: 50px;
+  --width-landing-scanner: 570px;
+  --width-landing-copy: 540px;
+  --radius-landing-frame: 24px;
+  --radius-landing-canvas: 34px;
+  --radius-landing-scanner: 22px;
+  --radius-landing-nav: 12px;
+  --type-landing-title: 55px;
+  --line-landing-title: 1.08;
+  --type-landing-copy: 17px;
+  --type-landing-scanner-title: 16px;
+  --type-landing-control: 13.333px;
+  --type-landing-stat-value: 29px;
+  --type-landing-stat-label: 11px;
+  --line-landing-copy: 1.8;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --height-landing-hero: auto;
+    --type-landing-title: 40px;
+    --line-landing-title: 1.15;
+  }
+}

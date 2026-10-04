@@ -25,8 +25,7 @@ export async function generateMetadata({
 
 export default function Page(): React.ReactElement {
   return (
-    <LandingPage>
-      <Hero />
+    <LandingPage hero={<Hero />}>
       <Proof />
       <ProductionGap />
       <Checks />

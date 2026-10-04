@@ -5,19 +5,29 @@ import { PromoBar } from '../../../components/ui';
 import { PublicPage } from '../../../components/public';
 
 interface LandingPageProps {
+  hero: ReactNode;
   children: ReactNode;
 }
 
-export default async function LandingPage({ children }: LandingPageProps): Promise<React.ReactElement> {
+export default async function LandingPage({
+  hero,
+  children,
+}: LandingPageProps): Promise<React.ReactElement> {
   const t = await getTranslations('public');
 
   return (
-    <div>
-      <PromoBar
-        message={t('promo', { freeCredits: FREE_ALLOCATION })}
-        dismissLabel={t('dismiss')}
-      />
-      <PublicPage active="nav_product">{children}</PublicPage>
-    </div>
+    <PublicPage
+      active="nav_product"
+      promo={
+        <PromoBar
+          message={t('promo', { freeCredits: FREE_ALLOCATION })}
+          dismissLabel={t('dismiss')}
+          className="h-landing-promo py-0 text-xs"
+        />
+      }
+      hero={hero}
+    >
+      {children}
+    </PublicPage>
   );
 }

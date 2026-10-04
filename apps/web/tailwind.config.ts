@@ -94,6 +94,10 @@ const config = {
         card: 'var(--radius-card)',
         pill: 'var(--radius-pill)',
         'marketing-shell': 'var(--radius-marketing-shell)',
+        'landing-frame': 'var(--radius-landing-frame)',
+        'landing-canvas': 'var(--radius-landing-canvas)',
+        'landing-scanner': 'var(--radius-landing-scanner)',
+        'landing-nav': 'var(--radius-landing-nav)',
       },
       boxShadow: {
         card: 'var(--shadow-card)',
@@ -113,6 +117,16 @@ const config = {
         '16': 'var(--space-16)',
         '20': 'var(--space-20)',
         '24': 'var(--space-24)',
+        'landing-inset-x': 'var(--space-landing-inset-x)',
+        'landing-inset-y': 'var(--space-landing-inset-y)',
+        'landing-scanner-gap': 'var(--space-landing-scanner-gap)',
+        'landing-control-x': 'var(--space-landing-control-x)',
+        'landing-input-x': 'var(--space-landing-input-x)',
+        'landing-core': 'var(--offset-landing-core-top)',
+        'landing-copy-y': 'var(--offset-landing-copy-y)',
+      },
+      gridTemplateColumns: {
+        'landing-hero': '1.05fr 0.95fr',
       },
       fontFamily: {
         sans: ['var(--font-sans)'],
@@ -120,18 +134,36 @@ const config = {
       },
       maxWidth: {
         marketing: 'var(--container-marketing)',
+        'landing-frame': 'var(--container-landing-frame)',
+        'landing-hero': 'var(--container-landing-hero)',
+        'landing-scanner': 'var(--width-landing-scanner)',
+        'landing-copy': 'var(--width-landing-copy)',
         'public-shell': '70rem',
         'app-shell': 'var(--container-app)',
       },
-      width: {
-        control: 'var(--control-height)',
-      },
       height: {
         control: 'var(--control-height)',
+        'landing-header': 'var(--height-landing-header)',
+        'landing-promo': 'var(--height-landing-promo)',
+        'landing-control': 'var(--height-landing-control)',
+        'landing-core': 'var(--size-landing-core)',
         hairline: 'var(--border-width)',
       },
       minHeight: {
         control: 'var(--control-height)',
+        'landing-hero': 'var(--height-landing-hero)',
+      },
+      width: {
+        control: 'var(--control-height)',
+        'landing-core': 'var(--size-landing-core)',
+      },
+      fontSize: {
+        'landing-title': 'var(--type-landing-title)',
+        'landing-copy': 'var(--type-landing-copy)',
+      },
+      lineHeight: {
+        'landing-title': 'var(--line-landing-title)',
+        'landing-copy': 'var(--line-landing-copy)',
       },
     },
   },

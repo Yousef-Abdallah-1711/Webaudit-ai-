@@ -66,7 +66,7 @@ describe('hero scan URL handoff', () => {
     expect(html).toContain('dir="ltr"');
     expect(html).toContain('bg-surface-marketing-dark');
     expect(html).toContain('bg-gradient-brand-subtle');
-    expect(html).toContain('rounded-marketing-shell');
+    expect(html).toContain('rounded-landing-scanner');
     expect(html).toContain('action="/signup"');
   });
 

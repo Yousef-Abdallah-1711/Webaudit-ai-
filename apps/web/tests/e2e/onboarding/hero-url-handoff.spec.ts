@@ -69,14 +69,25 @@ test('the hero stays within the viewport in both themes, locales, and required w
       for (const width of widths) {
         await page.setViewportSize({ width, height: 900 });
         await expect(page.locator('#hero input[dir="ltr"]')).toBeVisible();
-        const accents = await page.evaluate(() =>
-          Array.from(document.querySelectorAll<HTMLElement>('#hero > div[aria-hidden="true"]')).map(
-            (element) => getComputedStyle(element).display,
-          ),
-        );
-        expect(accents, `accent field display at ${width}px`).toEqual(
-          width > 900 ? ['block', 'none'] : ['none', 'block'],
-        );
+        const core = await page.locator('#hero .bg-gradient-brand-subtle').evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          const heroBounds = element.closest('#hero')?.getBoundingClientRect();
+          return {
+            display: getComputedStyle(element).display,
+            gradient: getComputedStyle(element).backgroundImage,
+            width: bounds.width,
+            insideHero:
+              heroBounds !== undefined &&
+              bounds.left >= heroBounds.left &&
+              bounds.right <= heroBounds.right &&
+              bounds.top >= heroBounds.top &&
+              bounds.bottom <= heroBounds.bottom,
+          };
+        });
+        expect(core.display, `Orange Core display at ${width}px`).not.toBe('none');
+        expect(core.width, `Orange Core width at ${width}px`).toBeGreaterThan(0);
+        expect(core.gradient, `Orange Core gradient at ${width}px`).toContain('linear-gradient');
+        expect(core.insideHero, `Orange Core bounds at ${width}px`).toBe(true);
         const dimensions = await page.evaluate(() => ({
           documentWidth: document.documentElement.scrollWidth,
           viewportWidth: document.documentElement.clientWidth,

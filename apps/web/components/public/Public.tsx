@@ -36,8 +36,11 @@ import { cn } from '../../lib/cn';
 const styles = {
   wordmarkLink: cn('no-underline'),
   header: cn('sticky top-0 z-20 bg-transparent px-4 pt-3 pb-3'),
+  headerHero: cn('relative z-20 bg-transparent px-0 pt-0 pb-3.5'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  headerInner: cn('flex items-center gap-6 max-w-public-shell h-control my-0 mx-auto px-4 rounded-card border border-hairline border-border-default border-solid bg-surface-raised shadow-card max-[640px]:gap-3 max-[640px]:px-3'),
+  headerInner: cn('flex items-center gap-6 h-control my-0 mx-auto px-4 rounded-card border border-hairline border-border-default border-solid bg-surface-raised shadow-card max-[640px]:gap-3 max-[640px]:px-3'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the source 640px mobile header controls
+  headerInnerHero: cn('max-w-landing-hero h-landing-header rounded-landing-nav max-[640px]:gap-3 max-[640px]:px-3'),
   // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
   nav: cn('flex gap-4 max-[640px]:hidden'),
   navLink: cn('py-2 text-text-secondary text-[0.875rem] font-normal no-underline transition-colors hover:text-text-strong focus-visible:outline focus-visible:outline-1 focus-visible:outline-accent-ring focus-visible:outline-offset-2'),
@@ -79,6 +82,12 @@ const styles = {
   footerCopy: cn('text-text-muted type-small'),
   footerZero: cn('ms-auto text-text-muted font-mono text-[0.75rem]'),
   page: cn('flex min-h-screen flex-col bg-surface-page'),
+  landingPage: cn('bg-surface-marketing'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the 900px frame gutter change in the H15 responsive composition
+  landingStage: cn('mx-auto w-full max-w-landing-frame px-7 max-[900px]:px-2.5'),
+  landingFrame: cn('overflow-hidden rounded-landing-frame border border-solid border-border-default bg-surface-marketing shadow-card'),
+  // eslint-disable-next-line no-restricted-syntax -- preserve the H15 900px frame inset and vertical transition
+  landingHeroBand: cn('bg-surface-marketing px-6 pt-3.5 pb-6 max-[900px]:px-2.5 max-[900px]:pt-2.5 max-[900px]:pb-3'),
   pageMain: cn('flex-1'),
 };
 
@@ -189,8 +198,14 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
   };
 
   return (
-    <header className={styles.header}>
-      <div className={styles.headerInner} inert={mobileDrawerOpen}>
+    <header className={active === 'nav_product' ? styles.headerHero : styles.header}>
+      <div
+        className={cn(
+          styles.headerInner,
+          active === 'nav_product' ? styles.headerInnerHero : 'max-w-public-shell',
+        )}
+        inert={mobileDrawerOpen}
+      >
         <a href="/" className={styles.wordmarkLink}>
           <Wordmark />
         </a>
@@ -425,13 +440,32 @@ export function PublicFooter(): ReactElement {
 export interface PublicPageProps {
   active?: PublicNavKey;
   tint?: string;
+  promo?: React.ReactNode;
+  hero?: React.ReactNode;
   children?: React.ReactNode;
 }
 
-export function PublicPage({ active, tint, children }: PublicPageProps): ReactElement {
+export function PublicPage({ active, tint, promo, hero, children }: PublicPageProps): ReactElement {
+  const hasLandingHero = promo !== undefined && hero !== undefined;
+
   return (
-    <div className={styles.page} style={tint !== undefined ? { background: tint } : undefined}>
-      <PublicHeader {...(active !== undefined ? { active } : {})} />
+    <div
+      className={cn(styles.page, hasLandingHero && styles.landingPage)}
+      style={tint !== undefined ? { background: tint } : undefined}
+    >
+      {hasLandingHero ? (
+        <div className={styles.landingStage}>
+          <div className={styles.landingFrame}>
+            {promo}
+            <div className={styles.landingHeroBand}>
+              <PublicHeader {...(active !== undefined ? { active } : {})} />
+              {hero}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <PublicHeader {...(active !== undefined ? { active } : {})} />
+      )}
       <main className={styles.pageMain}>{children}</main>
       <PublicFooter />
     </div>
