@@ -37,6 +37,12 @@ function contrastRatio(hexA: string, hexB: string): number {
 
 const WCAG_AA_NORMAL_TEXT = 4.5;
 
+function readGradientStops(css: string, token: string): string[] {
+  const match = css.match(new RegExp(`--${token}:\\s*linear-gradient\\(([^;]+)\\);`));
+  if (!match) throw new Error(`Missing gradient token --${token}`);
+  return [...(match[1] as string).matchAll(/#[0-9a-fA-F]{6}/g)].map((stop) => stop[0].toLowerCase());
+}
+
 describe('marketing surface token contrast and theme behavior', () => {
   const colorsCss = readFileSync(COLORS_CSS_PATH, 'utf8');
   const darkCss = readFileSync(DARK_CSS_PATH, 'utf8');
@@ -74,5 +80,23 @@ describe('marketing surface token contrast and theme behavior', () => {
     expect(contrastRatio(darkForeground, darkSurface)).toBeGreaterThanOrEqual(
       WCAG_AA_NORMAL_TEXT,
     );
+  });
+
+  it('keeps white text on every stop of the CTA gradient at AA in both themes', () => {
+    // --gradient-brand-marketing also fills the hero headline text, so the
+    // white-text CTA fill has its own, darker token.
+    for (const [theme, css] of [
+      ['light', colorsCss],
+      ['dark', darkCss],
+    ] as const) {
+      const stops = readGradientStops(css, 'gradient-cta-marketing');
+      expect(stops.length, `${theme} CTA gradient stops`).toBeGreaterThanOrEqual(2);
+      for (const stop of stops) {
+        expect(
+          contrastRatio('#ffffff', stop),
+          `${theme} theme: white on ${stop}`,
+        ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+      }
+    }
   });
 });

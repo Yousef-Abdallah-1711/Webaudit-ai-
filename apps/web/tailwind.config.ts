@@ -119,6 +119,7 @@ const config = {
         'wash-br': 'var(--wash-br)',
         'wash-tl': 'var(--wash-tl)',
         'gradient-brand-marketing': 'var(--gradient-brand-marketing)',
+        'gradient-cta-marketing': 'var(--gradient-cta-marketing)',
         atmosphere: 'var(--gradient-atmosphere)',
         'marketing-stars': 'var(--gradient-marketing-stars)',
       },

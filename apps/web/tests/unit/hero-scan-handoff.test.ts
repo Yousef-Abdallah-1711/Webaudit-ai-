@@ -70,6 +70,23 @@ describe('hero scan URL handoff', () => {
     expect(html).toContain('action="/signup"');
   });
 
+  it('aligns the scanner note logically so it mirrors in RTL', () => {
+    const html = renderToStaticMarkup(
+      createElement(I18nProvider, null, createElement(Hero)),
+    );
+
+    expect(html).toContain('text-start');
+    expect(html).not.toContain('text-right');
+  });
+
+  it('uses the AA-safe CTA gradient for the white-text submit button', () => {
+    const html = renderToStaticMarkup(
+      createElement(I18nProvider, null, createElement(Hero)),
+    );
+
+    expect(html).toContain('bg-gradient-cta-marketing');
+  });
+
   it('leaves InputTabs empty for existing callers and seeds only when initialUrl is provided', () => {
     const renderTabs = (initialUrl?: string): string =>
       renderToStaticMarkup(

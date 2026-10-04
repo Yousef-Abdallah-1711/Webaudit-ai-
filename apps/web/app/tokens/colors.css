@@ -44,6 +44,8 @@
   --brand-marketing-contrast: #7655f5;
   --brand-highlight: #c7ff45;
   --gradient-brand-marketing: linear-gradient(90deg, #2418ff 0%, #4743ff 55%, #7775ff 100%);
+  /* White-text fills (CTA buttons, active tab). Every stop keeps >= 4.5:1 against #fff; --gradient-brand-marketing is lighter and also fills hero headline text. */
+  --gradient-cta-marketing: linear-gradient(90deg, #2418ff 0%, #4743ff 55%, #625eff 100%);
   --gradient-atmosphere: radial-gradient(ellipse at 50% 73%, rgb(73 69 255 / 27%), transparent 43%), radial-gradient(ellipse at 50% 112%, rgb(103 101 255 / 28%), transparent 50%), radial-gradient(ellipse at 49% 48%, rgb(12 20 40 / 0%), #070d1c 110%);
   --shadow-marketing-card: 0 16px 45px rgb(23 35 81 / 7%);
   --shadow-marketing-float: 0 24px 70px rgb(19 31 71 / 10%);

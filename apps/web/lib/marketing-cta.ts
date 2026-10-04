@@ -7,8 +7,8 @@
  * literal string so Tailwind's content scan can see it.
  */
 
-/** Gradient fill used by the primary CTA and the active area tab. */
-export const gradientSurface = 'bg-gradient-brand-marketing text-white shadow-marketing-card';
+/** AA-safe gradient fill for white text: the primary CTA and the active area tab. */
+export const gradientSurface = 'bg-gradient-cta-marketing text-white shadow-marketing-card';
 
 /**
  * Marketing primary CTA, applied through `className` on `<Button variant="primary">`.

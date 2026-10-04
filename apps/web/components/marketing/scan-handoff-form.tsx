@@ -57,7 +57,7 @@ export function ScanHandoffForm({
           {submitLabel}
         </Button>
       </div>
-      <p className={cn('mb-0 mt-2.5 text-right text-marketing-label', tone === 'dark' ? 'text-marketing-inverse-muted' : 'text-marketing-muted')}>{note}</p>
+      <p className={cn('mb-0 mt-2.5 text-start text-marketing-label', tone === 'dark' ? 'text-marketing-inverse-muted' : 'text-marketing-muted')}>{note}</p>
     </form>
   );
 }

@@ -29,9 +29,9 @@ function source(relativePath: string): string {
 
 describe('marketing CTA recipes', () => {
   it('keeps the approved gradient primary CTA look', () => {
-    expect(gradientSurface).toBe('bg-gradient-brand-marketing text-white shadow-marketing-card');
+    expect(gradientSurface).toBe('bg-gradient-cta-marketing text-white shadow-marketing-card');
     expect(marketingPrimaryCta).toBe(
-      'bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110',
+      'bg-gradient-cta-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110',
     );
   });
 
@@ -75,7 +75,7 @@ describe('marketing CTA recipes', () => {
     for (const path of callsites) {
       const text = source(path);
       expect(text, `${path} inlines the gradient CTA recipe`).not.toContain(
-        'bg-gradient-brand-marketing text-white shadow-marketing-card',
+        'bg-gradient-cta-marketing text-white shadow-marketing-card',
       );
       expect(text, `${path} inlines the on-hero ghost recipe`).not.toContain(
         'text-marketing-inverse-muted hover:bg-white/10 hover:text-marketing-inverse',
