@@ -149,7 +149,7 @@ export function TierGrid(): React.ReactElement {
   const t = useTranslations('public');
 
   return (
-    // Named screens (900px / 720px): arbitrary `max-[Npx]:` variants are disabled by the object screens in tailwind.config.ts.
+    // Named screens (900px / 720px): arbitrary max-width variants are disabled by the object screens in tailwind.config.ts.
     <div className="grid grid-cols-4 gap-4 max-marketing-menu:grid-cols-2 max-pricing-tiers:grid-cols-1">
       {TIERS.map((tier) => (
         <div

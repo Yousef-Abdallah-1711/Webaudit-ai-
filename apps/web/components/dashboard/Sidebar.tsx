@@ -68,17 +68,13 @@ import { useAuth } from '../auth/AuthProvider';
 const styles = {
   shellRoot: 'flex min-h-screen bg-surface-sunken',
   mainCol: 'min-w-0 flex-1',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint
-  main: 'px-8 pt-8 pb-16 max-[640px]:pt-16',
+  main: 'px-8 pt-8 pb-16 max-dashboard-mobile:pt-16',
   mainInner: 'mx-auto max-w-app-shell',
   sidebarClosed: 'w-[3.75rem]',
   sidebarOpen: 'w-[15.5rem]',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint and drawer transform
-  sidebarMobileClosed: 'max-[640px]:translate-x-[-100%] max-[640px]:rtl:translate-x-full',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint
-  sidebarMobileOpen: 'max-[640px]:translate-x-0',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the component's intrinsic 640px inclusive collapse breakpoint and mobile drawer sizing
-  sidebar: 'sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-0 border-e-hairline border-e-border-default border-solid bg-surface-raised transition-[width] duration-150 ease-[var(--easing)] max-[640px]:fixed max-[640px]:start-0 max-[640px]:inset-y-0 max-[640px]:h-auto max-[640px]:w-[min(15.5rem,85vw)] max-[640px]:z-[950] max-[640px]:transition-transform max-[640px]:duration-150 max-[640px]:ease-[var(--easing)]',
+  sidebarMobileClosed: 'max-dashboard-mobile:translate-x-[-100%] max-dashboard-mobile:rtl:translate-x-full',
+  sidebarMobileOpen: 'max-dashboard-mobile:translate-x-0',
+  sidebar: 'sticky top-0 flex h-screen shrink-0 flex-col overflow-hidden border-0 border-e-hairline border-e-border-default border-solid bg-surface-raised transition-[width] duration-150 ease-[var(--easing)] max-dashboard-mobile:fixed max-dashboard-mobile:start-0 max-dashboard-mobile:inset-y-0 max-dashboard-mobile:h-auto max-dashboard-mobile:w-[min(15.5rem,85vw)] max-dashboard-mobile:z-[950] max-dashboard-mobile:transition-transform max-dashboard-mobile:duration-150 max-dashboard-mobile:ease-[var(--easing)]',
   sidebarHead: 'flex h-[3.75rem] shrink-0 items-center gap-2',
   sidebarHeadClosed: 'justify-center p-0',
   sidebarHeadOpen: 'justify-start px-3 py-0',
@@ -127,10 +123,8 @@ const styles = {
   pageHeadTitle: 'mt-2 mb-0 type-h3 text-text-strong',
   pageHeadMeta: 'mt-1.5 font-mono text-[0.8125rem] text-text-secondary',
   pageHeadActions: 'ms-auto flex gap-2.5',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint and overlay color
-  mobileBackdrop: 'hidden max-[640px]:fixed max-[640px]:inset-0 max-[640px]:z-[900] max-[640px]:block max-[640px]:border-0 max-[640px]:bg-[color-mix(in_srgb,var(--text-strong)_42%,transparent)] max-[640px]:p-0',
-  // eslint-disable-next-line no-restricted-syntax -- preserve the Sidebar's intrinsic 640px inclusive collapse breakpoint
-  mobileMenuTrigger: 'hidden max-[640px]:fixed max-[640px]:start-2 max-[640px]:top-2 max-[640px]:z-[850] max-[640px]:grid max-[640px]:bg-surface-raised',
+  mobileBackdrop: 'hidden max-dashboard-mobile:fixed max-dashboard-mobile:inset-0 max-dashboard-mobile:z-[900] max-dashboard-mobile:block max-dashboard-mobile:border-0 max-dashboard-mobile:bg-[color-mix(in_srgb,var(--text-strong)_42%,transparent)] max-dashboard-mobile:p-0',
+  mobileMenuTrigger: 'hidden max-dashboard-mobile:fixed max-dashboard-mobile:start-2 max-dashboard-mobile:top-2 max-dashboard-mobile:z-[850] max-dashboard-mobile:grid max-dashboard-mobile:bg-surface-raised',
 };
 
 type DashboardKey = keyof typeof enDashboard;
