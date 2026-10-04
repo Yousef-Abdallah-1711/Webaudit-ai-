@@ -4,36 +4,47 @@ import type enPublic from '../../messages/en/public.json';
 import { cn } from '../../lib/cn';
 
 const styles = {
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
-  section: cn('py-20 px-6 bg-surface-inverse text-text-on-surface-inverse max-[768px]:py-16 max-[640px]:py-12 max-[640px]:px-4'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 1024px, 768px, 640px; preserve this component-specific grid track ratio; no predefined grid utility matches it; preserve the source responsive clamp expression; no spacing token expresses this fluid value; preserve the component-specific intrinsic value where no configured utility token matches
-  inner: cn('grid grid-cols-[minmax(0,_0.85fr)_minmax(0,_1.15fr)] items-start gap-[clamp(var(--space-8),_7vw,_var(--space-16))] max-w-6xl mx-auto max-[1024px]:grid-cols-[minmax(0,_0.75fr)_minmax(0,_1.25fr)] max-[1024px]:gap-8 max-[768px]:grid-cols-[minmax(0,_0.9fr)_minmax(0,_1.1fr)] max-[768px]:gap-5 max-[640px]:block'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  header: cn('max-w-[35rem] pt-4 max-[640px]:pt-0'),
-  sampleLabel: cn('m-0 text-text-on-surface-inverse type-small leading-5 !font-semibold'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  heading: cn('mt-5 mb-0 type-h2  text-balance max-[640px]:mt-3 '),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  intro: cn('mt-4 mb-0 text-text-on-surface-inverse type-body-lg text-pretty max-[640px]:type-body max-[640px]:tracking-normal'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
-  decision: cn('min-w-0 py-5 px-5 bg-surface-page text-text-primary max-[768px]:px-4 max-[640px]:mt-6 max-[640px]:py-4 max-[640px]:px-3'),
-  gate: cn('flex items-center justify-between flex-wrap gap-3 pb-4 border-x-0 border-t-0 border-border-default border-b-hairline border-solid'),
-  gateLabel: cn('text-text-secondary type-small leading-5 !font-semibold'),
-  gateValue: cn('text-sev-high type-card-title tracking-[0.02em]'),
+  section: cn(
+    'bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
+  ),
+  inner: cn(
+    'mx-auto grid max-w-marketing-evidence grid-cols-[0.8fr_1.2fr] items-center gap-8 max-marketing-tablet:grid-cols-1 max-marketing-tablet:gap-6',
+  ),
+  header: cn('max-w-[35rem]'),
+  sampleLabel: cn('mb-0 text-marketing-muted text-marketing-micro font-bold'),
+  heading: cn('mb-0 mt-3 text-2xl leading-[1.5] font-black text-marketing-primary text-balance'),
+  intro: cn(
+    'mb-0 mt-3 text-marketing-readiness-copy leading-marketing-description text-marketing-secondary text-pretty',
+  ),
+  decision: cn(
+    'min-w-0 rounded-marketing-readiness border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-principle-padding-y px-6 text-marketing-primary shadow-marketing-card max-marketing-mobile:p-4',
+  ),
+  gate: cn(
+    'flex flex-wrap items-center justify-between gap-3 border-x-0 border-t-0 border-b border-solid border-border-marketing pb-4',
+  ),
+  gateLabel: cn('text-marketing-secondary text-marketing-label font-bold'),
+  gateValue: cn(
+    'rounded-full bg-sev-high-bg px-3 py-1.5 text-sev-high text-marketing-label font-extrabold',
+  ),
   modules: cn('m-0 p-0 list-none'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  module: cn('flex items-center justify-between gap-3 min-w-0 py-3 border-x-0 border-t-0 border-border-default border-b-hairline border-solid max-[368px]:items-start'),
-  moduleName: cn('min-w-0 text-text-primary type-body break-words'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  status: cn('flex-none py-1 px-2 rounded-pill type-small leading-5 !font-semibold max-[368px]:whitespace-normal max-[368px]:text-end'),
+  module: cn(
+    'flex min-w-0 items-center justify-between gap-3 border-x-0 border-t-0 border-b border-solid border-border-marketing py-3 max-marketing-micro:items-start',
+  ),
+  moduleName: cn('min-w-0 break-words text-marketing-primary type-body'),
+  status: cn(
+    'flex-none rounded-full px-2.5 py-1 text-marketing-micro font-extrabold max-marketing-micro:whitespace-normal max-marketing-micro:text-end',
+  ),
   pass: cn('bg-sev-resolved-bg text-sev-resolved'),
   blocked: cn('bg-sev-high-bg text-sev-high'),
   warning: cn('bg-sev-medium-bg text-sev-medium'),
-  blockers: cn('pt-4 [&>h3]:m-0 [&>h3]:text-text-strong [&>h3]:type-body-bold [&>ul]:grid [&>ul]:gap-2 [&>ul]:mt-3 [&>ul]:mb-0 [&>ul]:ps-5 [&>ul]:text-sev-high [&>ul]:type-small [&>p]:mt-4 [&>p]:mb-0 [&>p]:text-text-secondary [&>p]:type-small [&>p]:text-pretty'),
+  blockers: cn(
+    'mt-4 rounded-control border-s-2 border-solid border-sev-medium bg-sev-medium-bg px-4 py-3 text-sev-medium [&>h3]:m-0 [&>h3]:text-marketing-label [&>h3]:font-extrabold [&>ul]:mt-2 [&>ul]:mb-0 [&>ul]:grid [&>ul]:gap-2 [&>ul]:ps-5 [&>ul]:text-marketing-label [&>p]:mb-0 [&>p]:mt-3 [&>p]:text-marketing-muted [&>p]:text-marketing-label [&>p]:text-pretty',
+  ),
 };
 
 type PublicKey = keyof typeof enPublic;
-type ReadinessStatus = 'readiness_status_pass' | 'readiness_status_blocked' | 'readiness_status_warning';
+type ReadinessStatus =
+  'readiness_status_pass' | 'readiness_status_blocked' | 'readiness_status_warning';
 
 const AREAS: readonly (readonly [PublicKey, ReadinessStatus])[] = [
   ['a_perf', 'readiness_status_pass'],
@@ -56,6 +67,7 @@ export async function Readiness(): Promise<React.ReactElement> {
     <section
       id="readiness"
       data-landing-section="readiness"
+      data-approved-section="readiness"
       className={styles.section}
       aria-labelledby="readiness-heading"
     >
@@ -77,11 +89,7 @@ export async function Readiness(): Promise<React.ReactElement> {
             {AREAS.map(([area, status]) => (
               <li className={styles.module} key={area}>
                 <span className={styles.moduleName}>{t(area)}</span>
-                <span
-                  className={`${styles.status} ${STATUS_CLASS[status]}`}
-                >
-                  {t(status)}
-                </span>
+                <span className={`${styles.status} ${STATUS_CLASS[status]}`}>{t(status)}</span>
               </li>
             ))}
           </ul>

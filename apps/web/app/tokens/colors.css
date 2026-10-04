@@ -16,10 +16,41 @@
   --surface-raised: #fafafa;
   --surface-sunken: #f9fafb;
   --surface-inverse: #1f2937;
-  /* Warm neutral public-page canvas; dark mode uses a matching warm charcoal. */
-  --surface-marketing: #f7f3ee;
-  /* Invariant warm espresso hero surface; paired with the orange brand identity. */
-  --surface-marketing-dark: #302019;
+  /* Approved full-page Fahes marketing visual system. */
+  --surface-marketing: #f8faff;
+  --surface-marketing-raised: #ffffff;
+  --surface-hero: #0c1428;
+  --surface-marketing-dark: var(--surface-hero);
+  --surface-dark: #070d1c;
+  --surface-ice: #eef3ff;
+  --text-marketing-primary: #1a2440;
+  --text-marketing-secondary: #4b5674;
+  --text-marketing-muted: #64718f;
+  --text-marketing-inverse: #ffffff;
+  --text-marketing-inverse-muted: #c4cbe0;
+  --border-marketing-inverse: rgb(255 255 255 / 25%);
+  --border-marketing: #e7edfa;
+  --border-marketing-demo: #d8e0f4;
+  --border-marketing-finding: #e0e6f5;
+  --border-marketing-frame-divider: #edf0fa;
+  --border-marketing-pricing: #dfe5f2;
+  --surface-marketing-tag: #fbfcff;
+  --surface-marketing-frame-dot: #d5daea;
+  --brand-electric: #3024f5;
+  --surface-electric-soft: #f0edff;
+  --brand-electric-bright: #4945ff;
+  --brand-electric-pulse: #6765ff;
+  --brand-marketing: #7c5cff;
+  --brand-marketing-contrast: #7655f5;
+  --brand-highlight: #c7ff45;
+  --gradient-brand-marketing: linear-gradient(90deg, #2418ff 0%, #4743ff 55%, #7775ff 100%);
+  --gradient-atmosphere: radial-gradient(ellipse at 50% 73%, rgb(73 69 255 / 27%), transparent 43%), radial-gradient(ellipse at 50% 112%, rgb(103 101 255 / 28%), transparent 50%), radial-gradient(ellipse at 49% 48%, rgb(12 20 40 / 0%), #070d1c 110%);
+  --shadow-marketing-card: 0 16px 45px rgb(23 35 81 / 7%);
+  --shadow-marketing-float: 0 24px 70px rgb(19 31 71 / 10%);
+  --shadow-marketing-glow: 0 0 14px rgb(199 255 69 / 55%);
+  --shadow-marketing-explorer: 0 18px 50px rgb(24 38 83 / 7%);
+  --shadow-marketing-pricing: 0 20px 60px rgb(20 32 78 / 8%);
+  --gradient-marketing-stars: radial-gradient(1px 1px at 8% 25%, #dce2ff 98%, transparent), radial-gradient(1px 1px at 18% 62%, #dce2ff 98%, transparent), radial-gradient(1px 1px at 29% 18%, #dce2ff 98%, transparent), radial-gradient(1px 1px at 71% 25%, #dce2ff 98%, transparent), radial-gradient(1.2px 1.2px at 84% 39%, #ffffff 98%, transparent), radial-gradient(1px 1px at 91% 71%, #dce2ff 98%, transparent), radial-gradient(1px 1px at 63% 76%, #dce2ff 98%, transparent);
   /* Borders — hairline, sub-pixel */
   --border-subtle: #e5e5e5;
   --border-default: #e5e7eb;

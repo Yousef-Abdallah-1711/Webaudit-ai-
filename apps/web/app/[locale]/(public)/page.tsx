@@ -1,12 +1,11 @@
 import { getPublicMetadata } from '../../../i18n/metadata';
 import type { Locale } from '../../../i18n/locales';
 import { Hero } from '../../../components/marketing/hero';
-import { Proof } from '../../../components/marketing/proof';
 import { ProductionGap } from '../../../components/marketing/production-gap';
-import { Checks } from '../../../components/marketing/checks';
+import { AuditAreas } from '../../../components/marketing/audit-areas';
 import { ReportShowcase } from '../../../components/marketing/report-showcase';
 import { Readiness } from '../../../components/marketing/readiness';
-import { AiDevelopment } from '../../../components/marketing/ai-development';
+import { Remediation } from '../../../components/marketing/remediation';
 import { Trust } from '../../../components/marketing/trust';
 import { Loop } from '../../../components/marketing/loop';
 import { PricingPreview } from '../../../components/marketing/pricing-preview';
@@ -26,14 +25,13 @@ export async function generateMetadata({
 export default function Page(): React.ReactElement {
   return (
     <LandingPage hero={<Hero />}>
-      <Proof />
-      <ProductionGap />
-      <Checks />
       <ReportShowcase />
-      <Readiness />
-      <AiDevelopment />
-      <Trust />
+      <ProductionGap />
       <Loop />
+      <Readiness />
+      <Remediation />
+      <Trust />
+      <AuditAreas />
       <PricingPreview />
       <Faq />
       <FinalCta />

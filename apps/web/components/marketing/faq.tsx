@@ -1,28 +1,30 @@
 /* Wave 5's original section design is documented in design/screen-map.md and research.md R20. */
 import { getTranslations } from 'next-intl/server';
 import { FREE_ALLOCATION, FULL_AUDIT_COST, REVERIFY_COST } from '@webaudit/config';
-import specialStyles from './faq.special.module.css';
-
 import { cn } from '../../lib/cn';
 
 const styles = {
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
-  section: cn('py-20 px-6 bg-surface-page max-[768px]:py-16 max-[640px]:py-12 max-[640px]:px-4'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 1024px, 768px, 640px; preserve this component-specific grid track ratio; no predefined grid utility matches it; preserve the source responsive clamp expression; no spacing token expresses this fluid value; preserve the component-specific intrinsic value where no configured utility token matches
-  inner: cn('grid grid-cols-[minmax(0,_0.72fr)_minmax(0,_1.28fr)] items-start gap-[clamp(var(--space-8),_8vw,_var(--space-16))] max-w-6xl mx-auto max-[1024px]:grid-cols-[minmax(0,_0.8fr)_minmax(0,_1.2fr)] max-[1024px]:gap-8 max-[768px]:grid-cols-[minmax(0,_0.7fr)_minmax(0,_1.3fr)] max-[768px]:gap-5 max-[640px]:block'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  header: cn('sticky top-8 max-[640px]:static'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  heading: cn('max-w-[10ch] m-0 text-text-strong type-h2  text-balance max-[640px]:max-w-[15ch] '),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  lead: cn('max-w-[30rem] mt-4 mb-0 text-text-secondary type-body text-pretty max-[640px]:mt-3 max-[640px]:tracking-normal'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  questions: cn('border-x-0 border-b-0 border-border-default border-t-hairline border-solid max-[640px]:mt-5'),
-  item: cn(specialStyles.item, 'border-x-0 border-t-0 border-border-default border-b-hairline border-solid'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  question: cn(specialStyles.question, 'flex items-center justify-between gap-4 min-h-control py-4 text-text-primary type-body-bold text-pretty cursor-pointer list-none focus-visible:outline outline-hairline outline-focus-ring focus-visible:outline-offset-1 max-[640px]:items-start max-[640px]:gap-3 max-[640px]:py-4 max-[640px]:type-body '),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  answer: cn('max-w-[65ch] m-0 pt-0 pb-5 text-text-secondary type-body text-pretty max-[640px]:type-body max-[640px]:tracking-normal'),
+  section: cn(
+    'bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
+  ),
+  inner: cn(
+    'mx-auto grid max-w-marketing-evidence grid-cols-[0.72fr_1.28fr] items-start gap-marketing-faq-gap max-marketing-tablet:gap-marketing-faq-gap-tablet max-marketing-mobile:grid-cols-1 max-marketing-mobile:gap-marketing-faq-gap-mobile',
+  ),
+  header: cn('pt-2'),
+  heading: cn(
+    'max-w-[12ch] m-0 text-marketing-faq-heading leading-marketing-faq-heading font-black tracking-[-0.03em] text-balance text-marketing-primary max-marketing-mobile:max-w-full',
+  ),
+  lead: cn(
+    'mt-3 mb-0 max-w-[30rem] text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
+  ),
+  questions: cn('border-x-0 border-b-0 border-t border-solid border-border-marketing'),
+  item: cn('group border-x-0 border-t-0 border-b border-solid border-border-marketing'),
+  question: cn(
+    'flex min-h-marketing-faq-summary cursor-pointer list-none items-center justify-between gap-4 py-3 text-marketing-primary text-marketing-description font-extrabold text-pretty focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2',
+  ),
+  answer: cn(
+    'mb-0 max-w-[65ch] pt-0 pb-5 text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
+  ),
 };
 
 const QUESTIONS = [
@@ -47,18 +49,31 @@ export async function Faq(): Promise<React.ReactElement> {
     <section
       id="faq"
       data-landing-section="faq"
+      data-approved-section="faq"
       className={styles.section}
       aria-labelledby="faq-heading"
     >
       <div className={styles.inner}>
         <header className={styles.header}>
-          <h2 id="faq-heading" className={styles.heading}>{t('faq_heading')}</h2>
+          <h2 id="faq-heading" className={styles.heading}>
+            {t('faq_heading')}
+          </h2>
           <p className={styles.lead}>{t('faq_lead')}</p>
         </header>
         <div className={styles.questions}>
           {QUESTIONS.map(([question, answer]) => (
-            <details className={styles.item} key={question}>
-              <summary className={styles.question}>{t(question)}</summary>
+            <details
+              className={styles.item}
+              key={question}
+              open={question === 'faq_readonly_question'}
+            >
+              <summary className={styles.question}>
+                <span>{t(question)}</span>
+                <span
+                  aria-hidden="true"
+                  className="flex size-marketing-faq-icon flex-none items-center justify-center rounded-full bg-surface-electric-soft font-mono text-lg font-bold text-brand-electric [dir=rtl]:order-first after:content-['+'] group-open:after:content-['−']"
+                />
+              </summary>
               <p className={styles.answer}>
                 {answer === 'faq_free_answer'
                   ? t(answer, FREE_ANSWER_VALUES)

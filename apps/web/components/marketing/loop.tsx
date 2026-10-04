@@ -1,23 +1,33 @@
 import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
-import { Eyebrow } from '../ui';
 
 import { cn } from '../../lib/cn';
 
 const styles = {
   //  preserve the component-specific intrinsic value where no configured utility token matches
-  wrap: cn('py-[calc(var(--space-16)_+_var(--space-6))] px-6 bg-surface-page'),
+  wrap: cn(
+    'bg-surface-marketing px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
+  ),
   //  preserve the component-specific intrinsic value where no configured utility token matches
-  loopH2: cn('mt-3 mx-0 mb-[calc(var(--space-5)_+_var(--space-2))] type-h2'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
-  loopGrid: cn('grid grid-cols-4 gap-3 max-[640px]:grid-cols-1'),
+  loopH2: cn(
+    'mx-auto mb-9 mt-3 max-w-marketing-section text-center text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-marketing-primary text-balance',
+  ),
+  loopGrid: cn(
+    'mx-auto grid max-w-public-marketing grid-cols-4 gap-3 max-marketing-tablet:grid-cols-2 max-marketing-mobile:grid-cols-1',
+  ),
   //  preserve the component-specific intrinsic value where no configured utility token matches
-  loopStep: cn('pt-[calc(var(--space-3)_+_(var(--space-1)_/_2))] border-x-0 border-b-0 border-t-[calc(var(--space-1)_-_(var(--space-1)_/_4))] border-solid border-t-accent'),
-  loopNum: cn('font-mono text-[0.75rem] text-text-strong'),
+  loopStep: cn(
+    'relative min-h-marketing-workflow-card rounded-marketing-workflow border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-workflow-padding-y px-marketing-workflow-padding-x max-marketing-mobile:min-h-0 max-marketing-mobile:py-4 max-marketing-mobile:px-4',
+  ),
+  loopNum: cn(
+    'flex size-8 items-center justify-center rounded-full bg-surface-electric-soft font-mono text-marketing-label font-extrabold text-brand-electric',
+  ),
   //  preserve the component-specific intrinsic value where no configured utility token matches
-  loopTitle: cn('my-[calc(var(--space-2)_-_(var(--space-1)_/_2))] mx-0 text-[calc(var(--space-4)_+_(var(--space-1)_/_4))] font-semibold'),
-  loopDesc: cn('type-small text-text-secondary text-pretty'),
+  loopTitle: cn('mb-0 mt-5 text-marketing-workflow-heading font-extrabold text-marketing-primary'),
+  loopDesc: cn(
+    'mb-0 mt-2 text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
+  ),
 };
 
 type PublicKey = keyof typeof enPublic;
@@ -28,8 +38,13 @@ interface WrapProps {
 
 function Wrap({ children }: WrapProps): React.ReactElement {
   return (
-    <section id="loop" data-landing-section="loop" className={styles.wrap}>
-      <div className={cn('max-w-marketing mx-auto')}>{children}</div>
+    <section
+      id="loop"
+      data-landing-section="loop"
+      data-approved-section="workflow"
+      className={styles.wrap}
+    >
+      <div className={cn('mx-auto max-w-public-marketing')}>{children}</div>
     </section>
   );
 }
@@ -46,19 +61,21 @@ export async function Loop(): Promise<React.ReactElement> {
 
   return (
     <Wrap>
-      <Eyebrow tone="muted">{t('loop_eyebrow')}</Eyebrow>
+      <p className="mb-0 text-marketing-muted text-marketing-label font-extrabold">
+        {t('loop_eyebrow')}
+      </p>
       <h2 className={styles.loopH2}>{t('loop_h2')}</h2>
       <div className={styles.loopGrid}>
         {LOOP_STEPS.map(([n, title, body]) => (
-          <div key={n} className={styles.loopStep}>
+          <article key={n} className={styles.loopStep}>
             <div dir="ltr" className={styles.loopNum}>
               {n}
             </div>
-            <div className={styles.loopTitle}>{t(title)}</div>
-            <div className={styles.loopDesc}>
+            <h3 className={styles.loopTitle}>{t(title)}</h3>
+            <p className={styles.loopDesc}>
               {body === 'loop_3d' ? t(body, { reverifyCost: REVERIFY_COST }) : t(body)}
-            </div>
-          </div>
+            </p>
+          </article>
         ))}
       </div>
     </Wrap>

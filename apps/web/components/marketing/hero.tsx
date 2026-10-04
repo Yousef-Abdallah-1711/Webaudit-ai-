@@ -1,171 +1,102 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+/** Approved Fahes hero. Keeps the existing localized signup handoff; it never starts a scan here. */
 import { useLocale, useTranslations } from 'next-intl';
 import { ALL_AREAS, FREE_ALLOCATION, REVERIFY_COST } from '@webaudit/config';
-import { Button } from '../ui';
-import { storeHeroScanUrl } from '../../lib/hero-scan-handoff';
+import { ScanHandoffForm } from './scan-handoff-form';
 import { cn } from '../../lib/cn';
 
 const styles = {
-  section: cn('w-full'),
-  layout: cn(
-    // eslint-disable-next-line no-restricted-syntax -- retain H15's measured inset and tablet stacking breakpoint via semantic spacing utilities
-    'relative isolate mx-auto grid min-h-landing-hero max-w-landing-hero grid-cols-landing-hero items-center gap-x-10 rounded-landing-canvas bg-surface-marketing-dark px-landing-inset-x py-landing-inset-y text-text-on-accent max-[1024px]:min-h-0 max-[1024px]:grid-cols-1 max-[1024px]:gap-y-0 max-[1024px]:px-6 max-[1024px]:py-10 max-[640px]:px-4 max-[640px]:py-7',
-  ),
-  copy: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve the tablet stacking breakpoint from the approved H15 mobile adaptation
-    'relative z-10 col-start-1 row-start-1 min-w-0 translate-y-[var(--offset-landing-copy-y)] max-[1024px]:col-start-1 max-[1024px]:row-start-1 max-[1024px]:translate-y-0',
-  ),
-  heading: cn(
-    'm-0 max-w-landing-copy text-[length:var(--type-landing-title)] leading-landing-title !font-bold text-balance tracking-tight',
-  ),
-  headingClause: cn('block'),
-  supportingCopy: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve the established 640px mobile typography breakpoint
-    'mt-4 mb-0 max-w-landing-copy opacity-80 text-pretty max-[640px]:mt-3 max-[640px]:tracking-normal',
-  ),
-  visual: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve H15's measured tablet desktop-to-mobile composition breakpoint
-    'z-10 col-start-2 row-span-2 row-start-1 flex min-w-0 items-center self-stretch max-[1024px]:relative max-[1024px]:col-start-1 max-[1024px]:row-span-1 max-[1024px]:row-start-2 max-[1024px]:w-full max-[1024px]:pt-16',
-  ),
-  core: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve H15's measured core position and responsive placement
-    'pointer-events-none absolute z-0 top-landing-core w-landing-core h-landing-core rounded-full bg-gradient-brand-subtle max-[1024px]:top-0 max-[1024px]:left-1/2 max-[1024px]:right-auto max-[1024px]:-translate-x-1/2 max-[1024px]:w-44 max-[1024px]:h-44',
-  ),
-  scanner: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve H15's tablet and 640px scanner layout cutoffs
-    'relative z-10 w-full max-w-landing-scanner min-w-0 rounded-landing-scanner bg-surface-raised p-6 text-surface-marketing-dark shadow-float max-[1024px]:mx-auto max-[1024px]:max-w-xl max-[1024px]:translate-x-0 max-[640px]:p-5',
-  ),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the scanner's 640px mobile spacing adjustment
-  scannerHeader: cn('mb-landing-scanner-gap flex items-center justify-between gap-4 max-[640px]:mb-4'),
-  scannerTitle: cn('m-0 text-[length:var(--type-landing-scanner-title)] leading-[normal] font-extrabold'),
-  scannerSignal: cn(
-    'inline-flex flex-none items-center gap-2 text-xs text-surface-marketing-dark',
-  ),
-  signalDot: cn('size-2 rounded-full bg-accent'),
-  fieldLabel: cn('sr-only'),
-  form: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve the 640px stacked control breakpoint and input/button tracks
-    'grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-2.5 max-[640px]:grid-cols-1',
-  ),
-  input: cn(
-    'box-border h-landing-control min-w-0 w-full rounded-control border border-solid !border-hairline border-border-control bg-surface-page px-landing-input-x font-mono text-[length:var(--type-landing-control)] text-surface-marketing-dark placeholder:text-text-secondary focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1',
-  ),
-  button: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve the 640px full-width mobile action and H15 button inset
-    'h-landing-control px-landing-control-x text-[length:var(--type-landing-control)] max-[640px]:h-12 max-[640px]:w-full',
-  ),
-  stats: cn(
-    // eslint-disable-next-line no-restricted-syntax -- preserve H15's tablet evidence-rail breakpoint
-    'relative z-10 col-start-1 row-start-2 mt-6 flex w-full max-w-full gap-10 text-right max-[1024px]:col-start-1 max-[1024px]:row-start-3 max-[1024px]:mt-6 max-[1024px]:justify-between max-[640px]:gap-3',
-  ),
-  stat: cn('min-w-0'),
-  statValue: cn('block text-[length:var(--type-landing-stat-value)] leading-[normal] !font-bold text-text-on-accent'),
-  statLabel: cn('mt-1 block text-[length:var(--type-landing-stat-label)] leading-[normal] text-text-on-accent opacity-75 text-pretty'),
+  section:
+    'relative isolate flex min-h-[var(--height-landing-hero)] items-start justify-center overflow-hidden bg-surface-hero px-6 pb-32 pt-marketing-hero-top text-marketing-inverse max-marketing-tablet:min-h-marketing-tablet-hero max-marketing-mobile:min-h-[var(--height-landing-hero)] max-marketing-mobile:px-5 max-marketing-mobile:pb-20 max-marketing-mobile:pt-marketing-hero-top-mobile',
+  atmosphere:
+    'pointer-events-none absolute inset-0 -z-20 bg-atmosphere after:absolute after:inset-x-0 after:bottom-0 after:h-44 after:bg-gradient-to-b after:from-transparent after:to-surface-marketing',
+  stars:
+    'pointer-events-none absolute inset-y-marketing-stars inset-x-[5%] -z-10 opacity-50 bg-marketing-stars max-marketing-mobile:inset-x-[1%] top-marketing-mobile-stars-top bottom-marketing-mobile-stars-bottom max-marketing-mobile:opacity-35',
+  art: 'pointer-events-none absolute inset-x-0 top-20 -z-10 h-[calc(100%-var(--height-marketing-art-offset))] w-full opacity-70 max-marketing-mobile:inset-x-0 max-marketing-mobile:top-20 max-marketing-mobile:h-[calc(100%-var(--height-marketing-mobile-art-offset))] max-marketing-mobile:w-full',
+  inner: 'mx-auto my-auto w-full max-w-landing-hero text-center',
+  eyebrow: 'flex items-center justify-center gap-marketing-form text-xs font-bold tracking-wide text-marketing-inverse-muted max-marketing-mobile:text-marketing-micro',
+  eyebrowDot: 'size-[var(--size-marketing-dot)] rounded-full bg-brand-highlight shadow-marketing-glow',
+  kicker: 'mb-0 mt-5 text-xs font-extrabold text-marketing-inverse-muted',
+  heading:
+    'mx-auto mt-3 max-w-full text-marketing-display leading-marketing-display font-black tracking-[-0.035em] text-balance',
+  headingLine: 'block',
+  headingAccent:
+    'block bg-gradient-brand-marketing bg-clip-text text-transparent',
+  supportingCopy:
+    'mx-auto mt-5 max-w-marketing-copy text-base leading-[1.8] text-marketing-inverse-muted text-pretty max-marketing-mobile:mt-3 max-marketing-mobile:text-marketing-mobile-copy max-marketing-mobile:leading-[1.75]',
+  scanner:
+    'mx-auto mt-9 w-full max-w-landing-scanner rounded-landing-scanner border border-white/20 bg-white/[0.09] p-4 shadow-marketing-float backdrop-blur-xl max-marketing-mobile:mt-6 max-marketing-mobile:rounded-marketing-card max-marketing-mobile:p-3',
+  scannerHeader: 'mb-3 flex items-center justify-between gap-3 text-xs font-bold text-marketing-inverse-muted',
+  scannerSignal: 'inline-flex items-center gap-2 text-marketing-inverse-muted',
+  signalDot: 'size-[var(--size-marketing-dot)] rounded-full bg-brand-highlight',
+  stats: 'mx-auto mt-7 flex w-full max-w-landing-scanner justify-center border-t border-white/20',
+  stat: 'min-w-0 flex-1 px-3 pt-4 text-center',
+  statDivider: 'border-s border-white/15',
+  statValue: 'block font-mono text-marketing-stat font-extrabold leading-marketing-stat text-marketing-inverse max-marketing-mobile:text-marketing-mobile-stat',
+  statLabel: 'mt-1 block text-marketing-label text-marketing-inverse-muted max-marketing-mobile:text-marketing-micro',
 } as const;
 
 export function Hero(): React.ReactElement {
   const t = useTranslations('public');
   const locale = useLocale();
-  const [url, setUrl] = useState('');
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
-    event.preventDefault();
-    storeHeroScanUrl(url);
-    window.location.assign('/signup');
-  }
-
   return (
-    <section id="hero" data-landing-section="hero" className={styles.section}>
-      <div className={styles.layout}>
-        <div className={cn(styles.copy, locale === 'en' && 'max-w-md')}>
-          <h1 className={styles.heading}>
-            <span className={styles.headingClause}>{t('hero_lead')}</span>
-            <span className={cn(styles.headingClause, 'text-accent')}>{t('hero_accent')}</span>
-          </h1>
-          <p
-            className={cn(
-              styles.supportingCopy,
-              locale === 'ar'
-                // eslint-disable-next-line no-restricted-syntax -- preserve the Arabic support-copy 640px typography breakpoint
-                ? 'text-[length:var(--type-landing-copy)] leading-landing-copy max-[640px]:type-body'
-                : 'type-body',
-            )}
-          >
-            {t('hero_sub')}
-          </p>
-        </div>
-
-        <div className={styles.visual}>
-          <div
-            aria-hidden="true"
-            className={cn(
-              styles.core,
-              locale === 'ar'
-                // eslint-disable-next-line no-restricted-syntax -- preserve H15's 1024px responsive core alignment
-                ? 'left-[var(--offset-landing-core-inline)] max-[1024px]:left-1/2'
-                // eslint-disable-next-line no-restricted-syntax -- mirror the core for English while retaining the responsive center position
-                : 'right-[var(--offset-landing-core-inline)] max-[1024px]:right-auto max-[1024px]:left-1/2',
-            )}
+    <section
+      id="hero"
+      data-landing-section="hero"
+      aria-labelledby="hero-heading"
+      className={styles.section}
+    >
+      <div aria-hidden="true" className={styles.atmosphere} />
+      <div aria-hidden="true" className={styles.stars} />
+      <svg aria-hidden="true" className={styles.art} viewBox="0 0 1440 720" fill="none">
+        <ellipse cx="720" cy="575" rx="620" ry="260" stroke="var(--brand-electric-pulse)" strokeOpacity=".15" />
+        <ellipse cx="720" cy="575" rx="490" ry="205" stroke="var(--brand-electric-bright)" strokeOpacity=".12" />
+        <ellipse cx="720" cy="575" rx="360" ry="150" stroke="var(--brand-electric-pulse)" strokeOpacity=".1" />
+        <path d="M80 520C270 300 455 280 720 520s450 220 640 0" stroke="var(--brand-electric-bright)" strokeOpacity=".18" />
+      </svg>
+      <div className={styles.inner}>
+        <p className={styles.eyebrow}>
+          <span aria-hidden="true" className={styles.eyebrowDot} />
+          {t('promo', { freeCredits: FREE_ALLOCATION })}
+        </p>
+        <p className={styles.kicker}>{t('hero_kicker')}</p>
+        <h1 id="hero-heading" className={styles.heading}>
+          <span className={styles.headingLine}>{t('hero_lead')}</span>
+          <span className={styles.headingAccent}>{t('hero_accent')}</span>
+        </h1>
+        <p className={styles.supportingCopy}>{t('hero_sub')}</p>
+        <div className={styles.scanner} data-scan-handoff>
+          <div className={styles.scannerHeader}>
+            <p className="m-0">{t('hero_cta')}</p>
+            <span className={styles.scannerSignal}>
+              <span aria-hidden="true" className={styles.signalDot} />
+              <span dir="ltr">HTTPS</span>
+            </span>
+          </div>
+          <ScanHandoffForm
+            id={`hero-url-${locale}`}
+            label={t('hero_url_example_label')}
+            placeholder={`https://${t('url_ph')}`}
+            note={t('hero_handoff_note')}
+            submitLabel={t('hero_cta')}
+            tone="dark"
           />
-          <div
-            className={cn(
-              styles.scanner,
-              locale === 'ar'
-                // eslint-disable-next-line no-restricted-syntax -- retain H15's scanner overlap at the Arabic core
-                ? 'translate-x-[var(--offset-landing-scanner)] max-[1024px]:translate-x-0'
-                // eslint-disable-next-line no-restricted-syntax -- mirror scanner overlap into the English core
-                : '-translate-x-[var(--offset-landing-scanner)] max-[1024px]:translate-x-0',
-            )}
-          >
-            <div className={styles.scannerHeader}>
-              <p className={styles.scannerTitle}>{t('hero_cta')}</p>
-              <span className={styles.scannerSignal}>
-                <span aria-hidden="true" className={styles.signalDot} />
-                <span className="opacity-70" dir="ltr">HTTPS</span>
-              </span>
-            </div>
-            <form action="/signup" onSubmit={handleSubmit}>
-              <label htmlFor="hero-url" className={styles.fieldLabel}>
-                {t('hero_url_example_label')}
-              </label>
-              <div className={styles.form}>
-                <input
-                  id="hero-url"
-                  type="text"
-                  inputMode="url"
-                  name="url"
-                  autoComplete="url"
-                  dir="ltr"
-                  value={url}
-                  onChange={(event) => {
-                    setUrl(event.target.value);
-                  }}
-                  placeholder={`https://${t('url_ph')}`}
-                  className={styles.input}
-                />
-                <Button type="submit" className={styles.button}>
-                  {t('hero_cta')}
-                </Button>
-              </div>
-            </form>
-          </div>
         </div>
-
         <div className={styles.stats}>
-          <div className={styles.stat}>
-            <strong className={styles.statValue}>{FREE_ALLOCATION}</strong>
-            <span className={styles.statLabel}>{t('stat_credits')}</span>
-          </div>
-          <div className={styles.stat}>
-            <strong className={styles.statValue}>{ALL_AREAS.length}</strong>
-            <span className={styles.statLabel}>{t('stat_areas')}</span>
-          </div>
-          <div className={styles.stat}>
-            <strong className={styles.statValue}>{REVERIFY_COST}</strong>
-            <span className={styles.statLabel}>{t('stat_recheck')}</span>
-          </div>
+          {[
+            [FREE_ALLOCATION, t('stat_credits')],
+            [ALL_AREAS.length, t('stat_areas')],
+            [REVERIFY_COST, t('stat_recheck')],
+          ].map(([value, label], index) => (
+            <div
+              className={cn(styles.stat, index > 0 && styles.statDivider)}
+              key={`${value}-${label}`}
+            >
+              <strong className={styles.statValue}>{value}</strong>
+              <span className={styles.statLabel}>{label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -1,29 +1,38 @@
 import { getTranslations } from 'next-intl/server';
 import { FREE_ALLOCATION } from '@webaudit/config';
-import { Button } from '../ui';
-
-import { cn } from '../../lib/cn';
-
-const styles = {
-  cta: cn('relative overflow-hidden py-20 px-6 text-center bg-surface-inverse'),
-  ctaWash: cn('absolute inset-0 pointer-events-none bg-wash-br'),
-  ctaInner: cn('relative'),
-  ctaH2: cn('m-0 type-h2  text-text-on-surface-inverse'),
-  //  preserve the component-specific intrinsic value where no configured utility token matches
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
-  ctaLead: cn('mt-[calc(var(--space-3)_+_(var(--space-1)_/_2))] mx-0 mb-[calc(var(--space-5)_+_var(--space-2))] type-body text-text-on-surface-inverse-muted text-pretty max-[640px]:tracking-normal'),
-};
+import { ScanHandoffForm } from './scan-handoff-form';
 
 export async function FinalCta(): Promise<React.ReactElement> {
   const t = await getTranslations('public');
 
   return (
-    <section id="final-cta" data-landing-section="final-cta" className={styles.cta}>
-      <div className={styles.ctaWash} />
-      <div className={cn('max-w-marketing mx-auto', styles.ctaInner)}>
-        <h2 className={styles.ctaH2}>{t('cta_h2', { freeCredits: FREE_ALLOCATION })}</h2>
-        <p className={styles.ctaLead}>{t('cta_lead')}</p>
-        <Button href="/signup">{t('hero_cta')}</Button>
+    <section
+      id="final-cta"
+      data-landing-section="final-cta"
+      data-approved-section="final-cta"
+      className="relative overflow-hidden bg-surface-hero px-6 pb-marketing-closing-bottom pt-marketing-closing-top text-center text-marketing-inverse max-marketing-mobile:px-4 max-marketing-mobile:pb-marketing-closing-bottom-mobile max-marketing-mobile:pt-marketing-closing-top-mobile"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-atmosphere opacity-70"
+      />
+      <div className="relative mx-auto max-w-marketing-section">
+        <h2 className="mb-0 text-marketing-closing-heading leading-marketing-closing-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse max-marketing-mobile:text-marketing-mobile-h2 max-marketing-mobile:leading-marketing-h2">
+          {t('cta_h2', { freeCredits: FREE_ALLOCATION })}
+        </h2>
+        <p className="mx-auto mb-0 mt-3 max-w-marketing-prompt text-marketing-closing-copy leading-marketing-description text-marketing-inverse-muted text-pretty max-marketing-mobile:text-marketing-closing-copy-mobile">
+          {t('cta_lead')}
+        </p>
+        <div className="mx-auto mt-7 max-w-landing-scanner rounded-marketing-card border border-solid border-border-marketing-inverse bg-surface-hero p-4 text-start shadow-marketing-float max-marketing-mobile:p-3">
+          <ScanHandoffForm
+            id="final-scan-url"
+            label={t('hero_url_example_label')}
+            placeholder={`https://${t('url_ph')}`}
+            note={t('hero_handoff_note')}
+            submitLabel={t('hero_cta')}
+            tone="dark"
+          />
+        </div>
       </div>
     </section>
   );

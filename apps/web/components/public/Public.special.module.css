@@ -1,13 +1,26 @@
-@media (max-width: 640px) {
+/* Keep header controls readable over the transparent dark landing hero. */
+.heroChrome > div > nav a:not([aria-current='page']) {
+  color: var(--text-marketing-inverse-muted);
+}
+
+.heroChrome > div > nav a[aria-current='page'],
+.heroChrome > div > nav a:hover {
+  color: var(--text-marketing-inverse);
+}
+
+@media (max-width: 900px) {
   .mobileDrawer {
-    transform: translateX(-100%);
+    transform: translate(-50%, -0.5rem);
+    opacity: 0;
     transition:
       transform var(--duration) var(--easing),
+      opacity var(--duration) var(--easing),
       visibility 0s linear var(--duration);
   }
 
   .mobileDrawerOpen {
-    transform: translateX(0);
+    transform: translate(-50%, 0);
+    opacity: 1;
     transition-delay: 0s, 0s;
   }
 
@@ -35,11 +48,4 @@
     inset-block-start: var(--space-6);
   }
 
-  :global(html[dir='rtl']) .mobileDrawer {
-    transform: translateX(100%);
-  }
-
-  :global(html[dir='rtl']) .mobileDrawer.mobileDrawerOpen {
-    transform: translateX(0);
-  }
 }

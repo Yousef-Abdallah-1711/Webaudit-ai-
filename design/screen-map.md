@@ -51,6 +51,16 @@ Reference kit: `design-system/ui_kits/marketing/`. Runnable exports:
 | Forgot password | `ui_kits/marketing/AuthPages.jsx` + `.../6 Forgot password.html` | `/forgot-password` | T128 |
 | Reset password | `ui_kits/marketing/AuthPages.jsx` + `.../7 Reset password.html` | `/reset-password` | T128 |
 
+**Current approved landing direction:** `/` follows the Fahes full-page Arabic translation in
+[`specs/fahes-design-refresh/index.html`](../specs/fahes-design-refresh/index.html), approved for
+production implementation on 2026-10-04. Its Fahes-specific palette, Cairo marketing font,
+section order, hero/header treatment, and responsive measurements are documented in that feature's
+visual specification. Runtime styling is ported into `apps/web/app/tokens/` and semantic Tailwind
+aliases; the vendored design-system files remain read-only and are not imported at runtime. This is
+a scoped, user-approved landing-screen exception to the original public-page reference. See the
+feature's `research.md` decision record. Auth and pricing routes continue using their existing
+approved screens.
+
 Shared chrome (`Public.jsx`) supplies the public header and footer. The landing page has **no
 navigation bar** — one page, one action.
 
@@ -124,6 +134,7 @@ gap still gets asked about, not guessed.
 | Annotated screenshot | T143 | No artboard existed anywhere in `design-system/` (confirmed by a full content search, including `_ds_manifest.json`). User authorized an original design on 2026-08-27, built from existing tokens and `IssueCard`'s severity/attribution visual language — see `research.md`'s decision record. Replace with a real artboard if one is ever produced. |
 | Design intent questionnaire | T201 | No artboard existed anywhere in `design-system/` — referenced in the app kit but never a dedicated screen. User authorized a minimal, functional original design on 2026-09-03 — explicitly *not* claiming full visual design adherence — built only from `Card`/`Button`/`Input` (T237) and `var(--space-*)`/`var(--type-*)`/`var(--text-*)`/`var(--sev-*)` tokens, nothing invented beyond layout. See `research.md`'s R19. Replace with a real artboard if one is ever produced. |
 | Landing pricing preview and FAQ | Wave 5 | The Landing route is mapped, but its approved kit/reference and manifest contain no pricing-preview or FAQ section. The user explicitly authorized these original sections with specific content and design constraints. They use existing tokens; the preview derives amounts from `@webaudit/config`, and the FAQ uses native `<details>/<summary>`. See `research.md` R20. Replace the layout if a reviewed artboard is produced. |
+| Fahes full-page landing translation | 2026-10-04 | The user explicitly approved `specs/fahes-design-refresh/index.html` for production implementation. The implementation preserves Fahes product truth and existing routes/actions while applying its translated visual system to `/` and `/ar`. See `specs/fahes-design-refresh/research.md`. |
 
 ## Viewports
 

@@ -57,15 +57,15 @@ describe('hero scan URL handoff', () => {
     }
   });
 
-  it('renders an LTR URL input and the editorial hero surfaces', () => {
+  it('renders an LTR URL input and the approved marketing hero surfaces', () => {
     const html = renderToStaticMarkup(
       createElement(I18nProvider, null, createElement(Hero)),
     );
 
     expect(html).toContain('<input');
     expect(html).toContain('dir="ltr"');
-    expect(html).toContain('bg-surface-marketing-dark');
-    expect(html).toContain('bg-gradient-brand-subtle');
+    expect(html).toContain('bg-surface-hero');
+    expect(html).toContain('bg-gradient-brand-marketing');
     expect(html).toContain('rounded-landing-scanner');
     expect(html).toContain('action="/signup"');
   });
@@ -116,7 +116,7 @@ describe('hero scan URL handoff', () => {
     const mounted = await renderClient(createElement(Hero));
 
     try {
-      const input = document.querySelector<HTMLInputElement>('#hero-url');
+      const input = document.querySelector<HTMLInputElement>('#hero-url-en');
       expect(input).not.toBeNull();
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
       await act(async () => {
@@ -127,7 +127,7 @@ describe('hero scan URL handoff', () => {
         input!.form!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
       });
 
-      expect(mounted.html()).toContain('id="hero-url"');
+      expect(mounted.html()).toContain('id="hero-url-en"');
       expect(window.sessionStorage.getItem(HERO_SCAN_URL_KEY)).toBe('https://example.com/start');
       expect(assign).toHaveBeenCalledWith('/signup');
     } finally {

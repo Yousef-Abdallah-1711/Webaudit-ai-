@@ -6,7 +6,7 @@
   "description": "Next.js frontend. Ports UI from design-system/ per design/screen-map.md.",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "dev": "next dev --port 3000",
+    "dev": "next dev --port 7100",
     "build": "next build",
     "start": "next start --port 3000",
     "test:e2e": "playwright test"

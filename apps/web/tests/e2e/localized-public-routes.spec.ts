@@ -67,11 +67,101 @@ test('GET / renders English home copy and public metadata without redirecting', 
   await expect(page.getByText(ENGLISH_HERO_LEAD)).toBeVisible();
   await expect(page.getByRole('button', { name: 'Switch to dark mode' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Switch to العربية' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Dismiss' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Dismiss' })).toHaveCount(0);
   const hero = page.locator('[data-landing-section="hero"]');
   for (const value of ['50', '5', '3']) await expect(hero).toContainText(value);
   await expectCanonical(page, '/');
   await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
+});
+
+test('the public landing page renders the approved complete section order in Arabic', async ({ page }) => {
+  await expectRoute(page, '/ar');
+  const sections = page.locator('[data-approved-section]');
+  await expect(sections).toHaveCount(11);
+  await expect
+    .poll(() => sections.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-approved-section'))))
+    .toEqual([
+      'report',
+      'evidence',
+      'workflow',
+      'readiness',
+      'remediation',
+      'trust',
+      'areas',
+      'pricing',
+      'faq',
+      'final-cta',
+      'footer',
+    ]);
+  await expect(page.locator('#hero')).toContainText('أثبت ذلك');
+  await expect(page.locator('#hero input[dir="ltr"]')).toBeVisible();
+  await expect(page.locator('[data-approved-section="readiness"]')).toContainText('توضيحي');
+  await expect(page.locator('[data-approved-section="remediation"]')).toContainText('Cache-Control');
+
+  await expect(page.locator('body')).not.toContainText(/\bpublic\.[a-z0-9_]+\b/);
+  const structuralOrder = await page.locator('[data-approved-section="report"]').evaluate((section) => {
+    const children = Array.from(section.children);
+    return children[0]?.tagName === 'HEADER' && children[1]?.tagName === 'DIV';
+  });
+  expect(structuralOrder).toBe(true);
+  await expect(page.locator('[data-approved-section="pricing"] > header')).toBeVisible();
+  await expect(page.locator('[data-approved-section="pricing"] > header + div')).toBeVisible();
+
+  const areaTabs = page.getByRole('tablist').getByRole('tab');
+  await expect(areaTabs).toHaveCount(5);
+  const panel = page.getByRole('tabpanel');
+  const firstAreaCopy = await panel.innerText();
+  await areaTabs.nth(1).click();
+  await expect(areaTabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(panel).not.toHaveText(firstAreaCopy);
+
+  const faq = page.locator('[data-approved-section="faq"]');
+  await expect(faq.locator('details').first()).toHaveAttribute('open', '');
+  await faq.locator('summary').nth(1).click();
+  await expect(faq.locator('details').nth(1)).toHaveAttribute('open', '');
+});
+
+test('Arabic marketing uses loaded Cairo fonts and fits every approved viewport width', async ({ page }) => {
+  await expectRoute(page, '/ar');
+  await page.evaluate(async () => {
+    await document.fonts.load('16px cairoArabic', 'العربية');
+    await document.fonts.ready;
+  });
+
+  const fontState = await page.locator('[data-approved-section="report"] h2').evaluate((heading) => {
+    const family = getComputedStyle(heading).fontFamily;
+    const loadedCairo = Array.from(document.fonts).some(
+      (font) => /cairo/i.test(font.family) && font.status === 'loaded',
+    );
+    return { family, loadedCairo };
+  });
+  expect(fontState.family.toLowerCase()).toContain('cairo');
+  expect(fontState.loadedCairo).toBe(true);
+
+  for (const width of [1440, 1280, 1024, 768, 390, 360, 320]) {
+    await page.setViewportSize({ width, height: 900 });
+    const dimensions = await page.evaluate(() => ({
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: document.documentElement.clientWidth,
+      sections: Array.from(document.querySelectorAll('[data-approved-section]')).map((section) => {
+        const box = section.getBoundingClientRect();
+        return { left: box.left, right: box.right };
+      }),
+      reportColumns: getComputedStyle(document.querySelector('#report-showcase > div > .grid')!).gridTemplateColumns.split(' ').length,
+      remediationColumns: getComputedStyle(document.querySelector('#remediation > div.relative')!).gridTemplateColumns.split(' ').length,
+      faqColumns: getComputedStyle(document.querySelector('#faq > div')!).gridTemplateColumns.split(' ').length,
+    }));
+    expect(dimensions.documentWidth, `Arabic page at ${width}px`).toBeLessThanOrEqual(
+      dimensions.viewportWidth,
+    );
+    for (const [index, bounds] of dimensions.sections.entries()) {
+      expect(bounds.left, `section ${index} left edge at ${width}px`).toBeGreaterThanOrEqual(-1);
+      expect(bounds.right, `section ${index} right edge at ${width}px`).toBeLessThanOrEqual(width + 1);
+    }
+    expect(dimensions.reportColumns).toBe(width <= 768 ? 1 : 2);
+    expect(dimensions.remediationColumns).toBe(width <= 640 ? 1 : 2);
+    expect(dimensions.faqColumns).toBe(width <= 640 ? 1 : 2);
+  }
 });
 
 test('language toggle refreshes server-rendered home sections', async ({ page }) => {
@@ -169,10 +259,12 @@ test('Arabic accessible labels follow wa-lang on public and auth routes', async 
   if (!runningServer) throw new Error('The public routes server did not start');
   await page.context().addCookies([{ name: 'wa-lang', value: 'ar', url: runningServer.url }]);
 
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${runningServer.url}/ar`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'فتح قائمة التنقل' }).click();
   await expect(page.getByRole('button', { name: 'التبديل إلى الوضع الداكن' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'التبديل إلى English' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'إغلاق' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'إغلاق قائمة التنقل' }).first()).toBeVisible();
 
   await page.goto(`${runningServer.url}/login`, { waitUntil: 'networkidle' });
   await expect(page.getByRole('button', { name: 'التبديل إلى الوضع الداكن' })).toBeVisible();

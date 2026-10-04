@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>فاحص — أثبت جاهزية موقعك للإنتاج</title>
+  <style>
+    :root {
+      --canvas:#F8FAFF; --hero:#0C1428; --night:#070D1C; --ink:#1A2440;
+      --secondary:#4B5674; --muted:#687695; --ice:#EEF3FF; --line:#E7EDFA;
+      --electric:#3024F5; --electric-bright:#4945FF; --electric-pulse:#6765FF;
+      --cta:#7C5CFF; --lime:#C7FF45; --cta-gradient:linear-gradient(90deg,#2418FF 0%,#4743FF 55%,#7775FF 100%);
+      --paper:#fff; --success:#14795B; --warning:#A55A00; --danger:#B42335;
+      --radius-card:18px; --radius-large:28px; --content:960px;
+      --font-ar:"Cairo","Noto Sans Arabic",Tahoma,Arial,sans-serif;
+      --font-mono:"JetBrains Mono",Consolas,monospace;
+      font-family:var(--font-ar); color:var(--ink); background:var(--canvas);
+      font-synthesis:none; text-rendering:optimizeLegibility;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth;scroll-padding-top:82px}
+    body{margin:0;background:var(--canvas);color:var(--ink);font-size:14px;line-height:1.43}
+    button,input{font:inherit}
+    a{color:inherit}
+    .wrap{width:min(var(--content),calc(100% - 48px));margin-inline:auto}
+    .site-header{position:absolute;z-index:10;inset:0 0 auto;color:#fff}
+    .header-inner{width:min(1320px,calc(100% - 64px));height:92px;margin:auto;display:flex;align-items:center;gap:34px}
+    .wordmark{display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:25px;font-weight:900;letter-spacing:-.045em;white-space:nowrap}
+    .wordmark-mark{display:grid;place-items:center;width:27px;height:27px;border-radius:9px 9px 9px 3px;background:var(--cta-gradient);color:#fff;font-size:15px;line-height:1}
+    .desktop-nav{display:flex;align-items:center;gap:30px;margin-inline:auto}
+    .desktop-nav a,.header-login{font-size:13px;font-weight:600;color:#d9def0;text-decoration:none;transition:color .18s ease}
+    .desktop-nav a:hover,.header-login:hover{color:#fff}
+    .header-actions{display:flex;align-items:center;gap:11px;white-space:nowrap}
+    .header-login{padding-inline:6px}
+    .icon-control{display:grid;place-items:center;width:36px;height:36px;border:1px solid rgb(255 255 255 / 22%);border-radius:999px;background:rgb(255 255 255 / 5%);color:#f4f5ff;text-decoration:none;font-size:11px;font-weight:700}
+    .button{min-height:44px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:999px;background:var(--cta-gradient);box-shadow:0 8px 26px rgb(73 69 255 / 25%);color:#fff;text-decoration:none;font-size:14px;font-weight:800;cursor:pointer;transition:filter .18s ease,transform .18s ease}
+    .button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+    .button:focus-visible,.icon-control:focus-visible,a:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--lime);outline-offset:3px}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .mobile-trigger{display:none;width:42px;height:42px;border:1px solid rgb(255 255 255 / 25%);border-radius:50%;background:transparent;color:#fff;font-size:22px;cursor:pointer}
+    .mobile-drawer{display:none}
+
+    .hero{position:relative;isolation:isolate;min-height:845px;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;padding:186px 24px 132px;background:var(--hero);color:#fff}
+    .hero::before{content:"";position:absolute;inset:0;z-index:-2;background:radial-gradient(ellipse at 50% 73%,rgb(73 69 255 / 27%),transparent 43%),radial-gradient(ellipse at 50% 112%,rgb(103 101 255 / 28%),transparent 50%),radial-gradient(ellipse at 49% 48%,rgb(12 20 40 / 0%),var(--night) 110%)}
+    .hero::after{content:"";position:absolute;z-index:-1;inset:auto 0 0;height:170px;background:linear-gradient(180deg,transparent,var(--canvas));pointer-events:none}
+    .hero-art{position:absolute;z-index:-1;inset:80px 0 38px;width:100%;height:calc(100% - 118px);opacity:.7;pointer-events:none}
+    .hero-stars{position:absolute;z-index:-1;inset:90px 5% 90px;background-image:radial-gradient(1px 1px at 8% 25%,#dce2ff 98%,transparent),radial-gradient(1px 1px at 18% 62%,#dce2ff 98%,transparent),radial-gradient(1px 1px at 29% 18%,#dce2ff 98%,transparent),radial-gradient(1px 1px at 71% 25%,#dce2ff 98%,transparent),radial-gradient(1.2px 1.2px at 84% 39%,#fff 98%,transparent),radial-gradient(1px 1px at 91% 71%,#dce2ff 98%,transparent),radial-gradient(1px 1px at 63% 76%,#dce2ff 98%,transparent);opacity:.55}
+    .hero-inner{width:min(1152px,100%);margin:auto;text-align:center}
+    .eyebrow{display:flex;align-items:center;justify-content:center;gap:10px;color:#c6cbdf;font-size:12px;font-weight:700;letter-spacing:.015em}
+    .eyebrow-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 14px rgb(199 255 69 / 55%)}
+    h1{max-width:1152px;margin:24px auto 0;font-size:60.8px;line-height:1.3;font-weight:900;letter-spacing:-.035em;text-wrap:balance}
+    h1 span{display:block;background:var(--cta-gradient);background-clip:text;color:transparent}
+    .hero-copy{max-width:680px;margin:19px auto 0;color:#c1c8df;font-size:16px;line-height:1.8;text-wrap:pretty}
+    .scanner{position:relative;width:min(768px,100%);margin:36px auto 0;padding:15px 17px 14px;border:1px solid rgb(199 205 255 / 24%);border-radius:22px;background:linear-gradient(120deg,rgb(255 255 255 / 10%),rgb(103 101 255 / 12%));box-shadow:0 24px 80px rgb(7 13 28 / 32%),inset 0 1px rgb(255 255 255 / 9%);backdrop-filter:blur(12px)}
+    .scanner-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;color:#dce1f3;font-size:11px;font-weight:700}
+    .scanner-secure{display:inline-flex;align-items:center;gap:7px;color:#dce1f3}
+    .scanner-secure i{width:7px;height:7px;border-radius:50%;background:var(--lime)}
+    .scanner-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+    .scanner input{height:56px;min-width:0;padding:0 18px;border:1px solid #dce2f4;border-radius:12px;background:#fff;color:#26334c;direction:ltr;text-align:left;font-family:var(--font-mono);font-size:14px}
+    .scanner input::placeholder{color:#8a95ad}
+    .scanner .button{height:56px;padding-inline:25px;border-radius:12px}
+    .scanner-note{margin:10px 4px 0;color:#c4cbe0;font-size:11px;text-align:right}
+    .handoff{min-height:18px;margin:7px 4px 0;color:#d8e6ff;font-size:11px;text-align:right}
+    .hero-stats{display:flex;justify-content:center;gap:0;width:min(768px,100%);margin:28px auto 0;border-top:1px solid rgb(221 226 250 / 20%)}
+    .hero-stat{flex:1;padding:17px 12px 0;color:#dce1f3;text-align:center}
+    .hero-stat+.hero-stat{border-inline-start:1px solid rgb(221 226 250 / 17%)}
+    .hero-stat strong{display:block;color:#fff;font-family:var(--font-mono);font-size:24px;line-height:1.1;font-weight:800}
+    .hero-stat span{display:block;margin-top:5px;color:#bfc7df;font-size:11px}
+
+    .section{position:relative;padding:108px 24px;background:var(--canvas)}
+    .section.ice{background:var(--ice)}
+    .section-head{max-width:760px;margin:0 auto 38px;text-align:center}
+    .section-no{display:inline-flex;align-items:center;gap:9px;color:#626f92;font-size:11px;font-weight:800;letter-spacing:.08em}
+    .section-no::before{content:"";width:25px;height:1px;background:var(--electric-bright)}
+    h2{margin:12px 0 0;color:var(--ink);font-size:50.4px;line-height:1.32;font-weight:900;letter-spacing:-.03em;text-wrap:balance}
+    .section-lead{max-width:640px;margin:13px auto 0;color:var(--secondary);font-size:14px;line-height:1.85;text-wrap:pretty}
+    .kicker{color:#6c7792;font-size:11px;font-weight:800}
+
+    .demo-frame{max-width:1040px;margin:auto;padding:12px;border:1px solid #d8e0f4;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgb(19 31 71 / 10%)}
+    .frame-bar{height:34px;display:flex;align-items:center;gap:7px;padding-inline:11px;border-bottom:1px solid #edf0fa;color:#8993aa;font-size:10px}
+    .frame-bar i{width:7px;height:7px;border-radius:50%;background:#d5daea}
+    .frame-address{margin-inline:auto;padding:4px 14px;border-radius:999px;background:#f4f6fc;font-family:var(--font-mono);direction:ltr}
+    .demo-content{display:grid;grid-template-columns:.85fr 1.15fr;align-items:center;gap:34px;padding:32px}
+    .demo-copy h3{margin:0;color:var(--ink);font-size:25px;line-height:1.45;font-weight:900}
+    .demo-copy p{margin:10px 0 0;color:var(--secondary);line-height:1.8}
+    .demo-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:17px}
+    .tag{padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:#fbfcff;color:#485577;font-size:11px;font-weight:700}
+    .finding-card{padding:22px;border:1px solid #e0e6f5;border-radius:16px;background:#fff}
+    .finding-meta{display:flex;align-items:center;gap:8px}
+    .pill{padding:5px 10px;border-radius:999px;background:#fff3dd;color:#8e5400;font-size:10px;font-weight:800}
+    .pill.area{background:var(--ice);color:#4d5c83}
+    .finding-card h4{margin:15px 0 0;font-size:18px;font-weight:800}
+    .finding-card p{margin:8px 0 0;color:var(--secondary);font-size:12px;line-height:1.7}
+    .evidence-row{display:flex;justify-content:space-between;gap:12px;margin-top:16px;padding-top:13px;border-top:1px solid var(--line);font-size:11px}
+    code{direction:ltr;unicode-bidi:isolate;font-family:var(--font-mono);font-size:11px;color:#353e72}
+    .demo-caption{margin:12px 7px 3px;color:#707d98;font-size:10px;text-align:right}
+
+    .comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:1000px;margin:auto}
+    .compare-item{min-height:202px;padding:23px 21px;border:1px solid #dfe6f6;border-radius:16px;background:#fff}
+    .compare-mark{display:grid;place-items:center;width:37px;height:37px;border-radius:12px;background:#eeedff;color:var(--electric);font-size:17px;font-weight:900}
+    .compare-item h3{margin:16px 0 0;font-size:17px;font-weight:900}
+    .compare-item p{margin:8px 0 0;color:var(--secondary);font-size:12px;line-height:1.75}
+
+    .workflow{max-width:960px;margin:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}
+    .step{position:relative;min-height:216px;padding:21px 19px;border:1px solid #e1e7f5;border-radius:16px;background:#fff}
+    .step-no{display:flex;align-items:center;justify-content:space-between;color:#6e7892;font-family:var(--font-mono);font-size:11px}
+    .step-no b{display:grid;place-items:center;width:33px;height:33px;border-radius:50%;background:#efedff;color:var(--electric);font-size:12px}
+    .step h3{margin:22px 0 0;font-size:18px;font-weight:900}
+    .step p{margin:8px 0 0;color:var(--secondary);font-size:12px;line-height:1.75}
+    .step-link{position:absolute;inset-inline-end:20px;bottom:18px;color:#697695;font-size:12px}
+
+    .readiness-layout{max-width:1000px;margin:auto;display:grid;grid-template-columns:.8fr 1.2fr;gap:32px;align-items:center}
+    .readiness-copy h3{margin:0;font-size:24px;font-weight:900;line-height:1.5}
+    .readiness-copy p{margin:12px 0 0;color:var(--secondary);font-size:13px;line-height:1.85}
+    .readiness-board{padding:23px 25px;border:1px solid #dfe5f4;border-radius:20px;background:#fff;box-shadow:0 16px 45px rgb(23 35 81 / 7%)}
+    .board-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:17px;border-bottom:1px solid var(--line)}
+    .board-top span{color:#737e96;font-size:11px;font-weight:700}
+    .board-top strong{padding:6px 12px;border-radius:999px;background:#fff0f1;color:#a22d3c;font-size:12px}
+    .area-status{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid #f0f2f8;font-size:12px}
+    .status{padding:4px 9px;border-radius:999px;font-size:10px;font-weight:800}
+    .status.pass{background:#e8f6f0;color:#176348}.status.blocked{background:#fff0f1;color:#a22d3c}.status.warn{background:#fff5e6;color:#86520b}
+    .blocker-note{margin-top:14px;padding:13px 14px;border-inline-start:3px solid #e18b28;border-radius:8px;background:#fffbf3;color:#684a22;font-size:11px;line-height:1.7}
+    .sample-mark{display:block;margin-top:14px;color:#818ba3;font-size:10px}
+
+    .night-section{position:relative;overflow:hidden;padding:104px 24px;background:var(--night);color:#fff}
+    .night-section::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 80% 20%,rgb(73 69 255 / 19%),transparent 42%),radial-gradient(ellipse at 12% 100%,rgb(103 101 255 / 12%),transparent 50%);pointer-events:none}
+    .night-inner{position:relative;max-width:1000px;margin:auto;display:grid;grid-template-columns:.72fr 1.28fr;gap:42px;align-items:center}
+    .night-copy .section-no{color:#c6cbe0}.night-copy h2{color:#fff;font-size:42px;line-height:1.38}
+    .night-copy p{margin:14px 0 0;color:#c4cbe0;font-size:13px;line-height:1.8}
+    .repair-card{padding:21px 23px;border:1px solid rgb(214 220 255 / 18%);border-radius:17px;background:linear-gradient(145deg,#111b36,#0d152a);box-shadow:0 23px 60px rgb(0 0 0 / 20%)}
+    .repair-title{display:flex;align-items:center;gap:8px;color:#fff;font-size:15px;font-weight:800}
+    .repair-title i{width:8px;height:8px;border-radius:50%;background:#ffb64d}
+    .repair-meta{display:flex;gap:8px;margin-top:11px}
+    .repair-card p{margin:12px 0 0;color:#c4cbe0;font-size:12px;line-height:1.75}
+    .measure{margin-top:14px;padding:12px 13px;border-radius:10px;background:#080f20;color:#dfe5ff}
+    .measure small{display:block;margin-bottom:7px;color:#aeb8d6;font-size:10px}
+    .measure code{color:#cdd4ff}
+    .prompt-box{margin-top:14px;padding:12px 13px;border:1px solid rgb(204 211 255 / 14%);border-radius:10px;color:#dce1f3;font-size:11px;line-height:1.7}.prompt-box p{margin:10px 0 0}.prompt-box span{color:#aeb8d6;font-size:10px}.prompt-excerpt{margin:10px 0 0;color:#dce1f3;font-size:11px;line-height:1.8}.prompt-excerpt span{color:#aeb8d6;font-size:10px}
+    .prompt-top{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#c6cbdf}
+    .copy-btn{padding:7px 11px;border:1px solid rgb(255 255 255 / 22%);border-radius:8px;background:transparent;color:#fff;font-size:10px;cursor:pointer}
+    .recheck-bar{display:flex;align-items:center;gap:10px;margin-top:14px;color:#dce1f3;font-size:11px}
+    .recheck-bar b{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:var(--cta);font-family:var(--font-mono)}
+
+    .trust-grid{max-width:1000px;margin:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #dfe5f4;border-inline-start:1px solid #dfe5f4}
+    .trust-item{min-height:150px;padding:23px;border-inline-end:1px solid #dfe5f4;border-bottom:1px solid #dfe5f4;background:#fff}
+    .trust-item h3{margin:0;font-size:16px;font-weight:900}
+    .trust-item p{margin:8px 0 0;color:var(--secondary);font-size:12px;line-height:1.8}
+
+    .area-explorer{max-width:960px;margin:auto;padding:18px;border:1px solid #dee5f5;border-radius:19px;background:#fff;box-shadow:0 18px 50px rgb(24 38 83 / 7%)}
+    .area-tabs{display:flex;gap:7px;overflow-x:auto;padding:0 0 14px;border-bottom:1px solid var(--line);scrollbar-width:thin}
+    .area-tab{flex:1 0 auto;min-height:42px;padding:0 15px;border:1px solid #e3e8f4;border-radius:999px;background:#fff;color:#4b5876;font-size:12px;font-weight:700;cursor:pointer}
+    .area-tab[aria-selected="true"]{border-color:transparent;background:var(--cta-gradient);color:#fff;box-shadow:0 5px 15px rgb(73 69 255 / 20%)}
+    .area-panel{min-height:136px;padding:22px 13px 8px}
+    .area-panel-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .area-panel h3{margin:0;font-size:21px;font-weight:900}
+    .area-cost{padding:6px 11px;border-radius:999px;background:#f0edff;color:#493dc1;font-family:var(--font-mono);font-size:11px;font-weight:700;direction:ltr}
+    .area-panel p{max-width:720px;margin:10px 0 0;color:var(--secondary);font-size:13px;line-height:1.8}
+    .area-foot{margin:0 13px 7px;color:#79849b;font-size:10px}
+
+    .pricing-shell{max-width:960px;margin:auto;padding:28px;border:1px solid #dfe5f2;border-radius:22px;background:#fff;box-shadow:0 20px 60px rgb(20 32 78 / 8%)}
+    .credit-intro{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 0 22px;border-bottom:1px solid var(--line)}
+    .credit-intro p{max-width:560px;margin:0;color:var(--secondary);font-size:13px;line-height:1.8}
+    .free-credit{flex:none;text-align:center}
+    .free-credit strong{display:block;color:var(--electric);font-family:var(--font-mono);font-size:44px;line-height:1;font-weight:900}
+    .free-credit span{display:block;margin-top:7px;color:var(--secondary);font-size:11px}
+    .price-highlights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:19px}
+    .price-highlight{padding:16px 17px;border:1px solid #e4e9f5;border-radius:13px;background:#fbfcff}
+    .price-highlight span{display:block;color:#737f99;font-size:10px}
+    .price-highlight strong{display:block;margin-top:7px;color:var(--ink);font-family:var(--font-mono);font-size:23px;font-weight:800;direction:ltr;text-align:right}
+    .price-highlight p{margin:5px 0 0;color:var(--secondary);font-size:10px;line-height:1.6}
+    .cost-table{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin-top:17px;border:1px solid var(--line);border-radius:11px;overflow:hidden}
+    .cost-cell{padding:12px 9px;text-align:center}
+    .cost-cell+.cost-cell{border-inline-start:1px solid var(--line)}
+    .cost-cell b{display:block;color:#263455;font-family:var(--font-mono);font-size:15px}
+    .cost-cell span{display:block;margin-top:4px;color:#78849c;font-size:10px}
+    .money-note{margin:14px 0 0;color:#79849b;font-size:10px;line-height:1.7}
+    .pricing-more{display:inline-flex;align-items:center;gap:8px;margin-top:16px;color:#4c40bd;font-size:12px;font-weight:800;text-decoration:none}
+
+    .faq-layout{max-width:1000px;margin:auto;display:grid;grid-template-columns:.72fr 1.28fr;gap:42px;align-items:start}
+    .faq-aside h2{margin-top:0;font-size:39px}
+    .faq-aside p{margin:12px 0 0;color:var(--secondary);font-size:13px;line-height:1.8}
+    .faq-list{border-top:1px solid #dfe5f2}
+    details{border-bottom:1px solid #dfe5f2}
+    summary{position:relative;min-height:62px;display:flex;align-items:center;padding:12px 35px 12px 4px;color:var(--ink);font-size:14px;font-weight:800;line-height:1.6;list-style:none;cursor:pointer}
+    summary::-webkit-details-marker{display:none}
+    summary::before{content:"+";position:absolute;inset-inline-start:4px;display:grid;place-items:center;width:25px;height:25px;border-radius:50%;background:#efedff;color:var(--electric);font-family:var(--font-mono);font-size:16px;transition:transform .18s ease}
+    details[open] summary::before{content:"−"}
+    .faq-answer{max-width:660px;margin:0;padding:0 4px 19px;color:var(--secondary);font-size:12px;line-height:1.9}
+
+    .closing{position:relative;overflow:hidden;padding:92px 24px 88px;background:var(--hero);color:#fff;text-align:center}
+    .closing::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 120%,rgb(73 69 255 / 35%),transparent 60%)}
+    .closing-inner{position:relative;max-width:760px;margin:auto}
+    .closing h2{color:#fff;font-size:45px}
+    .closing p{max-width:570px;margin:12px auto 0;color:#c5cbe0;font-size:13px;line-height:1.8}
+    .closing .scanner{margin-top:26px;text-align:right}
+    .closing .foot-truth{margin-top:14px;color:#abb5d1;font-size:10px}
+
+    .footer{padding:56px 24px 24px;background:#fff;border-top:1px solid var(--line)}
+    .footer-main{width:min(1120px,100%);margin:auto;display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:34px}
+    .footer-brand p{max-width:280px;margin:11px 0 0;color:var(--secondary);font-size:11px;line-height:1.8}
+    .footer-col h3{margin:3px 0 13px;color:var(--ink);font-size:12px;font-weight:900}
+    .footer-col a{display:block;width:max-content;max-width:100%;margin-top:9px;color:var(--secondary);font-size:11px;text-decoration:none}
+    .footer-col a:hover{color:var(--electric)}
+    .footer-bottom{width:min(1120px,100%);margin:34px auto 0;padding-top:15px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;color:#7c879c;font-size:10px}
+    .footer-bottom [dir=ltr]{font-family:var(--font-mono)}
+
+    @media(max-width:1024px){.header-inner{width:calc(100% - 40px);gap:22px}.desktop-nav{gap:18px}.hero-inner{max-width:960px}.demo-content{gap:23px;padding:26px}.night-inner{gap:28px}}
+    @media(max-width:900px){.header-inner{height:92px}.desktop-nav,.header-actions{display:none}.mobile-trigger{display:grid;place-items:center;margin-inline-start:auto}.mobile-drawer{position:fixed;z-index:20;inset:0 0 0 auto;width:min(360px,calc(100vw - 72px));display:flex;flex-direction:column;gap:0;padding:18px 22px;background:var(--canvas);color:var(--ink);box-shadow:-18px 0 60px rgb(4 9 28 / 25%);transform:translateX(105%);visibility:hidden;transition:transform .22s ease,visibility .22s ease}.mobile-drawer.open{transform:translateX(0);visibility:visible}.drawer-top{display:flex;align-items:center;justify-content:space-between;min-height:48px;margin-bottom:18px}.drawer-close{width:40px;height:40px;border:0;border-radius:50%;background:#edeaff;color:#3529a5;font-size:22px;cursor:pointer}.drawer-links{display:grid;gap:4px}.drawer-links a{padding:13px 10px;border-bottom:1px solid var(--line);font-size:14px;font-weight:800;text-decoration:none}.drawer-actions{display:grid;gap:9px;margin-top:20px}.drawer-actions .button{width:100%}.drawer-backdrop{position:fixed;z-index:19;inset:0;display:none;border:0;background:rgb(5 10 28 / 48%)}.drawer-backdrop.open{display:block}}
+    @media(max-width:768px){.hero{min-height:820px}.section{padding-block:82px}.demo-content{grid-template-columns:1fr}.demo-copy{order:0}.finding-card{order:1}.comparison{grid-template-columns:1fr}.compare-item{min-height:0}.workflow{grid-template-columns:repeat(2,minmax(0,1fr))}.readiness-layout{grid-template-columns:1fr}.night-inner{grid-template-columns:.9fr 1.1fr;gap:20px}.night-copy h2{font-size:34px}.faq-layout{grid-template-columns:1fr;gap:24px}.faq-aside h2{font-size:36px}.footer-main{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    @media(max-width:640px){.wrap{width:calc(100% - 32px)}.header-inner{height:76px;width:calc(100% - 32px)}.wordmark{font-size:22px}.hero{min-height:656px;padding:138px 20px 74px}.hero-art{inset:80px -40% 22px;width:180%;height:calc(100% - 102px)}.hero-stars{inset:100px 1% 80px;opacity:.34}.eyebrow{font-size:10px}h1{margin-top:17px;font-size:23.424px;line-height:1.45;letter-spacing:-.02em}.hero-copy{margin-top:11px;font-size:13px;line-height:1.75}.scanner{margin-top:24px;padding:12px;border-radius:17px}.scanner-form{grid-template-columns:1fr}.scanner input{height:48px;font-size:12px}.scanner .button{height:48px;width:100%;border-radius:10px}.scanner-note{font-size:10px}.hero-stats{margin-top:19px}.hero-stat{padding:12px 7px 0}.hero-stat strong{font-size:18px}.hero-stat span{font-size:9px;line-height:1.5}.section{padding:53px 16px}.section-head{margin-bottom:25px}.section-no{font-size:9px}h2{margin-top:9px;font-size:29.6px;line-height:1.32;letter-spacing:-.025em}.section-lead{margin-top:9px;font-size:12px;line-height:1.8}.demo-frame{padding:7px;border-radius:17px}.frame-bar{height:30px}.demo-content{gap:17px;padding:16px 11px}.demo-copy h3{font-size:19px}.demo-copy p{font-size:12px}.demo-tags{gap:6px;margin-top:11px}.tag{padding:5px 8px;font-size:9px}.finding-card{padding:16px 13px}.finding-card h4{font-size:15px}.finding-card p{font-size:11px}.compare-item{padding:17px}.compare-item h3{margin-top:12px;font-size:15px}.compare-item p{font-size:11px}.workflow{grid-template-columns:1fr;gap:9px}.step{min-height:0;padding:16px 17px 38px}.step h3{margin-top:13px;font-size:16px}.step p{font-size:11px}.step-link{bottom:13px}.readiness-layout{gap:20px}.readiness-copy h3{font-size:20px}.readiness-copy p{font-size:12px}.readiness-board{padding:17px 14px}.area-status{font-size:11px}.night-section{padding:54px 16px}.night-inner{grid-template-columns:1fr;gap:22px}.night-copy h2{font-size:29.6px}.night-copy p{font-size:12px}.repair-card{padding:16px 13px}.repair-card p{font-size:11px}.trust-grid{grid-template-columns:1fr}.trust-item{min-height:0;padding:17px}.trust-item h3{font-size:14px}.trust-item p{font-size:11px}.area-explorer{padding:10px;border-radius:15px}.area-tab{min-height:38px;padding-inline:12px;font-size:11px}.area-panel{min-height:145px;padding:17px 7px 8px}.area-panel h3{font-size:18px}.area-panel p{font-size:11px}.area-foot{margin-inline:7px}.pricing-shell{padding:16px 13px;border-radius:17px}.credit-intro{align-items:flex-start;gap:12px;padding-bottom:16px}.credit-intro p{font-size:11px}.free-credit strong{font-size:34px}.free-credit span{font-size:9px}.price-highlights{grid-template-columns:1fr;gap:7px;margin-top:12px}.price-highlight{display:grid;grid-template-columns:1fr auto;align-items:center;gap:2px 8px;padding:11px}.price-highlight strong{grid-column:2;grid-row:1/3;margin:0;font-size:20px}.price-highlight p{margin:1px 0 0}.cost-table{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:11px}.cost-cell{padding:9px 4px}.cost-cell:nth-child(4){border-top:1px solid var(--line)}.cost-cell:nth-child(5){border-top:1px solid var(--line)}.cost-cell b{font-size:13px}.cost-cell span{font-size:9px}.money-note{font-size:9px}.faq-layout{gap:17px}.faq-aside h2{font-size:29.6px}.faq-aside p{font-size:11px}.faq-answer{font-size:11px}summary{min-height:57px;font-size:12px}.closing{padding:57px 16px 52px}.closing h2{font-size:29.6px}.closing p{font-size:11px}.closing .scanner{margin-top:19px}.footer{padding:35px 18px 17px}.footer-main{grid-template-columns:1fr 1fr;gap:24px 17px}.footer-brand{grid-column:1/-1}.footer-brand p{max-width:360px}.footer-bottom{margin-top:25px;flex-wrap:wrap;font-size:9px}}
+    @media(max-width:368px){.hero-stat span{font-size:8px}.hero-stat{padding-inline:4px}.credit-intro{flex-wrap:wrap}.free-credit{display:flex;align-items:baseline;gap:7px}.free-credit span{margin:0}}
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <header class="site-header" id="top">
+    <div class="header-inner">
+      <a class="wordmark" href="#top" aria-label="فاحص — الصفحة الرئيسية"><span class="wordmark-mark" aria-hidden="true">ف</span><span>Fahes</span></a>
+      <nav class="desktop-nav" aria-label="التنقل الرئيسي"><a href="#top">المنتج</a><a href="#workflow">كيف يعمل</a><a href="#pricing">الأسعار</a></nav>
+      <div class="header-actions"><a class="icon-control" href="/en" lang="en" aria-label="English">EN</a><button class="icon-control" type="button" aria-label="تبديل المظهر">◐</button><a class="header-login" href="/login">تسجيل الدخول</a><a class="button" href="/signup">ابدأ مجاناً <span aria-hidden="true">←</span></a></div>
+      <button class="mobile-trigger" type="button" aria-label="فتح قائمة التنقل" aria-expanded="false" aria-controls="mobile-menu">☰</button>
+    </div>
+    <button class="drawer-backdrop" type="button" aria-label="إغلاق القائمة"></button>
+    <nav class="mobile-drawer" id="mobile-menu" aria-label="التنقل على الهاتف" aria-hidden="true">
+      <div class="drawer-top"><a class="wordmark" href="#top"><span class="wordmark-mark" aria-hidden="true">ف</span><span>Fahes</span></a><button class="drawer-close" type="button" aria-label="إغلاق القائمة">×</button></div>
+      <div class="drawer-links"><a href="#top">المنتج</a><a href="#workflow">كيف يعمل</a><a href="#pricing">الأسعار</a></div>
+      <div class="drawer-actions"><a class="button" href="/login">تسجيل الدخول</a><a class="button" href="/signup">ابدأ مجاناً</a><a class="icon-control" href="/en" lang="en">English</a></div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-stars" aria-hidden="true"></div>
+      <svg class="hero-art" viewBox="0 0 1440 760" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+        <defs><radialGradient id="halo" cx="50%" cy="88%" r="58%"><stop offset="0" stop-color="#6765ff" stop-opacity=".34"/><stop offset=".68" stop-color="#4945ff" stop-opacity=".07"/><stop offset="1" stop-color="#0c1428" stop-opacity="0"/></radialGradient><linearGradient id="arc" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#7775ff" stop-opacity="0"/><stop offset=".66" stop-color="#7775ff" stop-opacity=".28"/><stop offset="1" stop-color="#bbc2ff" stop-opacity=".02"/></linearGradient></defs>
+        <ellipse cx="720" cy="720" rx="680" ry="440" fill="url(#halo)"/>
+        <path d="M-90 700C180 625 356 423 590 438c192 13 185 202 309 218 128 16 193-203 353-229 91-15 162 28 260 96" fill="none" stroke="url(#arc)" stroke-width="2"/>
+        <path d="M-80 650C146 592 331 475 505 491c153 14 178 140 311 156 165 20 227-163 385-185 82-11 177 7 287 63" fill="none" stroke="#6765ff" stroke-opacity=".16" stroke-width="1"/>
+        <path d="M38 698C276 647 438 548 577 564c123 14 167 93 253 105 137 18 207-101 350-134 79-18 159-6 245 27" fill="none" stroke="#9c9aff" stroke-opacity=".12" stroke-width="1"/>
+        <circle cx="720" cy="582" r="3" fill="#d6d7ff"/><circle cx="720" cy="582" r="28" fill="none" stroke="#a3a2ff" stroke-opacity=".24"/><circle cx="720" cy="582" r="57" fill="none" stroke="#a3a2ff" stroke-opacity=".13"/>
+      </svg>
+      <div class="hero-inner">
+        <div class="eyebrow"><i class="eyebrow-dot"></i> أول تدقيق مجاناً — 50 رصيداً</div>
+        <p class="kicker">جاهزية الإنتاج تبدأ بالدليل</p>
+        <h1 id="hero-title">تظن أن موقعك جاهز؟<span>أثبت ذلك، ثم أطلقه.</span></h1>
+        <p class="hero-copy">ندقّق الأداء والأمن والتصميم والاختبار والظهور في البحث — نقيس أولاً، ثم نشرح. بعد ذلك نتحقق من كل إصلاح حتى تصبح اللوحة خضراء بالكامل.</p>
+        <div class="scanner" aria-label="فاحص رابط الموقع">
+          <div class="scanner-top"><span>أدخل رابط موقعك لبدء التسجيل</span><span class="scanner-secure"><i></i><bdi dir="ltr">HTTPS</bdi></span></div>
+          <form class="scanner-form" data-scan-form>
+            <label class="sr-only" for="hero-url">مثال لرابط</label>
+            <input id="hero-url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="https://موقعك.com" dir="ltr" required>
+            <button class="button" type="submit">دقّق موقعي <span aria-hidden="true">←</span></button>
+          </form>
+          <p class="scanner-note">يُحفظ الرابط للمتابعة إلى التسجيل؛ لا يبدأ الفحص من هذه الصفحة.</p>
+          <p class="handoff" role="status" aria-live="polite"></p>
+        </div>
+        <div class="hero-stats" aria-label="حقائق عن التدقيق">
+          <div class="hero-stat"><strong>50</strong><span>رصيد مجاني، بدون بطاقة</span></div>
+          <div class="hero-stat"><strong>5</strong><span>مجالات للفحص</span></div>
+          <div class="hero-stat"><strong>3</strong><span>أرصدة لكل إعادة تحقق</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo" aria-labelledby="demo-title">
+      <div class="section-head"><span class="section-no">01 · النتيجة قبل الوعد</span><h2 id="demo-title">ليس مجرد تقييم بلا تفسير.</h2><p class="section-lead">تتضمن النتيجة ما قيس ومكان العثور عليه، وتعليمة إصلاح محددة يمكنك تمريرها إلى أداة البرمجة التي تستخدمها.</p></div>
+      <div class="demo-frame">
+        <div class="frame-bar"><i></i><i></i><i></i><span class="frame-address">fahes / report / sample</span><span>عرض توضيحي</span></div>
+        <div class="demo-content">
+          <div class="demo-copy"><span class="kicker">قراءة واضحة للدليل</span><h3>كل ملاحظة مرتبطة بقياس وموضع.</h3><p>يعرض التقرير نتيجة الفحص ومصدرها، ثم يوضح ما يمكن إصلاحه وإعادة التحقق منه.</p><div class="demo-tags"><span class="tag">الأداء</span><span class="tag">الدليل المقاس</span><span class="tag">تعليمة الإصلاح</span></div></div>
+          <article class="finding-card"><div class="finding-meta"><span class="pill">متوسط</span><span class="pill area">الأداء</span></div><h4>سياسة التخزين المؤقت غير موجودة</h4><p>لم يتضمن الرد ترويسة <bdi dir="ltr">Cache-Control</bdi>، لذلك لا يعرف المتصفح كيفية تخزين هذه الصفحة مؤقتاً.</p><div class="evidence-row"><span>الموضع</span><code>GET https://shop.example/</code></div><div class="evidence-row"><span>الدليل المقاس</span><code>{"cache-control":null}</code></div></article>
+        </div>
+      </div>
+      <p class="demo-caption">نتيجة توضيحية · قيم افتراضية، وليست نتيجة تدقيق فعلي.</p>
+    </section>
+
+    <section class="section ice" id="evidence" aria-labelledby="evidence-title">
+      <div class="section-head"><span class="section-no">02 · قياس قبل الاستنتاج</span><h2 id="evidence-title">التقرير يحدد العمل. والجاهزية تثبت إنجازه.</h2><p class="section-lead">يسجل فاحص ما رصدته الفحوص، ويُظهر المجالات غير المكتملة، ويعيد فحص الإصلاحات قبل اعتبارها ناجحة.</p></div>
+      <div class="comparison">
+        <article class="compare-item"><span class="compare-mark" aria-hidden="true">01</span><h3>القياس قبل الاستنتاج</h3><p>توضح النتائج ما قاسه الفحص وما تم استنتاجه.</p></article>
+        <article class="compare-item"><span class="compare-mark" aria-hidden="true">02</span><h3>الأخضر يعني التحقق</h3><p>لا تتحول المشكلة إلى الأخضر إلا بعد اجتياز فحصها المحدد.</p></article>
+        <article class="compare-item"><span class="compare-mark" aria-hidden="true">03</span><h3>يبقى التعذّر ظاهراً</h3><p>عندما يتعذر تشغيل فحص، يوضح مجاله ما ينقصه؛ ولا تُفرض رسوم على أعطال المنصة.</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="workflow" aria-labelledby="workflow-title">
+      <div class="section-head"><span class="section-no">03 · حلقة الإصلاح</span><h2 id="workflow-title">من الأحمر إلى الأخضر، فحصاً بعد فحص.</h2><p class="section-lead">تبدأ برابط أو مستودع أو ملف مصدر، وتبقى النتيجة مرتبطة بما فُحص فعلياً.</p></div>
+      <div class="workflow">
+        <article class="step"><div class="step-no"><span>01</span><b>↗</b></div><h3>دقّق</h3><p>أرسل رابطاً أو مستودعاً أو ملفاً مضغوطاً.</p><span class="step-link">القياس يبدأ هنا ←</span></article>
+        <article class="step"><div class="step-no"><span>02</span><b>≡</b></div><h3>افهم النتيجة</h3><p>راجع الدليل المقاس ومكان العثور على كل مشكلة.</p><span class="step-link">دليل واضح ←</span></article>
+        <article class="step"><div class="step-no"><span>03</span><b>⌘</b></div><h3>أصلِح</h3><p>انسخ تعليمة الإصلاح إلى مساعد البرمجة الذي تستخدمه.</p><span class="step-link">أنت تتحكم بالتغيير ←</span></article>
+        <article class="step"><div class="step-no"><span>04</span><b>✓</b></div><h3>أعد التحقق وأطلِق</h3><p>أعد فحص المشكلة؛ ثم شغّل تدقيقاً جديداً لقرار الجاهزية.</p><span class="step-link">3 أرصدة لإعادة التحقق</span></article>
+      </div>
+    </section>
+
+    <section class="section ice" id="readiness" aria-labelledby="readiness-title">
+      <div class="readiness-layout">
+        <div class="readiness-copy"><span class="section-no">04 · التقرير والجاهزية</span><h3 id="readiness-title">قرار الإطلاق له أسباب محددة.</h3><p>تُعرض حالة كل مجال، وما يمنع الجاهزية، وما إذا كانت النتيجة مقاسة أو متعذرة. لا يتحول التعذر إلى نجاح.</p><span class="sample-mark">عينة توضيحية · قيم افتراضية</span></div>
+        <div class="readiness-board"><div class="board-top"><span>قرار الإطلاق</span><strong>غير جاهز</strong></div><div class="area-status"><span>الأداء</span><b class="status pass">اجتاز</b></div><div class="area-status"><span>الأمن</span><b class="status pass">اجتاز</b></div><div class="area-status"><span>التصميم</span><b class="status blocked">محجوب</b></div><div class="area-status"><span>الاختبار</span><b class="status pass">اجتاز</b></div><div class="area-status"><span>الظهور في البحث</span><b class="status warn">تحذير</b></div><div class="blocker-note">أسباب المنع المحددة: التصميم دون الحد المنشور له، وظهر تراجع في الظهور بالبحث مقارنة بخط الأساس. المجال الذي تعذّر قياسه يمنع الإطلاق.</div></div>
+      </div>
+    </section>
+
+    <section class="night-section" id="remediation" aria-labelledby="remediation-title">
+      <div class="night-inner">
+        <div class="night-copy"><span class="section-no">05 · من التقرير إلى الإصلاح</span><h2 id="remediation-title">الدليل يرافق كل خطوة.</h2><p>تعليمة الإصلاح مرتبطة بالمشكلة المقاسة. وبعد التغيير، تعيد فحص المشكلة نفسها؛ ولا تصبح خضراء إلا إذا اجتازت الفحص.</p><p>تسرّع أدوات البرمجة المعتمدة على الذكاء الاصطناعي عملية البناء. ويفحص فاحص النتيجة بمعايير حتمية قبل الإطلاق.</p></div>
+        <article class="repair-card"><div class="repair-title"><i></i> سياسة التخزين المؤقت غير موجودة</div><div class="repair-meta"><span class="pill">متوسط</span><span class="pill area">الأداء</span></div><p>لم يتضمن الرد ترويسة <bdi dir="ltr">Cache-Control</bdi>. قد يعيد المتصفح تحميل الصفحة بدلاً من استخدام نسخة مخزنة مؤقتاً بأمان.</p><div class="measure"><small>الدليل المقاس · GET https://shop.example/</small><code>{"cache-control":null}</code></div><div class="prompt-box"><div class="prompt-top"><span>تعليمة الإصلاح · جاهزة للنسخ</span><button class="copy-btn" type="button" data-copy>انسخ التعليمة</button></div><p class="prompt-excerpt">أصلح مشكلة الأداء التالية.<br><br>المشكلة: سياسة التخزين المؤقت غير موجودة<br>ما تم قياسه: لم يتضمن الرد ترويسة <bdi dir="ltr">Cache-Control</bdi>.<br>… <span>مقتطف من التعليمة الكاملة المنسوخة</span></p></div><div class="recheck-bar"><b>3</b><span>أرصدة لإعادة فحص المشكلة بعد الإصلاح</span></div><span class="sample-mark">مثال توضيحي من عينة التقرير، وليس فحصاً حقيقياً.</span></article>
+      </div>
+    </section>
+
+    <section class="section" id="trust" aria-labelledby="trust-title">
+      <div class="section-head"><span class="section-no">06 · حدود واضحة</span><h2 id="trust-title">حدود يمكن فحصها.</h2><p class="section-lead">فاحص يوضح ما يصل إليه الفحص وكيف تُدار بيانات المصدر والتقرير.</p></div>
+      <div class="trust-grid">
+        <article class="trust-item"><h3>حماية الطلب عند الاتصال</h3><p>تُفحص عناوين DNS، ثم يُفحص عنوان الاتصال مجدداً، ويُعاد التحقق من كل تحويل للرابط.</p></article>
+        <article class="trust-item"><h3>التدقيق يقرأ الموقع فقط</h3><p>تفحص القدرات الصفحات والاستجابات أو ملفات المصدر، ولا ترسل النماذج أو تكتب إلى الموقع.</p></article>
+        <article class="trust-item"><h3>ملفات المصدر مؤقتة</h3><p>تُدمّر مساحة عمل المصدر عند انتهاء الفحص، بما في ذلك حالات الفشل والإلغاء.</p></article>
+        <article class="trust-item"><h3>للتقارير مدة احتفاظ مستقلة</h3><p>تتبع التقارير مدة الخطة ويصل تنبيه قبل حذفها؛ ومساحة عمل المصدر تُنظف مع الفحص.</p></article>
+      </div>
+    </section>
+
+    <section class="section ice" id="areas" aria-labelledby="areas-title">
+      <div class="section-head"><span class="section-no">07 · خمسة مجالات للفحص</span><h2 id="areas-title">ما الذي يفحصه فاحص؟</h2><p class="section-lead">يعرض كل مجال نطاق الفحوص المتاح وتكلفته. اختر مجالاً للاطلاع على تفاصيله.</p></div>
+      <div class="area-explorer">
+        <div class="area-tabs" role="tablist" aria-label="مجالات التدقيق">
+          <button class="area-tab" role="tab" id="tab-security" aria-controls="panel-security" aria-selected="true" tabindex="0" data-area="security">الأمن · 20</button>
+          <button class="area-tab" role="tab" id="tab-performance" aria-controls="panel-security" aria-selected="false" tabindex="-1" data-area="performance">الأداء · 20</button>
+          <button class="area-tab" role="tab" id="tab-design" aria-controls="panel-security" aria-selected="false" tabindex="-1" data-area="design">التصميم · 25</button>
+          <button class="area-tab" role="tab" id="tab-testing" aria-controls="panel-security" aria-selected="false" tabindex="-1" data-area="testing">الاختبار · 20</button>
+          <button class="area-tab" role="tab" id="tab-seo" aria-controls="panel-security" aria-selected="false" tabindex="-1" data-area="seo">الظهور في البحث · 10</button>
+        </div>
+        <div class="area-panel" id="panel-security" role="tabpanel" aria-labelledby="tab-security" tabindex="0"><div class="area-panel-head"><h3>الأمن</h3><span class="area-cost">20 credits</span></div><p>ترويسات الأمان وسمات ملفات الارتباط؛ وبيانات الاعتماد المكشوفة والتبعيات المعروفة بثغراتها في الشيفرة المرفقة.</p></div>
+        <p class="area-foot">التدقيق الكامل للمجالات الخمسة: 80 رصيداً. جمع المجالات منفردة: 95 رصيداً.</p>
+      </div>
+    </section>
+
+    <section class="section" id="pricing" aria-labelledby="pricing-title">
+      <div class="section-head"><span class="section-no">08 · رصيد لكل خطوة</span><h2 id="pricing-title">تكلفة الرصيد محددة.</h2><p class="section-lead">ابدأ بالمخصص المجاني، ثم استخدم الرصيد بحسب المجالات التي يحتاج إليها فحصك.</p></div>
+      <div class="pricing-shell">
+        <div class="credit-intro"><p>جرّب التدقيق على موقعك الحقيقي برصيد مجاني يُمنح مرة واحدة. التغطية الكاملة للمجالات الخمسة تكلف أقل من شرائها منفردة.</p><div class="free-credit"><strong>50</strong><span>رصيد مجاني لمرة واحدة</span></div></div>
+        <div class="price-highlights"><div class="price-highlight"><span>المجالات الخمسة منفردة</span><strong>95</strong><p>رصيداً · 20 + 20 + 25 + 20 + 10</p></div><div class="price-highlight"><span>تدقيق كامل للمجالات الخمسة</span><strong>80</strong><p>رصيداً · السعر المجمع</p></div><div class="price-highlight"><span>إعادة فحص مشكلة واحدة</span><strong>3</strong><p>أرصدة · بعد الإصلاح</p></div></div>
+        <div class="cost-table" aria-label="تكلفة المجالات"><div class="cost-cell"><b>20</b><span>الأداء</span></div><div class="cost-cell"><b>20</b><span>الأمن</span></div><div class="cost-cell"><b>25</b><span>التصميم</span></div><div class="cost-cell"><b>20</b><span>الاختبار</span></div><div class="cost-cell"><b>10</b><span>البحث</span></div></div>
+        <p class="money-note">رصيد الجاهزية: 60. لم تُعرض أسعار الاشتراك النقدية هنا؛ فالأرقام الموجودة في صفحة الخطط موصوفة في مصدرها كقيم مؤقتة غير محسومة.</p>
+        <a class="pricing-more" href="/pricing">تفاصيل الخطط والاحتفاظ <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="section ice" id="faq" aria-labelledby="faq-title">
+      <div class="faq-layout"><header class="faq-aside"><span class="section-no">09 · أسئلة قبل التدقيق</span><h2 id="faq-title">قبل أن تدقّق موقعك.</h2><p>ما الذي يقرأه التدقيق، وكيف تُدار بياناته، وماذا يعني قرار الجاهزية.</p></header>
+        <div class="faq-list">
+          <details><summary>هل يغيّر فاحص موقعي؟</summary><p class="faq-answer">لا. يقتصر عمل فاحص على القراءة فقط؛ فهو يفحص الصفحات والاستجابات أو ملفات المصدر التي تقدمها، ولا يرسل النماذج أو يكتب إلى الموقع.</p></details>
+          <details><summary>ماذا يحدث لبيانات الفحص؟</summary><p class="faq-answer">تُحذف الشيفرة المصدرية عند إغلاق مساحة عمل الفحص، حتى عند الفشل أو الإلغاء. أما التقارير فلها دورة مستقلة للاحتفاظ بها بحسب الخطة، ويصلك تنبيه قبل حذفها.</p></details>
+          <details><summary>هل يمكنني تدقيق تطبيق بُني بأدوات البرمجة بالذكاء الاصطناعي؟</summary><p class="faq-answer">نعم. يستخدم فاحص مسار التدقيق نفسه للمشروعات المبنية بأدوات البرمجة بالذكاء الاصطناعي أو بأي طريقة أخرى؛ فهو يفحص الموقع أو المصدر الناتج.</p></details>
+          <details><summary>كيف تُحسم الجاهزية للإنتاج؟</summary><p class="faq-answer">يجب أن يحقق كل مجال حدّه المنشور، وألا يُظهر التدقيق الجديد أي تراجع عن خط الأساس. ويُذكر المجال المتعذر أو غير القابل للقياس كعائق محدد، لا كنقطة مبهمة.</p></details>
+          <details><summary>ماذا يمكنني أن أفعل بالرصيد المجاني؟</summary><p class="faq-answer">يغطي المخصص لمرة واحدة، وقدره 50 رصيداً، مجالين أو ثلاثة من التدقيق لتظهر لك نتائج حقيقية على موقعك. ويكلف التدقيق الكامل 80 رصيداً.</p></details>
+          <details><summary>هل أحتاج إلى تدقيق كامل بعد كل إصلاح؟</summary><p class="faq-answer">لا. يمكنك إعادة فحص مشكلة واحدة مقابل 3 أرصدة. ولا تتحول المشكلة إلى الحالة الخضراء إلا بعد اجتياز فحصها؛ وإلا فتبقى غير محسومة.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing" id="final-scan" aria-labelledby="closing-title">
+      <div class="closing-inner"><span class="section-no">10 · ابدأ بالدليل</span><h2 id="closing-title">خمسون رصيداً. بدون بطاقة.</h2><p>تكفي لتدقيق مجالين أو ثلاثة من موقعك الحقيقي ورؤية نتائج حقيقية.</p>
+        <div class="scanner"><div class="scanner-top"><span>أدخل رابط موقعك للمتابعة إلى التسجيل</span><span class="scanner-secure"><i></i><bdi dir="ltr">HTTPS</bdi></span></div><form class="scanner-form" data-scan-form><label class="sr-only" for="final-url">مثال لرابط</label><input id="final-url" name="url" type="text" inputmode="url" autocomplete="url" placeholder="https://موقعك.com" dir="ltr" required><button class="button" type="submit">دقّق موقعي <span aria-hidden="true">←</span></button></form><p class="scanner-note">يُحفظ الرابط للمتابعة إلى التسجيل؛ لا يبدأ الفحص من هذه الصفحة.</p><p class="handoff" role="status" aria-live="polite"></p></div>
+        <p class="foot-truth">القياس قبل الاستنتاج. الأخضر يعني مُتحقَّقاً منه. ولا تُحاسب أبداً على أخطائنا.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-main"><div class="footer-brand"><a class="wordmark" href="#top" style="color:var(--ink)"><span class="wordmark-mark" aria-hidden="true">ف</span><span>Fahes</span></a><p>القياس قبل الاستنتاج. الأخضر يعني مُتحقَّقاً منه. ولا تُحاسب أبداً على أخطائنا.</p></div>
+      <div class="footer-col"><h3>المنتج</h3><a href="#top">المنتج</a></div>
+      <div class="footer-col"><h3>الأسعار</h3><a href="/pricing">الأسعار</a><a href="/pricing">رصيد</a><a href="/pricing">شحن الرصيد</a></div>
+      <div class="footer-col"><h3>الحساب</h3><a href="/login">تسجيل الدخول</a><a href="/signup">ابدأ مجاناً</a></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 Fahes</span><span dir="ltr">صفر طلبات خارجية أثناء التشغيل</span></div>
+  </footer>
+
+  <script>
+    (function(){
+      var trigger=document.querySelector('.mobile-trigger'),drawer=document.querySelector('.mobile-drawer'),backdrop=document.querySelector('.drawer-backdrop'),closeButton=document.querySelector('.drawer-close');
+      function setDrawer(open){if(!drawer)return;drawer.classList.toggle('open',open);backdrop.classList.toggle('open',open);trigger.setAttribute('aria-expanded',String(open));drawer.setAttribute('aria-hidden',String(!open));document.body.style.overflow=open?'hidden':'';if(open)closeButton.focus();else trigger.focus();}
+      trigger.addEventListener('click',function(){setDrawer(trigger.getAttribute('aria-expanded')!=='true')});closeButton.addEventListener('click',function(){setDrawer(false)});backdrop.addEventListener('click',function(){setDrawer(false)});drawer.querySelectorAll('a[href^="#"]').forEach(function(a){a.addEventListener('click',function(){setDrawer(false)})});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&trigger.getAttribute('aria-expanded')==='true')setDrawer(false)});
+      var areas={security:{title:'الأمن',cost:'20 credits',text:'ترويسات الأمان وسمات ملفات الارتباط؛ وبيانات الاعتماد المكشوفة والتبعيات المعروفة بثغراتها في الشيفرة المرفقة.'},performance:{title:'الأداء',cost:'20 credits',text:'فحوص ترويسات الاستجابة للتخزين المؤقت والضغط.'},design:{title:'التصميم',cost:'25 credits',text:'في الشيفرة المرفقة: حجم ملفات الأنماط والإفراط في !important وتعدد الألوان؛ والصور المعطلة.'},testing:{title:'الاختبار',cost:'20 credits',text:'فحوص الروابط المعطلة وسلامة الصفحات ضمن النطاق نفسه.'},seo:{title:'الظهور في البحث',cost:'10 credits',text:'العنوان والوصف ومنفذ العرض والرابط الأساسي والعناوين واللغة والنص البديل للصور.'}};
+      var tabs=[].slice.call(document.querySelectorAll('.area-tab')),panel=document.querySelector('.area-panel');function selectTab(tab){tabs.forEach(function(item){var selected=item===tab;item.setAttribute('aria-selected',String(selected));item.tabIndex=selected?0:-1});var data=areas[tab.dataset.area];panel.setAttribute('aria-labelledby',tab.id);panel.querySelector('h3').textContent=data.title;panel.querySelector('.area-cost').textContent=data.cost;panel.querySelector('p').textContent=data.text;}
+      tabs.forEach(function(tab,index){tab.addEventListener('click',function(){selectTab(tab)});tab.addEventListener('keydown',function(e){if(e.key!=='ArrowLeft'&&e.key!=='ArrowRight')return;e.preventDefault();var next=(index+(e.key==='ArrowLeft'?1:-1)+tabs.length)%tabs.length;tabs[next].focus();selectTab(tabs[next])})});
+      document.querySelectorAll('[data-scan-form]').forEach(function(form){form.addEventListener('submit',function(e){e.preventDefault();var field=form.querySelector('input[name=url]'),note=form.parentElement.querySelector('.handoff'),value=field.value.trim();if(!value){field.focus();return}try{sessionStorage.setItem('wa-hero-scan-url',value)}catch(_error){}note.textContent='حُفظ الرابط للمتابعة إلى التسجيل. لم يبدأ التدقيق في هذه المعاينة.'})});
+      var copy=document.querySelector('[data-copy]');if(copy)copy.addEventListener('click',function(){var text=['أصلح مشكلة الأداء التالية.','','المشكلة: سياسة التخزين المؤقت غير موجودة','ما تم قياسه: لم يتضمن الرد ترويسة Cache-Control.','الموضع: GET https://shop.example/','سبب الأهمية: قد تعيد الزيارات تحميل الصفحة نفسها بدلاً من استخدام نسخة مخزنة مؤقتاً بأمان.','الدليل: {"cache-control":null}','','أجرِ أصغر تغيير يحل المشكلة، ولا تعدّل السلوك غير المرتبط بها.','بعد الانتهاء، اذكر ما غيّرته لكي نتمكن من إعادة التحقق من الإصلاح.'].join('\n');if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text);copy.textContent='تم النسخ';setTimeout(function(){copy.textContent='انسخ التعليمة'},1300)});
+    })();
+  </script>
+</body>
+</html>

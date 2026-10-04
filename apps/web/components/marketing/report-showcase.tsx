@@ -1,97 +1,136 @@
 import { getTranslations } from 'next-intl/server';
-import { CopyPromptButton } from './copy-prompt-button';
-import specialStyles from './report-showcase.special.module.css';
-
 import { cn } from '../../lib/cn';
 
 const styles = {
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
-  section: cn('py-20 px-6 bg-surface-page max-[768px]:py-16 max-[640px]:py-12 max-[640px]:px-4'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 1024px, 768px, 640px; preserve this component-specific grid track ratio; no predefined grid utility matches it; preserve the source responsive clamp expression; no spacing token expresses this fluid value; preserve the component-specific intrinsic value where no configured utility token matches
-  inner: cn('grid grid-cols-[minmax(0,_0.72fr)_minmax(0,_1.28fr)] items-start gap-[clamp(var(--space-8),_6vw,_var(--space-16))] max-w-6xl mx-auto max-[1024px]:grid-cols-[minmax(0,_0.8fr)_minmax(0,_1.2fr)] max-[1024px]:gap-8 max-[768px]:grid-cols-[minmax(0,_1fr)_minmax(0,_1.35fr)] max-[768px]:gap-5 max-[640px]:block'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  intro: cn('sticky top-8 max-[640px]:static'),
-  sampleLabel: cn('table m-0 py-2 px-3 border-border-default border-hairline border-solid text-text-primary type-small leading-5 !font-semibold'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  heading: cn('mt-5 mb-0 type-h2  text-balance max-[640px]:mt-3 '),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px
-  lead: cn('mt-4 mb-0 text-text-secondary type-body-lg text-pretty max-[640px]:type-body max-[640px]:tracking-normal'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px, 640px
-  finding: cn('min-w-0 py-6 px-6 border-border-default border-hairline border-solid bg-surface-sunken max-[768px]:py-5 max-[768px]:px-4 max-[640px]:mt-6 max-[640px]:py-4 max-[640px]:px-3'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  findingMeta: cn('flex flex-wrap items-center gap-2 max-[368px]:items-start max-[368px]:flex-col'),
-  severity: cn('inline-flex items-center min-h-6 px-2 rounded-pill type-small leading-5 !font-semibold bg-sev-medium-bg text-sev-medium'),
-  area: cn('inline-flex items-center min-h-6 px-2 rounded-pill type-small leading-5 !font-semibold border-border-default border-hairline border-solid bg-surface-page text-text-secondary'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 768px
-  findingTitle: cn('mt-4 mb-0 text-text-strong type-card-title text-balance max-[768px]:type-body-bold'),
-  locationRow: cn('flex flex-wrap items-baseline gap-y-2 gap-x-4 mt-4'),
-  fieldLabel: cn('text-text-muted type-small leading-5 !font-semibold'),
-  location: cn('min-w-0 text-text-code font-mono text-[0.875rem] break-words'),
-  evidenceValue: cn('min-w-0 text-text-code font-mono text-[0.875rem] break-words'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint at 640px
-  description: cn('mt-4 mb-0 text-text-primary type-body text-pretty max-[640px]:tracking-normal'),
-  evidence: cn('flex flex-wrap items-baseline gap-y-2 gap-x-4 mt-4 pt-4 border-x-0 border-b-0 border-border-default border-t-hairline border-solid'),
-  prompt: cn('mt-5 bg-surface-page'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  promptHeading: cn('flex items-center justify-between gap-3 py-3 px-4 bg-surface-inverse text-text-on-surface-inverse [&>h4]:m-0 [&>h4]:type-small [&>h4]:leading-5 [&>h4]:!font-semibold max-[368px]:items-start max-[368px]:flex-col max-[368px]:items-start'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 368px
-  copyButton: cn('flex-none min-h-control py-2 px-3 border-text-on-surface-inverse border-hairline border-solid rounded-control bg-transparent text-text-on-surface-inverse type-small leading-5 !font-semibold cursor-pointer hover:bg-text-primary focus-visible:outline focus-visible:outline-hairline focus-visible:outline-focus-ring focus-visible:outline-offset-1 max-[368px]:self-start'),
-  // eslint-disable-next-line no-restricted-syntax -- preserve the source CSS breakpoint(s) at 640px; preserve the component-specific intrinsic value where no configured utility token matches
-  promptText: cn(specialStyles.promptText, 'max-h-88 m-0 py-4 px-4 text-text-primary font-mono text-[0.8125rem] leading-[1.65] overflow-auto break-words whitespace-pre-wrap max-[640px]:max-h-72 max-[640px]:px-3'),
-  promptNote: cn('mt-3 mb-0 text-text-secondary type-small text-pretty'),
-};
+  section: cn(
+    'bg-surface-marketing px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
+  ),
+  header: cn(
+    'mx-auto mb-marketing-report-heading-gap max-w-marketing-section text-center max-marketing-mobile:mb-6',
+  ),
+  sectionNo: cn(
+    'inline-flex items-center gap-2 text-marketing-muted text-marketing-label font-extrabold tracking-[0.08em] before:h-px before:w-6 before:bg-brand-electric-bright',
+  ),
+  heading: cn(
+    'mb-0 mt-3 text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-marketing-primary',
+  ),
+  lead: cn(
+    'mx-auto mb-0 mt-3 max-w-marketing-body text-marketing-lead leading-marketing-lead text-marketing-secondary text-pretty',
+  ),
+  frame: cn(
+    'mx-auto max-w-marketing-demo rounded-marketing-demo border border-solid border-marketing-demo bg-surface-marketing-raised p-3 shadow-marketing-float',
+  ),
+  frameBar: cn(
+    'flex h-marketing-framebar items-center gap-2 border-x-0 border-b border-t-0 border-solid border-marketing-frame-divider px-3 text-marketing-muted text-marketing-micro',
+  ),
+  frameDot: cn('size-marketing-dot rounded-full bg-surface-marketing-frame-dot'),
+  frameAddress: cn(
+    'mx-auto rounded-full bg-surface-marketing-tag px-3 py-1 font-mono text-marketing-micro',
+  ),
+  demoContent: cn(
+    'mx-auto grid max-w-marketing-demo grid-cols-[minmax(0,_0.85fr)_minmax(0,_1.15fr)] items-center gap-marketing-demo-gap p-marketing-demo-padding max-marketing-demo-compact:gap-marketing-demo-gap-compact max-marketing-demo-compact:p-marketing-demo-padding-compact max-marketing-tablet:grid-cols-1 max-marketing-tablet:gap-marketing-demo-gap-mobile max-marketing-mobile:py-marketing-demo-padding-mobile max-marketing-mobile:px-marketing-demo-padding-mobile-x',
+  ),
+  demoCopy: cn('min-w-0'),
+  kicker: cn('mb-0 text-marketing-muted text-marketing-label font-extrabold'),
+  demoHeading: cn(
+    'mb-0 mt-3 text-marketing-demo-heading leading-marketing-demo-heading font-black text-marketing-primary text-balance',
+  ),
+  demoBody: cn(
+    'mb-0 mt-2.5 text-marketing-body leading-marketing-body text-marketing-secondary text-pretty',
+  ),
+  tags: cn('mt-4 flex flex-wrap gap-2'),
+  tag: cn(
+    'rounded-full border border-solid border-border-marketing bg-surface-marketing-tag px-3 py-1.5 text-marketing-label font-bold text-marketing-secondary',
+  ),
+  finding: cn(
+    'min-w-0 rounded-marketing-demo-finding border border-solid border-marketing-finding bg-surface-marketing-raised p-marketing-finding-padding',
+  ),
+  findingMeta: cn('flex flex-wrap items-center gap-2'),
+  severity: cn(
+    'inline-flex min-h-6 items-center rounded-full bg-sev-medium-bg px-2.5 text-marketing-micro font-extrabold text-sev-medium',
+  ),
+  area: cn(
+    'inline-flex min-h-6 items-center rounded-full bg-surface-ice px-2.5 text-marketing-micro font-bold text-marketing-secondary',
+  ),
+  findingTitle: cn(
+    'mb-0 mt-4 text-marketing-card-heading font-extrabold text-marketing-primary text-balance',
+  ),
+  description: cn(
+    'mb-0 mt-2 text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
+  ),
+  evidenceRow: cn(
+    'mt-4 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-2 border-x-0 border-b-0 border-t border-solid border-border-marketing pt-3 text-marketing-label',
+  ),
+  evidenceLabel: cn('text-marketing-muted font-bold'),
+  evidenceValue: cn('min-w-0 break-words font-mono text-marketing-label text-marketing-primary'),
+  caption: cn('mb-0 mx-2 mt-3 text-marketing-muted text-marketing-micro text-end'),
+} as const;
 
 export async function ReportShowcase(): Promise<React.ReactElement> {
   const t = await getTranslations('public');
-  const prompt = t('report_prompt_text') ?? '';
 
   return (
     <section
       id="report-showcase"
       data-landing-section="report-showcase"
+      data-approved-section="report"
       className={styles.section}
       aria-labelledby="report-showcase-heading"
     >
-      <div className={styles.inner}>
-        <header className={styles.intro}>
-          <p className={styles.sampleLabel}>{t('report_sample_label')}</p>
-          <h2 id="report-showcase-heading" className={styles.heading}>
-            {t('report_h2')}
-          </h2>
-          <p className={styles.lead}>{t('report_intro')}</p>
-        </header>
+      <header className={styles.header}>
+        <p className={styles.sectionNo}>{t('report_section_label')}</p>
+        <h2 id="report-showcase-heading" className={styles.heading}>
+          {t('report_h2')}
+        </h2>
+        <p className={styles.lead}>{t('report_intro')}</p>
+      </header>
 
-        <article className={styles.finding} aria-label={t('report_sample_label')}>
-          <div className={styles.findingMeta}>
-            <span className={styles.severity}>{t('report_severity_medium')}</span>
-            <span className={styles.area}>{t('a_perf')}</span>
-          </div>
-          <h3 className={styles.findingTitle}>{t('report_finding_title')}</h3>
-          <div className={styles.locationRow}>
-            <span className={styles.fieldLabel}>{t('report_location_label')}</span>
-            <code dir="ltr" className={styles.location}>
-              GET https://shop.example/
-            </code>
-          </div>
-          <p className={styles.description}>{t('report_description')}</p>
-          <div className={styles.evidence}>
-            <span className={styles.fieldLabel}>{t('report_evidence_label')}</span>
-            <code dir="ltr" className={styles.evidenceValue}>
-              {'{"cache-control":null}'}
-            </code>
-          </div>
-          <div className={styles.prompt}>
-            <div className={styles.promptHeading}>
-              <h4>{t('report_prompt_label')}</h4>
-              <CopyPromptButton prompt={prompt} className={styles.copyButton} />
+      <div className={styles.frame}>
+        <div className={styles.frameBar} aria-hidden="true">
+          <span className={styles.frameDot} />
+          <span className={styles.frameDot} />
+          <span className={styles.frameDot} />
+          <span dir="ltr" className={styles.frameAddress}>
+            fahes / report / sample
+          </span>
+          <span>{t('report_frame_sample')}</span>
+        </div>
+
+        <div className={styles.demoContent}>
+          <div className={styles.demoCopy}>
+            <p className={styles.kicker}>{t('report_demo_kicker')}</p>
+            <h3 className={styles.demoHeading}>{t('report_demo_heading')}</h3>
+            <p className={styles.demoBody}>{t('report_demo_body')}</p>
+            <div className={styles.tags}>
+              <span className={styles.tag}>{t('a_perf')}</span>
+              <span className={styles.tag}>{t('report_evidence_label')}</span>
+              <span className={styles.tag}>{t('report_prompt_short_label')}</span>
             </div>
-            <pre dir="auto" className={styles.promptText}>
-              {prompt}
-            </pre>
           </div>
-          <p className={styles.promptNote}>{t('report_prompt_note')}</p>
-        </article>
+
+          <article className={styles.finding} aria-label={t('report_sample_label')}>
+            <div className={styles.findingMeta}>
+              <span className={styles.severity}>{t('report_severity_medium')}</span>
+              <span className={styles.area}>{t('a_perf')}</span>
+            </div>
+            <h4 className={styles.findingTitle}>{t('report_finding_title')}</h4>
+            <p className={styles.description}>{t('report_description')}</p>
+            <div className={styles.evidenceRow}>
+              <span className={styles.evidenceLabel}>{t('report_location_label')}</span>
+              <code dir="ltr" className={styles.evidenceValue}>
+                GET https://shop.example/
+              </code>
+            </div>
+            <div className={styles.evidenceRow}>
+              <span className={styles.evidenceLabel}>{t('report_evidence_label')}</span>
+              <code dir="ltr" className={styles.evidenceValue}>
+                {'{"cache-control":null}'}
+              </code>
+            </div>
+          </article>
+        </div>
       </div>
+      <p className={styles.caption}>{t('report_demo_caption')}</p>
     </section>
   );
 }

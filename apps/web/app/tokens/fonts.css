@@ -19,6 +19,7 @@
  * rendered outside the root layout in a test).
  */
 :root {
+  --font-marketing: var(--font-cairo-arabic), var(--font-cairo-latin), var(--font-noto-sans-arabic), var(--font-sans);
   --font-sans: var(--font-lexend-deca), var(--font-noto-sans-arabic), 'Lexend Deca Fallback', system-ui, sans-serif;
   --font-mono:
     var(--font-jetbrains-mono), ui-monospace, 'JetBrains Mono', SFMono-Regular, Menlo, monospace;

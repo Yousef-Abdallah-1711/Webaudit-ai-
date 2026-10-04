@@ -23,8 +23,8 @@ test('the hero URL reaches the authenticated scan form through signup and email 
   const target = 'https://example.com/launch';
 
   await page.goto(stack.webBaseUrl);
-  await page.getByLabel('Example URL').fill(target);
-  await page.getByRole('button', { name: 'Audit my site', exact: true }).click();
+  await page.locator('#hero').getByLabel('Example URL').fill(target);
+  await page.locator('#hero').getByRole('button', { name: 'Audit my site', exact: true }).click();
   await page.waitForURL(`${stack.webBaseUrl}/signup`);
 
   await page.getByLabel('Work email').fill(email);
@@ -50,7 +50,7 @@ test('the hero URL reaches the authenticated scan form through signup and email 
 test('the hero stays within the viewport in both themes, locales, and required widths', async ({
   page,
 }) => {
-  const widths = [1440, 1024, 900, 899, 768, 390, 360, 320];
+  const widths = [1440, 1280, 1024, 900, 899, 768, 390, 360, 320];
   const heroBackgrounds = new Map<string, string>();
   mkdirSync(VISUAL_QA_DIR, { recursive: true });
 
@@ -65,16 +65,20 @@ test('the hero stays within the viewport in both themes, locales, and required w
         getComputedStyle(element).backgroundColor,
       );
       heroBackgrounds.set(`${locale}-${theme}`, background);
+      const heroText = await page.locator('#hero h1').evaluate((element) =>
+        getComputedStyle(element).color,
+      );
+      expect(heroText, `${locale}/${theme} hero heading foreground`).toBe('rgb(255, 255, 255)');
 
       for (const width of widths) {
         await page.setViewportSize({ width, height: 900 });
         await expect(page.locator('#hero input[dir="ltr"]')).toBeVisible();
-        const core = await page.locator('#hero .bg-gradient-brand-subtle').evaluate((element) => {
+        const core = await page.locator('#hero [data-scan-handoff]').evaluate((element) => {
           const bounds = element.getBoundingClientRect();
           const heroBounds = element.closest('#hero')?.getBoundingClientRect();
           return {
             display: getComputedStyle(element).display,
-            gradient: getComputedStyle(element).backgroundImage,
+            background: getComputedStyle(element).backgroundColor,
             width: bounds.width,
             insideHero:
               heroBounds !== undefined &&
@@ -84,10 +88,10 @@ test('the hero stays within the viewport in both themes, locales, and required w
               bounds.bottom <= heroBounds.bottom,
           };
         });
-        expect(core.display, `Orange Core display at ${width}px`).not.toBe('none');
-        expect(core.width, `Orange Core width at ${width}px`).toBeGreaterThan(0);
-        expect(core.gradient, `Orange Core gradient at ${width}px`).toContain('linear-gradient');
-        expect(core.insideHero, `Orange Core bounds at ${width}px`).toBe(true);
+        expect(core.display, `Hero scanner display at ${width}px`).not.toBe('none');
+        expect(core.width, `Hero scanner width at ${width}px`).toBeGreaterThan(0);
+        expect(core.background, `Hero scanner background at ${width}px`).not.toBe('rgba(0, 0, 0, 0)');
+        expect(core.insideHero, `Hero scanner bounds at ${width}px`).toBe(true);
         const dimensions = await page.evaluate(() => ({
           documentWidth: document.documentElement.scrollWidth,
           viewportWidth: document.documentElement.clientWidth,

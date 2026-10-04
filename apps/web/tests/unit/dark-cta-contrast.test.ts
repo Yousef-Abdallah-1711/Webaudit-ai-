@@ -58,18 +58,33 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
     expect(authSource.match(/text-text-on-surface-inverse/g)?.length).toBeGreaterThanOrEqual(3);
     expect(authSource).not.toContain('text-text-on-accent');
 
-    const utilitySurfaces: readonly [URL, readonly string[]][] = [
-      [new URL('../../components/marketing/readiness.tsx', import.meta.url), ['section', 'sampleLabel', 'intro']],
-      [new URL('../../components/marketing/report-showcase.tsx', import.meta.url), ['promptHeading', 'copyButton']],
-    ];
-    for (const [url, classes] of utilitySurfaces) {
-      const source = readFileSync(url, 'utf8');
-      for (const className of classes) {
-        const line = source.split('\n').find((candidate) => candidate.includes(`${className}: cn(`));
-        expect(line, `${className} utility exists in ${url.pathname}`).toBeDefined();
-        expect(line).toContain('text-text-on-surface-inverse');
-        expect(line).not.toContain('text-on-accent');
-      }
+    const heroSource = readFileSync(
+      new URL('../../components/marketing/hero.tsx', import.meta.url),
+      'utf8',
+    );
+    const remediationSource = readFileSync(
+      new URL('../../components/marketing/remediation.tsx', import.meta.url),
+      'utf8',
+    );
+    const reportSource = readFileSync(
+      new URL('../../components/marketing/report-showcase.tsx', import.meta.url),
+      'utf8',
+    );
+    for (const [surface, source] of [
+      ['hero', heroSource],
+      ['remediation', remediationSource],
+    ] as const) {
+      expect(source, `${surface} uses the approved inverse text token`).toContain(
+        'text-marketing-inverse',
+      );
+      expect(source).not.toContain('text-text-on-accent');
     }
+
+    // The report sample is on the raised marketing surface in both themes,
+    // so it must use the primary foreground rather than the inverse token.
+    expect(reportSource, 'report sample uses the raised-surface foreground').toContain(
+      'text-marketing-primary',
+    );
+    expect(reportSource).not.toContain('text-text-on-accent');
   });
 });

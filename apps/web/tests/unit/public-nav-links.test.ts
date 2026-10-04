@@ -23,8 +23,9 @@ describe('public navigation', () => {
       ([link]) => link ?? '',
     );
     expect(activeLinks).toHaveLength(2);
-    expect(activeLinks.every((link) => link.includes('font-semibold'))).toBe(true);
-    expect(activeLinks[1]).toContain('max-[640px]:!text-text-strong');
+    expect(activeLinks.every((link) => link.includes('font-extrabold'))).toBe(true);
+    expect(activeLinks[0]).toContain('text-marketing-inverse');
+    expect(activeLinks[1]).toContain('text-brand-marketing');
   });
 
   it('links How it works to the existing audit loop section', () => {

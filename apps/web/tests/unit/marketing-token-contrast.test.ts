@@ -42,22 +42,27 @@ describe('marketing surface token contrast and theme behavior', () => {
   const darkCss = readFileSync(DARK_CSS_PATH, 'utf8');
 
   it('keeps the marketing hero surface invariant across themes', () => {
-    const heroSurface = readHexToken(colorsCss, 'surface-marketing-dark');
+    const heroSurface = readHexToken(colorsCss, 'surface-hero');
 
-    expect(darkCss).not.toMatch(/--surface-marketing-dark\s*:/);
-    expect(heroSurface).toBe('#302019');
+    expect(readHexToken(darkCss, 'surface-hero')).toBe(heroSurface);
+    expect(heroSurface).toBe('#0c1428');
   });
 
   it('provides AA contrast for light text on the invariant marketing hero surface', () => {
-    const foreground = readHexToken(colorsCss, 'text-on-accent');
-    const heroSurface = readHexToken(colorsCss, 'surface-marketing-dark');
+    const foreground = readHexToken(colorsCss, 'text-marketing-inverse');
+    const mutedForeground = readHexToken(colorsCss, 'text-marketing-inverse-muted');
+    const heroSurface = readHexToken(colorsCss, 'surface-hero');
+    const remediationSurface = readHexToken(darkCss, 'surface-dark');
 
     expect(contrastRatio(foreground, heroSurface)).toBeGreaterThanOrEqual(
       WCAG_AA_NORMAL_TEXT,
     );
+    expect(contrastRatio(mutedForeground, remediationSurface)).toBeGreaterThanOrEqual(
+      WCAG_AA_NORMAL_TEXT,
+    );
   });
 
-  it('provides AA contrast for theme-appropriate text on both warm marketing page surfaces', () => {
+  it('provides AA contrast for theme-appropriate text on both marketing page surfaces', () => {
     const lightForeground = readHexToken(colorsCss, 'text-strong');
     const lightSurface = readHexToken(colorsCss, 'surface-marketing');
     const darkForeground = readHexToken(darkCss, 'text-strong');

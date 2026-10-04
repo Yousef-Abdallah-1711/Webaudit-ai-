@@ -24,6 +24,7 @@ import { NextIntlClientProvider, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { messagesByLocale } from '../i18n/messages';
 import { defaultLocale, localeMetadata, locales, type Lang, type Locale } from '../i18n/locales';
+import { routing } from '../i18n/routing';
 import { cn } from '../lib/cn';
 
 const isBrowser = typeof window !== 'undefined';
@@ -264,11 +265,13 @@ const GLOBE_PATH =
 export interface ThemeToggleProps {
   compact?: boolean;
   label?: boolean;
+  className?: string;
 }
 
 export function ThemeToggle({
   compact = false,
   label = false,
+  className,
 }: ThemeToggleProps): React.ReactElement {
   const [theme, setTheme] = useTheme();
   const dark = theme === 'dark';
@@ -281,6 +284,7 @@ export function ThemeToggle({
     // eslint-disable-next-line no-restricted-syntax -- compact control is the existing 30px size
     compact && 'h-[30px] w-[30px]',
     label && 'w-full border-border-default px-3',
+    className,
   );
 
   return (
@@ -313,9 +317,10 @@ export function ThemeToggle({
 
 export interface LangToggleProps {
   label?: boolean;
+  className?: string;
 }
 
-export function LangToggle({ label = false }: LangToggleProps): React.ReactElement {
+export function LangToggle({ label = false, className }: LangToggleProps): React.ReactElement {
   const [lang, setLang] = useLang();
   const router = useRouter();
   const t = useTranslations('common');
@@ -325,6 +330,7 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
     // eslint-disable-next-line no-restricted-syntax -- preserve the source toggle's 13px label size
     'flex box-border h-9 w-auto cursor-pointer items-center justify-center gap-[7px] rounded-control border border-hairline border-transparent bg-transparent px-3 font-sans text-[13px] font-medium text-text-secondary transition-colors hover:bg-surface-raised',
     label && 'w-full border-border-default',
+    className,
   );
 
   return (
@@ -332,7 +338,15 @@ export function LangToggle({ label = false }: LangToggleProps): React.ReactEleme
       type="button"
       onClick={() => {
         setLang(next);
-        router.refresh();
+        void import('next-intl/navigation').then(({ createNavigation }) => {
+          const { getPathname } = createNavigation(routing);
+          const url = new URL(window.location.href);
+          const segments = url.pathname.split('/');
+          if (locales.includes(segments[1] as Locale)) segments.splice(1, 1);
+          const pathname = segments.join('/') || '/';
+          const localizedPath = getPathname({ href: pathname, locale: next });
+          router.replace(`${localizedPath}${url.search}${url.hash}`);
+        });
       }}
       aria-label={t('switch_to_language', { language: localeMetadata[next].label })}
       title={localeMetadata[next].label}

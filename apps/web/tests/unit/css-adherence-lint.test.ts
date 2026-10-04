@@ -48,7 +48,6 @@ const CSS_MODULE_ALLOWLIST = [
   'components/auth/AuthShell.special.module.css',
   'components/marketing/ai-development.special.module.css',
   'components/marketing/faq.special.module.css',
-  'components/marketing/report-showcase.special.module.css',
   'components/public/Public.special.module.css',
 ];
 
