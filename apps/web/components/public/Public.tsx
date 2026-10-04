@@ -32,6 +32,14 @@ import type { messagesByLocale } from '../../i18n/messages';
 
 import specialStyles from './Public.special.module.css';
 import { cn } from '../../lib/cn';
+import {
+  focusRingBrand,
+  focusRingBrandOffset,
+  focusRingHighlightOffset,
+  marketingPrimaryCta,
+  onHeroGhostButton,
+  onHeroGhostControl,
+} from '../../lib/marketing-cta';
 
 const styles = {
   wordmarkLink: cn('no-underline'),
@@ -40,12 +48,12 @@ const styles = {
   headerInner: cn('mx-auto flex h-[var(--height-landing-header)] w-[calc(100%-4rem)] max-w-marketing-header items-center gap-8 text-marketing-primary max-marketing-mobile:w-[calc(100%-2rem)] max-marketing-mobile:gap-3'),
   headerInnerHero: cn('text-marketing-inverse'),
   nav: cn('mx-auto flex items-center gap-8 max-marketing-menu:hidden'),
-  navLink: cn('py-2 text-sm font-semibold text-marketing-secondary no-underline transition-colors hover:text-brand-marketing focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-marketing focus-visible:outline-offset-2'),
-  mobileNavLink: cn('py-3 text-marketing-primary type-body font-semibold no-underline hover:text-brand-marketing focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-marketing focus-visible:outline-offset-2'),
-  mobileMenuTrigger: cn('hidden size-landing-header-control shrink-0 place-items-center rounded-full border border-border-marketing-inverse bg-transparent text-marketing-inverse focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-highlight focus-visible:outline-offset-2 max-marketing-menu:grid'),
-  mobileDrawerClose: cn('ms-auto grid size-landing-header-control place-items-center rounded-full border border-border-marketing bg-transparent text-marketing-primary text-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-marketing'),
+  navLink: cn('py-2 text-sm font-semibold text-marketing-secondary no-underline transition-colors hover:text-brand-marketing', focusRingBrandOffset),
+  mobileNavLink: cn('py-3 text-marketing-primary type-body font-semibold no-underline hover:text-brand-marketing', focusRingBrandOffset),
+  mobileMenuTrigger: cn('hidden size-landing-header-control shrink-0 place-items-center rounded-full border border-border-marketing-inverse bg-transparent text-marketing-inverse', focusRingHighlightOffset, 'max-marketing-menu:grid'),
+  mobileDrawerClose: cn('ms-auto grid size-landing-header-control place-items-center rounded-full border border-border-marketing bg-transparent text-marketing-primary text-2xl', focusRingBrand),
   footerColLinks: cn('[&>a]:focus-visible:outline [&>a]:focus-visible:outline-2 [&>a]:focus-visible:outline-brand-marketing flex flex-col gap-2 [&>a]:text-marketing-secondary [&>a]:type-small [&>a]:no-underline [&>a]:hover:text-brand-marketing'),
-  footerLink: cn('focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-marketing type-small'),
+  footerLink: cn(focusRingBrand, 'type-small'),
   navLinkActive: cn('text-marketing-primary font-extrabold'),
   headerActions: cn('flex items-center gap-3 max-marketing-menu:hidden'),
   mobileBackdrop: cn('fixed inset-0 z-40 border-0 bg-surface-hero/45 p-0 max-marketing-menu:block'),
@@ -204,28 +212,28 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
         <div className={styles.headerActions}>
           {status === 'anonymous' && (
             <>
-              <Button variant="ghost" size="sm" href="/login" className={active === 'nav_product' ? 'text-marketing-inverse-muted hover:bg-white/10 hover:text-marketing-inverse' : ''}>
+              <Button variant="ghost" size="sm" href="/login" className={active === 'nav_product' ? onHeroGhostButton : ''}>
                 {tCommon('signin')}
               </Button>
-              <Button variant="primary" size="sm" href="/signup" className="bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110">
+              <Button variant="primary" size="sm" href="/signup" className={marketingPrimaryCta}>
                 {tCommon('start_free')}
               </Button>
             </>
           )}
           {status === 'authenticated' && (
             <>
-              <Button variant="ghost" size="sm" href="/scan" className={active === 'nav_product' ? 'text-marketing-inverse-muted hover:bg-white/10 hover:text-marketing-inverse' : ''}>
+              <Button variant="ghost" size="sm" href="/scan" className={active === 'nav_product' ? onHeroGhostButton : ''}>
                 {tNavigation('foot_dashboard')}
               </Button>
               {isOperator && (
-                <Button variant="primary" size="sm" href="/admin" className="bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110">
+                <Button variant="primary" size="sm" href="/admin" className={marketingPrimaryCta}>
                   {tNavigation('foot_admin')}
                 </Button>
               )}
             </>
           )}
-          <LangToggle className={active === 'nav_product' ? 'text-marketing-inverse-muted hover:bg-white/10 hover:text-marketing-inverse' : ''} />
-          <ThemeToggle className={active === 'nav_product' ? 'text-marketing-inverse-muted hover:bg-white/10 hover:text-marketing-inverse' : ''} />
+          <LangToggle className={active === 'nav_product' ? onHeroGhostControl : ''} />
+          <ThemeToggle className={active === 'nav_product' ? onHeroGhostControl : ''} />
         </div>
         <button
           ref={mobileTriggerRef}
@@ -307,7 +315,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
               >
                 {tCommon('signin')}
               </Button>
-              <Button variant="primary" href="/signup" fullWidth onClick={() => setMobileDrawerOpen(false)} className="bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110">
+              <Button variant="primary" href="/signup" fullWidth onClick={() => setMobileDrawerOpen(false)} className={marketingPrimaryCta}>
                 {tCommon('start_free')}
               </Button>
             </>
@@ -323,7 +331,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
                 {tNavigation('foot_dashboard')}
               </Button>
               {isOperator && (
-                <Button variant="primary" href="/admin" fullWidth onClick={() => setMobileDrawerOpen(false)} className="bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110">
+                <Button variant="primary" href="/admin" fullWidth onClick={() => setMobileDrawerOpen(false)} className={marketingPrimaryCta}>
                   {tNavigation('foot_admin')}
                 </Button>
               )}

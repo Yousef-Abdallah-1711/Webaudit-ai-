@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '../ui';
 import { storeHeroScanUrl } from '../../lib/hero-scan-handoff';
 import { cn } from '../../lib/cn';
+import { marketingPrimaryCta } from '../../lib/marketing-cta';
 
 export interface ScanHandoffFormProps {
   id: string;
@@ -51,7 +52,7 @@ export function ScanHandoffForm({
       <Button
         type="submit"
         variant="primary"
-        className="h-landing-control rounded-control px-6 bg-gradient-brand-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110 max-marketing-mobile:w-full"
+        className={cn('h-landing-control rounded-control px-6', marketingPrimaryCta, 'max-marketing-mobile:w-full')}
       >
           {submitLabel}
         </Button>

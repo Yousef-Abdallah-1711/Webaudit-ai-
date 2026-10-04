@@ -5,6 +5,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { ALL_AREAS, AREA_COST, FULL_AUDIT_COST, SUM_OF_AREAS } from '@webaudit/config';
 import { useTranslations } from 'next-intl';
 import { cn } from '../../lib/cn';
+import { gradientSurface } from '../../lib/marketing-cta';
 import type enPublic from '../../messages/en/public.json';
 
 type PublicKey = keyof typeof enPublic;
@@ -89,8 +90,7 @@ export function AuditAreas(): React.ReactElement {
                 onKeyDown={(event) => moveFocus(event, index)}
                 className={cn(
                   'min-h-marketing-area-tab flex-none rounded-full border border-solid border-border-marketing bg-transparent px-marketing-area-tab-x text-xs font-bold text-marketing-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:min-h-marketing-area-tab-mobile max-marketing-mobile:px-marketing-area-tab-x-mobile max-marketing-mobile:text-marketing-label',
-                  active &&
-                    'border-transparent bg-gradient-brand-marketing text-white shadow-marketing-card',
+                  active && ['border-transparent', gradientSurface],
                 )}
               >
                 {t(nameKey)}
