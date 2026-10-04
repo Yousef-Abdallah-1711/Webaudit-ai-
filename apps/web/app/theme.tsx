@@ -195,6 +195,20 @@ function I18nProviderContent({
   );
 }
 
+/**
+ * Re-provides the route's locale beneath the `[locale]` segment. The root
+ * layout only hands `I18nProvider` its `initialLocale` on the first server
+ * render and is not re-rendered by client navigation, so after an EN -> AR
+ * switch that value is stale. Anything remounted under the new segment (the
+ * header language toggle) must read the route's own locale instead.
+ */
+export function LocaleScope({
+  locale,
+  children,
+}: Readonly<{ locale: Locale; children: React.ReactNode }>): React.ReactElement {
+  return <InitialLocaleContext.Provider value={locale}>{children}</InitialLocaleContext.Provider>;
+}
+
 export function I18nProvider({
   children,
   initialLocale,

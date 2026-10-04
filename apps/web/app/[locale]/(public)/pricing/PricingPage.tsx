@@ -149,8 +149,8 @@ export function TierGrid(): React.ReactElement {
   const t = useTranslations('public');
 
   return (
-    // eslint-disable-next-line no-restricted-syntax -- preserve source CSS breakpoints at 900px and 720px
-    <div className="grid grid-cols-4 gap-4 max-[900px]:grid-cols-2 max-[720px]:grid-cols-1">
+    // Named screens (900px / 720px): arbitrary `max-[Npx]:` variants are disabled by the object screens in tailwind.config.ts.
+    <div className="grid grid-cols-4 gap-4 max-marketing-menu:grid-cols-2 max-pricing-tiers:grid-cols-1">
       {TIERS.map((tier) => (
         <div
           key={tier.nameKey}

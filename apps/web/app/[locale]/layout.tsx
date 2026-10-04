@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { locales, type Locale } from '../../i18n/locales';
+import { LocaleScope } from '../theme';
 
 function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
@@ -21,5 +22,5 @@ export default async function LocaleLayout({
   if (!isLocale(locale)) notFound();
 
   setRequestLocale(locale);
-  return <>{children}</>;
+  return <LocaleScope locale={locale}>{children}</LocaleScope>;
 }

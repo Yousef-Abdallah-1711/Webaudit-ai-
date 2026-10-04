@@ -17,6 +17,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 import {
   I18nProvider,
   LangToggle,
+  LocaleScope,
   resolveBrowserLocale,
   ThemeScript,
   ThemeToggle,
@@ -98,6 +99,29 @@ describe('locale provider context', () => {
 
     const html = renderToStaticMarkup(
       createElement(I18nProvider, { initialLocale: 'ar', children: createElement(LocaleProbe) }),
+    );
+
+    expect(html).toContain('<span>ar</span>');
+  });
+
+  it('lets the route locale override a stale root locale after client navigation', () => {
+    // The root layout's provider only receives `initialLocale` on the first
+    // server render; after a client-side EN -> AR switch its value is stale,
+    // so anything remounted under the new [locale] segment (e.g. the header
+    // language toggle) must read the route's locale instead.
+    function LocaleProbe(): React.ReactElement {
+      const [locale] = useLang();
+      return createElement('span', null, locale);
+    }
+
+    const html = renderToStaticMarkup(
+      createElement(I18nProvider, {
+        initialLocale: 'en',
+        children: createElement(LocaleScope, {
+          locale: 'ar',
+          children: createElement(LocaleProbe),
+        }),
+      }),
     );
 
     expect(html).toContain('<span>ar</span>');

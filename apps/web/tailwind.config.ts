@@ -37,6 +37,7 @@ const config = {
         'max-marketing-narrow': { max: '480px' },
         'max-marketing-micro': { max: '368px' },
         'max-marketing-demo-compact': { max: '1024px' },
+        'max-pricing-tiers': { max: '720px' },
         'auth-collapse': '1023.984px',
         'auth-compact': '368px',
         'account-collapse': '776.02px',
