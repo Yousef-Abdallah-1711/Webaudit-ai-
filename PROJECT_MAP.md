@@ -88,6 +88,8 @@ Before UI work read [DESIGN.md](DESIGN.md), [screen map](design/screen-map.md), 
 matching component contracts/prompts in `design-system/`; detailed rules:
 [UI safeguards](docs/agent-domain-rules.md#ui-work).
 `specs/ui-reference-siteaudits/` is competitor reference evidence, not the approved design authority.
+`specs/katteb-ar/` is a Markdown-only reference-clone specification for Katteb's Arabic landing
+page; it is not approved WebAudit design and does not authorize copying its brand assets.
 
 ## Database, configuration and operations
 
