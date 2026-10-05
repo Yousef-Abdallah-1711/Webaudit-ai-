@@ -97,7 +97,8 @@
   --surface-field: var(--surface-page);
   --border-card: var(--border-default);
   --border-control: var(--border-subtle);
-  --focus-ring: var(--accent-ring);
+  /* Keyboard focus ring. Brand orange (--accent-ring, #fa7014) is only ~2.7:1 on the light surfaces, below the 3:1 WCAG 1.4.11 minimum, so light uses a darker orange of the same hue (>= 4.1:1 on every light surface). Dark keeps --accent-ring. */
+  --focus-ring: #d9480f;
   --text-on-surface-inverse: #fafafa;
   --text-on-surface-inverse-muted: #9ca3af;
 }

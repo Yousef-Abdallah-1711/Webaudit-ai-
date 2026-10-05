@@ -60,7 +60,7 @@ export function Button({
 }: ButtonProps): React.ReactElement {
   const classes = cn(
     // eslint-disable-next-line no-restricted-syntax -- 14px is the existing Button label size
-    'box-border inline-flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control border-solid [border-width:var(--border-width)] border-transparent px-8 font-sans text-[14px] font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-[0.45]',
+    'box-border inline-flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-control border-solid [border-width:var(--border-width)] border-transparent px-8 font-sans text-[14px] font-medium no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-[0.45] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
     VARIANT_CLASS[variant],
     SIZE_CLASS[size],
     fullWidth && 'w-full',

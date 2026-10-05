@@ -19,6 +19,8 @@
  * "T128 mechanism check" block uses.
  *
  * **What was expected going in, versus what a real run actually found.**
+ * (UPDATE: gap 0a below is now closed — `Button` draws a `:focus-visible` ring
+ * and the last test in this file asserts it. The history is kept as written.)
  * PROGRESS.md's carried correction 0a documents one known, pre-existing gap:
  * `Button` (`apps/web/components/ui/Button.tsx`) ships with no keyboard-focus
  * indicator, faithfully ported from `design-system/components/core/Button.jsx`,
@@ -118,3 +120,54 @@ for (const { name, path: route } of PAGES) {
     expect(results.violations, JSON.stringify(results.violations, null, 2)).toEqual([]);
   });
 }
+
+/**
+ * Focus ring on the shared Button (previously "known gap 0a"): axe cannot see
+ * it, so assert the computed outline directly. Keyboard focus must draw a solid
+ * 2px ring; pointer focus must not.
+ */
+test('Button shows a focus ring for keyboard focus only', async ({ page }) => {
+  await page.goto(`${server.url}/login`, { waitUntil: 'networkidle' });
+  const submit = page.getByRole('button', { name: /^sign in$/i });
+
+  // Keyboard: tab until the submit button is focused.
+  for (let presses = 0; presses < 12; presses++) {
+    await page.keyboard.press('Tab');
+    if (await submit.evaluate((el) => el === document.activeElement)) break;
+  }
+  const keyboard = await submit.evaluate((el) => {
+    const style = getComputedStyle(el);
+    return {
+      focused: el === document.activeElement,
+      focusVisible: el.matches(':focus-visible'),
+      style: style.outlineStyle,
+      width: style.outlineWidth,
+      offset: style.outlineOffset,
+    };
+  });
+  expect(keyboard.focused).toBe(true);
+  expect(keyboard.focusVisible).toBe(true);
+  expect(keyboard.style).toBe('solid');
+  // 2px, but browsers snap outline widths to whole device pixels (1.6px at a
+  // 1.25 device pixel ratio), so assert a clearly visible width, not an exact one.
+  expect(Number.parseFloat(keyboard.width)).toBeGreaterThanOrEqual(1.5);
+  expect(Number.parseFloat(keyboard.offset)).toBeGreaterThanOrEqual(1.5);
+
+  // Pointer: press on the button (focus moves on mousedown), then release away from
+  // it so no click fires.
+  await page.locator('body').click({ position: { x: 1, y: 1 } });
+  await submit.hover();
+  await page.mouse.down();
+  const pointer = await submit.evaluate((el) => ({
+    focused: el === document.activeElement,
+    focusVisible: el.matches(':focus-visible'),
+    // outline-width keeps its initial 3px with no outline drawn, so check the style.
+    style: getComputedStyle(el).outlineStyle,
+  }));
+  await page.mouse.move(1, 1);
+  await page.mouse.up();
+
+  expect(pointer.focused).toBe(true);
+  expect(pointer.focusVisible).toBe(false);
+  expect(pointer.style).toBe('none');
+});

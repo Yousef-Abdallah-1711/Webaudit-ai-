@@ -58,6 +58,36 @@ describe('Button', () => {
     expect(html).not.toContain('px-8');
   });
 
+  it('shows a keyboard-only focus ring on every variant, as a button and as a link', () => {
+    // :focus-visible keeps the ring off pointer clicks; an outline never shifts layout.
+    const ring = [
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-focus-ring',
+    ];
+    for (const variant of ['primary', 'secondary', 'ghost', 'inverse'] as const) {
+      for (const props of [{ variant }, { variant, href: '/x' }]) {
+        const classes = render(createElement(Button, props, 'x')).match(/class="([^"]*)"/)?.[1];
+        for (const utility of ring) {
+          expect(classes?.split(' '), `${variant} ${'href' in props ? 'link' : 'button'}`).toContain(
+            utility,
+          );
+        }
+      }
+    }
+  });
+
+  it('lets a caller recolour the focus ring without losing its width or style', () => {
+    const classes = render(
+      createElement(Button, { className: 'focus-visible:outline-brand-marketing' }, 'x'),
+    ).match(/class="([^"]*)"/)?.[1]?.split(' ');
+    expect(classes).toContain('focus-visible:outline-brand-marketing');
+    expect(classes).not.toContain('focus-visible:outline-focus-ring');
+    expect(classes).toContain('focus-visible:outline');
+    expect(classes).toContain('focus-visible:outline-2');
+  });
+
   it('marks a disabled button disabled and drops the click handler', () => {
     const html = render(createElement(Button, { disabled: true, onClick: () => {} }, 'x'));
     expect(html).toContain('disabled=""');

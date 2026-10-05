@@ -12,6 +12,7 @@
   --accent: #fe5a01;
   --accent-hover: #ff6b1a;
   --accent-ring: #fa7014;
+  --focus-ring: var(--accent-ring);
   --text-primary: #e5e7eb;
   --text-secondary: #9ca3af;
   --text-zinc: #d4d4d8;
