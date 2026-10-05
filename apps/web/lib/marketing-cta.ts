@@ -16,6 +16,9 @@ export const gradientSurface = 'bg-gradient-cta-marketing text-white shadow-mark
  */
 export const marketingPrimaryCta = `${gradientSurface} [&:hover:not(:disabled)]:brightness-110`;
 
+/** Header and drawer CTA height (44px), applied after Button's own size height. */
+export const marketingCtaHeight = 'h-landing-cta';
+
 /**
  * Quiet action on the dark landing hero, for `<Button variant="ghost">`.
  * Button's own hover rule is written as `[&:hover:not(:disabled)]:`, which

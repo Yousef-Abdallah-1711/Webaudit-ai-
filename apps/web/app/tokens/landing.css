@@ -20,6 +20,8 @@
   --height-landing-hero: 845px;
   --height-marketing-tablet-hero: 820px;
   --height-landing-control: 56px;
+  /* Header and drawer CTA: the approved artifact's .button min-height. */
+  --height-landing-cta: 44px;
   --size-landing-header-control: 42px;
   --width-landing-scanner: 768px;
   --width-landing-copy: 680px;
@@ -153,6 +155,8 @@
   :root {
     --height-landing-header: 91px;
     --height-landing-hero: 656px;
+    /* Approved artifact: scanner input and submit are 48px at 640px and below. */
+    --height-landing-control: 48px;
     --type-marketing-display: var(--type-marketing-mobile-display);
     --line-marketing-display: var(--line-marketing-mobile-display);
     --type-marketing-h2: var(--type-marketing-mobile-h2);

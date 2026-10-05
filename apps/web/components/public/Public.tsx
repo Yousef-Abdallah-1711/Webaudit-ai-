@@ -36,10 +36,14 @@ import {
   focusRingBrand,
   focusRingBrandOffset,
   focusRingHighlightOffset,
+  marketingCtaHeight,
   marketingPrimaryCta,
   onHeroGhostButton,
   onHeroGhostControl,
 } from '../../lib/marketing-cta';
+
+/** Primary marketing CTA at the approved 44px height (header and drawer). */
+const sizedMarketingCta = cn(marketingPrimaryCta, marketingCtaHeight);
 
 const styles = {
   wordmarkLink: cn('no-underline'),
@@ -215,7 +219,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
               <Button variant="ghost" size="sm" href="/login" className={active === 'nav_product' ? onHeroGhostButton : ''}>
                 {tCommon('signin')}
               </Button>
-              <Button variant="primary" size="sm" href="/signup" className={marketingPrimaryCta}>
+              <Button variant="primary" size="sm" href="/signup" className={sizedMarketingCta}>
                 {tCommon('start_free')}
               </Button>
             </>
@@ -226,7 +230,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
                 {tNavigation('foot_dashboard')}
               </Button>
               {isOperator && (
-                <Button variant="primary" size="sm" href="/admin" className={marketingPrimaryCta}>
+                <Button variant="primary" size="sm" href="/admin" className={sizedMarketingCta}>
                   {tNavigation('foot_admin')}
                 </Button>
               )}
@@ -315,7 +319,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
               >
                 {tCommon('signin')}
               </Button>
-              <Button variant="primary" href="/signup" fullWidth onClick={() => setMobileDrawerOpen(false)} className={marketingPrimaryCta}>
+              <Button variant="primary" href="/signup" fullWidth onClick={() => setMobileDrawerOpen(false)} className={sizedMarketingCta}>
                 {tCommon('start_free')}
               </Button>
             </>
@@ -331,7 +335,7 @@ export function PublicHeader({ active }: PublicHeaderProps): ReactElement {
                 {tNavigation('foot_dashboard')}
               </Button>
               {isOperator && (
-                <Button variant="primary" href="/admin" fullWidth onClick={() => setMobileDrawerOpen(false)} className={marketingPrimaryCta}>
+                <Button variant="primary" href="/admin" fullWidth onClick={() => setMobileDrawerOpen(false)} className={sizedMarketingCta}>
                   {tNavigation('foot_admin')}
                 </Button>
               )}
