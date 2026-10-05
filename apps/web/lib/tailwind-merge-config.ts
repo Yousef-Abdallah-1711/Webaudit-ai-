@@ -32,6 +32,25 @@ export const CUSTOM_FONT_SIZES: readonly string[] = [
   'marketing-stat',
   'marketing-mobile-stat',
   'marketing-mobile-copy',
+  'marketing-mobile-h2',
+];
+
+/**
+ * Custom `theme.extend.height` keys from tailwind.config.ts. Unknown to
+ * tailwind-merge, so `h-[36px]` and `h-landing-cta` would both survive a merge
+ * and the stylesheet order would pick the winner. A unit test keeps this list
+ * in sync with the config.
+ */
+export const CUSTOM_HEIGHTS: readonly string[] = [
+  'landing-header-control',
+  'control',
+  'landing-header',
+  'landing-promo',
+  'landing-control',
+  'landing-cta',
+  'marketing-framebar',
+  'landing-core',
+  'hairline',
 ];
 
 /**
@@ -49,6 +68,7 @@ export const twMerge = extendTailwindMerge({
     },
     classGroups: {
       'border-w': [{ border: ['hairline'] }],
+      h: [{ h: [...CUSTOM_HEIGHTS] }],
     },
   },
   override: {

@@ -44,6 +44,20 @@ const config = {
         'account-collapse': '776.02px',
         'billing-collapse': '900.02px',
         'usage-collapse': '640.02px',
+        // Tailwind 3.4 derives `max-<screen>` variants only when no screen is an object,
+        // and the `{ max }` screens above are objects, so the derived variants used by
+        // the app (`max-account-collapse:`, `max-md:` ...) are declared explicitly.
+        // Widths mirror the original `@media (max-width: …)` rules.
+        'max-account-collapse': { max: '776px' },
+        'max-billing-collapse': { max: '900px' },
+        'max-usage-collapse': { max: '640px' },
+        'max-auth-collapse': { max: '1023.98px' },
+        'max-sm': { max: '639.98px' },
+        'max-md': { max: '767.98px' },
+        // The scan form + 340px quote card beside the 248px sidebar need ~1040px.
+        'max-scan-stack': { max: '1040px' },
+        // The settings form (>= 428px) + 320px plan card beside the sidebar need ~1095px.
+        'max-account-stack': { max: '1100px' },
       },
       colors: {
         accent: 'var(--accent)',
@@ -266,6 +280,7 @@ const config = {
         'landing-header': 'var(--height-landing-header)',
         'landing-promo': 'var(--height-landing-promo)',
         'landing-control': 'var(--height-landing-control)',
+        'landing-cta': 'var(--height-landing-cta)',
         'marketing-framebar': 'var(--height-marketing-framebar)',
         'landing-core': 'var(--size-landing-core)',
         hairline: 'var(--border-width)',
@@ -318,6 +333,7 @@ const config = {
         'marketing-stat': 'var(--type-marketing-stat)',
         'marketing-mobile-stat': 'var(--type-marketing-mobile-stat)',
         'marketing-mobile-copy': 'var(--type-marketing-mobile-copy)',
+        'marketing-mobile-h2': 'var(--type-marketing-mobile-h2)',
       },
       lineHeight: {
         'landing-title': 'var(--line-landing-title)',

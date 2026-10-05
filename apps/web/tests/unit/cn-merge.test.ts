@@ -9,7 +9,7 @@
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { cn } from '../../lib/cn';
-import { CUSTOM_FONT_SIZES } from '../../lib/tailwind-merge-config';
+import { CUSTOM_FONT_SIZES, CUSTOM_HEIGHTS } from '../../lib/tailwind-merge-config';
 
 function classes(value: string): string[] {
   return value.split(/\s+/).filter(Boolean);
@@ -68,5 +68,14 @@ describe('custom font size list', () => {
     expect([...CUSTOM_FONT_SIZES].sort()).toEqual(
       Object.keys(config.theme.extend.fontSize).sort(),
     );
+  });
+
+  it('matches the height keys declared in tailwind.config.ts', async () => {
+    const configPath = fileURLToPath(new URL('../../tailwind.config.ts', import.meta.url));
+    const { default: config } = (await import(/* @vite-ignore */ configPath)) as {
+      default: { theme: { extend: { height: Record<string, string> } } };
+    };
+
+    expect([...CUSTOM_HEIGHTS].sort()).toEqual(Object.keys(config.theme.extend.height).sort());
   });
 });

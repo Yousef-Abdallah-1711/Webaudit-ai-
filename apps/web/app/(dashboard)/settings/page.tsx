@@ -33,7 +33,7 @@ import { useTheme } from '../../theme';
 import { useAuth } from '../../../components/auth/AuthProvider';
 
 const styles = {
-  layout: 'grid grid-cols-[1fr_20rem] items-start gap-5 max-account-collapse:grid-cols-1',
+  layout: 'grid grid-cols-[1fr_20rem] items-start gap-5 max-account-stack:grid-cols-1',
   col: 'flex flex-col gap-4',
   row: 'grid grid-cols-[12.5rem_1fr] items-start gap-5 border-0 border-t-hairline border-t-border-default border-solid py-[1.125rem] max-account-collapse:grid-cols-1',
   rowLabel: 'font-sans text-[0.875rem] leading-5 font-semibold text-text-strong',

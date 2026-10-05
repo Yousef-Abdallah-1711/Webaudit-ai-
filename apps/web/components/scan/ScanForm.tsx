@@ -32,7 +32,7 @@ import { Button, Card, Eyebrow } from '../ui';
 import { ApiError, createScan, createTarget, getPlans, quoteScan } from '../../lib/api';
 import { InputTabs, type InputSelection } from './InputTabs';
 const styles = {
-  grid: 'grid grid-cols-[1fr_21.25rem] gap-5 items-start [@media(max-width:40rem)]:grid-cols-1',
+  grid: 'grid grid-cols-[1fr_21.25rem] gap-5 items-start max-scan-stack:grid-cols-1',
   areasSection: 'mt-7',
   areasList: 'mt-3 border border-solid border-hairline border-border-default',
   areaRow: 'flex items-center gap-3 px-4 py-[0.875rem] cursor-pointer',
