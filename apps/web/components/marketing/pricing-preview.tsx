@@ -10,6 +10,7 @@ import {
 } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
 import { cn } from '../../lib/cn';
+import { MarketingSectionHeader } from './section-header';
 
 type PublicKey = keyof typeof enPublic;
 const AREA_NAMES: Record<(typeof ALL_AREAS)[number], PublicKey> = {
@@ -51,20 +52,13 @@ export async function PricingPreview(): Promise<React.ReactElement> {
       className="bg-surface-marketing px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile"
       aria-labelledby="pricing-preview-heading"
     >
-      <header className="mx-auto mb-marketing-report-heading-gap max-w-marketing-section text-center max-marketing-mobile:mb-6">
-        <p className="mb-0 text-marketing-muted text-marketing-label font-extrabold">
-          {t('pricing_cost_eyebrow')}
-        </p>
-        <h2
-          id="pricing-preview-heading"
-          className="mb-0 mt-3 text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-marketing-primary"
-        >
-          {t('pricing_preview_heading')}
-        </h2>
-        <p className="mx-auto mb-0 mt-3 max-w-marketing-body text-marketing-lead leading-marketing-lead text-marketing-secondary text-pretty">
-          {t('pricing_preview_lead')}
-        </p>
-      </header>
+      <MarketingSectionHeader
+        id="pricing-preview-heading"
+        number="08"
+        eyebrow={t('pricing_cost_eyebrow')}
+        title={t('pricing_preview_heading')}
+        lead={t('pricing_preview_lead')}
+      />
 
       <div className="mx-auto max-w-public-marketing rounded-marketing-pricing border border-solid border-marketing-pricing bg-surface-marketing-raised p-7 shadow-marketing-pricing max-marketing-mobile:p-4">
         <div className="flex items-center justify-between gap-6 border-x-0 border-t-0 border-b border-solid border-border-marketing pb-5 max-marketing-mobile:items-start">

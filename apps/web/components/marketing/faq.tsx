@@ -2,6 +2,7 @@
 import { getTranslations } from 'next-intl/server';
 import { FREE_ALLOCATION, FULL_AUDIT_COST, REVERIFY_COST } from '@webaudit/config';
 import { cn } from '../../lib/cn';
+import { SectionNo } from './section-header';
 
 const styles = {
   section: cn(
@@ -12,15 +13,15 @@ const styles = {
   ),
   header: cn('pt-2'),
   heading: cn(
-    'max-w-[12ch] m-0 text-marketing-faq-heading leading-marketing-faq-heading font-black tracking-[-0.03em] text-balance text-marketing-primary max-marketing-mobile:max-w-full',
+    'max-w-[12ch] m-0 mt-marketing-section-heading-gap text-marketing-faq-heading leading-marketing-faq-heading font-black tracking-[-0.03em] text-balance text-marketing-primary max-marketing-mobile:max-w-full max-marketing-mobile:mt-marketing-section-heading-gap-mobile',
   ),
   lead: cn(
-    'mt-3 mb-0 max-w-[30rem] text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
+    'mt-marketing-section-heading-gap mb-0 max-w-[30rem] text-marketing-description leading-marketing-description text-marketing-secondary text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile',
   ),
   questions: cn('border-x-0 border-b-0 border-t border-solid border-border-marketing'),
   item: cn('group border-x-0 border-t-0 border-b border-solid border-border-marketing'),
   question: cn(
-    'flex min-h-marketing-faq-summary cursor-pointer list-none items-center justify-between gap-4 py-3 text-marketing-primary text-marketing-description font-extrabold text-pretty focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2',
+    'flex min-h-marketing-faq-summary cursor-pointer list-none items-center justify-between gap-4 py-3 text-marketing-primary text-marketing-body leading-marketing-faq-question font-extrabold text-pretty focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:text-marketing-description',
   ),
   answer: cn(
     'mb-0 max-w-[65ch] pt-0 pb-5 text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',
@@ -55,6 +56,7 @@ export async function Faq(): Promise<React.ReactElement> {
     >
       <div className={styles.inner}>
         <header className={styles.header}>
+          <SectionNo number="09">{t('faq_eyebrow')}</SectionNo>
           <h2 id="faq-heading" className={styles.heading}>
             {t('faq_heading')}
           </h2>

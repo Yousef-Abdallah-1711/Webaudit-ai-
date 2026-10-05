@@ -48,6 +48,10 @@
   --space-marketing-mobile-gutter: 16px;
   --space-marketing-form-gap: 10px;
   --space-marketing-report-heading-gap: 38px;
+  --space-marketing-section-heading-gap: 13px;
+  --space-marketing-section-heading-gap-mobile: 9px;
+  --space-marketing-section-content-gap: 38px;
+  --space-marketing-section-content-gap-mobile: 25px;
   --space-marketing-remediation-gap: 42px;
   --space-marketing-remediation-tablet-gap: 28px;
   --space-marketing-remediation-compact-gap: 20px;
@@ -119,6 +123,9 @@
   --line-marketing-body: 1.8;
   --type-marketing-lead: 14px;
   --line-marketing-lead: 1.85;
+  --type-marketing-mobile-lead: 12px;
+  --line-marketing-mobile-lead: 1.8;
+  --type-marketing-section-number-mobile: 9px;
   --type-marketing-description: 12px;
   --line-marketing-description: 1.75;
   --type-marketing-demo-heading: 25px;
@@ -129,6 +136,10 @@
   --type-marketing-pricing-total: 44px;
   --type-marketing-trust-heading: 16px;
   --type-marketing-readiness-copy: 13px;
+  --type-marketing-readiness-heading: 24px;
+  --type-marketing-mobile-readiness-heading: 20px;
+  --line-marketing-readiness-heading: 1.5;
+  --line-marketing-faq-question: 1.6;
   --type-marketing-closing-copy: 13px;
   --type-marketing-closing-copy-mobile: 11px;
   --type-marketing-area-heading: 21px;

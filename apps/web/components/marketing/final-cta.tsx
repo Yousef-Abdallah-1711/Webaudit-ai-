@@ -1,5 +1,6 @@
 import { getTranslations } from 'next-intl/server';
 import { FREE_ALLOCATION } from '@webaudit/config';
+import { SectionNo } from './section-header';
 import { ScanHandoffForm } from './scan-handoff-form';
 
 export async function FinalCta(): Promise<React.ReactElement> {
@@ -17,10 +18,13 @@ export async function FinalCta(): Promise<React.ReactElement> {
         className="pointer-events-none absolute inset-0 bg-atmosphere opacity-70"
       />
       <div className="relative mx-auto max-w-marketing-section">
-        <h2 className="mb-0 text-marketing-closing-heading leading-marketing-closing-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse max-marketing-mobile:text-marketing-mobile-h2 max-marketing-mobile:leading-marketing-h2">
+        <SectionNo number="10" tone="inverse">
+          {t('cta_eyebrow')}
+        </SectionNo>
+        <h2 className="mb-0 mt-marketing-section-heading-gap text-marketing-closing-heading leading-marketing-closing-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-mobile-h2 max-marketing-mobile:leading-marketing-h2">
           {t('cta_h2', { freeCredits: FREE_ALLOCATION })}
         </h2>
-        <p className="mx-auto mb-0 mt-3 max-w-marketing-prompt text-marketing-closing-copy leading-marketing-description text-marketing-inverse-muted text-pretty max-marketing-mobile:text-marketing-closing-copy-mobile">
+        <p className="mx-auto mb-0 mt-marketing-section-heading-gap max-w-marketing-prompt text-marketing-closing-copy leading-marketing-description text-marketing-inverse-muted text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-closing-copy-mobile">
           {t('cta_lead')}
         </p>
         <div className="mx-auto mt-7 max-w-landing-scanner rounded-marketing-card border border-solid border-border-marketing-inverse bg-surface-hero p-4 text-start shadow-marketing-float max-marketing-mobile:p-3">
@@ -33,6 +37,9 @@ export async function FinalCta(): Promise<React.ReactElement> {
             tone="dark"
           />
         </div>
+        <p className="mx-auto mb-0 mt-marketing-section-content-gap max-w-marketing-prompt text-marketing-description leading-marketing-description text-marketing-inverse-muted text-pretty max-marketing-mobile:mt-marketing-section-content-gap-mobile">
+          {t('cta_truth')}
+        </p>
       </div>
     </section>
   );

@@ -1,21 +1,10 @@
 import { getTranslations } from 'next-intl/server';
 import { cn } from '../../lib/cn';
+import { MarketingSectionHeader } from './section-header';
 
 const styles = {
   section: cn(
     'bg-surface-marketing px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
-  ),
-  header: cn(
-    'mx-auto mb-marketing-report-heading-gap max-w-marketing-section text-center max-marketing-mobile:mb-6',
-  ),
-  sectionNo: cn(
-    'inline-flex items-center gap-2 text-marketing-muted text-marketing-label font-extrabold tracking-[0.08em] before:h-px before:w-6 before:bg-brand-electric-bright',
-  ),
-  heading: cn(
-    'mb-0 mt-3 text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-marketing-primary',
-  ),
-  lead: cn(
-    'mx-auto mb-0 mt-3 max-w-marketing-body text-marketing-lead leading-marketing-lead text-marketing-secondary text-pretty',
   ),
   frame: cn(
     'mx-auto max-w-marketing-demo rounded-marketing-demo border border-solid border-marketing-demo bg-surface-marketing-raised p-3 shadow-marketing-float',
@@ -77,13 +66,13 @@ export async function ReportShowcase(): Promise<React.ReactElement> {
       className={styles.section}
       aria-labelledby="report-showcase-heading"
     >
-      <header className={styles.header}>
-        <p className={styles.sectionNo}>{t('report_section_label')}</p>
-        <h2 id="report-showcase-heading" className={styles.heading}>
-          {t('report_h2')}
-        </h2>
-        <p className={styles.lead}>{t('report_intro')}</p>
-      </header>
+      <MarketingSectionHeader
+        id="report-showcase-heading"
+        number="01"
+        eyebrow={t('report_section_label')}
+        title={t('report_h2')}
+        lead={t('report_intro')}
+      />
 
       <div className={styles.frame}>
         <div className={styles.frameBar} aria-hidden="true">

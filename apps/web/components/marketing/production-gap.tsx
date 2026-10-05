@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
-import { Eyebrow } from '../ui';
+import { MarketingSectionHeader } from './section-header';
 
 import { cn } from '../../lib/cn';
 
@@ -9,14 +9,7 @@ const styles = {
   section: cn(
     'bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
   ),
-  inner: cn('mx-auto max-w-public-marketing'),
-  intro: cn('mx-auto mb-9 max-w-marketing-section text-center max-marketing-mobile:mb-6'),
-  heading: cn(
-    'mb-0 mt-3 text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-marketing-primary',
-  ),
-  lead: cn(
-    'mx-auto mb-0 mt-3 max-w-marketing-body type-body leading-[1.85] text-marketing-secondary text-pretty',
-  ),
+  inner: cn('mx-auto max-w-marketing-evidence'),
   principles: cn(
     'mx-auto grid max-w-marketing-demo grid-cols-3 gap-3 max-marketing-tablet:grid-cols-1',
   ),
@@ -51,13 +44,16 @@ export async function ProductionGap(): Promise<React.ReactElement> {
       data-landing-section="difference"
       data-approved-section="evidence"
       className={styles.section}
+      aria-labelledby="difference-heading"
     >
       <div className={styles.inner}>
-        <div className={styles.intro}>
-          <Eyebrow tone="muted">{t('gap_eyebrow')}</Eyebrow>
-          <h2 className={styles.heading}>{t('gap_h2')}</h2>
-          <p className={styles.lead}>{t('gap_lead')}</p>
-        </div>
+        <MarketingSectionHeader
+          id="difference-heading"
+          number="02"
+          eyebrow={t('gap_eyebrow')}
+          title={t('gap_h2')}
+          lead={t('gap_lead')}
+        />
         <div className={styles.principles}>
           {PRINCIPLES.map(([title, body], index) => (
             <article className={styles.principle} key={title}>

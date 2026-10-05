@@ -6,6 +6,7 @@ import { ALL_AREAS, AREA_COST, FULL_AUDIT_COST, SUM_OF_AREAS } from '@webaudit/c
 import { useTranslations } from 'next-intl';
 import { cn } from '../../lib/cn';
 import { gradientSurface } from '../../lib/marketing-cta';
+import { MarketingSectionHeader } from './section-header';
 import type enPublic from '../../messages/en/public.json';
 
 type PublicKey = keyof typeof enPublic;
@@ -51,20 +52,13 @@ export function AuditAreas(): React.ReactElement {
       className="bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile"
       aria-labelledby="areas-heading"
     >
-      <header className="mx-auto mb-9 max-w-marketing-section text-center max-marketing-mobile:mb-6">
-        <span className="text-marketing-muted text-marketing-label font-extrabold">
-          {t('areas_eyebrow', { areaCount: ALL_AREAS.length })}
-        </span>
-        <h2
-          id="areas-heading"
-          className="mb-0 mt-3 text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-marketing-primary text-balance"
-        >
-          {t('areas_h2')}
-        </h2>
-        <p className="mx-auto mb-0 mt-3 max-w-marketing-body type-body leading-[1.85] text-marketing-secondary text-pretty">
-          {t('areas_intro')}
-        </p>
-      </header>
+      <MarketingSectionHeader
+        id="areas-heading"
+        number="07"
+        eyebrow={t('areas_eyebrow', { areaCount: ALL_AREAS.length })}
+        title={t('areas_h2')}
+        lead={t('areas_intro')}
+      />
       <div className="mx-auto max-w-marketing-area-explorer rounded-marketing-explorer border border-solid border-border-marketing bg-surface-marketing-raised p-marketing-area-explorer-padding shadow-marketing-explorer max-marketing-mobile:p-3">
         <div
           className="flex gap-2 overflow-x-auto border-b border-solid border-border-marketing pb-4"

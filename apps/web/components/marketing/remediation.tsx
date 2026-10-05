@@ -1,6 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import { CopyPromptButton } from './copy-prompt-button';
+import { SectionNo } from './section-header';
 
 const promptClass =
   'flex-none rounded-control border border-solid border-border-marketing-inverse bg-transparent px-3 py-2 type-small font-bold text-marketing-inverse hover:bg-surface-hero focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-highlight';
@@ -23,12 +24,12 @@ export async function Remediation(): Promise<React.ReactElement> {
       />
       <div className="relative mx-auto grid max-w-marketing-remediation grid-cols-[0.72fr_1.28fr] items-center gap-marketing-remediation-gap max-marketing-demo-compact:gap-marketing-remediation-tablet-gap max-marketing-tablet:grid-cols-[0.9fr_1.1fr] max-marketing-tablet:gap-marketing-remediation-compact-gap max-marketing-mobile:!grid-cols-1 max-marketing-mobile:!gap-marketing-remediation-mobile-gap">
         <div>
-          <p className="mb-0 text-marketing-inverse-muted text-marketing-label font-extrabold">
+          <SectionNo number="05" tone="inverse">
             {t('remediation_eyebrow')}
-          </p>
+          </SectionNo>
           <h2
             id="remediation-heading"
-            className="mb-0 mt-3 text-marketing-remediation-heading leading-marketing-remediation-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse"
+            className="mb-0 mt-marketing-section-heading-gap text-marketing-remediation-heading leading-marketing-remediation-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse max-marketing-mobile:mt-marketing-section-heading-gap-mobile"
           >
             {t('remediation_heading')}
           </h2>

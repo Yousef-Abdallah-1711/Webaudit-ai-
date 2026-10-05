@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import type enPublic from '../../messages/en/public.json';
 
 import { cn } from '../../lib/cn';
+import { SectionNo } from './section-header';
 
 const styles = {
   section: cn(
@@ -11,10 +12,12 @@ const styles = {
     'mx-auto grid max-w-marketing-evidence grid-cols-[0.8fr_1.2fr] items-center gap-8 max-marketing-tablet:grid-cols-1 max-marketing-tablet:gap-6',
   ),
   header: cn('max-w-[35rem]'),
-  sampleLabel: cn('mb-0 text-marketing-muted text-marketing-micro font-bold'),
-  heading: cn('mb-0 mt-3 text-2xl leading-[1.5] font-black text-marketing-primary text-balance'),
+  sampleLabel: cn('mb-0 mt-3 text-marketing-muted text-marketing-micro font-bold'),
+  heading: cn(
+    'mb-0 mt-marketing-section-heading-gap text-marketing-readiness-heading leading-marketing-readiness-heading font-black text-marketing-primary text-balance max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-mobile-readiness-heading',
+  ),
   intro: cn(
-    'mb-0 mt-3 text-marketing-readiness-copy leading-marketing-description text-marketing-secondary text-pretty',
+    'mb-0 mt-marketing-section-heading-gap text-marketing-readiness-copy leading-marketing-description text-marketing-secondary text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-description',
   ),
   decision: cn(
     'min-w-0 rounded-marketing-readiness border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-principle-padding-y px-6 text-marketing-primary shadow-marketing-card max-marketing-mobile:p-4',
@@ -73,11 +76,12 @@ export async function Readiness(): Promise<React.ReactElement> {
     >
       <div className={styles.inner}>
         <header className={styles.header}>
-          <p className={styles.sampleLabel}>{t('readiness_sample_label')}</p>
+          <SectionNo number="04">{t('readiness_eyebrow')}</SectionNo>
           <h2 id="readiness-heading" className={styles.heading}>
             {t('readiness_h2')}
           </h2>
           <p className={styles.intro}>{t('readiness_intro')}</p>
+          <p className={styles.sampleLabel}>{t('readiness_sample_label')}</p>
         </header>
 
         <div className={styles.decision}>
