@@ -15,7 +15,7 @@ const styles = {
   ),
   //  preserve the component-specific intrinsic value where no configured utility token matches
   loopStep: cn(
-    'relative min-h-marketing-workflow-card rounded-marketing-workflow border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-workflow-padding-y px-marketing-workflow-padding-x max-marketing-mobile:min-h-0 max-marketing-mobile:px-4 max-marketing-mobile:pb-12 max-marketing-mobile:pt-4',
+    'relative min-h-marketing-workflow-card rounded-marketing-workflow border border-solid border-border-marketing-workflow bg-surface-marketing-raised py-marketing-workflow-padding-y px-marketing-workflow-padding-x max-marketing-mobile:min-h-0 max-marketing-mobile:px-marketing-workflow-padding-mobile-x max-marketing-mobile:pb-12 max-marketing-mobile:pt-4',
   ),
   stepHead: cn('flex items-center justify-between text-marketing-muted text-marketing-label font-bold'),
   loopSymbol: cn(

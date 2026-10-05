@@ -14,10 +14,10 @@ const styles = {
     'mx-auto grid max-w-marketing-demo grid-cols-3 gap-3 max-marketing-tablet:grid-cols-1',
   ),
   principle: cn(
-    'min-h-marketing-evidence-card rounded-marketing-principle border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-principle-padding-y px-marketing-principle-padding-x max-marketing-tablet:min-h-0',
+    'min-h-marketing-evidence-card rounded-marketing-principle border border-solid border-border-marketing-evidence bg-surface-marketing-raised py-marketing-principle-padding-y px-marketing-principle-padding-x max-marketing-tablet:min-h-0 max-marketing-mobile:p-marketing-evidence-padding-mobile',
   ),
   icon: cn(
-    'grid size-9 place-items-center rounded-control bg-surface-electric-soft font-mono text-sm font-extrabold text-brand-electric',
+    'grid size-marketing-principle-icon place-items-center rounded-marketing-principle-icon bg-surface-electric-soft font-mono text-sm font-extrabold text-brand-electric',
   ),
   title: cn(
     'mb-0 mt-4 text-marketing-principle-heading font-extrabold text-marketing-primary text-balance',

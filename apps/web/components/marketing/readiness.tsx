@@ -20,7 +20,7 @@ const styles = {
     'mb-0 mt-marketing-section-heading-gap text-marketing-readiness-copy leading-marketing-description text-marketing-secondary text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-description',
   ),
   decision: cn(
-    'min-w-0 rounded-marketing-readiness border border-solid border-border-marketing bg-surface-marketing-raised py-marketing-principle-padding-y px-6 text-marketing-primary shadow-marketing-card max-marketing-mobile:p-4',
+    'min-w-0 rounded-marketing-readiness border border-solid border-border-marketing-readiness bg-surface-marketing-raised py-marketing-principle-padding-y px-6 text-marketing-primary shadow-marketing-card max-marketing-mobile:py-marketing-readiness-padding-mobile-y max-marketing-mobile:px-marketing-readiness-padding-mobile-x',
   ),
   gate: cn(
     'flex flex-wrap items-center justify-between gap-3 border-x-0 border-t-0 border-b border-solid border-border-marketing pb-4',
@@ -41,7 +41,7 @@ const styles = {
   blocked: cn('bg-sev-high-bg text-sev-high'),
   warning: cn('bg-sev-medium-bg text-sev-medium'),
   blockers: cn(
-    'mt-4 rounded-control border-s-2 border-solid border-sev-medium bg-sev-medium-bg px-4 py-3 text-sev-medium [&>h3]:m-0 [&>h3]:text-marketing-label [&>h3]:font-extrabold [&>ul]:mt-2 [&>ul]:mb-0 [&>ul]:grid [&>ul]:gap-2 [&>ul]:ps-5 [&>ul]:text-marketing-label [&>p]:mb-0 [&>p]:mt-3 [&>p]:text-marketing-muted [&>p]:text-marketing-label [&>p]:text-pretty',
+    'mt-4 rounded-marketing-blocker border-s-marketing-blocker border-solid border-sev-medium bg-sev-medium-bg px-4 py-3 text-sev-medium [&>h3]:m-0 [&>h3]:text-marketing-label [&>h3]:font-extrabold [&>ul]:mt-2 [&>ul]:mb-0 [&>ul]:grid [&>ul]:gap-2 [&>ul]:ps-5 [&>ul]:text-marketing-label [&>p]:mb-0 [&>p]:mt-3 [&>p]:text-marketing-muted [&>p]:text-marketing-label [&>p]:text-pretty',
   ),
 };
 

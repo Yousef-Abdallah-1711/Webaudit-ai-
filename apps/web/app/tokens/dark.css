@@ -35,6 +35,12 @@
   --text-marketing-inverse: #ffffff;
   --text-marketing-inverse-muted: #c4cbe0;
   --border-marketing-inverse: rgb(255 255 255 / 25%);
+  --border-marketing-evidence: #374151;
+  --border-marketing-workflow: #374151;
+  --border-marketing-readiness: #374151;
+  --border-marketing-trust: #374151;
+  --border-marketing-explorer: #374151;
+  --border-marketing-price-highlight: #374151;
   --border-marketing: #374151;
   --border-marketing-demo: #374151;
   --border-marketing-finding: #374151;

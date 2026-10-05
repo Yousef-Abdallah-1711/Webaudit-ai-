@@ -32,6 +32,12 @@
   --border-marketing-scanner: rgb(199 205 255 / 24%);
   --border-marketing-repair: rgb(214 220 255 / 18%);
   --border-marketing-prompt: rgb(204 211 255 / 14%);
+  --border-marketing-evidence: #dfe6f6;
+  --border-marketing-workflow: #e1e7f5;
+  --border-marketing-readiness: #dfe5f4;
+  --border-marketing-trust: #dfe5f4;
+  --border-marketing-explorer: #dee5f5;
+  --border-marketing-price-highlight: #e4e9f5;
   --border-marketing: #e7edfa;
   --border-marketing-demo: #d8e0f4;
   --border-marketing-finding: #e0e6f5;

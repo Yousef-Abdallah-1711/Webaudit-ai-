@@ -59,7 +59,7 @@ export function AuditAreas(): React.ReactElement {
         title={t('areas_h2')}
         lead={t('areas_intro')}
       />
-      <div className="mx-auto max-w-marketing-area-explorer rounded-marketing-explorer border border-solid border-border-marketing bg-surface-marketing-raised p-marketing-area-explorer-padding shadow-marketing-explorer max-marketing-mobile:p-3">
+      <div className="mx-auto max-w-marketing-area-explorer rounded-marketing-explorer border border-solid border-border-marketing-explorer bg-surface-marketing-raised p-marketing-area-explorer-padding shadow-marketing-explorer max-marketing-mobile:rounded-marketing-explorer-mobile max-marketing-mobile:p-marketing-area-explorer-padding-mobile">
         <div
           className="flex gap-2 overflow-x-auto border-b border-solid border-border-marketing pb-4"
           role="tablist"

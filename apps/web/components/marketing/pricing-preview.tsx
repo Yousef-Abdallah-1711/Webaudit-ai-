@@ -60,7 +60,7 @@ export async function PricingPreview(): Promise<React.ReactElement> {
         lead={t('pricing_preview_lead')}
       />
 
-      <div className="mx-auto max-w-public-marketing rounded-marketing-pricing border border-solid border-border-marketing-pricing bg-surface-marketing-raised p-7 shadow-marketing-pricing max-marketing-mobile:p-4">
+      <div className="mx-auto max-w-public-marketing rounded-marketing-pricing border border-solid border-border-marketing-pricing bg-surface-marketing-raised p-7 shadow-marketing-pricing max-marketing-mobile:rounded-marketing-pricing-mobile max-marketing-mobile:py-4 max-marketing-mobile:px-marketing-pricing-padding-mobile-x">
         <div className="flex items-center justify-between gap-6 border-x-0 border-t-0 border-b border-solid border-border-marketing pb-5 max-marketing-mobile:items-start">
           <p className="mb-0 max-w-marketing-pricing text-marketing-readiness-copy leading-[1.8] text-marketing-secondary text-pretty">
             {t('pricing_preview_free_copy')}
@@ -81,19 +81,19 @@ export async function PricingPreview(): Promise<React.ReactElement> {
         <div className="mt-5 grid grid-cols-3 gap-marketing-form-gap max-marketing-mobile:grid-cols-1 max-marketing-mobile:gap-2">
           {highlights.map((item) => (
             <article
-              className="rounded-marketing-price-highlight border border-solid border-border-marketing bg-surface-marketing-tag p-4"
+              className="rounded-marketing-price-highlight border border-solid border-border-marketing-price-highlight bg-surface-marketing-tag p-4 max-marketing-mobile:grid max-marketing-mobile:grid-cols-[1fr_auto] max-marketing-mobile:items-center max-marketing-mobile:gap-x-2 max-marketing-mobile:gap-y-0.5 max-marketing-mobile:p-marketing-price-highlight-padding-mobile"
               key={item.label}
             >
               <strong
                 dir="ltr"
-                className="block font-mono text-2xl font-extrabold text-marketing-primary"
+                className="block font-mono text-2xl font-extrabold text-marketing-primary max-marketing-mobile:col-start-2 max-marketing-mobile:row-span-2 max-marketing-mobile:row-start-1 max-marketing-mobile:text-xl"
               >
                 {item.amount}
               </strong>
-              <span className="mt-1 block text-marketing-label font-bold text-marketing-primary">
+              <span className="mt-1 block text-marketing-label font-bold text-marketing-primary max-marketing-mobile:mt-0">
                 {item.label}
               </span>
-              <p className="mb-0 mt-2 text-marketing-micro leading-[1.6] text-marketing-secondary">
+              <p className="mb-0 mt-2 text-marketing-micro leading-[1.6] text-marketing-secondary max-marketing-mobile:mt-px">
                 {item.detail}
               </p>
             </article>
