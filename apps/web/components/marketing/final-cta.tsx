@@ -27,7 +27,7 @@ export async function FinalCta(): Promise<React.ReactElement> {
         <p className="mx-auto mb-0 mt-marketing-section-heading-gap max-w-marketing-prompt text-marketing-closing-copy leading-marketing-description text-marketing-inverse-muted text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-closing-copy-mobile">
           {t('cta_lead')}
         </p>
-        <div className="mx-auto mt-7 max-w-landing-scanner rounded-marketing-card border border-solid border-border-marketing-inverse bg-surface-hero p-4 text-start shadow-marketing-float max-marketing-mobile:p-3">
+        <div className="mx-auto mt-7 max-w-landing-scanner rounded-landing-scanner border-landing-scanner border-solid border-marketing-scanner bg-gradient-marketing-scanner p-4 text-start shadow-marketing-scanner max-marketing-mobile:rounded-landing-scanner-mobile max-marketing-mobile:p-3">
           <ScanHandoffForm
             id="final-scan-url"
             label={t('hero_url_example_label')}

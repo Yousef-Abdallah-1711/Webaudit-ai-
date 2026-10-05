@@ -7,10 +7,10 @@ const styles = {
     'bg-surface-marketing px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
   ),
   frame: cn(
-    'mx-auto max-w-marketing-demo rounded-marketing-demo border border-solid border-marketing-demo bg-surface-marketing-raised p-3 shadow-marketing-float',
+    'mx-auto max-w-marketing-demo rounded-marketing-demo border border-solid border-border-marketing-demo bg-surface-marketing-raised p-3 shadow-marketing-float max-marketing-mobile:rounded-landing-scanner-mobile max-marketing-mobile:p-marketing-frame-padding-mobile',
   ),
   frameBar: cn(
-    'flex h-marketing-framebar items-center gap-2 border-x-0 border-b border-t-0 border-solid border-marketing-frame-divider px-3 text-marketing-muted text-marketing-micro',
+    'flex h-marketing-framebar items-center gap-2 border-x-0 border-b border-t-0 border-solid border-border-marketing-frame-divider px-3 text-marketing-muted text-marketing-micro',
   ),
   frameDot: cn('size-marketing-dot rounded-full bg-surface-marketing-frame-dot'),
   frameAddress: cn(
@@ -32,7 +32,7 @@ const styles = {
     'rounded-full border border-solid border-border-marketing bg-surface-marketing-tag px-3 py-1.5 text-marketing-label font-bold text-marketing-secondary',
   ),
   finding: cn(
-    'min-w-0 rounded-marketing-demo-finding border border-solid border-marketing-finding bg-surface-marketing-raised p-marketing-finding-padding',
+    'min-w-0 rounded-marketing-demo-finding border border-solid border-border-marketing-finding bg-surface-marketing-raised p-marketing-finding-padding max-marketing-mobile:py-4 max-marketing-mobile:px-marketing-finding-padding-mobile-x',
   ),
   findingMeta: cn('flex flex-wrap items-center gap-2'),
   severity: cn(

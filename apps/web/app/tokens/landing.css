@@ -24,10 +24,12 @@
   --height-landing-cta: 44px;
   --size-landing-header-control: 42px;
   --width-landing-scanner: 768px;
+  --width-landing-scanner-border: 1px;
   --width-landing-copy: 680px;
   --radius-landing-frame: 0px;
   --radius-landing-canvas: 0px;
   --radius-landing-scanner: 22px;
+  --radius-landing-scanner-mobile: 17px;
   --radius-landing-nav: 0px;
   --radius-marketing-shell: 28px;
   --radius-marketing-card: 18px;
@@ -40,6 +42,7 @@
   --radius-marketing-workflow: 16px;
   --radius-marketing-readiness: 20px;
   --radius-marketing-repair: 17px;
+  --radius-marketing-prompt: 10px;
   --radius-marketing-pricing-table: 11px;
   --space-marketing-section: 108px;
   --space-marketing-section-tablet: 82px;
@@ -72,7 +75,9 @@
   --space-marketing-demo-gap-mobile: 17px;
   --space-marketing-demo-padding-mobile: 16px;
   --space-marketing-demo-padding-mobile-x: 11px;
+  --space-marketing-frame-padding-mobile: 7px;
   --space-marketing-finding-padding: 22px;
+  --space-marketing-finding-padding-mobile-x: 13px;
   --space-marketing-principle-padding-y: 23px;
   --space-marketing-principle-padding-x: 21px;
   --space-marketing-workflow-padding-y: 21px;

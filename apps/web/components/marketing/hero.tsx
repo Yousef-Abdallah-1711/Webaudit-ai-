@@ -26,7 +26,7 @@ const styles = {
   supportingCopy:
     'mx-auto mt-5 max-w-marketing-copy text-base leading-[1.8] text-marketing-inverse-muted text-pretty max-marketing-mobile:mt-3 max-marketing-mobile:text-marketing-mobile-copy max-marketing-mobile:leading-[1.75]',
   scanner:
-    'mx-auto mt-9 w-full max-w-landing-scanner rounded-landing-scanner border border-white/20 bg-white/[0.09] p-4 shadow-marketing-float backdrop-blur-xl max-marketing-mobile:mt-6 max-marketing-mobile:rounded-marketing-card max-marketing-mobile:p-3',
+    'mx-auto mt-9 w-full max-w-landing-scanner rounded-landing-scanner border-landing-scanner border-solid border-marketing-scanner bg-gradient-marketing-scanner p-4 shadow-marketing-scanner backdrop-blur-xl max-marketing-mobile:mt-6 max-marketing-mobile:rounded-landing-scanner-mobile max-marketing-mobile:p-3',
   scannerHeader: 'mb-3 flex items-center justify-between gap-3 text-xs font-bold text-marketing-inverse-muted',
   scannerSignal: 'inline-flex items-center gap-2 text-marketing-inverse-muted',
   signalDot: 'size-[var(--size-marketing-dot)] rounded-full bg-brand-highlight',

@@ -58,7 +58,7 @@ export async function Remediation(): Promise<React.ReactElement> {
         </div>
 
         <article
-          className="rounded-marketing-repair border border-solid border-border-marketing-inverse bg-gradient-to-br from-surface-hero to-surface-dark py-marketing-principle-padding-y px-6 shadow-marketing-float max-marketing-mobile:p-4"
+          className="rounded-marketing-repair border border-solid border-border-marketing-repair bg-gradient-marketing-repair py-marketing-principle-padding-y px-6 shadow-marketing-repair max-marketing-mobile:p-4"
           aria-label={t('report_sample_label')}
         >
           <div className="flex items-center gap-2 text-marketing-trust-heading font-extrabold text-marketing-inverse">
@@ -84,7 +84,7 @@ export async function Remediation(): Promise<React.ReactElement> {
               {'{"cache-control":null}'}
             </code>
           </div>
-          <div className="mt-4 rounded-control border border-solid border-border-marketing-inverse bg-surface-dark p-3 text-marketing-inverse-muted">
+          <div className="mt-4 rounded-marketing-prompt border border-solid border-border-marketing-prompt bg-transparent p-3 text-marketing-inverse-muted">
             <div className="flex items-center justify-between gap-3 text-marketing-label font-bold">
               <span>{t('report_prompt_label')}</span>
               <CopyPromptButton prompt={prompt} className={promptClass} />

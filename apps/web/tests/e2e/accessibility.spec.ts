@@ -76,6 +76,7 @@ import { startServer, type ServerHandle } from '../visual/harness.js';
 const REPO_ROOT = new URL('../../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const WEB_DIR = `${REPO_ROOT}apps/web`;
 const PORT = 4180;
+const EXTERNAL_BASE_URL = process.env.MARKETING_SURFACE_BASE_URL;
 
 const PAGES: readonly { readonly name: string; readonly path: string }[] = [
   { name: 'Home page', path: '/' },
@@ -95,7 +96,7 @@ const PAGES: readonly { readonly name: string; readonly path: string }[] = [
  */
 const KNOWN_PRE_EXISTING_RULE_IDS = ['color-contrast', 'region'];
 
-let server: ServerHandle;
+let server: ServerHandle | undefined;
 
 test.beforeAll(async () => {
   // Playwright's `beforeAll` has no timeout parameter of its own (unlike
@@ -103,17 +104,24 @@ test.beforeAll(async () => {
   // `test.setTimeout` inside the hook is the documented way to extend it
   // past the config's default 60s, which a real `next build` exceeds.
   test.setTimeout(180_000);
+  if (EXTERNAL_BASE_URL) return;
   execSync('npx next build', { cwd: WEB_DIR, stdio: 'ignore' });
   server = await startServer(WEB_DIR, PORT);
 });
 
 test.afterAll(() => {
-  server.close();
+  server?.close();
 });
+
+function pageUrl(route: string): string {
+  const baseUrl = EXTERNAL_BASE_URL ?? server?.url;
+  if (!baseUrl) throw new Error('The accessibility server did not start');
+  return `${baseUrl.replace(/\/$/, '')}${route}`;
+}
 
 for (const { name, path: route } of PAGES) {
   test(`${name} has no axe-core violations`, async ({ page }) => {
-    await page.goto(`${server.url}${route}`, { waitUntil: 'networkidle' });
+    await page.goto(pageUrl(route), { waitUntil: 'networkidle' });
     const results = await new AxeBuilder({ page })
       .disableRules(KNOWN_PRE_EXISTING_RULE_IDS)
       .analyze();
@@ -127,7 +135,7 @@ for (const { name, path: route } of PAGES) {
  * 2px ring; pointer focus must not.
  */
 test('Button shows a focus ring for keyboard focus only', async ({ page }) => {
-  await page.goto(`${server.url}/login`, { waitUntil: 'networkidle' });
+  await page.goto(pageUrl('/login'), { waitUntil: 'networkidle' });
   const submit = page.getByRole('button', { name: /^sign in$/i });
 
   // Keyboard: tab until the submit button is focused.

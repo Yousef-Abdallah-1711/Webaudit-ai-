@@ -60,7 +60,7 @@ export async function PricingPreview(): Promise<React.ReactElement> {
         lead={t('pricing_preview_lead')}
       />
 
-      <div className="mx-auto max-w-public-marketing rounded-marketing-pricing border border-solid border-marketing-pricing bg-surface-marketing-raised p-7 shadow-marketing-pricing max-marketing-mobile:p-4">
+      <div className="mx-auto max-w-public-marketing rounded-marketing-pricing border border-solid border-border-marketing-pricing bg-surface-marketing-raised p-7 shadow-marketing-pricing max-marketing-mobile:p-4">
         <div className="flex items-center justify-between gap-6 border-x-0 border-t-0 border-b border-solid border-border-marketing pb-5 max-marketing-mobile:items-start">
           <p className="mb-0 max-w-marketing-pricing text-marketing-readiness-copy leading-[1.8] text-marketing-secondary text-pretty">
             {t('pricing_preview_free_copy')}
