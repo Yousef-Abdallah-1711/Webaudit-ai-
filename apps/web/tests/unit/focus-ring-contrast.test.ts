@@ -21,12 +21,12 @@ const DARK = readFileSync(
 );
 
 /** Resolve `--token` to a hex colour, following a single `var(--other)` alias. */
-function resolveColor(css: string, fallbackCss: string, token: string): string {
+function resolveColor(css: string, token: string): string {
   const match = css.match(new RegExp(`--${token}:\\s*([^;]+);`));
   const value = match?.[1]?.trim();
   if (value === undefined) throw new Error(`Missing token --${token}`);
   const alias = value.match(/^var\(--([\w-]+)\)$/);
-  if (alias) return resolveColor(css, fallbackCss, alias[1] as string);
+  if (alias) return resolveColor(css, alias[1] as string);
   if (!/^#[0-9a-f]{6}$/i.test(value)) throw new Error(`--${token} is not a hex colour: ${value}`);
   return value.toLowerCase();
 }
@@ -53,9 +53,9 @@ describe('focus ring contrast', () => {
     ['light', LIGHT],
     ['dark', DARK],
   ] as const)('reaches 3:1 on every %s surface', (_theme, css) => {
-    const ring = resolveColor(css, css, 'focus-ring');
+    const ring = resolveColor(css, 'focus-ring');
     for (const surface of SURFACES) {
-      const background = resolveColor(css, css, surface);
+      const background = resolveColor(css, surface);
       expect(contrast(ring, background), `${ring} on ${surface} ${background}`).toBeGreaterThanOrEqual(
         NON_TEXT_MINIMUM,
       );
@@ -63,11 +63,11 @@ describe('focus ring contrast', () => {
   });
 
   it('reaches 3:1 on the dark marketing hero in both themes', () => {
-    const hero = resolveColor(LIGHT, LIGHT, 'surface-hero');
-    expect(contrast(resolveColor(LIGHT, LIGHT, 'focus-ring'), hero)).toBeGreaterThanOrEqual(
+    const hero = resolveColor(LIGHT, 'surface-hero');
+    expect(contrast(resolveColor(LIGHT, 'focus-ring'), hero)).toBeGreaterThanOrEqual(
       NON_TEXT_MINIMUM,
     );
-    expect(contrast(resolveColor(DARK, DARK, 'focus-ring'), hero)).toBeGreaterThanOrEqual(
+    expect(contrast(resolveColor(DARK, 'focus-ring'), hero)).toBeGreaterThanOrEqual(
       NON_TEXT_MINIMUM,
     );
   });

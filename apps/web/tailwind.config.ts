@@ -54,6 +54,8 @@ const config = {
         'max-auth-collapse': { max: '1023.98px' },
         'max-sm': { max: '639.98px' },
         'max-md': { max: '767.98px' },
+        // Declared after max-sm so the 368px padding step wins over the 640px one.
+        'max-auth-compact': { max: '368px' },
         // The scan form + 340px quote card beside the 248px sidebar need ~1040px.
         'max-scan-stack': { max: '1040px' },
         // The settings form (>= 428px) + 320px plan card beside the sidebar need ~1095px.

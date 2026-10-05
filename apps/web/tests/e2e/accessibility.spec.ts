@@ -143,11 +143,22 @@ test('Button shows a focus ring for keyboard focus only', async ({ page }) => {
       style: style.outlineStyle,
       width: style.outlineWidth,
       offset: style.outlineOffset,
+      color: style.outlineColor,
+      // What --focus-ring resolves to for this theme, read through a probe element.
+      expectedColor: (() => {
+        const probe = document.createElement('i');
+        probe.style.outlineColor = 'var(--focus-ring)';
+        document.body.append(probe);
+        const resolved = getComputedStyle(probe).outlineColor;
+        probe.remove();
+        return resolved;
+      })(),
     };
   });
   expect(keyboard.focused).toBe(true);
   expect(keyboard.focusVisible).toBe(true);
   expect(keyboard.style).toBe('solid');
+  expect(keyboard.color).toBe(keyboard.expectedColor);
   // 2px, but browsers snap outline widths to whole device pixels (1.6px at a
   // 1.25 device pixel ratio), so assert a clearly visible width, not an exact one.
   expect(Number.parseFloat(keyboard.width)).toBeGreaterThanOrEqual(1.5);

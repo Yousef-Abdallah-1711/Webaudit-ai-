@@ -28,8 +28,11 @@ function sourceFiles(directory: string): string[] {
   });
 }
 
+/** Escape a class name as Tailwind writes it in a selector (a comma becomes `\2c `). */
 function escapeSelector(token: string): string {
-  return token.replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+  return token.replace(/[^a-zA-Z0-9_-]/g, (character) =>
+    character === ',' ? '\\2c ' : `\\${character}`,
+  );
 }
 
 describe('max-<screen> variants', () => {
@@ -37,7 +40,10 @@ describe('max-<screen> variants', () => {
     const tokens = new Map<string, string>();
     for (const file of ['app', 'components'].flatMap((root) => sourceFiles(join(WEB_ROOT, root)))) {
       for (const token of readFileSync(file, 'utf8').split(/[\s'"`{}]+/)) {
-        if (MAX_VARIANT.test(token) && !token.includes('[')) {
+        // Arbitrary values (`w-[min(15rem,85vw)]`) are checked too; a token cut apart by a
+        // quote inside brackets has unbalanced brackets and is skipped.
+        const balanced = token.split('[').length === token.split(']').length;
+        if (MAX_VARIANT.test(token) && balanced) {
           tokens.set(token, relative(WEB_ROOT, file).replaceAll('\\', '/'));
         }
       }

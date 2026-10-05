@@ -11,7 +11,7 @@ export interface AuthShellProps {
 export function AuthShell({ form, context }: AuthShellProps): React.ReactElement {
   return (
     <div
-      className={`grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] [grid-template-areas:'context_form'] items-stretch gap-12 w-full ${context === undefined ? 'max-w-[42rem]' : 'max-w-app-shell'} min-h-[36rem] mx-auto py-12 px-6 ${styles.rtlLayout}${context === undefined ? ` ${styles.rtlSingleColumn} grid-cols-[minmax(0,1fr)] [grid-template-areas:'form']` : ''} max-auth-collapse:grid-cols-[minmax(0,1fr)] max-auth-collapse:[grid-template-areas:'form'_'context'] max-auth-collapse:gap-8 max-auth-collapse:min-h-0 max-auth-collapse:max-w-[42rem] max-auth-collapse:py-8 max-md:py-6 max-md:px-4 max-sm:[&_.formSurface]:p-6 max-sm:[&_.formTitle]:type-card-title max-auth-compact:[&_.formSurface]:p-4`}
+      className={`grid grid-cols-[minmax(0,0.46fr)_minmax(0,0.54fr)] [grid-template-areas:'context_form'] items-stretch gap-12 w-full ${context === undefined ? 'max-w-[42rem]' : 'max-w-app-shell'} min-h-[36rem] mx-auto py-12 px-6 ${styles.rtlLayout}${context === undefined ? ` ${styles.rtlSingleColumn} grid-cols-[minmax(0,1fr)] [grid-template-areas:'form']` : ''} max-auth-collapse:grid-cols-[minmax(0,1fr)] max-auth-collapse:[grid-template-areas:'form'_'context'] max-auth-collapse:gap-8 max-auth-collapse:min-h-0 max-auth-collapse:max-w-[42rem] max-auth-collapse:py-8 max-md:py-6 max-md:px-4 max-sm:[&_.formSurface]:p-6 max-auth-compact:[&_.formSurface]:p-4`}
     >
       <div className="[grid-area:form] flex min-w-0 items-center justify-center">{form}</div>
       {context !== undefined && (
