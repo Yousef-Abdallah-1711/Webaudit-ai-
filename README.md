@@ -288,6 +288,82 @@ These are deliberately scoped or future items, not silently omitted work:
 - External monitoring dashboard configuration and real credential-backed checks require the
   operator's infrastructure and secrets.
 
+## Open Items After the Marketing Wave 2 Closure
+
+State as of `9ecd267` (2026-10-05). The Fahes marketing refresh, the Wave 1 fixes (language toggle,
+pricing overflow) and Wave 2 (shared CTA recipes, Button focus ring, Tailwind 3 `cn` fix, `max-*`
+screens, control heights, CTA contrast) are done, verified and pushed. What follows is what is
+**still not done**. Nothing here is a hidden regression; each item was found and left on purpose.
+
+### Planned next
+
+- **Wave 3 — section / typography / repeated marketing structure consolidation** (for example a
+  shared section-heading component). Not started; to be done in a new session from the pushed SHA.
+
+### Needs a product or design decision
+
+- **Explicit `/en` with a saved Arabic preference renders Arabic.** The server answers
+  `<html lang="ar">` for `/en` when the `wa-lang` cookie says Arabic (confirmed with curl). Not
+  caused by Wave 1 or 2. Decide whether an explicit URL or the saved preference wins.
+- **CTA shape vs the approved artifact.** `specs/fahes-design-refresh/index.html` uses pill CTAs
+  (999px radius, weight 800) and a 12px / 10px-mobile scanner radius; the app keeps the platform
+  `Button` 6px radius and weight 500. Only heights were aligned. Header toggles are pills in the
+  artifact and 6px here.
+- **Drawer close button** is 42px (a Wave 1 decision); the artifact says 40px.
+- **Pricing `↗` arrow** now mirrors in Arabic. The approved Arabic artifact leaves it unmirrored,
+  so this is a deliberate, direction-aware difference. Revert one class if the artifact should win.
+- **CTA gradient is deeper at the light end** (new `--gradient-cta-marketing`) to reach AA. The
+  dark theme no longer has the lilac end. Confirm the look with design.
+
+### Accessibility
+
+- **Primary orange `Button` text contrast is 3.01:1** (`#fafafa` on `#fe5a01`), below AA for 14px
+  text. It comes from the vendored palette, and axe's `color-contrast` and `region` rules are still
+  excluded in `tests/e2e/accessibility.spec.ts` for this reason. Fixing it changes brand tokens.
+- **The focus ring is verified for keyboard use in marketing, auth, dashboard and admin**, but the
+  admin `providers` and `queue` pages could not be exercised with mocked data and were not checked.
+
+### Known limitations in the locale layer
+
+- The root `I18nProvider` keeps its server-computed `initialLocale`. A client navigation between
+  locales that does not go through the language toggle can leave rendered messages and the toggle
+  briefly disagreeing. The toggle path itself is correct and tested.
+
+### Test and verification gaps
+
+- **No automated visual-diff gate** protects the marketing pages: the home, pricing and auth
+  comparisons in `apps/web/tests/visual/harness.test.ts` are still `it.todo`. Fidelity was checked
+  by computed-style and screenshot comparison only.
+- **`adherence-lint.test.ts` exceeds vitest's default 5 s timeout** (about 6–30 s, it spawns a lint
+  pass). It passes with `--testTimeout 120000`. Give the test its own timeout.
+- **The final dashboard/admin journey e2e specs were not re-run after the last small commit**
+  (`9ecd267`, auth-shell classes and test files only). The 46 affected specs were re-run and passed;
+  the earlier clean full run was 70 of 71, with the one failure being a test bug that was then fixed.
+- **Tailwind prints a build warning** (`min-* and max-* variants are not supported with a screens
+  configuration containing objects`). It is expected: derived `max-*` screens are declared by hand in
+  `apps/web/tailwind.config.ts`. A guard test (`tailwind-max-variants-generated`) fails if any
+  `max-*` class used in the source emits no CSS. Consolidating the screens would remove the warning.
+
+### Cleanup candidates (found, not removed)
+
+- `components/marketing/ai-development.tsx`, `checks.tsx` and `proof.tsx` are not imported anywhere
+  and still contain arbitrary `max-[Npx]:` classes (allow-listed in the guard test).
+- Two competing values were reported for `--radius-marketing-shell` (`app/tokens/landing.css` vs
+  `app/tokens/radius.css`); verify before relying on either.
+- Several screens define the same width under different names (640 px three times, 900 px twice).
+  Acceptable as domain naming, but a future width change must touch each one.
+
+### Running the browser e2e suite locally
+
+The full suite needs the repository's Docker services: run `pnpm services:up` (Postgres 5442,
+Redis 6389; the specs use the `webaudit_test` database, never the dev one) and start Docker Desktop
+first. Run it **once, serially** (`pnpm --filter @webaudit/web exec playwright test --workers=1`) and
+never alongside another Playwright run or a dev stack: leftover runs hold ports 4400/4401 and cause
+`EADDRINUSE` failures. A full run takes roughly 15–35 minutes. `ioredis ETIMEDOUT` lines in the
+output are noise from Docker's forwarded ports on Windows, not failures. With Docker Desktop
+running, a refused `localhost:3001` takes about 2 s, so the signed-out header actions appear a few
+seconds after load when no API is running.
+
 ## Remaining External Launch Requirements
 
 Before a public launch, an operator must provide and verify:
