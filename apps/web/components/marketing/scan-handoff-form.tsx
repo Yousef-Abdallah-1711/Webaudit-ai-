@@ -47,7 +47,7 @@ export function ScanHandoffForm({
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder={placeholder}
-          className="h-landing-control min-w-0 rounded-control border border-solid border-border-marketing bg-surface-marketing-raised px-4 text-left font-mono text-sm text-marketing-primary placeholder:text-marketing-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric"
+          className="h-landing-control min-w-0 rounded-control border border-solid border-[color:var(--border-marketing-control)] bg-surface-marketing-raised px-4 text-left font-mono text-sm text-marketing-primary placeholder:text-marketing-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric"
         />
       <Button
         type="submit"

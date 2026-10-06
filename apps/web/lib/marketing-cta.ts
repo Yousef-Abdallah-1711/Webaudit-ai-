@@ -14,7 +14,7 @@ export const gradientSurface = 'bg-gradient-cta-marketing text-white shadow-mark
  * Marketing primary CTA, applied through `className` on `<Button variant="primary">`.
  * Hover is a brightness step because the gradient is a background image.
  */
-export const marketingPrimaryCta = `${gradientSurface} [&:hover:not(:disabled)]:brightness-110`;
+export const marketingPrimaryCta = `${gradientSurface} [&:hover:not(:disabled)]:brightness-110 [&:active:not(:disabled)]:!brightness-95`;
 
 /** Header and drawer CTA height (44px), applied after Button's own size height. */
 export const marketingCtaHeight = 'h-landing-cta';

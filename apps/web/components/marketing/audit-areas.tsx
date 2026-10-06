@@ -40,7 +40,9 @@ export function AuditAreas(): React.ReactElement {
     const area = ALL_AREAS[next];
     if (!area) return;
     setSelected(area);
-    tabRefs.current[next]?.focus();
+    const target = tabRefs.current[next];
+    target?.focus();
+    target?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
 
   const [titleKey, descriptionKey] = AREA_COPY[selected];
@@ -83,7 +85,7 @@ export function AuditAreas(): React.ReactElement {
                 onClick={() => setSelected(area)}
                 onKeyDown={(event) => moveFocus(event, index)}
                 className={cn(
-                  'min-h-marketing-area-tab flex-none rounded-full border border-solid border-border-marketing bg-transparent px-marketing-area-tab-x text-xs font-bold text-marketing-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:min-h-marketing-area-tab-mobile max-marketing-mobile:px-marketing-area-tab-x-mobile max-marketing-mobile:text-marketing-label',
+                  'min-h-marketing-area-tab flex-none rounded-full border border-solid border-[color:var(--border-marketing-control)] bg-transparent px-marketing-area-tab-x text-xs font-bold text-marketing-secondary transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:min-h-marketing-area-tab-mobile max-marketing-mobile:px-marketing-area-tab-x-mobile max-marketing-mobile:text-marketing-label',
                   active && ['border-transparent', gradientSurface],
                 )}
               >

@@ -9,9 +9,9 @@ export interface SectionNoProps {
 
 const styles = {
   sectionNo: cn(
-    'mx-auto mb-0 inline-flex items-center gap-2 text-marketing-muted text-marketing-label font-extrabold tracking-[0.08em] before:h-px before:w-6 before:bg-brand-electric-bright max-marketing-mobile:text-marketing-section-number-mobile',
+    "mx-auto mb-0 inline-flex items-center gap-2 text-marketing-muted text-marketing-label font-extrabold tracking-[0.08em] before:content-[''] before:h-px before:w-6 before:bg-brand-electric-bright max-marketing-mobile:text-marketing-section-number-mobile",
   ),
-  sectionNoInverse: cn('text-marketing-inverse-muted before:bg-brand-highlight'),
+  sectionNoInverse: cn("text-marketing-inverse-muted before:content-[''] before:bg-brand-highlight"),
   header: cn(
     'mx-auto mb-marketing-section-content-gap max-w-marketing-section text-center max-marketing-mobile:mb-marketing-section-content-gap-mobile',
   ),

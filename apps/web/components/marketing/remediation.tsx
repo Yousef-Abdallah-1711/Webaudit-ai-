@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import { CopyPromptButton } from './copy-prompt-button';
 import { SectionNo } from './section-header';
+import specialStyles from '../public/Public.special.module.css';
 
 const promptClass =
   'flex-none rounded-control border border-solid border-border-marketing-inverse bg-transparent px-3 py-2 type-small font-bold text-marketing-inverse hover:bg-surface-hero focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-highlight';
@@ -47,7 +48,7 @@ export async function Remediation(): Promise<React.ReactElement> {
               <span className="rounded-control border border-solid border-border-marketing-inverse px-3 py-2">
                 {t('ai_build_label')}
               </span>
-              <span aria-hidden="true" className="text-brand-highlight">
+              <span aria-hidden="true" className={`${specialStyles.workflowArrow} inline-block text-brand-highlight`}>
                 →
               </span>
               <span className="rounded-control bg-brand-marketing px-3 py-2 text-marketing-inverse">

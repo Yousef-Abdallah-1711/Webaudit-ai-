@@ -31,7 +31,7 @@ describe('marketing CTA recipes', () => {
   it('keeps the approved gradient primary CTA look', () => {
     expect(gradientSurface).toBe('bg-gradient-cta-marketing text-white shadow-marketing-card');
     expect(marketingPrimaryCta).toBe(
-      'bg-gradient-cta-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110',
+      'bg-gradient-cta-marketing text-white shadow-marketing-card [&:hover:not(:disabled)]:brightness-110 [&:active:not(:disabled)]:!brightness-95',
     );
   });
 

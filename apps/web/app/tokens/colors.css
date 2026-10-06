@@ -25,7 +25,7 @@
   --surface-ice: #eef3ff;
   --text-marketing-primary: #1a2440;
   --text-marketing-secondary: #4b5674;
-  --text-marketing-muted: #64718f;
+  --text-marketing-muted: #636f8c;
   --text-marketing-inverse: #ffffff;
   --text-marketing-inverse-muted: #c4cbe0;
   --border-marketing-inverse: rgb(255 255 255 / 25%);
@@ -39,6 +39,7 @@
   --border-marketing-explorer: #dee5f5;
   --border-marketing-price-highlight: #e4e9f5;
   --border-marketing: #e7edfa;
+  --border-marketing-control: #71809c;
   --border-marketing-demo: #d8e0f4;
   --border-marketing-finding: #e0e6f5;
   --border-marketing-frame-divider: #edf0fa;
@@ -52,7 +53,7 @@
   --brand-marketing: #7c5cff;
   --brand-marketing-contrast: #7655f5;
   --brand-highlight: #c7ff45;
-  --gradient-brand-marketing: linear-gradient(90deg, #2418ff 0%, #4743ff 55%, #7775ff 100%);
+  --gradient-brand-marketing: linear-gradient(90deg, #4945ff 0%, #4743ff 55%, #7775ff 100%);
   /* White-text fills (CTA buttons, active tab). Every stop keeps >= 4.5:1 against #fff; --gradient-brand-marketing is lighter and also fills hero headline text. */
   --gradient-cta-marketing: linear-gradient(90deg, #2418ff 0%, #4743ff 55%, #625eff 100%);
   --gradient-atmosphere: radial-gradient(ellipse at 50% 73%, rgb(73 69 255 / 27%), transparent 43%), radial-gradient(ellipse at 50% 112%, rgb(103 101 255 / 28%), transparent 50%), radial-gradient(ellipse at 49% 48%, rgb(12 20 40 / 0%), #070d1c 110%);

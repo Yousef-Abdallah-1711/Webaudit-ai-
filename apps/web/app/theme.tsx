@@ -293,7 +293,7 @@ export function ThemeToggle({
 
   const classes = cn(
     // eslint-disable-next-line no-restricted-syntax -- preserve the source toggle's 13px label size
-    'flex box-border cursor-pointer items-center justify-center rounded-control border border-hairline border-transparent bg-transparent font-sans text-[13px] text-text-secondary transition-colors hover:bg-surface-raised',
+    'flex box-border cursor-pointer items-center justify-center rounded-control border border-hairline border-transparent bg-transparent font-sans text-[13px] text-text-secondary transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
     'h-9 w-9 gap-2 p-0',
     // eslint-disable-next-line no-restricted-syntax -- compact control is the existing 30px size
     compact && 'h-[30px] w-[30px]',
@@ -342,7 +342,7 @@ export function LangToggle({ label = false, className }: LangToggleProps): React
 
   const classes = cn(
     // eslint-disable-next-line no-restricted-syntax -- preserve the source toggle's 13px label size
-    'flex box-border h-9 w-auto cursor-pointer items-center justify-center gap-[7px] rounded-control border border-hairline border-transparent bg-transparent px-3 font-sans text-[13px] font-medium text-text-secondary transition-colors hover:bg-surface-raised',
+    'flex box-border h-9 w-auto cursor-pointer items-center justify-center gap-[7px] rounded-control border border-hairline border-transparent bg-transparent px-3 font-sans text-[13px] font-medium text-text-secondary transition-colors hover:bg-surface-raised focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring',
     label && 'w-full border-border-default',
     className,
   );

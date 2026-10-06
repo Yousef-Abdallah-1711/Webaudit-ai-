@@ -10,7 +10,7 @@ const styles = {
   section:
     'relative isolate flex min-h-[var(--height-landing-hero)] items-start justify-center overflow-hidden bg-surface-hero px-6 pb-32 pt-marketing-hero-top text-marketing-inverse max-marketing-tablet:min-h-marketing-tablet-hero max-marketing-mobile:min-h-[var(--height-landing-hero)] max-marketing-mobile:px-5 max-marketing-mobile:pb-20 max-marketing-mobile:pt-marketing-hero-top-mobile',
   atmosphere:
-    'pointer-events-none absolute inset-0 -z-20 bg-atmosphere after:absolute after:inset-x-0 after:bottom-0 after:h-44 after:bg-gradient-to-b after:from-transparent after:to-surface-marketing',
+    "pointer-events-none absolute inset-0 -z-20 bg-atmosphere after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-44 after:bg-gradient-to-b after:from-transparent after:to-surface-marketing",
   stars:
     'pointer-events-none absolute inset-y-marketing-stars inset-x-[5%] -z-10 opacity-50 bg-marketing-stars max-marketing-mobile:inset-x-[1%] top-marketing-mobile-stars-top bottom-marketing-mobile-stars-bottom max-marketing-mobile:opacity-35',
   art: 'pointer-events-none absolute inset-x-0 top-20 -z-10 h-[calc(100%-var(--height-marketing-art-offset))] w-full opacity-70 max-marketing-mobile:inset-x-0 max-marketing-mobile:top-20 max-marketing-mobile:h-[calc(100%-var(--height-marketing-mobile-art-offset))] max-marketing-mobile:w-full',

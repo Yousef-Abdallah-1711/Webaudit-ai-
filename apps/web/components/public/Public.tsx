@@ -46,7 +46,7 @@ import {
 const sizedMarketingCta = cn(marketingPrimaryCta, marketingCtaHeight);
 
 const styles = {
-  wordmarkLink: cn('no-underline'),
+  wordmarkLink: cn('inline-flex py-3 -my-3 no-underline'),
   header: cn('relative z-20 bg-surface-marketing'),
   headerHero: cn(specialStyles.heroChrome, 'absolute inset-x-0 top-0 z-50 bg-transparent'),
   headerInner: cn('mx-auto flex h-[var(--height-landing-header)] w-[calc(100%-4rem)] max-w-marketing-header items-center gap-8 text-marketing-primary max-marketing-mobile:w-[calc(100%-2rem)] max-marketing-mobile:gap-3'),
@@ -56,7 +56,7 @@ const styles = {
   mobileNavLink: cn('py-3 text-marketing-primary type-body font-semibold no-underline hover:text-brand-marketing', focusRingBrandOffset),
   mobileMenuTrigger: cn('hidden size-landing-header-control shrink-0 place-items-center rounded-full border border-border-marketing-inverse bg-transparent text-marketing-inverse', focusRingHighlightOffset, 'max-marketing-menu:grid'),
   mobileDrawerClose: cn('ms-auto grid size-landing-header-control place-items-center rounded-full border border-border-marketing bg-transparent text-marketing-primary text-2xl', focusRingBrand),
-  footerColLinks: cn('[&>a]:focus-visible:outline [&>a]:focus-visible:outline-2 [&>a]:focus-visible:outline-brand-marketing flex flex-col gap-2 [&>a]:text-marketing-secondary [&>a]:type-small [&>a]:no-underline [&>a]:hover:text-brand-marketing'),
+  footerColLinks: cn('flex flex-col gap-2 [&_a:focus-visible]:outline [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-brand-marketing [&>a]:text-marketing-secondary [&>a]:type-small [&>a]:underline [&>a]:underline-offset-4 [&>a]:decoration-border-marketing [&>a]:hover:text-brand-marketing'),
   footerLink: cn(focusRingBrand, 'type-small'),
   navLinkActive: cn('text-marketing-primary font-extrabold'),
   headerActions: cn('flex items-center gap-3 max-marketing-menu:hidden'),

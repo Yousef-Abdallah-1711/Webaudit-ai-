@@ -8,6 +8,10 @@
   color: var(--text-marketing-inverse);
 }
 
+:global([dir='rtl']) .workflowArrow {
+  transform: scaleX(-1);
+}
+
 @media (max-width: 900px) {
   .mobileDrawer {
     transform: translate(-50%, -0.5rem);
@@ -44,8 +48,20 @@
     inset-block-start: calc(-1 * var(--space-6));
   }
 
-  .menuIcon::after {
-    inset-block-start: var(--space-6);
+.menuIcon::after {
+  inset-block-start: var(--space-6);
+}
+
+}
+
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  .mobileDrawer {
+    transform: translateX(-50%);
+    transition: opacity 1ms linear, visibility 0s linear 1ms;
   }
 
+  .mobileDrawerOpen {
+    transform: translateX(-50%);
+    transition-delay: 0s;
+  }
 }

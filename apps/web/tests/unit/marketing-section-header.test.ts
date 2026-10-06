@@ -37,4 +37,16 @@ describe('marketing section typography', () => {
     expect(html).toContain('text-marketing-inverse-muted');
     expect(html).toContain('before:bg-brand-highlight');
   });
+
+  it('emits content for the decorative dash in both section marker tones', () => {
+    const normal = renderToStaticMarkup(
+      createElement(SectionNo, { number: '01', children: 'Overview' }),
+    );
+    const inverse = renderToStaticMarkup(
+      createElement(SectionNo, { number: '02', tone: 'inverse', children: 'Repair' }),
+    );
+
+    expect(normal.replace(/&#x27;/g, "'")).toContain("before:content-['']");
+    expect(inverse.replace(/&#x27;/g, "'")).toContain("before:content-['']");
+  });
 });

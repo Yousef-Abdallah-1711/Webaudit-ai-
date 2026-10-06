@@ -36,6 +36,8 @@ function contrastRatio(hexA: string, hexB: string): number {
 }
 
 const WCAG_AA_NORMAL_TEXT = 4.5;
+const WCAG_LARGE_TEXT = 3;
+const WCAG_NON_TEXT = 3;
 
 function readGradientStops(css: string, token: string): string[] {
   const match = css.match(new RegExp(`--${token}:\\s*linear-gradient\\(([^;]+)\\);`));
@@ -98,5 +100,53 @@ describe('marketing surface token contrast and theme behavior', () => {
         ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
       }
     }
+  });
+
+  it('keeps the light hero headline gradient at 3:1 against the hero surface', () => {
+    const heroSurface = readHexToken(colorsCss, 'surface-hero');
+    const stops = readGradientStops(colorsCss, 'gradient-brand-marketing');
+    for (const stop of stops) {
+      expect(contrastRatio(stop, heroSurface), `light hero text ${stop}`).toBeGreaterThanOrEqual(
+        WCAG_LARGE_TEXT,
+      );
+    }
+    for (const stop of readGradientStops(darkCss, 'gradient-brand-marketing')) {
+      expect(contrastRatio(stop, heroSurface), `dark hero text ${stop}`).toBeGreaterThanOrEqual(
+        WCAG_LARGE_TEXT,
+      );
+    }
+  });
+
+  it('keeps the small muted section label at AA on the light ice surface', () => {
+    expect(
+      contrastRatio(
+        readHexToken(colorsCss, 'text-marketing-muted'),
+        readHexToken(colorsCss, 'surface-ice'),
+      ),
+    ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+    expect(
+      contrastRatio(
+        readHexToken(darkCss, 'text-marketing-muted'),
+        readHexToken(darkCss, 'surface-ice'),
+      ),
+    ).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
+  });
+
+  it('gives the AuditAreas tab and scanner input control edges 3:1 in both themes', () => {
+    const lightEdge = readHexToken(colorsCss, 'border-marketing-control');
+    const darkEdge = readHexToken(darkCss, 'border-marketing-control');
+    for (const [theme, edge, surface] of [
+      ['light tab', lightEdge, readHexToken(colorsCss, 'surface-marketing-raised')],
+      ['light input', lightEdge, readHexToken(colorsCss, 'surface-marketing-raised')],
+      ['dark tab', darkEdge, readHexToken(darkCss, 'surface-marketing-raised')],
+      ['dark input', darkEdge, readHexToken(darkCss, 'surface-marketing-raised')],
+    ] as const) {
+      expect(contrastRatio(edge, surface), theme).toBeGreaterThanOrEqual(WCAG_NON_TEXT);
+    }
+
+    const areas = readFileSync(new URL('../../components/marketing/audit-areas.tsx', import.meta.url), 'utf8');
+    const form = readFileSync(new URL('../../components/marketing/scan-handoff-form.tsx', import.meta.url), 'utf8');
+    expect(areas).toContain('border-[color:var(--border-marketing-control)]');
+    expect(form).toContain('border-[color:var(--border-marketing-control)]');
   });
 });
