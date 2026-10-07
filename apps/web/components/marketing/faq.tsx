@@ -56,7 +56,7 @@ export async function Faq(): Promise<React.ReactElement> {
     >
       <div className={styles.inner}>
         <header className={styles.header}>
-          <SectionNo number="09">{t('faq_eyebrow')}</SectionNo>
+          <SectionNo>{t('faq_eyebrow')}</SectionNo>
           <h2 id="faq-heading" className={styles.heading}>
             {t('faq_heading')}
           </h2>

@@ -65,7 +65,6 @@ export async function Loop(): Promise<React.ReactElement> {
     <Wrap>
       <MarketingSectionHeader
         id="loop-heading"
-        number="03"
         eyebrow={t('loop_eyebrow')}
         title={t('loop_h2')}
         lead={t('loop_intro')}

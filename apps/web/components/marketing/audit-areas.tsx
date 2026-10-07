@@ -6,10 +6,18 @@ import { ALL_AREAS, AREA_COST, FULL_AUDIT_COST, SUM_OF_AREAS } from '@webaudit/c
 import { useTranslations } from 'next-intl';
 import { cn } from '../../lib/cn';
 import { gradientSurface } from '../../lib/marketing-cta';
-import { MarketingSectionHeader } from './section-header';
+import { SectionNo } from './section-header';
 import type enPublic from '../../messages/en/public.json';
 
 type PublicKey = keyof typeof enPublic;
+const headerStyles = {
+  header:
+    'mx-auto mb-marketing-section-content-gap max-w-marketing-area-explorer text-start max-marketing-mobile:mb-marketing-section-content-gap-mobile',
+  heading:
+    'mb-0 mt-marketing-section-heading-gap text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-start text-marketing-primary max-marketing-mobile:mt-marketing-section-heading-gap-mobile',
+  lead:
+    'mb-0 mt-marketing-section-heading-gap max-w-marketing-body text-start text-marketing-lead leading-marketing-lead text-marketing-secondary text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-mobile-lead max-marketing-mobile:leading-marketing-mobile-lead',
+};
 const AREA_COPY: Record<(typeof ALL_AREAS)[number], readonly [PublicKey, PublicKey]> = {
   PERFORMANCE: ['a_perf', 'a_perf_d'],
   SECURITY: ['a_sec', 'a_sec_d'],
@@ -54,16 +62,16 @@ export function AuditAreas(): React.ReactElement {
       className="bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile"
       aria-labelledby="areas-heading"
     >
-      <MarketingSectionHeader
-        id="areas-heading"
-        number="07"
-        eyebrow={t('areas_eyebrow', { areaCount: ALL_AREAS.length })}
-        title={t('areas_h2')}
-        lead={t('areas_intro')}
-      />
+      <header className={headerStyles.header}>
+        <SectionNo>{t('areas_eyebrow', { areaCount: ALL_AREAS.length })}</SectionNo>
+        <h2 id="areas-heading" className={headerStyles.heading}>
+          {t('areas_h2')}
+        </h2>
+        <p className={headerStyles.lead}>{t('areas_intro')}</p>
+      </header>
       <div className="mx-auto max-w-marketing-area-explorer rounded-marketing-explorer border border-solid border-border-marketing-explorer bg-surface-marketing-raised p-marketing-area-explorer-padding shadow-marketing-explorer max-marketing-mobile:rounded-marketing-explorer-mobile max-marketing-mobile:p-marketing-area-explorer-padding-mobile">
         <div
-          className="flex gap-2 overflow-x-auto border-b border-solid border-border-marketing pb-4"
+          className="flex gap-2 overflow-x-auto border-b border-s-0 border-e-0 border-t-0 border-solid border-border-marketing pb-4"
           role="tablist"
           aria-label={t('areas_h2')}
         >

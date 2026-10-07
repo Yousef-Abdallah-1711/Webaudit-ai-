@@ -9,10 +9,10 @@ const styles = {
   ),
   inner: cn('mx-auto max-w-marketing-evidence'),
   ledger: cn(
-    'm-0 grid grid-cols-2 border-s border-t border-solid border-border-marketing-trust max-marketing-mobile:grid-cols-1',
+    'm-0 grid grid-cols-2 border-s border-t border-e-0 border-b-0 border-solid border-border-marketing-trust max-marketing-mobile:grid-cols-1',
   ),
   claim: cn(
-    'min-h-marketing-trust-card border-e border-b border-solid border-border-marketing-trust bg-surface-marketing-raised p-marketing-trust-padding max-marketing-mobile:p-marketing-trust-padding-mobile [&>dt]:m-0 [&>dt]:text-marketing-trust-heading [&>dt]:font-extrabold [&>dt]:text-marketing-primary [&>dd]:mb-0 [&>dd]:mt-2 [&>dd]:text-marketing-description [&>dd]:leading-marketing-description [&>dd]:text-marketing-secondary [&>dd]:text-pretty',
+    'min-h-marketing-trust-card border-e border-b border-s-0 border-t-0 border-solid border-border-marketing-trust bg-surface-marketing-raised p-marketing-trust-padding max-marketing-mobile:p-marketing-trust-padding-mobile [&>dt]:m-0 [&>dt]:text-marketing-trust-heading [&>dt]:font-extrabold [&>dt]:text-marketing-primary [&>dd]:mb-0 [&>dd]:mt-2 [&>dd]:text-marketing-description [&>dd]:leading-marketing-description [&>dd]:text-marketing-secondary [&>dd]:text-pretty',
   ),
 };
 
@@ -37,7 +37,6 @@ export async function Trust(): Promise<React.ReactElement> {
       <div className={styles.inner}>
         <MarketingSectionHeader
           id="trust-heading"
-          number="06"
           eyebrow={t('trust_eyebrow')}
           title={t('trust_h2')}
           lead={t('trust_intro')}

@@ -25,7 +25,7 @@ export async function Remediation(): Promise<React.ReactElement> {
       />
       <div className="relative mx-auto grid max-w-marketing-remediation grid-cols-[0.72fr_1.28fr] items-center gap-marketing-remediation-gap max-marketing-demo-compact:gap-marketing-remediation-tablet-gap max-marketing-tablet:grid-cols-[0.9fr_1.1fr] max-marketing-tablet:gap-marketing-remediation-compact-gap max-marketing-mobile:!grid-cols-1 max-marketing-mobile:!gap-marketing-remediation-mobile-gap">
         <div>
-          <SectionNo number="05" tone="inverse">
+          <SectionNo tone="inverse">
             {t('remediation_eyebrow')}
           </SectionNo>
           <h2
@@ -37,7 +37,7 @@ export async function Remediation(): Promise<React.ReactElement> {
           <p className="mb-0 mt-4 text-marketing-readiness-copy leading-marketing-description text-marketing-inverse-muted text-pretty">
             {t('remediation_intro', { reverifyCost: REVERIFY_COST })}
           </p>
-          <div className="mt-6 border-s border-solid border-border-marketing-inverse ps-5">
+          <div className="mt-6 border-s border-e-0 border-y-0 border-solid border-border-marketing-repair ps-5">
             <h3 className="mb-0 text-marketing-trust-heading font-extrabold text-marketing-inverse">
               {t('ai_h2')}
             </h3>
@@ -45,7 +45,7 @@ export async function Remediation(): Promise<React.ReactElement> {
               {t('ai_body')}
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3 text-marketing-label font-bold">
-              <span className="rounded-control border border-solid border-border-marketing-inverse px-3 py-2">
+              <span className="rounded-control border border-solid border-border-marketing-repair px-3 py-2">
                 {t('ai_build_label')}
               </span>
               <span

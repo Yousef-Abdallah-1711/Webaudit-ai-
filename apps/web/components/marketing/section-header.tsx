@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/cn';
 
 export interface SectionNoProps {
-  number: string;
+  number?: string;
   tone?: 'default' | 'inverse';
   children: ReactNode;
 }
@@ -26,8 +26,12 @@ const styles = {
 export function SectionNo({ number, tone = 'default', children }: SectionNoProps): React.ReactElement {
   return (
     <p className={cn(styles.sectionNo, tone === 'inverse' && styles.sectionNoInverse)}>
-      <span dir="ltr">{number}</span>
-      <span aria-hidden="true">·</span>
+      {number !== undefined && (
+        <>
+          <span dir="ltr">{number}</span>
+          <span aria-hidden="true">·</span>
+        </>
+      )}
       {children}
     </p>
   );
@@ -35,7 +39,7 @@ export function SectionNo({ number, tone = 'default', children }: SectionNoProps
 
 export interface MarketingSectionHeaderProps {
   id: string;
-  number: string;
+  number?: string;
   eyebrow: ReactNode;
   title: ReactNode;
   lead: ReactNode;
@@ -50,7 +54,7 @@ export function MarketingSectionHeader({
 }: MarketingSectionHeaderProps): React.ReactElement {
   return (
     <header className={styles.header}>
-      <SectionNo number={number}>{eyebrow}</SectionNo>
+      <SectionNo {...(number === undefined ? {} : { number })}>{eyebrow}</SectionNo>
       <h2 id={id} className={styles.heading}>
         {title}
       </h2>

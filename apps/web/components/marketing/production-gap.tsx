@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { REVERIFY_COST } from '@webaudit/config';
 import type enPublic from '../../messages/en/public.json';
-import { MarketingSectionHeader } from './section-header';
+import { SectionNo } from './section-header';
 
 import { cn } from '../../lib/cn';
 
@@ -10,6 +10,15 @@ const styles = {
     'bg-surface-ice px-6 py-marketing-section max-marketing-tablet:py-marketing-section-tablet max-marketing-mobile:px-4 max-marketing-mobile:py-marketing-section-mobile',
   ),
   inner: cn('mx-auto max-w-marketing-evidence'),
+  header: cn(
+    'mb-marketing-section-content-gap max-w-[35rem] text-start max-marketing-mobile:mb-marketing-section-content-gap-mobile',
+  ),
+  heading: cn(
+    'mb-0 mt-marketing-section-heading-gap text-marketing-h2 leading-marketing-h2 font-black tracking-[-0.03em] text-balance text-start text-marketing-primary max-marketing-mobile:mt-marketing-section-heading-gap-mobile',
+  ),
+  lead: cn(
+    'mb-0 mt-marketing-section-heading-gap max-w-marketing-body text-start text-marketing-lead leading-marketing-lead text-marketing-secondary text-pretty max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-mobile-lead max-marketing-mobile:leading-marketing-mobile-lead',
+  ),
   principles: cn(
     'mx-auto grid max-w-marketing-demo grid-cols-3 gap-3 max-marketing-tablet:grid-cols-1',
   ),
@@ -47,13 +56,13 @@ export async function ProductionGap(): Promise<React.ReactElement> {
       aria-labelledby="difference-heading"
     >
       <div className={styles.inner}>
-        <MarketingSectionHeader
-          id="difference-heading"
-          number="02"
-          eyebrow={t('gap_eyebrow')}
-          title={t('gap_h2')}
-          lead={t('gap_lead')}
-        />
+        <header className={styles.header}>
+          <SectionNo>{t('gap_eyebrow')}</SectionNo>
+          <h2 id="difference-heading" className={styles.heading}>
+            {t('gap_h2')}
+          </h2>
+          <p className={styles.lead}>{t('gap_lead')}</p>
+        </header>
         <div className={styles.principles}>
           {PRINCIPLES.map(([title, body], index) => (
             <article className={styles.principle} key={title}>

@@ -68,7 +68,6 @@ export async function ReportShowcase(): Promise<React.ReactElement> {
     >
       <MarketingSectionHeader
         id="report-showcase-heading"
-        number="01"
         eyebrow={t('report_section_label')}
         title={t('report_h2')}
         lead={t('report_intro')}

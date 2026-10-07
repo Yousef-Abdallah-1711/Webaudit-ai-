@@ -76,7 +76,7 @@ export async function Readiness(): Promise<React.ReactElement> {
     >
       <div className={styles.inner}>
         <header className={styles.header}>
-          <SectionNo number="04">{t('readiness_eyebrow')}</SectionNo>
+          <SectionNo>{t('readiness_eyebrow')}</SectionNo>
           <h2 id="readiness-heading" className={styles.heading}>
             {t('readiness_h2')}
           </h2>

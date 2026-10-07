@@ -54,7 +54,6 @@ export async function PricingPreview(): Promise<React.ReactElement> {
     >
       <MarketingSectionHeader
         id="pricing-preview-heading"
-        number="08"
         eyebrow={t('pricing_cost_eyebrow')}
         title={t('pricing_preview_heading')}
         lead={t('pricing_preview_lead')}

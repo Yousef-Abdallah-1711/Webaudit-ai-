@@ -18,7 +18,7 @@ export async function FinalCta(): Promise<React.ReactElement> {
         className="pointer-events-none absolute inset-0 bg-atmosphere opacity-70"
       />
       <div className="relative mx-auto max-w-marketing-section">
-        <SectionNo number="10" tone="inverse">
+        <SectionNo tone="inverse">
           {t('cta_eyebrow')}
         </SectionNo>
         <h2 className="mb-0 mt-marketing-section-heading-gap text-marketing-closing-heading leading-marketing-closing-heading font-black tracking-[-0.03em] text-balance text-marketing-inverse max-marketing-mobile:mt-marketing-section-heading-gap-mobile max-marketing-mobile:text-marketing-mobile-h2 max-marketing-mobile:leading-marketing-h2">

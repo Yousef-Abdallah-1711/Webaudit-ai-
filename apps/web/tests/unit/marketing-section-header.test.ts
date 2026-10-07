@@ -16,11 +16,28 @@ describe('marketing section typography', () => {
     );
 
     expect(html).toContain('<span dir="ltr">02</span>');
+    expect(html).toContain('<span aria-hidden="true">·</span>');
     expect(html).toContain('Production readiness');
     expect(html).toContain('<h2 id="example-heading"');
     expect(html).toContain('text-marketing-h2');
     expect(html).toContain('text-marketing-lead');
     expect(html).toContain('leading-marketing-lead');
+  });
+
+  it('renders a numberless section eyebrow with its tick and no separator', () => {
+    const html = renderToStaticMarkup(
+      createElement(MarketingSectionHeader, {
+        id: 'example-heading',
+        eyebrow: 'Production readiness',
+        title: 'Evidence before conclusions',
+        lead: 'A short explanation of what the product measures.',
+      }),
+    );
+
+    expect(html).toContain('Production readiness');
+    expect(html).not.toContain('<span dir="ltr">');
+    expect(html).not.toContain('<span aria-hidden="true">·</span>');
+    expect(html.replace(/&#x27;/g, "'")).toContain("before:content-['']");
   });
 
   it('keeps inverse section markers semantic and visually distinct', () => {
@@ -39,9 +56,7 @@ describe('marketing section typography', () => {
   });
 
   it('emits content for the decorative dash in both section marker tones', () => {
-    const normal = renderToStaticMarkup(
-      createElement(SectionNo, { number: '01', children: 'Overview' }),
-    );
+    const normal = renderToStaticMarkup(createElement(SectionNo, { children: 'Overview' }));
     const inverse = renderToStaticMarkup(
       createElement(SectionNo, { number: '02', tone: 'inverse', children: 'Repair' }),
     );
