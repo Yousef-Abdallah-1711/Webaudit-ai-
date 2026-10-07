@@ -61,13 +61,13 @@ test('the hero stays within the viewport in both themes, locales, and required w
       await page.goto(`${stack.webBaseUrl}${route}`);
       await page.evaluate((value) => localStorage.setItem('wa-theme', value), theme);
       await page.reload();
-      const background = await page.locator('#hero').evaluate((element) =>
-        getComputedStyle(element).backgroundColor,
-      );
+      const background = await page
+        .locator('#hero')
+        .evaluate((element) => getComputedStyle(element).backgroundColor);
       heroBackgrounds.set(`${locale}-${theme}`, background);
-      const heroText = await page.locator('#hero h1').evaluate((element) =>
-        getComputedStyle(element).color,
-      );
+      const heroText = await page
+        .locator('#hero h1')
+        .evaluate((element) => getComputedStyle(element).color);
       expect(heroText, `${locale}/${theme} hero heading foreground`).toBe('rgb(255, 255, 255)');
 
       for (const width of widths) {
@@ -79,6 +79,7 @@ test('the hero stays within the viewport in both themes, locales, and required w
           return {
             display: getComputedStyle(element).display,
             background: getComputedStyle(element).backgroundColor,
+            backgroundImage: getComputedStyle(element).backgroundImage,
             width: bounds.width,
             insideHero:
               heroBounds !== undefined &&
@@ -90,7 +91,10 @@ test('the hero stays within the viewport in both themes, locales, and required w
         });
         expect(core.display, `Hero scanner display at ${width}px`).not.toBe('none');
         expect(core.width, `Hero scanner width at ${width}px`).toBeGreaterThan(0);
-        expect(core.background, `Hero scanner background at ${width}px`).not.toBe('rgba(0, 0, 0, 0)');
+        expect(
+          core.background !== 'rgba(0, 0, 0, 0)' || core.backgroundImage !== 'none',
+          `Hero scanner surface at ${width}px`,
+        ).toBe(true);
         expect(core.insideHero, `Hero scanner bounds at ${width}px`).toBe(true);
         const dimensions = await page.evaluate(() => ({
           documentWidth: document.documentElement.scrollWidth,

@@ -1,10 +1,12 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { evaluateCostAlerts } from '../../src/services/monitoring/cost-alerts.js';
+import { ensureFuturePartitions } from '../../src/services/storage/telemetry-archive.js';
 import { closeDb, resetDb, testDb } from '../helpers/db.js';
 
 describe('cost-alert evaluation', () => {
   beforeEach(async () => {
     await resetDb();
+    await ensureFuturePartitions(testDb, 0, new Date('2026-09-13T12:00:00.000Z'));
     await testDb.costAlertThreshold.upsert({
       where: { scope: 'GLOBAL' },
       create: { scope: 'GLOBAL', windowMinutes: 60, thresholdMicros: 100 },

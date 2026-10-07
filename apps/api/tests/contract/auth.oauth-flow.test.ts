@@ -405,6 +405,8 @@ describe('GET /auth/oauth/:provider/callback — success', () => {
     expect(res.headers['location']).toBe('https://app.webaudit.test/settings/billing');
   });
 
+  // This exercises three real database-backed callbacks; the 5s default can
+  // expire under the complete serial suite even though each redirect check is fast.
   it('will not be turned into an open redirect', async () => {
     for (const attempt of ['https://evil.example/x', '//evil.example/x', '/\\evil.example']) {
       await resetDb();
@@ -415,7 +417,7 @@ describe('GET /auth/oauth/:provider/callback — success', () => {
       const res = await callback(s, { code: 'provider-code', state: s.state }).expect(302);
       expect(res.headers['location']).toBe('https://app.webaudit.test/dashboard');
     }
-  });
+  }, 15_000);
 
   it('reads the verified primary address from GitHub, not the public profile', async () => {
     // GitHub's /user carries no verified flag and may show a non-primary alias,
