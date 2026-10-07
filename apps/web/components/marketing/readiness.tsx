@@ -41,7 +41,7 @@ const styles = {
   blocked: cn('bg-sev-high-bg text-sev-high'),
   warning: cn('bg-sev-medium-bg text-sev-medium'),
   blockers: cn(
-    'mt-4 rounded-marketing-blocker border-s-marketing-blocker border-solid border-sev-medium bg-sev-medium-bg px-4 py-3 text-sev-medium [&>h3]:m-0 [&>h3]:text-marketing-label [&>h3]:font-extrabold [&>ul]:mt-2 [&>ul]:mb-0 [&>ul]:grid [&>ul]:gap-2 [&>ul]:ps-5 [&>ul]:text-marketing-label [&>p]:mb-0 [&>p]:mt-3 [&>p]:text-marketing-muted [&>p]:text-marketing-label [&>p]:text-pretty',
+    'mt-4 rounded-marketing-blocker border-solid border-x-0 border-y-0 !border-s-[0.1875rem] border-s-sev-medium bg-sev-medium-bg px-4 py-3 text-sev-medium [&>h3]:m-0 [&>h3]:text-marketing-label [&>h3]:font-extrabold [&>ul]:mt-2 [&>ul]:mb-0 [&>ul]:grid [&>ul]:gap-2 [&>ul]:ps-5 [&>ul]:text-marketing-label [&>p]:mb-0 [&>p]:mt-3 [&>p]:text-marketing-muted [&>p]:text-marketing-label [&>p]:text-pretty',
   ),
 };
 

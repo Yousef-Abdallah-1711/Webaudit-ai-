@@ -4,8 +4,8 @@ import { useState, type FormEvent } from 'react';
 import { Button } from '../ui';
 import { storeHeroScanUrl } from '../../lib/hero-scan-handoff';
 import { cn } from '../../lib/cn';
-import { marketingPrimaryCta } from '../../lib/marketing-cta';
-import { marketingInputControl } from '../../lib/marketing-controls';
+import { focusRingHighlightOffset, marketingPrimaryCta } from '../../lib/marketing-cta';
+import { marketingDarkInputControl, marketingInputControl } from '../../lib/marketing-controls';
 
 export interface ScanHandoffFormProps {
   id: string;
@@ -39,7 +39,12 @@ export function ScanHandoffForm({
       <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-marketing-form max-marketing-mobile:grid-cols-1">
+      <div
+        className={cn(
+          'grid grid-cols-[minmax(0,1fr)_auto] max-marketing-mobile:grid-cols-1',
+          tone === 'dark' ? 'gap-marketing-form-gap' : 'gap-0',
+        )}
+      >
         <input
           id={id}
           type="text"
@@ -52,7 +57,7 @@ export function ScanHandoffForm({
           placeholder={placeholder}
           className={cn(
             'h-landing-control min-w-0 rounded-control px-4 text-left font-mono text-sm',
-            marketingInputControl,
+            tone === 'dark' ? marketingDarkInputControl : marketingInputControl,
           )}
         />
         <Button
@@ -61,6 +66,7 @@ export function ScanHandoffForm({
           className={cn(
             'h-landing-control rounded-control px-6',
             marketingPrimaryCta,
+            tone === 'dark' && focusRingHighlightOffset,
             'max-marketing-mobile:w-full',
           )}
         >

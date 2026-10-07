@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { marketingDarkInputControl, marketingInputControl } from '../../lib/marketing-controls';
 
 const COLORS_CSS_PATH = fileURLToPath(new URL('../../app/tokens/colors.css', import.meta.url));
 const DARK_CSS_PATH = fileURLToPath(new URL('../../app/tokens/dark.css', import.meta.url));
@@ -48,6 +49,15 @@ function readGradientStops(css: string, token: string): string[] {
 }
 
 describe('marketing surface token contrast and theme behavior', () => {
+  it('preserves the light input classes and gives the dark input its scanner glass border', () => {
+    expect(marketingInputControl).toBe(
+      'border-solid border-[color:var(--border-marketing-control)] transition-colors motion-reduce:transition-none aria-[invalid=true]:border-sev-critical aria-[invalid=true]:hover:border-sev-critical aria-[invalid=true]:focus:border-sev-critical aria-[invalid=true]:focus-visible:outline-sev-critical disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[color:var(--border-marketing-control)] bg-surface-marketing-raised text-marketing-primary placeholder:text-marketing-muted hover:border-brand-electric focus:border-brand-electric focus:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2',
+    );
+    expect(marketingDarkInputControl).toBe(
+      'border-solid border-[color:var(--border-marketing-scanner)] transition-colors motion-reduce:transition-none aria-[invalid=true]:border-sev-critical aria-[invalid=true]:hover:border-sev-critical aria-[invalid=true]:focus:border-sev-critical aria-[invalid=true]:focus-visible:outline-sev-critical disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[color:var(--border-marketing-scanner)] border bg-surface-dark text-marketing-inverse placeholder:text-marketing-inverse-muted hover:border-brand-marketing focus:border-brand-marketing focus:shadow-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-highlight focus-visible:outline-offset-2',
+    );
+  });
+
   const colorsCss = readFileSync(COLORS_CSS_PATH, 'utf8');
   const darkCss = readFileSync(DARK_CSS_PATH, 'utf8');
 
@@ -156,6 +166,11 @@ describe('marketing surface token contrast and theme behavior', () => {
     );
     expect(areas).toContain('border-[color:var(--border-marketing-control)]');
     expect(form).toContain('marketingInputControl');
-    expect(controls).toContain('border-solid border-[color:var(--border-marketing-control)]');
+    expect(controls).toContain(
+      "'border-solid border-[color:var(--border-marketing-control)]'",
+    );
+    expect(controls).toContain(
+      "'border-solid border-[color:var(--border-marketing-scanner)]'",
+    );
   });
 });

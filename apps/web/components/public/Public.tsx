@@ -67,7 +67,7 @@ const styles = {
   mobileNav: cn('flex flex-col gap-2'),
   mobileDrawerActions: cn('mt-auto flex flex-col gap-2 [&_a]:w-full'),
   mobileDrawerControls: cn('flex flex-wrap items-center gap-3 border-y border-solid border-border-marketing py-4'),
-  footer: cn('border-x-0 border-b-0 border-t border-solid border-border-marketing bg-surface-marketing-raised text-marketing-primary'),
+  footer: cn('border-x-0 border-b-0 border-t border-solid border-border-marketing bg-gradient-to-b from-surface-ice to-surface-marketing-raised text-marketing-primary'),
   footerGrid: cn('mx-auto grid max-w-marketing-footer grid-cols-[1.6fr_repeat(3,minmax(0,1fr))] gap-8 px-6 pb-6 pt-marketing-footer-top max-marketing-mobile:grid-cols-2 max-marketing-mobile:gap-6 max-marketing-mobile:px-4 max-marketing-mobile:pt-9'),
   footerTag: cn('mb-0 mt-3 max-w-[34ch] type-small text-marketing-secondary text-pretty'),
   footerColTitle: cn('mb-3 text-marketing-muted text-marketing-label font-extrabold'),
