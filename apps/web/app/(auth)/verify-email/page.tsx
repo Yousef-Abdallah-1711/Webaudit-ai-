@@ -15,6 +15,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '../../../components/ui';
+import { AuthPrimaryButton } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { Icon } from '../../../components/ui/icons/Icon';
 import { useTranslations } from 'next-intl';
@@ -45,9 +46,13 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
       <AuthShell
         form={
           <AuthFormPanel title={t('verify_confirm_title')} lead={t('verify_confirm_lead')}>
-            <Button fullWidth disabled={outcome === 'confirming'} onClick={() => void onConfirm()}>
+            <AuthPrimaryButton
+              fullWidth
+              disabled={outcome === 'confirming'}
+              onClick={() => void onConfirm()}
+            >
               {outcome === 'confirming' ? t('verify_confirm_pending') : t('verify_confirm_button')}
-            </Button>
+            </AuthPrimaryButton>
           </AuthFormPanel>
         }
       />
@@ -64,16 +69,16 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
             >
               <Icon name="check" className="h-8 w-8" />
             </div>
-            <h1 className="m-0 mb-2 type-card-title text-text-strong">
+            <h1 className="m-0 mb-2 text-marketing-demo-heading font-marketing font-extrabold text-marketing-primary">
               {t('verify_confirmed_title')}
             </h1>
-            <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+            <p className="m-0 mb-5 text-marketing-body font-marketing text-marketing-secondary text-pretty">
               {t('verify_confirmed_lead')}
             </p>
-            <Button fullWidth href="/login">
+            <AuthPrimaryButton fullWidth href="/login">
               {t('verify_confirmed_submit')}
-            </Button>
-            <p className="m-0 mt-3 text-center type-small text-text-muted">
+            </AuthPrimaryButton>
+            <p className="m-0 mt-3 text-center text-marketing-body font-marketing text-marketing-muted">
               {t('verify_confirmed_close_note')}
             </p>
           </AuthFormPanel>
@@ -86,13 +91,15 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
       <AuthShell
         form={
           <AuthFormPanel>
-            <h1 className="m-0 mb-2 type-card-title text-text-strong">{t('verify_retry_title')}</h1>
-            <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+            <h1 className="m-0 mb-2 text-marketing-demo-heading font-marketing font-extrabold text-marketing-primary">
+              {t('verify_retry_title')}
+            </h1>
+            <p className="m-0 mb-5 text-marketing-body font-marketing text-marketing-secondary text-pretty">
               {t('verify_retry_lead')}
             </p>
-            <Button fullWidth onClick={() => void onConfirm()}>
+            <AuthPrimaryButton fullWidth onClick={() => void onConfirm()}>
               {t('verify_retry_button')}
-            </Button>
+            </AuthPrimaryButton>
           </AuthFormPanel>
         }
       />
@@ -108,15 +115,15 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
           >
             <Icon name="circleAlert" className="h-8 w-8" />
           </div>
-          <h1 className="m-0 mb-2 type-card-title text-text-strong">
+          <h1 className="m-0 mb-2 text-marketing-demo-heading font-marketing font-extrabold text-marketing-primary">
             {t('verify_invalid_title')}
           </h1>
-          <p className="m-0 mb-5 type-small text-text-secondary text-pretty">
+          <p className="m-0 mb-5 text-marketing-body font-marketing text-marketing-secondary text-pretty">
             {t('verify_invalid_lead')}
           </p>
-          <Button fullWidth href="/signup">
+          <AuthPrimaryButton fullWidth href="/signup">
             {t('verify_foot_link')}
-          </Button>
+          </AuthPrimaryButton>
         </AuthFormPanel>
       }
     />
@@ -152,7 +159,7 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
             </span>
           }
         >
-          <div className="mb-5 border-solid border-hairline border-border-default bg-surface-sunken p-4 font-mono type-small text-text-zinc">
+          <div className="mb-5 border-solid border-hairline border-border-marketing bg-surface-marketing-raised p-4 font-mono text-marketing-body text-marketing-primary">
             {email || t('verify_email_fallback')}
           </div>
           <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>

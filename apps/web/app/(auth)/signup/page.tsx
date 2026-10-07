@@ -17,8 +17,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '../../../components/ui';
-import { Divider, Field } from '../../../components/auth/AuthFrame';
-import { AuthContextPanel, AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
+import { AuthPrimaryButton, Divider, Field } from '../../../components/auth/AuthFrame';
+import {
+  AuthContextPanel,
+  AuthFormPanel,
+  AuthShell,
+  AuthStatus,
+} from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
@@ -112,7 +117,7 @@ export default function RegisterPage(): React.ReactElement | null {
               }}
             />
             <div
-              className={`flex items-center gap-2 type-small ${password.length >= 12 ? 'text-sev-resolved' : 'text-text-muted'}`}
+              className={`flex items-center gap-2 text-marketing-body font-marketing ${password.length >= 12 ? 'text-sev-resolved' : 'text-marketing-muted'}`}
             >
               <svg
                 width="14"
@@ -129,11 +134,17 @@ export default function RegisterPage(): React.ReactElement | null {
               </svg>
               {t('min_chars')}
             </div>
-            <div className="type-small text-text-muted">{t('register_note')}</div>
+            <div className="text-marketing-body font-marketing text-marketing-muted">
+              {t('register_note')}
+            </div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <Button type="submit" fullWidth disabled={password.length < 12 || submitting}>
+            <AuthPrimaryButton
+              type="submit"
+              fullWidth
+              disabled={password.length < 12 || submitting}
+            >
               {t('register_submit')}
-            </Button>
+            </AuthPrimaryButton>
           </form>
           <Divider />
           <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>

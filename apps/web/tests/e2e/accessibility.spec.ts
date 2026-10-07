@@ -130,11 +130,11 @@ for (const { name, path: route } of PAGES) {
 }
 
 /**
- * Focus ring on the shared Button (previously "known gap 0a"): axe cannot see
- * it, so assert the computed outline directly. Keyboard focus must draw a solid
- * 2px ring; pointer focus must not.
+ * Focus ring on the auth primary Button (previously "known gap 0a"): axe cannot
+ * see it, so assert the computed outline directly. Keyboard focus must draw a
+ * solid 2px brand ring; pointer focus must not.
  */
-test('Button shows a focus ring for keyboard focus only', async ({ page }) => {
+test('auth primary Button shows a brand focus ring for keyboard focus only', async ({ page }) => {
   await page.goto(pageUrl('/login'), { waitUntil: 'networkidle' });
   const submit = page.getByRole('button', { name: /^sign in$/i });
 
@@ -152,10 +152,10 @@ test('Button shows a focus ring for keyboard focus only', async ({ page }) => {
       width: style.outlineWidth,
       offset: style.outlineOffset,
       color: style.outlineColor,
-      // What --focus-ring resolves to for this theme, read through a probe element.
+      // What --brand-marketing resolves to for this theme, read through a probe element.
       expectedColor: (() => {
         const probe = document.createElement('i');
-        probe.style.outlineColor = 'var(--focus-ring)';
+        probe.style.outlineColor = 'var(--brand-marketing)';
         document.body.append(probe);
         const resolved = getComputedStyle(probe).outlineColor;
         probe.remove();

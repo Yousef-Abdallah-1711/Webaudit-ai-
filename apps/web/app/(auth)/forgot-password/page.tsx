@@ -8,8 +8,7 @@
  * matching that contract rather than trying to infer one it does not give.
  */
 import { useRef, useState, type FormEvent } from 'react';
-import { Button } from '../../../components/ui';
-import { Field } from '../../../components/auth/AuthFrame';
+import { AuthPrimaryButton, Field } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, forgotPassword } from '../../../lib/api';
@@ -76,9 +75,9 @@ export default function ForgotPage(): React.ReactElement {
                 setEmail(e.target.value);
               }}
             />
-            <Button type="submit" fullWidth disabled={submitting}>
+            <AuthPrimaryButton type="submit" fullWidth disabled={submitting}>
               {t('forgot_submit')}
-            </Button>
+            </AuthPrimaryButton>
           </form>
         </AuthFormPanel>
       }

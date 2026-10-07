@@ -10,8 +10,7 @@
  */
 import { Suspense, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button } from '../../../components/ui';
-import { Field } from '../../../components/auth/AuthFrame';
+import { AuthPrimaryButton, Field } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, resetPassword } from '../../../lib/api';
@@ -60,9 +59,9 @@ function ResetPageInner(): React.ReactElement {
       <AuthShell
         form={
           <AuthFormPanel title={t('reset_done_title')} lead={t('reset_done_lead')}>
-            <Button fullWidth href="/login">
+            <AuthPrimaryButton fullWidth href="/login">
               {t('verify_confirmed_submit')}
-            </Button>
+            </AuthPrimaryButton>
           </AuthFormPanel>
         }
       />
@@ -99,7 +98,7 @@ function ResetPageInner(): React.ReactElement {
               }}
             />
             <div
-              className={`flex items-center gap-2 type-small ${longEnough ? 'text-sev-resolved' : 'text-text-muted'}`}
+              className={`flex items-center gap-2 text-marketing-body font-marketing ${longEnough ? 'text-sev-resolved' : 'text-marketing-muted'}`}
             >
               <svg
                 width="14"
@@ -117,12 +116,16 @@ function ResetPageInner(): React.ReactElement {
               {t('min_chars')}
             </div>
             {confirm !== '' && !matches && (
-              <div className="type-small text-sev-critical">{t('error_passwords_match')}</div>
+              <div className="text-marketing-body font-marketing text-sev-critical">
+                {t('error_passwords_match')}
+              </div>
             )}
-            {error !== null && <div className="type-small text-sev-critical">{error}</div>}
-            <Button type="submit" fullWidth disabled={!ok || submitting}>
+            {error !== null && (
+              <div className="text-marketing-body font-marketing text-sev-critical">{error}</div>
+            )}
+            <AuthPrimaryButton type="submit" fullWidth disabled={!ok || submitting}>
               {t('reset_submit')}
-            </Button>
+            </AuthPrimaryButton>
           </form>
         </AuthFormPanel>
       }

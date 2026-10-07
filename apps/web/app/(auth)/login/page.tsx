@@ -9,8 +9,13 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button, Input } from '../../../components/ui';
-import { Divider, Field } from '../../../components/auth/AuthFrame';
-import { AuthContextPanel, AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
+import { AuthPrimaryButton, Divider, Field } from '../../../components/auth/AuthFrame';
+import {
+  AuthContextPanel,
+  AuthFormPanel,
+  AuthShell,
+  AuthStatus,
+} from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, API_BASE } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
@@ -90,8 +95,13 @@ export default function LoginPage(): React.ReactElement | null {
             />
             <div>
               <div className="mb-1.5 flex">
-                <span className="type-small !font-medium">{t('password')}</span>
-                <a href="/forgot-password" className="ms-auto type-small text-text-strong">
+                <span className="text-marketing-body font-marketing font-medium">
+                  {t('password')}
+                </span>
+                <a
+                  href="/forgot-password"
+                  className="ms-auto text-marketing-body font-marketing text-brand-marketing-contrast"
+                >
                   {t('forgot_link')}
                 </a>
               </div>
@@ -107,9 +117,9 @@ export default function LoginPage(): React.ReactElement | null {
               />
             </div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <Button type="submit" fullWidth disabled={submitting}>
+            <AuthPrimaryButton type="submit" fullWidth disabled={submitting}>
               {t('signin_submit')}
-            </Button>
+            </AuthPrimaryButton>
           </form>
           <Divider />
           <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>

@@ -352,6 +352,14 @@ export function LangToggle({ label = false, className }: LangToggleProps): React
       type="button"
       onClick={() => {
         setLang(next);
+        const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+        const authPath = /^\/(?:login|signup|forgot-password|reset-password|verify-email)$/.test(
+          currentPath,
+        );
+        // Auth pages use canonical, unprefixed routes; their translations are
+        // selected by the shared language store rather than a locale segment.
+        if (authPath) return;
+
         void import('next-intl/navigation').then(({ createNavigation }) => {
           const { getPathname } = createNavigation(routing);
           const url = new URL(window.location.href);

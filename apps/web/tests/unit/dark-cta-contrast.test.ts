@@ -52,10 +52,14 @@ describe('inverse-surface CTA text contrast (WCAG AA, 4.5:1)', () => {
     expect(contrastRatio('#6b7280', '#fafafa')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
   });
 
-  it('inverse-surface marketing and auth text use the contrasting inverse token', () => {
-    const authSource = readFileSync(new URL('../../components/auth/AuthShell.tsx', import.meta.url), 'utf8');
-    expect(authSource).toContain('bg-surface-inverse');
-    expect(authSource.match(/text-text-on-surface-inverse/g)?.length).toBeGreaterThanOrEqual(3);
+  it('marketing hero and auth text use the contrasting marketing inverse token', () => {
+    const authSource = readFileSync(
+      new URL('../../components/auth/AuthShell.tsx', import.meta.url),
+      'utf8',
+    );
+    expect(authSource).toContain('bg-surface-hero');
+    expect(authSource).toContain('text-marketing-inverse');
+    expect(contrastRatio('#ffffff', '#0c1428')).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
     expect(authSource).not.toContain('text-text-on-accent');
 
     const heroSource = readFileSync(

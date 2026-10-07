@@ -58,11 +58,19 @@ section order, hero/header treatment, and responsive measurements are documented
 visual specification. Runtime styling is ported into `apps/web/app/tokens/` and semantic Tailwind
 aliases; the vendored design-system files remain read-only and are not imported at runtime. This is
 a scoped, user-approved landing-screen exception to the original public-page reference. See the
-feature's `research.md` decision record. Auth and pricing routes continue using their existing
-approved screens.
+feature's `research.md` decision record. Pricing retains its existing approved screen. Auth keeps the
+approved form structure and behavior while using the Fahes public palette, marketing CTA recipe,
+typography, surfaces, focused header, and shared footer. The rationale and route-localization repair
+are recorded in the feature's `research.md`.
 
 Shared chrome (`Public.jsx`) supplies the public header and footer. The landing page has **no
 navigation bar** — one page, one action.
+
+Auth routes use a focused header built from the shared wordmark and theme/language controls. The full
+`PublicHeader` is not used there because it would repeat sign-in/signup links and activate its mobile
+navigation drawer while a user is completing an auth form. Auth routes reuse `PublicFooter`. Auth
+visuals follow the current Fahes marketing tokens while preserving the approved auth form content,
+validation states, and product status colors; see `specs/fahes-design-refresh/research.md`.
 
 ## Customer app — 9 screens
 

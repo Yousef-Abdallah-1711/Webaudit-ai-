@@ -74,12 +74,18 @@ test('GET / renders English home copy and public metadata without redirecting', 
   await expect(page.locator('head link[rel="alternate"][hreflang="ar"]')).toHaveCount(1);
 });
 
-test('the public landing page renders the approved complete section order in Arabic', async ({ page }) => {
+test('the public landing page renders the approved complete section order in Arabic', async ({
+  page,
+}) => {
   await expectRoute(page, '/ar');
   const sections = page.locator('[data-approved-section]');
   await expect(sections).toHaveCount(11);
   await expect
-    .poll(() => sections.evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-approved-section'))))
+    .poll(() =>
+      sections.evaluateAll((nodes) =>
+        nodes.map((node) => node.getAttribute('data-approved-section')),
+      ),
+    )
     .toEqual([
       'report',
       'evidence',
@@ -96,13 +102,17 @@ test('the public landing page renders the approved complete section order in Ara
   await expect(page.locator('#hero')).toContainText('أثبت ذلك');
   await expect(page.locator('#hero input[dir="ltr"]')).toBeVisible();
   await expect(page.locator('[data-approved-section="readiness"]')).toContainText('توضيحي');
-  await expect(page.locator('[data-approved-section="remediation"]')).toContainText('Cache-Control');
+  await expect(page.locator('[data-approved-section="remediation"]')).toContainText(
+    'Cache-Control',
+  );
 
   await expect(page.locator('body')).not.toContainText(/\bpublic\.[a-z0-9_]+\b/);
-  const structuralOrder = await page.locator('[data-approved-section="report"]').evaluate((section) => {
-    const children = Array.from(section.children);
-    return children[0]?.tagName === 'HEADER' && children[1]?.tagName === 'DIV';
-  });
+  const structuralOrder = await page
+    .locator('[data-approved-section="report"]')
+    .evaluate((section) => {
+      const children = Array.from(section.children);
+      return children[0]?.tagName === 'HEADER' && children[1]?.tagName === 'DIV';
+    });
   expect(structuralOrder).toBe(true);
   await expect(page.locator('[data-approved-section="pricing"] > header')).toBeVisible();
   await expect(page.locator('[data-approved-section="pricing"] > header + div')).toBeVisible();
@@ -121,20 +131,24 @@ test('the public landing page renders the approved complete section order in Ara
   await expect(faq.locator('details').nth(1)).toHaveAttribute('open', '');
 });
 
-test('Arabic marketing uses loaded Cairo fonts and fits every approved viewport width', async ({ page }) => {
+test('Arabic marketing uses loaded Cairo fonts and fits every approved viewport width', async ({
+  page,
+}) => {
   await expectRoute(page, '/ar');
   await page.evaluate(async () => {
     await document.fonts.load('16px cairoArabic', 'العربية');
     await document.fonts.ready;
   });
 
-  const fontState = await page.locator('[data-approved-section="report"] h2').evaluate((heading) => {
-    const family = getComputedStyle(heading).fontFamily;
-    const loadedCairo = Array.from(document.fonts).some(
-      (font) => /cairo/i.test(font.family) && font.status === 'loaded',
-    );
-    return { family, loadedCairo };
-  });
+  const fontState = await page
+    .locator('[data-approved-section="report"] h2')
+    .evaluate((heading) => {
+      const family = getComputedStyle(heading).fontFamily;
+      const loadedCairo = Array.from(document.fonts).some(
+        (font) => /cairo/i.test(font.family) && font.status === 'loaded',
+      );
+      return { family, loadedCairo };
+    });
   expect(fontState.family.toLowerCase()).toContain('cairo');
   expect(fontState.loadedCairo).toBe(true);
 
@@ -147,16 +161,24 @@ test('Arabic marketing uses loaded Cairo fonts and fits every approved viewport 
         const box = section.getBoundingClientRect();
         return { left: box.left, right: box.right };
       }),
-      reportColumns: getComputedStyle(document.querySelector('#report-showcase > div > .grid')!).gridTemplateColumns.split(' ').length,
-      remediationColumns: getComputedStyle(document.querySelector('#remediation > div.relative')!).gridTemplateColumns.split(' ').length,
-      faqColumns: getComputedStyle(document.querySelector('#faq > div')!).gridTemplateColumns.split(' ').length,
+      reportColumns: getComputedStyle(
+        document.querySelector('#report-showcase > div > .grid')!,
+      ).gridTemplateColumns.split(' ').length,
+      remediationColumns: getComputedStyle(
+        document.querySelector('#remediation > div.relative')!,
+      ).gridTemplateColumns.split(' ').length,
+      faqColumns: getComputedStyle(document.querySelector('#faq > div')!).gridTemplateColumns.split(
+        ' ',
+      ).length,
     }));
     expect(dimensions.documentWidth, `Arabic page at ${width}px`).toBeLessThanOrEqual(
       dimensions.viewportWidth,
     );
     for (const [index, bounds] of dimensions.sections.entries()) {
       expect(bounds.left, `section ${index} left edge at ${width}px`).toBeGreaterThanOrEqual(-1);
-      expect(bounds.right, `section ${index} right edge at ${width}px`).toBeLessThanOrEqual(width + 1);
+      expect(bounds.right, `section ${index} right edge at ${width}px`).toBeLessThanOrEqual(
+        width + 1,
+      );
     }
     expect(dimensions.reportColumns).toBe(width <= 768 ? 1 : 2);
     expect(dimensions.remediationColumns).toBe(width <= 640 ? 1 : 2);
@@ -205,9 +227,7 @@ test('home and pricing render the complete public marketing shell', async ({ pag
   }
 });
 
-test('every auth route renders only the minimal auth header and no public shell', async ({
-  page,
-}) => {
+test('auth routes use the focused Fahes header and shared public footer', async ({ page }) => {
   for (const route of [
     '/login',
     '/signup',
@@ -225,13 +245,22 @@ test('every auth route renders only the minimal auth header and no public shell'
       'aria-label',
       'Switch to dark mode',
     );
-    await expect(page.getByRole('link', { name: 'Product', exact: true })).toHaveCount(0);
-    await expect(page.getByRole('link', { name: 'Pricing', exact: true })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Product', exact: true })).toHaveCount(0);
+    await expect(header.getByRole('link', { name: 'Pricing', exact: true })).toHaveCount(0);
     await expect(header.getByRole('link', { name: 'Sign in', exact: true })).toHaveCount(0);
     await expect(header.getByRole('link', { name: 'Start free', exact: true })).toHaveCount(0);
     await expect(page.locator('[aria-controls="public-mobile-drawer"]')).toHaveCount(0);
     await expect(page.locator('#public-mobile-drawer')).toHaveCount(0);
-    await expect(page.getByRole('contentinfo')).toHaveCount(0);
+    const footer = page.locator('footer[data-approved-section="footer"]');
+    await expect(footer).toHaveCount(1);
+    await expect(footer.getByRole('link', { name: 'Product', exact: true })).toHaveAttribute(
+      'href',
+      '/',
+    );
+    await expect(footer.getByRole('link', { name: 'Pricing', exact: true })).toHaveAttribute(
+      'href',
+      '/pricing',
+    );
   }
 });
 
