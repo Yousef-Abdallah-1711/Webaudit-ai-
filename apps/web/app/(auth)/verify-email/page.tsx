@@ -14,7 +14,7 @@
  */
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Button } from '../../../components/ui';
+import { AuthSecondaryButton } from '../../../components/auth/AuthFrame';
 import { AuthPrimaryButton } from '../../../components/auth/AuthFrame';
 import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
 import { Icon } from '../../../components/ui/icons/Icon';
@@ -162,9 +162,9 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
           <div className="mb-5 border-solid border-hairline border-border-marketing bg-surface-marketing-raised p-4 font-mono text-marketing-body text-marketing-primary">
             {email || t('verify_email_fallback')}
           </div>
-          <Button variant="secondary" fullWidth disabled={sent} onClick={() => void onResend()}>
+          <AuthSecondaryButton fullWidth disabled={sent} onClick={() => void onResend()}>
             {sent ? t('verify_resent') : t('verify_resend')}
-          </Button>
+          </AuthSecondaryButton>
         </AuthFormPanel>
       }
     />

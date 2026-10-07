@@ -21,7 +21,7 @@ const styles = {
   questions: cn('border-x-0 border-b-0 border-t border-solid border-border-marketing'),
   item: cn('group border-x-0 border-t-0 border-b border-solid border-border-marketing'),
   question: cn(
-    'flex min-h-marketing-faq-summary cursor-pointer list-none items-center justify-between gap-4 py-3 text-marketing-primary text-marketing-body leading-marketing-faq-question font-extrabold text-pretty focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:text-marketing-description',
+    'flex min-h-marketing-faq-summary cursor-pointer list-none items-center justify-between gap-4 py-3 text-marketing-primary text-marketing-body leading-marketing-faq-question font-extrabold text-pretty transition-colors motion-reduce:transition-none hover:text-brand-electric focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric focus-visible:outline-offset-2 max-marketing-mobile:text-marketing-description',
   ),
   answer: cn(
     'mb-0 max-w-[65ch] pt-0 pb-5 text-marketing-description leading-marketing-description text-marketing-secondary text-pretty',

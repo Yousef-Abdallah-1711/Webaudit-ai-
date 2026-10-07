@@ -127,10 +127,13 @@ export async function PricingPreview(): Promise<React.ReactElement> {
           {t('pricing_preview_cash_note')}
         </p>
         <a
-          className="mt-4 inline-flex min-h-control items-center gap-2 font-bold text-brand-electric underline decoration-border-marketing underline-offset-4 hover:text-brand-electric-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric"
+          className="mt-4 inline-flex min-h-control items-center gap-2 font-bold text-brand-electric underline decoration-border-marketing underline-offset-4 transition-colors motion-reduce:transition-none hover:text-brand-electric-bright focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric"
           href="/pricing"
         >
-          {t('pricing_preview_details')} <span aria-hidden="true" className="inline-block rtl:-scale-x-100">↗</span>
+          {t('pricing_preview_details')}{' '}
+          <span aria-hidden="true" className="inline-block rtl:-scale-x-100">
+            ↗
+          </span>
         </a>
       </div>
     </section>

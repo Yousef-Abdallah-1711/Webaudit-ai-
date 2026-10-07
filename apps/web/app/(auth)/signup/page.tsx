@@ -16,8 +16,12 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '../../../components/ui';
-import { AuthPrimaryButton, Divider, Field } from '../../../components/auth/AuthFrame';
+import {
+  AuthPrimaryButton,
+  AuthSecondaryButton,
+  Divider,
+  Field,
+} from '../../../components/auth/AuthFrame';
 import {
   AuthContextPanel,
   AuthFormPanel,
@@ -147,9 +151,9 @@ export default function RegisterPage(): React.ReactElement | null {
             </AuthPrimaryButton>
           </form>
           <Divider />
-          <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
+          <AuthSecondaryButton fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
             {t('github')}
-          </Button>
+          </AuthSecondaryButton>
         </AuthFormPanel>
       }
       context={<AuthContextPanel />}

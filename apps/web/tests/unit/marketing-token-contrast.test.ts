@@ -42,7 +42,9 @@ const WCAG_NON_TEXT = 3;
 function readGradientStops(css: string, token: string): string[] {
   const match = css.match(new RegExp(`--${token}:\\s*linear-gradient\\(([^;]+)\\);`));
   if (!match) throw new Error(`Missing gradient token --${token}`);
-  return [...(match[1] as string).matchAll(/#[0-9a-fA-F]{6}/g)].map((stop) => stop[0].toLowerCase());
+  return [...(match[1] as string).matchAll(/#[0-9a-fA-F]{6}/g)].map((stop) =>
+    stop[0].toLowerCase(),
+  );
 }
 
 describe('marketing surface token contrast and theme behavior', () => {
@@ -62,9 +64,7 @@ describe('marketing surface token contrast and theme behavior', () => {
     const heroSurface = readHexToken(colorsCss, 'surface-hero');
     const remediationSurface = readHexToken(darkCss, 'surface-dark');
 
-    expect(contrastRatio(foreground, heroSurface)).toBeGreaterThanOrEqual(
-      WCAG_AA_NORMAL_TEXT,
-    );
+    expect(contrastRatio(foreground, heroSurface)).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
     expect(contrastRatio(mutedForeground, remediationSurface)).toBeGreaterThanOrEqual(
       WCAG_AA_NORMAL_TEXT,
     );
@@ -79,9 +79,7 @@ describe('marketing surface token contrast and theme behavior', () => {
     expect(contrastRatio(lightForeground, lightSurface)).toBeGreaterThanOrEqual(
       WCAG_AA_NORMAL_TEXT,
     );
-    expect(contrastRatio(darkForeground, darkSurface)).toBeGreaterThanOrEqual(
-      WCAG_AA_NORMAL_TEXT,
-    );
+    expect(contrastRatio(darkForeground, darkSurface)).toBeGreaterThanOrEqual(WCAG_AA_NORMAL_TEXT);
   });
 
   it('keeps white text on every stop of the CTA gradient at AA in both themes', () => {
@@ -144,9 +142,20 @@ describe('marketing surface token contrast and theme behavior', () => {
       expect(contrastRatio(edge, surface), theme).toBeGreaterThanOrEqual(WCAG_NON_TEXT);
     }
 
-    const areas = readFileSync(new URL('../../components/marketing/audit-areas.tsx', import.meta.url), 'utf8');
-    const form = readFileSync(new URL('../../components/marketing/scan-handoff-form.tsx', import.meta.url), 'utf8');
+    const areas = readFileSync(
+      new URL('../../components/marketing/audit-areas.tsx', import.meta.url),
+      'utf8',
+    );
+    const form = readFileSync(
+      new URL('../../components/marketing/scan-handoff-form.tsx', import.meta.url),
+      'utf8',
+    );
+    const controls = readFileSync(
+      new URL('../../lib/marketing-controls.ts', import.meta.url),
+      'utf8',
+    );
     expect(areas).toContain('border-[color:var(--border-marketing-control)]');
-    expect(form).toContain('border-[color:var(--border-marketing-control)]');
+    expect(form).toContain('marketingInputControl');
+    expect(controls).toContain('border-solid border-[color:var(--border-marketing-control)]');
   });
 });

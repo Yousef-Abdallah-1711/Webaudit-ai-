@@ -12,9 +12,7 @@ import { useTranslations } from 'next-intl';
 import { Button, Input, type ButtonProps, type InputProps } from '../ui';
 import { cn } from '../../lib/cn';
 import { focusRingBrand, marketingPrimaryCta } from '../../lib/marketing-cta';
-
-const authFieldGroup =
-  '[&_input]:border-border-marketing [&_input]:bg-surface-marketing-raised [&_input]:font-marketing [&_input]:text-marketing-primary [&_input:focus]:!shadow-none [&_input:focus-visible]:outline [&_input:focus-visible]:outline-2 [&_input:focus-visible]:outline-brand-marketing [&_input:focus-visible]:outline-offset-2';
+import { marketingInputControl } from '../../lib/marketing-controls';
 
 /** Auth actions reuse the public CTA recipe and keep a visible brand focus ring. */
 export function AuthPrimaryButton(props: ButtonProps): React.ReactElement {
@@ -25,6 +23,26 @@ export function AuthPrimaryButton(props: ButtonProps): React.ReactElement {
       className={cn(marketingPrimaryCta, focusRingBrand, props.className)}
     />
   );
+}
+
+/** Secondary auth actions share the public control border and keyboard focus treatment. */
+export function AuthSecondaryButton(props: ButtonProps): React.ReactElement {
+  return (
+    <Button
+      {...props}
+      variant="secondary"
+      className={cn(
+        'border-[color:var(--border-marketing-control)] bg-surface-marketing-raised font-marketing text-marketing-primary [&:hover:not(:disabled)]:bg-surface-marketing [&:hover:active:not(:disabled)]:bg-surface-raised',
+        focusRingBrand,
+        props.className,
+      )}
+    />
+  );
+}
+
+/** Auth fields use the same semantic resting, hover, focus and invalid states as the public scanner. */
+export function AuthInput({ className, ...props }: InputProps): React.ReactElement {
+  return <Input {...props} className={cn('font-marketing', marketingInputControl, className)} />;
 }
 
 export interface FieldProps extends InputProps {
@@ -38,11 +56,11 @@ export function Field({ label, ...rest }: FieldProps): React.ReactElement {
   };
 
   return (
-    <label className={cn('block', authFieldGroup)}>
+    <label className="block">
       <div className="mb-1.5 text-marketing-body font-marketing font-medium text-marketing-primary">
         {label}
       </div>
-      <Input {...inputProps} />
+      <AuthInput {...inputProps} />
     </label>
   );
 }

@@ -20,6 +20,10 @@ export interface InputProps {
   fullWidth?: boolean;
   /** Red hairline border; pair with a message, never colour alone */
   invalid?: boolean;
+  /** Disabled controls stay recognizable while refusing input. */
+  disabled?: boolean;
+  /** Additional semantic surface/state classes for a composed input. */
+  className?: string;
   /** Mono face for machine-truth values (headers, selectors, paths) */
   mono?: boolean;
   readOnly?: boolean;
@@ -36,17 +40,20 @@ export function Input({
   type = 'text',
   fullWidth = true,
   invalid = false,
+  disabled = false,
   mono = false,
   readOnly = false,
+  className,
   ...rest
 }: InputProps): React.ReactElement {
   const wrapClasses = cn('relative', fullWidth && 'w-full');
   const fieldClasses = cn(
     // eslint-disable-next-line no-restricted-syntax -- 14px is the existing Input text size
-    'box-border h-12 w-full rounded-control border border-hairline border-border-subtle bg-surface-field px-3 py-1 font-sans text-[14px] text-text-primary outline-none transition-colors focus:shadow-focus',
+    'box-border h-12 w-full rounded-control border border-hairline border-solid border-border-subtle bg-surface-field px-3 py-1 font-sans text-[14px] text-text-primary outline-none transition-colors focus:shadow-focus',
     prefix !== undefined && 'ps-16',
-    invalid && 'border-sev-critical',
     mono && 'font-mono',
+    className,
+    invalid && 'border-sev-critical',
   );
 
   return (
@@ -61,6 +68,8 @@ export function Input({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        disabled={disabled}
+        aria-invalid={invalid || undefined}
         readOnly={readOnly}
         className={fieldClasses}
         {...rest}

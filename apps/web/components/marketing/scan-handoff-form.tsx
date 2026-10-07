@@ -5,6 +5,7 @@ import { Button } from '../ui';
 import { storeHeroScanUrl } from '../../lib/hero-scan-handoff';
 import { cn } from '../../lib/cn';
 import { marketingPrimaryCta } from '../../lib/marketing-cta';
+import { marketingInputControl } from '../../lib/marketing-controls';
 
 export interface ScanHandoffFormProps {
   id: string;
@@ -35,7 +36,9 @@ export function ScanHandoffForm({
 
   return (
     <form action="/signup" onSubmit={handleSubmit} className={className}>
-      <label htmlFor={id} className="sr-only">{label}</label>
+      <label htmlFor={id} className="sr-only">
+        {label}
+      </label>
       <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-marketing-form max-marketing-mobile:grid-cols-1">
         <input
           id={id}
@@ -47,17 +50,31 @@ export function ScanHandoffForm({
           value={url}
           onChange={(event) => setUrl(event.target.value)}
           placeholder={placeholder}
-          className="h-landing-control min-w-0 rounded-control border border-solid border-[color:var(--border-marketing-control)] bg-surface-marketing-raised px-4 text-left font-mono text-sm text-marketing-primary placeholder:text-marketing-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-electric"
+          className={cn(
+            'h-landing-control min-w-0 rounded-control px-4 text-left font-mono text-sm',
+            marketingInputControl,
+          )}
         />
-      <Button
-        type="submit"
-        variant="primary"
-        className={cn('h-landing-control rounded-control px-6', marketingPrimaryCta, 'max-marketing-mobile:w-full')}
-      >
+        <Button
+          type="submit"
+          variant="primary"
+          className={cn(
+            'h-landing-control rounded-control px-6',
+            marketingPrimaryCta,
+            'max-marketing-mobile:w-full',
+          )}
+        >
           {submitLabel}
         </Button>
       </div>
-      <p className={cn('mb-0 mt-2.5 text-start text-marketing-label', tone === 'dark' ? 'text-marketing-inverse-muted' : 'text-marketing-muted')}>{note}</p>
+      <p
+        className={cn(
+          'mb-0 mt-2.5 text-start text-marketing-label',
+          tone === 'dark' ? 'text-marketing-inverse-muted' : 'text-marketing-muted',
+        )}
+      >
+        {note}
+      </p>
     </form>
   );
 }

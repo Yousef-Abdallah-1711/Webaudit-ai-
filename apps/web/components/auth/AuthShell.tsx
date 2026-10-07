@@ -57,7 +57,7 @@ export function AuthFormPanel({
           {children}
         </div>
         {foot !== undefined && (
-          <div className="mt-4 text-center text-marketing-body font-marketing text-marketing-secondary [&_a]:text-brand-marketing-contrast">
+          <div className="mt-4 text-center text-marketing-body font-marketing text-marketing-secondary [&_a]:text-brand-marketing-contrast [&_a:hover]:text-brand-electric-bright [&_a:active]:text-brand-electric [&_a:focus-visible]:outline [&_a:focus-visible]:outline-2 [&_a:focus-visible]:outline-offset-2 [&_a:focus-visible]:outline-brand-marketing">
             {foot}
           </div>
         )}

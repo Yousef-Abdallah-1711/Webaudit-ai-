@@ -8,8 +8,13 @@
  */
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button, Input } from '../../../components/ui';
-import { AuthPrimaryButton, Divider, Field } from '../../../components/auth/AuthFrame';
+import {
+  AuthPrimaryButton,
+  AuthSecondaryButton,
+  AuthInput,
+  Divider,
+  Field,
+} from '../../../components/auth/AuthFrame';
 import {
   AuthContextPanel,
   AuthFormPanel,
@@ -100,12 +105,12 @@ export default function LoginPage(): React.ReactElement | null {
                 </span>
                 <a
                   href="/forgot-password"
-                  className="ms-auto text-marketing-body font-marketing text-brand-marketing-contrast"
+                  className="ms-auto text-marketing-body font-marketing text-brand-marketing-contrast transition-colors motion-reduce:transition-none hover:text-brand-electric-bright active:text-brand-electric focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-marketing"
                 >
                   {t('forgot_link')}
                 </a>
               </div>
-              <Input
+              <AuthInput
                 type="password"
                 autoComplete="current-password"
                 placeholder="••••••••"
@@ -122,9 +127,9 @@ export default function LoginPage(): React.ReactElement | null {
             </AuthPrimaryButton>
           </form>
           <Divider />
-          <Button variant="secondary" fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
+          <AuthSecondaryButton fullWidth href={`${API_BASE}/auth/oauth/github/start`}>
             {t('github')}
-          </Button>
+          </AuthSecondaryButton>
         </AuthFormPanel>
       }
       context={<AuthContextPanel />}
