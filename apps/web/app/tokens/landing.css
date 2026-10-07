@@ -186,6 +186,7 @@
   :root {
     --height-landing-header: 91px;
     --height-landing-hero: 656px;
+    --height-marketing-tablet-hero: 656px;
     /* Approved artifact: scanner input and submit are 48px at 640px and below. */
     --height-landing-control: 48px;
     --type-marketing-display: var(--type-marketing-mobile-display);

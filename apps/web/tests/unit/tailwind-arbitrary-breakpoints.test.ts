@@ -19,11 +19,7 @@ const CONFIG_PATH = join(WEB_ROOT, 'tailwind.config.ts');
 const ARBITRARY_BREAKPOINT = /\b(?:max|min)-\[[^\]]+\]:/;
 
 /** Marketing sections that are not imported anywhere; they predate the named screens. */
-const UNUSED_FILES_ALLOWED = [
-  'components/marketing/ai-development.tsx',
-  'components/marketing/checks.tsx',
-  'components/marketing/proof.tsx',
-];
+const UNUSED_FILES_ALLOWED: string[] = [];
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((entry) => {

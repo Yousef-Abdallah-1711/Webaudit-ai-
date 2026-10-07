@@ -18,9 +18,6 @@ const config = {
     'type-small',
     'type-eyebrow',
     'bg-surface-marketing',
-    'bg-surface-marketing-dark',
-    'bg-gradient-brand-subtle',
-    'rounded-marketing-shell',
   ],
   theme: {
     extend: {

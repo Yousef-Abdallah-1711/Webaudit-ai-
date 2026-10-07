@@ -1,15 +1,12 @@
 # Tailwind migration CSS Module exit report
 
-The pre-migration audit counted **66 CSS Modules** in `apps/web`. After Wave 8, **5 remain**. Each is still imported by its listed consumer and contains a CSS feature that Tailwind utilities cannot express on that element.
+The pre-migration audit counted **66 CSS Modules** in `apps/web`. After Wave 8, **2 remain**. Each is still imported by its listed consumer and contains a CSS feature that Tailwind utilities cannot express on that element.
 
 ## Retained special-case modules
 
 | CSS Module | Current consumer and verified use | Why it remains |
 | --- | --- | --- |
 | `components/auth/AuthShell.special.module.css` | `components/auth/AuthShell.tsx` applies `rtlLayout` to the two-column grid and adds `rtlSingleColumn` when no context is passed. | The `html[dir='rtl']` ancestor selector swaps grid areas and has separate responsive and single-column rules. Tailwind cannot condition these utility rules on that ancestor selector. |
-| `components/marketing/ai-development.special.module.css` | `components/marketing/ai-development.tsx` applies `specialStyles.connector` to the connector arrow. | The `[dir='rtl']` ancestor selector mirrors the arrow, with a narrow-screen rotation override. The component's Tailwind rotation handles the narrow LTR layout; it cannot encode this RTL ancestor-conditioned transform. |
-| `components/marketing/faq.special.module.css` | `components/marketing/faq.tsx` applies the special classes to each `<details>` and `<summary>`. | Hiding `::-webkit-details-marker` and adding/toggling the `::after` plus/minus content based on the parent `<details open>` state require pseudo-element selectors and generated content. |
-| `components/marketing/report-showcase.special.module.css` | `components/marketing/report-showcase.tsx` applies `specialStyles.promptText` to the prompt `<pre>`. | The browser-specific `scrollbar-color` property has no Tailwind utility in this project. |
 | `components/public/Public.special.module.css` | `components/public/Public.tsx` uses the classes on the mobile drawer and its empty menu-icon `<span>`. | The hamburger strokes are `::before`/`::after` pseudo-elements, and the drawer's closed/open transforms change direction under an `html[dir='rtl']` ancestor. These pseudo-elements and ancestor-conditioned transforms are not expressible with the available utilities. |
 
 ## Wave summary

@@ -346,8 +346,6 @@ screens, control heights, CTA contrast) are done, verified and pushed. What foll
 
 ### Cleanup candidates (found, not removed)
 
-- `components/marketing/ai-development.tsx`, `checks.tsx` and `proof.tsx` are not imported anywhere
-  and still contain arbitrary `max-[Npx]:` classes (allow-listed in the guard test).
 - Two competing values were reported for `--radius-marketing-shell` (`app/tokens/landing.css` vs
   `app/tokens/radius.css`); verify before relying on either.
 - Several screens define the same width under different names (640 px three times, 900 px twice).

@@ -12,7 +12,7 @@ const styles = {
   atmosphere:
     "pointer-events-none absolute inset-0 -z-20 bg-atmosphere after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-44 after:bg-gradient-to-b after:from-transparent after:to-surface-marketing",
   stars:
-    'pointer-events-none absolute inset-y-marketing-stars inset-x-[5%] -z-10 opacity-50 bg-marketing-stars max-marketing-mobile:inset-x-[1%] top-marketing-mobile-stars-top bottom-marketing-mobile-stars-bottom max-marketing-mobile:opacity-35',
+    'pointer-events-none absolute inset-y-marketing-stars-y inset-x-[5%] -z-10 opacity-50 bg-marketing-stars max-marketing-mobile:inset-x-[1%] max-marketing-mobile:top-marketing-mobile-stars-top max-marketing-mobile:bottom-marketing-mobile-stars-bottom max-marketing-mobile:opacity-35',
   art: 'pointer-events-none absolute inset-x-0 top-20 -z-10 h-[calc(100%-var(--height-marketing-art-offset))] w-full opacity-70 max-marketing-mobile:inset-x-0 max-marketing-mobile:top-20 max-marketing-mobile:h-[calc(100%-var(--height-marketing-mobile-art-offset))] max-marketing-mobile:w-full',
   inner: 'mx-auto my-auto w-full max-w-landing-hero text-center',
   eyebrow: 'flex items-center justify-center gap-marketing-form text-xs font-bold tracking-wide text-marketing-inverse-muted max-marketing-mobile:text-marketing-micro',

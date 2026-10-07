@@ -46,8 +46,6 @@ const BASELINE: Record<string, { hex: number; px: number }> = {
 /** The only approved CSS Modules after the Tailwind migration (see exit report). */
 const CSS_MODULE_ALLOWLIST = [
   'components/auth/AuthShell.special.module.css',
-  'components/marketing/ai-development.special.module.css',
-  'components/marketing/faq.special.module.css',
   'components/public/Public.special.module.css',
 ];
 

@@ -45,12 +45,12 @@
   }
 
   .menuIcon::before {
-    inset-block-start: calc(-1 * var(--space-6));
+    inset-block-start: calc(-1 * var(--space-2));
   }
 
-.menuIcon::after {
-  inset-block-start: var(--space-6);
-}
+  .menuIcon::after {
+    inset-block-start: var(--space-2);
+  }
 
 }
 
