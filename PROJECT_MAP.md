@@ -175,6 +175,14 @@ real-provider latency, higher concurrency or production capacity.
   `apps/worker/src/prompts`) is centralized and mature; no Model Router, MCP, RAG, agent
   tool-calling, or evaluation harness exists today, and the audit explains which of those are
   gaps versus deliberately unneeded for this product.
+- Scan platform v2 and future testing capabilities: start with the
+  [2026-10-07 capability audit](docs/reviews/scan-audit-2026-10-07/EXECUTIVE_SCAN_AUDIT.md), its
+  [follow-through task list](docs/reviews/scan-audit-2026-10-07/tasks.md), and the dependency-ordered
+  [architecture roadmap](specs/006-scan-architecture-v2/roadmap.md). Foundation authorization and
+  safety implementation tasks live in [007](specs/007-foundation-target-authorization-scope/tasks.md)
+  and [008](specs/008-safety-killswitch-budget-audit/tasks.md); the consolidated core-platform and
+  web-testing specifications are [009](specs/009-core-scan-execution-platform/) and
+  [010](specs/010-web-testing-platform/).
 - `docs/superpowers/plans/` contains dated implementation/review history; follow a specific
   plan only when assigned. `WebAuditAI_ARCHITECTURE.md` is a historical sketch, not current code.
   Reviews, tasks and runbooks have known stale statements; verify claims against source/tests.

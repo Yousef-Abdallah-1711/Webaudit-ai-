@@ -1,6 +1,58 @@
 <!--
 SYNC IMPACT REPORT
 ==================
+Version change: 1.1.0 -> 1.2.0  (2026-10-07)
+Bump rationale: MINOR. Seven new principles (VIII-XIV) added to govern the next-generation
+  scanning platform ("Fahes Scan Platform Architecture v2") and its future child specs. No
+  existing principle was removed or redefined in a way that makes previously compliant code
+  non-compliant; the new principles extend III (Deterministic Before Probabilistic) and V
+  (Untrusted Code Runs Isolated) explicitly rather than contradicting them, and the existing
+  "Security requirements" bullet list under Technology and Security Constraints gained five
+  bullets rather than being replaced (a fifth, evidence-redaction bullet was added during this
+  same amendment's independent-review pass, 2026-10-07, after the initial four — see below).
+
+Added principles:
+  VIII.  Engines Serve Domains, Domains Do Not Own Engines           (Architecture)
+  IX.    Evidence Is Reproducible; Judgment Is Labeled                (Evidence - extends III)
+  X.     Authorization Is Not Ownership                               (Safety)
+  XI.    Untrusted Code Needs Its Own Isolation Boundary               (Customer code - extends V)
+  XII.   Long-Running Work Declares Its Own Lifecycle                  (Long-running execution)
+  XIII.  Tenant Boundaries Survive Every New Engine                    (Multi-tenancy)
+  XIV.   Every Future Capability Declares Its Contract Before It Ships (Evolution)
+
+Amended sections:
+  Technology and Security Constraints -> "Security requirements" gained five bullets: credential
+    lifecycle (not just encryption-at-rest), session isolation for future authenticated-scanning
+    capabilities, explicit target authorization required before any active/adversarial execution
+    class runs, environment (production/staging) must never be inferred from ownership
+    verification alone, and (added during this amendment's own independent-review pass) evidence
+    from an active/adversarial/authenticated execution class MUST be redacted through the same
+    mechanism that protects AI prompt assembly before storage or display — found when the master
+    architecture spec's own review asked "could a successful exploit's evidence itself leak a
+    customer's secrets into a report," which nothing in the initial four bullets addressed.
+
+Context: this bump was produced by a master-architecture planning pass (SpecKit Specify ->
+  Clarify -> Plan -> Checklist -> Tasks -> Analyze, Implement and Converge intentionally not run)
+  that establishes the parent architecture contract several future child specs will build on:
+  new execution engines (browser/probe, crawler, static source analysis, untrusted source
+  execution, active security, authenticated workflow, load/capacity, telemetry integration) and
+  product domains (security, performance, frontend/UX, accessibility, functional testing, SEO,
+  source quality, production readiness) that consume those engines rather than each owning one.
+
+Deferred items requiring follow-up (new):
+  TODO(ACTIVE_SECURITY_AUTHORIZATION_MODEL): Principle X requires authorization to be modeled
+    as distinct from ownership verification, but the concrete authorization-level taxonomy
+    (passive / browser / authenticated / active-security / load / high-impact-staging-only) and
+    its data-model representation are a /speckit-specify decision for the Architecture v2 master
+    spec and its "Target / Environment / Ownership / Authorization / Scope" foundation child spec,
+    not a governance-level choice.
+  TODO(UNTRUSTED_EXECUTION_MECHANISM): Principle XI mandates container/VM-grade isolation (or
+    equivalent proven containment) for any future untrusted-code-execution engine, but does not
+    choose the mechanism (gVisor, Firecracker, a managed container platform, etc.). That is a
+    /speckit-plan decision for the dedicated Untrusted Source Execution Engine child spec.
+
+--- Previous sync report below ---
+
 Version change: 1.0.0 -> 1.1.0  (2026-08-23)
 Bump rationale: MINOR. A new section ("Design Adherence") was added; no existing principle was
 removed or redefined, so previously compliant code stays compliant.
@@ -186,6 +238,193 @@ that specific issue.
 Rationale: the product's value is the walk from red to green. If confirming one header costs a full
 audit's credits and minutes, users stop walking.
 
+### VIII. Engines Serve Domains, Domains Do Not Own Engines
+
+A future scanning platform MUST separate **execution engines** (the mechanism that produces
+measurements — e.g. a browser/probe engine, a crawler, a static-source-analysis engine, an
+active-security engine) from **product domains** (Security, Performance, Frontend/UX,
+Accessibility, Functional Testing, SEO, Source Quality, Production Readiness), which consume one
+or more engines' output.
+
+- A domain MUST NOT implement its own private copy of an engine another domain already needs. A
+  browser/probe engine MUST be built once and consumed by every domain that needs rendered-page
+  measurement (Performance, Frontend, Accessibility, SEO, Testing, Security alike), never
+  reimplemented per domain.
+- A new capability category MUST reuse an existing shared contract (capability discovery, finding
+  shape, fingerprint identity, credit metering, reverify dispatch) before inventing a parallel one.
+  A parallel contract requires a documented reason an existing one cannot serve.
+- Rewriting a working subsystem (the BullMQ queue skeleton, the credit ledger, the readiness
+  diff/verdict engine, the capability-SDK contract) MUST be justified by repository evidence that
+  extension is insufficient, not by preference. Migration and incremental extension are the
+  default; rewrite is the exception and MUST be argued for explicitly.
+- Standing up a new deployable service MUST be justified by a genuine isolation or scaling need
+  (e.g. untrusted code execution needs container/VM isolation no in-process library can provide).
+  Services MUST NOT be split merely to mirror an org chart or a specific future roadmap item.
+
+Rationale: the current platform's five vendored modules already show the failure mode this
+principle exists to prevent — several domains independently reimplement small pieces of
+browser-dependent measurement rather than sharing one engine, and the browser engine itself
+(`apps/probe-pool`) exists as an unwired library specifically because no shared, deployed version
+of it was ever built. A platform that lets every domain own its own engine recreates that gap at
+every future layer instead of fixing it once.
+
+### IX. Evidence Is Reproducible; Judgment Is Labeled
+
+This extends Principle III (Deterministic Before Probabilistic); it does not relax it. Every
+deterministic finding, from any execution engine, MUST carry evidence sufficient for a second run
+of the same check to reproduce the same verdict against an unchanged target.
+
+- Every finding MUST carry a stable finding-identity (fingerprint), computed by the capability or
+  engine that produced it, that survives re-auditing. This is the single cross-engine identity
+  mechanism reverify and readiness-regression detection both depend on; a new engine MUST NOT
+  invent a second identity scheme.
+- Evidence MUST be attributable to either a deterministic measurement or an explicit AI judgment,
+  per Principle III's attribution rule — a new execution engine MUST NOT blur this distinction by
+  letting an engine or a capability declare its own attribution.
+- Where a finding's certainty is not binary (e.g. a heuristic threshold, a sampled check, a
+  judgment call under Principle III's AI layer), the evidence MUST carry an explicit
+  confidence/measurement-state field rather than presenting a heuristic result with the same
+  apparent certainty as a direct measurement.
+- No execution engine MAY fabricate a measurement it did not actually take. An engine that cannot
+  measure something (e.g. Core Web Vitals with no browser pool configured) MUST report that
+  absence explicitly (`NOT_APPLICABLE`/`DEGRADED`/an equivalent state), never a placeholder value.
+
+Rationale: readiness regression detection and targeted reverify both work today because finding
+identity is stable and because the report never asks a reader to guess whether a number was
+measured or inferred. Every future engine inherits that trust only if it inherits this discipline.
+
+### X. Authorization Is Not Ownership
+
+Proving control of a target (ownership/control verification) and being authorized to run
+active or destructive tests against it are two distinct concepts and MUST NEVER be collapsed into
+one.
+
+- Ownership verification MUST continue to answer only "does this user control this target." It
+  MUST NOT, by itself, unlock any execution class beyond today's passive/measurement-only testing.
+- Running any active, adversarial, or potentially disruptive execution class (injection testing,
+  authenticated workflow testing, load/capacity generation, or any future class so classified)
+  MUST require an explicit, separately-granted authorization distinct from ownership verification.
+- Production and staging (or any other environment classification) MUST be explicitly and
+  verifiably distinguishable before an active execution class is permitted to run, and destructive
+  capability MUST NEVER be inferred from environment alone (a target classified "staging" is not,
+  by that classification alone, cleared for every execution class).
+- Every active execution class MUST have an explicit scope (included/excluded domains,
+  subdomains, routes, accounts, actions), explicit request/concurrency/duration budgets, a working
+  emergency stop reachable independent of the normal cancellation path, and an audit trail of what
+  was attempted against the target and when.
+- Outbound requests made during active testing MUST continue to honor the same SSRF, DNS-rebinding,
+  and redirect-revalidation protections the platform already enforces for passive fetches, plus an
+  explicit target-allowlist check specific to the granted authorization and scope.
+
+Rationale: the existing platform already distinguishes "I can prove I own this domain" from
+"nothing bad will happen if you attack it" by never offering active testing at all. The moment
+active testing exists, that distinction has to become an explicit, enforced data model instead of
+an implicit platform-wide absence — collapsing the two is the single most consequential safety
+mistake this architecture could make.
+
+### XI. Untrusted Code Needs Its Own Isolation Boundary
+
+This extends Principle V (Untrusted Code Runs Isolated); it does not relax it. The existing
+sandbox boundary runs **trusted Fahes code (vendored/installed capabilities) against untrusted
+data** (a customer's fetched page or source tree). It MUST NOT be reused, extended, or assumed
+sufficient for **running the customer's own code** (install scripts, build steps, their own test
+suite, arbitrary executables) — that is a different threat model requiring its own boundary.
+
+- Customer-supplied code MUST NOT execute inside the existing capability sandbox unless a future,
+  explicitly separate untrusted-code-execution architecture is designed and ratified for that
+  specific purpose.
+- Any future untrusted-code-execution engine MUST provide container- or VM-grade isolation (or
+  equivalent proven containment with no known escape path, per Principle V's existing bar) — the
+  process-level `node --permission` boundary that protects the existing trusted-code sandbox is not
+  sufficient evidence of safety for running code the customer themselves supplied.
+- Network egress from an untrusted-code-execution workload MUST be explicit, minimal, and
+  independently justified per capability — it MUST NOT inherit the existing sandbox's egress
+  posture by default.
+- Credentials, secrets, and environment variables MUST NOT be reachable from an untrusted-code
+  workload under any circumstance, including indirectly through a shared filesystem, shared
+  process, or shared network namespace.
+
+Rationale: today's sandbox-runner is a well-reasoned, narrowly-scoped answer to one problem —
+"run our own reviewed code without letting it over-trust untrusted data." A future spec that
+needs to `npm install && npm test` a customer's repository is solving a materially harder problem,
+and reusing the existing boundary for it would quietly borrow safety properties it was never
+designed to provide.
+
+### XII. Long-Running Work Declares Its Own Lifecycle
+
+A future execution class whose typical duration exceeds the current platform's short-job
+assumptions (today: a ~15-minute scan-wide timeout, per-module timeouts in the tens of seconds,
+`attempts: 1` with refund-on-failure for the scan-phase queue) MUST NOT inherit those assumptions
+by default.
+
+- Every new execution class MUST declare its own cancellation semantics, heartbeat/progress
+  reporting cadence, recovery behavior on worker death, idempotence policy, timeout, and retry
+  semantics, sized to its own actual duration and statefulness — not copied from the scan-phase
+  queue's short-job defaults.
+- A long-running execution class SHOULD run in its own queue rather than sharing a queue whose
+  other jobs are short and latency-sensitive, consistent with the existing platform's own pattern
+  of giving reverify its own queue so an audit backlog cannot starve it.
+- Idempotence MUST be proven, not assumed, before an execution class is granted retry attempts
+  greater than one. A class that may have already incurred real-world side effects (a paid
+  provider call, a billed unit of generated load, a partially-completed authenticated workflow)
+  MUST default to `attempts: 1` with explicit refund/recovery handling, exactly as today's
+  scan-phase queue already does for the same reason.
+
+Rationale: the current queue configuration's own internal comments state the governing principle
+already — "recovery is a decision, not a default." A future load-test or long source-execution
+job that silently inherits a 30-second timeout and a blind retry would violate that principle
+without a single line of code looking wrong in isolation.
+
+### XIII. Tenant Boundaries Survive Every New Engine
+
+Every new execution engine, evidence type, or storage location MUST preserve the existing
+tenant-isolation guarantees — it MUST NOT bypass them for convenience.
+
+- Every new persisted entity that is reachable by more than one tenant's work (executions,
+  evidence, artifacts, sessions, credentials) MUST be scoped to the owning user/tenant at creation,
+  the same way `Target`/`Scan`/`Issue` are scoped today.
+- Every new object-storage location (artifacts, traces, HAR files, video, screenshots) MUST use a
+  tenant-scoped or ownership-verifiable key, and MUST have a defined retention/cleanup path before
+  it ships — an open question about whether an existing storage class is actually cleaned up
+  (as currently exists for staged archive uploads) MUST be resolved, not inherited, by a new class.
+- Workspace and credential cleanup on every exit path (completion, failure, timeout, cancellation)
+  MUST extend to every new execution class's own workspace/session/credential-binding concept, not
+  only to the existing scan workspace.
+
+Rationale: the existing platform's multi-tenancy model is sound where it has been built
+(`userId`-scoped queries, scan-scoped workspace teardown) and incomplete in at least one place
+that predates this architecture pass (staged-upload retention). A new engine inherits whichever of
+those two patterns its author copies; this principle makes copying the sound one mandatory rather
+than optional.
+
+### XIV. Every Future Capability Declares Its Contract Before It Ships
+
+Before any future execution engine or capability category is implemented, its owning spec MUST
+declare, at minimum:
+
+- its execution class and the trust boundary that class implies (passive/trusted-code-on-
+  untrusted-data, browser-rendered, untrusted-code-execution, active/adversarial, or another
+  class this architecture's child specs define);
+- its inputs and outputs;
+- the authorization level and environment restrictions required to run it, per Principle X;
+- its resource budget (requests, concurrency, duration, compute, storage);
+- its timeout, retry, and cancellation semantics, per Principle XII where long-running;
+- its evidence schema and finding-identity strategy, per Principle IX;
+- its cost/metering model, including whether it fits the existing flat-per-domain credit model or
+  needs duration/resource-scaled pricing;
+- its reverify strategy, including whether the existing single-check 30-second reverify model is
+  sufficient or whether the class needs its own;
+- its retention requirements for any evidence/artifact it produces;
+- its observability requirements (what an operator needs to see to know the engine is healthy,
+  without exposing customer secrets).
+
+A spec that proposes a new execution engine or capability category without declaring all of the
+above is incomplete and MUST NOT proceed to `/speckit-plan` until it does.
+
+Rationale: this is the master architecture's enforcement mechanism for its own stated goal —
+every future child spec must prove it has thought through safety, cost, evidence, and lifecycle
+before implementation begins, the same way this principle set asks the master spec itself to.
+
 ## Technology and Security Constraints
 
 Stack commitments. A change here is a constitutional amendment, not a refactor.
@@ -215,6 +454,20 @@ Security requirements.
   the `Authorization` header; refresh tokens are httpOnly cookies.
 - Admin capability MUST be enforced server-side on every privileged route. Frontend route guards
   are usability, never security.
+- Credentials used for any future authenticated-scanning capability MUST follow a declared
+  lifecycle (issuance, scoped storage, rotation/expiry, revocation on scan end) — not merely
+  encryption at rest, per Principle XI.
+- Any future authenticated-scanning session MUST be isolated per scan/tenant; a session MUST NOT
+  be reused across scans or across tenants under any circumstances.
+- No execution class classified as active or adversarial under Principle X MAY run against a
+  target before that target carries both ownership verification AND a separate, explicit
+  authorization grant for that execution class.
+- A target's environment classification (production, staging, or otherwise) MUST NEVER be used,
+  by itself, to infer or grant destructive-testing permission — see Principle X.
+- Evidence produced by an active, adversarial, or authenticated execution class MUST be redacted
+  through the same mechanism that protects AI prompt assembly before it is stored or displayed —
+  a successful exploit's own evidence can contain real customer secrets or PII, and that reaching
+  a report unredacted is a data-exposure incident, not merely an evidence-quality defect.
 
 ## Design Adherence
 
@@ -285,9 +538,14 @@ Compliance review.
 - Every PR is reviewed against these principles. A reviewer may block on principle violation alone.
 - Principles I through V and VII are verified by automated test wherever a test is possible.
   Principle VI is additionally verified by ongoing cost reconciliation, not by tests alone.
+- Principles VIII through XIV govern future child specs under the Fahes Scan Platform
+  Architecture v2 master spec. A child spec's own `/speckit-plan` and `/speckit-checklist` MUST
+  verify compliance with the principle(s) its execution class implicates before any
+  `/speckit-tasks`/`/speckit-implement` work begins; Principle XIV's contract declaration is a
+  gating requirement, not an aspiration, for every such child spec.
 - This constitution is reviewed at the close of each development cycle. Principles that are
   routinely excepted are either wrong or unenforced, and MUST be fixed or removed.
 - Runtime development guidance for coding agents lives in agent guidance files at the repository
   root. Those files MUST NOT contradict this constitution; on conflict, this document wins.
 
-**Version**: 1.1.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-08-23
+**Version**: 1.2.0 | **Ratified**: 2026-08-22 | **Last Amended**: 2026-10-07
