@@ -86,3 +86,8 @@ Total decisions: 69.
 | DEC-068 | Audit/correlation identifiers and redaction rules for new events | 008,009,012 | Per-event vocabulary exists; no global correlation id. | specs/008-safety-killswitch-budget-audit/contracts/execution-audit-contract.md; specs/012-security-auth-api-testing-platform/spec.md FR-180 | scheme | unitId+claimSeq+effect ordinal; never raw tokens | — | DEC-056 | — | Audit schema tests | SPEC 8 owner (OWNER NOT IDENTIFIED) | RECOMMENDED — OWNER APPROVAL REQUIRED |
 | DEC-069 | Migration/rollout: additive migrations, default-off flags, legacy path untouched; order 007→008→009→engines | all | ADR-006. | specs/006-scan-architecture-v2/decisions.md ADR-006; specs/012-security-auth-api-testing-platform/spec.md FR-158 | as stated | Adopt | — | DEC-005 | rollback = flags off | Rollout runbook | project owner | RECOMMENDED — OWNER APPROVAL REQUIRED |
 | DEC-070 | DB outage during terminalization or settlement: rely on rollback + sweep; settlement idempotent per scan/plan | 009,billing | Terminal writes are single transactions; refund after guarded move; crash between move and refund loses (never doubles) the refund. | specs/009-core-scan-execution-platform/contracts/scan-deadline-contract.md:236-237; apps/worker/src/orchestrator/terminal-refund.ts | as stated; add refund reconciler | Keep behaviour; add reconciler task | — | DEC-032 | — | Outage tests | SPEC 9 owner (OWNER NOT IDENTIFIED) | RECOMMENDED — OWNER APPROVAL REQUIRED |
+
+## Amendments
+
+- 2026-10-28 — DEC-034, DEC-044, DEC-045, DEC-048, DEC-049 approved by the project owner (Option A each; direction only, not
+  detailed text). Record: `DECISION_AMENDMENT_2026-10-28_SPEC008_LEVEL1.md`. Rows above are historical and unchanged.
