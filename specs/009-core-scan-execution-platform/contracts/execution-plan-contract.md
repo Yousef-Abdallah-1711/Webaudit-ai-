@@ -44,11 +44,15 @@ are themselves pure per F01's own FR-023)
    with `ExecutionDependency` edges per the engine's own declared shape (this contract does not
    itself know what depends on what for a specific engine; that is each engine's own declared
    dependency template, supplied via `config`/the profile's `domainExecutionClasses` mapping).
+4a. (U-1) Compute the plan deadline: call `computePlanDeadline` (`scan-deadline-contract.md`) over the
+   generated graph and the referenced grants. A result of `PLAN_DEADLINE_EXCEEDS_CEILING` or
+   `GRANT_EXPIRES_BEFORE_DEADLINE` refuses the whole plan (`refusalReason`) before any credit is charged,
+   exactly like a failed authorization check; an internal error fails closed to `REFUSED`.
 5. Validate the generated graph is acyclic and every dependency is intra-plan
    (`data-model.md`'s validation rules). A violation refuses the plan with `refusalReason: "cyclic
    dependency graph"` — this is a this-spec-internal defect class, never surfaced as an F01/F07
    reason.
-6. Snapshot: `scanProfileVersionId` (if any), every referenced `TargetAuthorization.id` (by
+6. Snapshot: `deadlineMs` and `deadlineBreakdown` (U-1), `scanProfileVersionId` (if any), every referenced `TargetAuthorization.id` (by
    reference, never by copying grant content, per F01's own FR-014 pattern), and persist the whole
    graph in one transaction. Mark `state: RESOLVED`.
 
@@ -66,6 +70,7 @@ are themselves pure per F01's own FR-023)
    sequence above with no special-cased authorization logic (`research.md` R10).
 4. No AI judgment may decide step 2's refuse/admit outcome, step 4's graph shape, or step 5's
    acyclicity verdict (FR-046) — every step is a pure, deterministic function of its inputs.
-5. This function MUST fail closed: an internal error at any step (a database failure, F01's own
+5. (U-1) Every `RESOLVED` plan carries a bounded `deadlineMs`; no code path edits it after this function returns.
+6. This function MUST fail closed: an internal error at any step (a database failure, F01's own
    `isAuthorized` throwing) surfaces as `state: REFUSED` with a reason identifying the internal
    error — never as a default-`RESOLVED` outcome.

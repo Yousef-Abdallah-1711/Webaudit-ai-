@@ -181,6 +181,24 @@ own required workflow)
   first planning pass — noted, not touched, consistent with this feature's own repository-safety
   charter.
 
+## Phase 12: Controlled Upstream Amendment U-1 — Scan Deadline Policy (2026-10-10)
+
+Planning-only amendment authorized by the project owner; implementation tasks below are future work and are NOT performed.
+
+- [X] T037 Verify the conflict read-only against `timeout-scheduler.ts`, `timeout.ts`, `state-machine.ts` and the 009 text; record the proven conflict in `plan.md`.
+- [X] T038 Author `contracts/scan-deadline-contract.md`; add FR-047, the FR-040 amendment note, SC-008, Key-Entity and Assumption notes to `spec.md`; add `ScanPlan.deadlineMs`/`deadlineBreakdown` and invariants to `data-model.md`; amend `execution-plan-contract.md` (step 4a), `execution-runtime-contract.md` (step 0, 6a, rule 6), `runtime-finalization-contract.md` and `evidence-envelope-contract.md`.
+- [X] T039 Record the amendment history in `spec.md` header and `plan.md`; preserve FR-040's original text.
+- [ ] T-U1-1 Add `ScanPlan.deadlineMs Int?` and `deadlineBreakdown Json?` with a migration (implementation).
+- [ ] T-U1-2 Implement and unit-test `computePlanDeadline` (critical path, ceiling, grant expiry, passive-only equals legacy).
+- [ ] T-U1-3 Integrate into `resolvePlan` with `PLAN_DEADLINE_EXCEEDS_CEILING` / `GRANT_EXPIRES_BEFORE_DEADLINE`.
+- [ ] T-U1-4 Dispatch step 0 with `SCAN_DEADLINE_EXPIRED` / `SCAN_DEADLINE_INSUFFICIENT` before F07 admission.
+- [ ] T-U1-5 Engine host-loop expiry check and shared helper.
+- [ ] T-U1-6 Extend `sweepTimedOutScans` with the planned pass; existing timeout tests unchanged and green.
+- [ ] T-U1-7 `expirePlanUnits` (topological order, status-by-cause matrix, engine `onUnitExpired -> TERMINATED|PENDING` with the lease held until confirmation, F07-state precedence), planned-pass ordering (expire -> module-result finalizers -> guarded transaction), self-healing pass with a supporting index, reverify-plan pass, all in the same `timeout-sweep` job.
+- [ ] T-U1-8 `continueScanIfPlanTerminal` gate, domain-registered module-result finalizer extension point, event-driven completion from `finalizeExecutionUnit`, and the orchestrator's final transition routed through the gate.
+- [ ] T-U1-9 Engine execution-wrapper fencing helper (terminal unit / terminal scan / passed deadline in one transaction) and the two added edges `PLANNED -> REFUSED` / `DISPATCHED -> REFUSED`; fence-first-claim-second ordering; engines confirm their lease before finalizing; generic `recordEvidence` stays permissive.
+- [ ] T-U1-10 Adverse tests for AC-1..AC-20 (database clock, kill-vs-deadline precedence, sweep-vs-gate race, refund fairness, legacy regression).
+
 ## Explicitly NOT performed (per this feature's own charter)
 
 - `/speckit-implement` — NOT run. No application code, route, service file, or Prisma migration

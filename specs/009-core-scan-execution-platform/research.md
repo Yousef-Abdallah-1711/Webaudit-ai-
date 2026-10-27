@@ -287,6 +287,19 @@ master plan, and if so, how is that handled?
   the master prompt reserves for actually stopping and escalating — it is a minor, net-positive
   refinement this spec can adopt for its own design while leaving 006's document itself alone).
 
+## R13 (amendment U-1, 2026-10-10): How is a bounded scan deadline introduced for long-running classes without a second scheduler?
+
+- **Decision**: a per-plan immutable `deadlineMs` calculated by `resolvePlan` and enforced by the existing
+  `timeout-sweep` job, dispatch step 0 and the engine host loops (`contracts/scan-deadline-contract.md`).
+- **Rationale**: the frozen sweep uses one global limit and terminates any scan by state and age; `Scan.startedAt`
+  is written once, so `startedAt + deadlineMs` is a non-extendable anchor; planning already owns graph shape, so it
+  owns the calculation; the runtime already owns timeouts, so it owns enforcement. No F01/F07 change is needed
+  because dispatch refusals precede admission and deadline termination is liveness enforcement, not a safety trigger.
+- **Alternatives considered**: raising the global 15-minute value (rejected: weakens every scan and is unbounded for
+  passive work); a separate scan row for long units (rejected: second scan platform); exempting scans with live
+  non-passive units from the sweep (rejected: unbounded scans); a new F07 SYSTEM trigger on expiry (rejected: needs an
+  008 amendment and is unnecessary); per-class deadlines only (rejected: ignores critical path and grants).
+
 ## Independent Adversarial Review (master-prompt §40, 31 named scenarios plus this spec's own
 Edge Cases)
 

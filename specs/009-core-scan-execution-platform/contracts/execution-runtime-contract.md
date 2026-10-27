@@ -21,6 +21,10 @@ class unit never dispatches onto any queue at all — it is finalized directly a
 dispatchExecutionUnit(executionUnitId: string) -> void  // enqueues; does not block for completion
 ```
 
+0. (U-1) Deadline precondition, evaluated on pickup after the re-read and before F07: apply
+   `scan-deadline-contract.md` "Dispatch precondition" — scan terminal or deadline passed -> finalize
+   `REFUSED` `SCAN_DEADLINE_EXPIRED`; remaining time < `timeoutPolicyMs + hardStopMarginMs` -> finalize
+   `REFUSED` `SCAN_DEADLINE_INSUFFICIENT`. No F07 call, no lease, no budget consumed.
 1. Enqueue a job whose payload is **only** `{ executionUnitId }` (FR-018) — never embedded
    configuration, credentials, or content.
 2. On pickup, the worker re-reads the full `ExecutionUnit` row from Postgres (never trusts the
@@ -38,6 +42,9 @@ dispatchExecutionUnit(executionUnitId: string) -> void  // enqueues; does not bl
    unchanged) via an IPC round-trip to the parent (the child itself never holds a direct Postgres
    connection — a deliberate isolation property: a hung or compromised child cannot itself forge a
    checkpoint result, only ask its parent to perform one).
+6a. (U-1) The same <= 5 s host-loop iteration also checks `scan terminal OR now >= effectiveDeadlineAt`; on
+   expiry the host terminates its own execution and finalizes per `scan-deadline-contract.md` "Outcome
+   mapping". This is liveness enforcement, not an F07 trigger.
 7. On the child's own clean exit (success or a classified failure), or on the parent's `SIGKILL`
    deadline firing first: call `finalizeExecutionUnit` (`runtime-finalization-contract.md`).
 
@@ -57,3 +64,5 @@ dispatchExecutionUnit(executionUnitId: string) -> void  // enqueues; does not bl
    already-terminal unit is a no-op, returning the prior outcome (mirroring F07's own no-
    resurrection guarantee, applied here to this spec's own dispatch layer specifically).
 5. No AI judgment may decide steps 3-7's outcomes (FR-046).
+6. (U-1) Step 0 runs before every dispatch, including every BullMQ redelivery and every worker-restart recovery; an
+   expired or terminal plan's units are never dispatched or resurrected.

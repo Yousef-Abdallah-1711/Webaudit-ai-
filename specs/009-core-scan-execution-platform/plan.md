@@ -133,7 +133,7 @@ and this session's own direct reads, cited inline where new)
 Four BullMQ queues (`webaudit-scan-phase`/`webaudit-reverify`/`webaudit-maintenance`/
 `webaudit-email-notification`, `packages/config/src/queues.ts`), `attempts:1` for scan-phase
 (credit/AI-spend safety), `attempts:3` for reverify/email (proven idempotent). 15-minute scan-wide
-timeout with a 60-second sweep (`timeout-scheduler.ts`). Cooperative-flag cancellation, never
+timeout with a 60-second sweep (`timeout-scheduler.ts`; amended for plans containing non-passive units — see "Controlled Upstream Amendment U-1"). Cooperative-flag cancellation, never
 interrupting in-flight capability work (`orchestrator/cancellation.ts`). `CapabilityExecution`
 requires a non-nullable `capabilityId` FK to `Capability` (`schema.prisma:683-707`) — the concrete
 fact that makes "extend `CapabilityExecution`" infeasible for a generic cross-engine record (this
@@ -255,6 +255,8 @@ stateDiagram-v2
     PLANNED --> BLOCKED: a dependency fails/cancels before this unit dispatches
     PLANNED --> ADMITTED: F07 safetyCheckpoint PROCEED (or N/A for passive classes)
     ADMITTED --> REFUSED: safety/authorization refused between admission and dispatch
+    PLANNED --> REFUSED: U-1 deadline or scan terminal at dispatch step 0
+    DISPATCHED --> REFUSED: U-1 deadline or scan terminal before fork
     ADMITTED --> DISPATCHED: queue job created
     DISPATCHED --> RUNNING: child process started
     RUNNING --> COMPLETED
@@ -549,6 +551,56 @@ progress honestly). Every SPEC 2-6 (the renumbered product-testing specs) consum
 `ExecutionUnit` outcomes and `Issue`/`IssueEvidenceLink` provenance, never inventing its own
 orchestration, evidence store, or cancellation semantics (`quickstart.md`'s validation steps make
 this a gating check, not an aspiration).
+
+## Controlled Upstream Amendment U-1 — Scan Deadline Policy
+
+**Status**: authorized by the project owner on 2026-10-10 as a minimal planning amendment; planning documents only; no implementation, migration, deployment or commit. Raised by SPEC 011 (`specs/011-source-backend-database-testing-platform/upstream-amendment-requests.md`). **Amendment history** is recorded in `spec.md`'s header; the previous text of FR-040 is preserved in place and only scoped by an amendment note.
+
+### Previous contract
+FR-040 and "Current-State Architecture": the existing 15-minute scan-wide timeout and its 60-second sweep (`apps/worker/src/orchestrator/timeout-scheduler.ts`, `timeout.ts`) "continue to behave exactly as today, unmodified". Constitution Principle XII: a class exceeding the short-job assumptions (today: ~15-minute scan-wide timeout) "MUST NOT inherit them". 006's execution-class matrix: `SOURCE_EXECUTION` runs "minutes to tens of minutes".
+
+### Proven conflict (verified read-only against the code)
+- `timeout-scheduler.ts` sets `DEFAULT_MAX_DURATION_MS = 15 * 60_000` (env `SCAN_TIMEOUT_MS`) and registers the `timeout-sweep` job every 60 s.
+- `timeout.ts` `sweepTimedOutScans` selects `Scan` rows with `state in SWEEPABLE` (every non-terminal state, including all `RUNNING_*`) and `startedAt < now - maxDurationMs` — one global number, no look at the plan, the execution class or live units — and applies the guarded transition to `TIMED_OUT` plus `refundForUndelivered`.
+- `state-machine.ts` writes `startedAt` exactly once, on the guarded `QUEUED -> RUNNING_PHASE_1` transition.
+- The 15-minute limit is therefore BOTH a hard legacy runtime behavior (code, env default) AND a frozen planning invariant (FR-040, Current-State). For a scan with a plan containing a non-passive unit whose `timeoutPolicyMs` exceeds 15 minutes, the frozen sweep terminates and refunds the scan while the unit is alive; FR-040 forbids changing the sweep and Principle XII forbids inheriting it. No frozen text defines the `Scan` row's bound for such plans. The conflict is real; 010's long-running classes face the same question.
+
+### New authoritative contract
+`contracts/scan-deadline-contract.md` (new). In short: every `RESOLVED` plan carries an immutable bounded `deadlineMs`; the effective deadline is `Scan.startedAt + deadlineMs` (reverify: `resolvedAt + deadlineMs`; no plan: `startedAt + legacy`); the existing sweep enforces it; dispatch and the engine host loops honour it; nothing can extend it.
+
+### Deadline ownership
+- **Scan Planning context owns the calculation and its immutability**: `resolvePlan` calls the pure `computePlanDeadline` and persists the result with the graph (`execution-plan-contract.md` step 4a, `data-model.md`).
+- **Execution Runtime context owns enforcement**: the existing `timeout-sweep` job (same schedule, same guarded transition, same refund path), the dispatch precondition (`execution-runtime-contract.md` step 0) and each engine host's existing <= 5 s loop.
+- Result/Evidence Platform owns nothing new (evidence produced by a unit is fenced by the engine's execution wrapper). F01 and F07 own nothing new. No second scheduler or independent safety system is created.
+
+### Deadline calculation
+`deadlineMs = L + C + M`: `L` = today's limit if the graph has any passive unit (else 0); `C` = critical-path sum (chains add, parallel siblings do not) of `unitBudgetMs = maxAttempts x (timeoutPolicyMs + hardStopMarginMs + queueWaitAllowanceMs)`, where `timeoutPolicyMs` MUST include setup, dependency installation, tests/steps, persistence, cleanup and finalization; `M` = finalization margin (300 s). Passive-only plans: exactly today's value. Refused (never clamped) when above `SCAN_PLAN_MAX_DEADLINE_MS` (6 h) or when a referenced grant expires first. Worked example (SPEC 011 monorepo, 4 chained partitions): `timeoutPolicyMs` = 120 + 1 500 + 120 + 90 + 40 s = 2 030 000 ms; unit budget = 2 030 000 + 300 000 + 60 000 = 2 390 000 ms; `C` = 9 560 000; `L` = 900 000; `M` = 300 000; `deadlineMs` = 10 760 000 ms (2 h 59 min 20 s), under the 21 600 000 ms ceiling. The dispatch threshold is 2 330 000 ms (it excludes the 60 000 ms queue allowance, which is spent before step 0; proof in `scan-deadline-contract.md`).
+
+### Legacy compatibility
+Scans without a `ScanPlan` row (all scans today) follow the unchanged legacy pass: same query, same `SCAN_TIMEOUT_MS`, same guarded transition and refund. Passive-only plans get today's value. The sweep function gains an optional plan-deadline lookup; absent, behavior is byte-identical (regression task T-U1-6).
+
+### Execution-unit timeout interaction
+`timeoutPolicyMs` and the parent-armed SIGKILL (FR-019) stay per-unit and are unchanged; the plan deadline sits above them. A unit may start only if `remaining >= dispatchThresholdMs` (= `timeoutPolicyMs + hardStopMarginMs`), so its own hard stop always lands inside the scan deadline. Retries are inside the budget and consume, never extend, the remaining time.
+
+### Sweeper behavior
+Legacy pass (no RESOLVED plan; unchanged) + planned pass (plan deadline) + self-healing pass (units of terminal scans or expired reverify plans), all in the one existing job. For a planned candidate the order is `expirePlanUnits` -> module-result finalizers -> the existing guarded `TIMED_OUT` transaction, so the refund reflects what the units delivered; leftovers are finalized through `finalizeExecutionUnit` with the outcome mapping (an F07 stop already recorded wins over the deadline outcome). Refund is issued only after a successful guarded move. Scan completion is event-driven through `continueScanIfPlanTerminal` (called by the orchestrator and by unit finalization) with domain-registered module-result finalizers. All deadline comparisons use the database clock.
+
+### Cancellation behavior
+User cancellation and F07 stops always take precedence; first terminal compare-and-swap wins; the deadline never reverses a terminal state. Leftover units of a cancelled scan are finalized `CANCELLED`.
+
+### Crash recovery
+Every redelivery, stalled-job recovery or restart re-runs dispatch step 0 and the existing F07 no-resurrection check; an expired or terminal plan is never dispatched or resurrected; a dead host's unit is finalized by the self-healing pass and its engine backstop (SPEC 011: Execution Plane dead-man, hard TTL, reconciler).
+
+### Refund/finalization behavior
+No change to `refundForUndelivered`, the guarded `TIMED_OUT` transition, or the refund-after-move rule. A scan cannot reach `COMPLETED` with a non-terminal plan unit. Pricing for metered classes remains F06's; until then expiry refunds follow delivered-area semantics only. Evidence produced by a terminal unit, a terminal scan or after the plan deadline is rejected by the engine wrapper (generic registry-dispatched evidence is unaffected).
+
+### Required implementation tasks
+T-U1-1 add `ScanPlan.deadlineMs Int?` (null iff REFUSED) and `deadlineBreakdown Json?` plus migration. T-U1-2 implement and unit-test `computePlanDeadline`. T-U1-3 integrate into `resolvePlan` with the two new refusal reasons. T-U1-4 dispatch step 0. T-U1-5 engine host-loop expiry check contract and shared helper. T-U1-6 extend `sweepTimedOutScans` (planned pass) with legacy-regression tests (existing timeout tests unchanged and green). T-U1-7 `expirePlanUnits` plus self-healing pass plus reverify-plan pass. T-U1-8 `continueScanIfPlanTerminal` gate, module-result finalizer extension point and orchestrator change (the legacy final transition goes through the gate). T-U1-9 engine execution-wrapper fencing helper (terminal unit / terminal scan / passed deadline, one transaction) and the `PLANNED -> REFUSED` transition. T-U1-10 adverse tests for every acceptance criterion race below.
+
+### Acceptance criteria
+AC-1 a scan without a plan is terminated at today's limit and nothing else changes. AC-2 a passive-only plan gets today's limit. AC-3 a plan with a long unit survives 15 minutes and is terminated at its own deadline. AC-4 every resolved plan has `deadlineMs` <= ceiling and <= grant expiry, else REFUSED. AC-5 retries/redelivery/restart/progress cannot move the deadline. AC-6 sweeper vs completion: exactly one terminal write, refund at most once. AC-7 refund vs unit finalization: refund computed from a fresh in-transaction read, issued after the move only. AC-8 F07 kill during any unit phase wins ordering and the deadline never overrides it. AC-9 a stale worker cannot finalize an expired unit and cannot write unit-produced evidence for a terminal unit, terminal scan or passed deadline, while registry-dispatched check evidence after termination still works (SPEC 010/011 sweeps unaffected). AC-10 a unit dispatched with insufficient remaining time is REFUSED before F07 admission and consumes no budget. AC-11 units sharing a deadline: later units in a chain are refused rather than started late. AC-12 no unit remains non-terminal for a terminal scan beyond one sweep interval plus its host loop. AC-13 a scan cannot complete with a non-terminal unit, and the completion gate and the sweep racing yield exactly one terminal state and at most one refund. AC-14 F01/F07 contracts, enums and audit types are unchanged. AC-15 an F07 stop recorded before expiry wins the unit outcome (KILLED/CANCELLED, not TIMEOUT). AC-16 a unit still PLANNED or DISPATCHED (no process started) at expiry is REFUSED via the two added edges without any F07 call, and dependents of an expired predecessor end BLOCKED (deterministic order). AC-17 new deadline comparisons use the database clock; the legacy pass is byte-identical and the startedAt skew is absorbed by M. AC-18 the gate cannot resume the phase chain after the deadline (atomic predicate) and an expired scan ends TIMED_OUT. AC-19 an engine with an isolation runtime keeps its F07 lease until termination is confirmed (or TERMINATION_UNCONFIRMED after the bounded window). AC-20 dispatch step 0 does not apply to passive units.
+
+---
 
 ## Independent Adversarial Review
 

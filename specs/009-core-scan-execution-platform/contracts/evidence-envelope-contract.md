@@ -16,6 +16,10 @@ recordEvidence(
 
 ## Required behavior
 
+0. (U-1) This generic write path does NOT itself reject writes for a terminal unit: registry-dispatched evidence
+   (SPEC 010/011 check results) is legitimately written parent-side after units are terminal. Evidence produced BY a
+   unit's execution is fenced by each engine's execution wrapper (terminal unit, terminal scan or passed plan deadline
+   => no write), per `scan-deadline-contract.md` "Evidence and finalization fencing".
 1. Read the owning `ExecutionUnit.executionUnitClass`. If it is `ACTIVE_SECURITY`/
    `AUTHENTICATED_WORKFLOW`/`SOURCE_EXECUTION`: pass `payload` through `@webaudit/redaction`
    unconditionally before any further step (FR-030) — no caller-supplied bypass flag exists.

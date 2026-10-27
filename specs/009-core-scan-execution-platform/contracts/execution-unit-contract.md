@@ -75,3 +75,12 @@ never silently coerced to the nearest valid state.
 5. A unit's own dependency edges, once the plan is `RESOLVED`, are never edited — only additive
    runtime-discovered child units (with their own fresh edges) may be created afterward, per the
    generation rules above.
+6. (U-1) `timeoutPolicyMs` MUST be declared by the owning engine's spec as the full wall-clock the unit may take from
+   `DISPATCHED` to terminal finalization, including setup, dependency installation, the work, result persistence,
+   cleanup/teardown and finalization. Each non-passive engine ALSO declares its `hardStopMarginMs` (the parent-armed
+   kill-deadline margin of FR-019; default 60 000 ms) and an independent hosting-failure backstop (see
+   `scan-deadline-contract.md`). These declarations feed `computePlanDeadline`; they are code-level engine
+   declarations like the unit-consumption policy, not new columns.
+7. (U-1) Exactly two edges are added for plan-deadline handling (`scan-deadline-contract.md` matrix): `PLANNED -> REFUSED`
+   and `DISPATCHED -> REFUSED` (both to the existing `REFUSED` status; `DISPATCHED` means a queue job exists and no
+   child process or Guest has started). No engine may use them for any other purpose; no unit status is added.

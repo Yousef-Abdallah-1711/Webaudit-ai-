@@ -14,8 +14,10 @@ either way).
 
 **Prisma enum-naming note**: F01's own `data-model.md` defines an `ExecutionClass` enum
 (`BROWSER | CRAWLER | SOURCE_EXECUTION | ACTIVE_SECURITY | AUTHENTICATED_WORKFLOW |
-LOAD_CAPACITY`) as *its own* intended future schema — not yet present in the real
-`apps/api/prisma/schema.prisma` (confirmed by direct grep: no `enum ExecutionClass` exists today).
+LOAD_CAPACITY`) as *its own* intended future schema. **Correction 2026-10-27 (owner-authorized, documentation only):**
+that enum is now present in the real `apps/api/prisma/schema.prisma` (`enum ExecutionClass`, added
+by SPEC 007 T001 and mirrored in `packages/types/src/domain.ts`); the earlier "not yet present" /
+"no `enum ExecutionClass` exists today" statement is stale. The decision below is unchanged.
 This spec needs a superset (F01's six values plus `PASSIVE_HTTP`/`SOURCE_STATIC`, which never
 require `TargetAuthorization` and so are rightly absent from F01's own, narrower enum) and
 therefore defines its **own**, distinctly-named `ExecutionUnitClass` enum below rather than
@@ -162,6 +164,8 @@ model ScanPlan {
   state                ScanPlanState
   refusalReason        String?       // populated only when state = REFUSED (FR-007's F01 reason, or this spec's own graph-validation refusal)
   resolvedAt           DateTime      @default(now())
+  deadlineMs           Int?          // U-1: immutable bounded plan deadline in ms; non-null iff state = RESOLVED (scan-deadline-contract.md)
+  deadlineBreakdown    Json?         // U-1: { passiveWindowMs, criticalPathMs, finalizationMarginMs, ceilingMs, grantCapMs? } audit record of the calculation
 
   executionUnits ExecutionUnit[]
 
@@ -380,6 +384,11 @@ requires **zero** structural change for this spec's package to be implementable.
   function (`contracts/finding-materialization-contract.md`) — never written directly by an
   engine, so provenance (FR-037) is always attributable to a known, auditable code path.
 
+- (U-1) `ScanPlan.deadlineMs` MUST be non-null iff `state = RESOLVED`, > 0 and <= the platform ceiling
+  (`SCAN_PLAN_MAX_DEADLINE_MS`); `deadlineMs`/`deadlineBreakdown` are written once with the graph and have no
+  update path. The effective deadline is derived (`Scan.startedAt + deadlineMs`, or `resolvedAt + deadlineMs` for
+  `REVERIFY`), never stored as an absolute timestamp.
+
 ## Schema invariant ownership
 
 | Invariant | Enforced by | Owning context |
@@ -391,6 +400,8 @@ requires **zero** structural change for this spec's package to be implementable.
 | `ExecutionUnit` finalization idempotency (`idempotencyKey`) | DATABASE (`@@unique`) + SERVICE | Execution Runtime |
 | `FailureClass` assignment (never engine-self-reported) | SERVICE (`research.md` R9's classification function) | Execution Runtime |
 | Process-level force termination (FR-019) | SERVICE + OS (parent-armed `SIGKILL`, outside Postgres entirely) | Execution Runtime |
+| `ScanPlan.deadlineMs` bounded, immutable, derived-anchor only (U-1, FR-047) | SERVICE (pure `computePlanDeadline`, no update path) | Scan Planning |
+| Plan deadline enforcement, expiry finalization, scan-completion invariant (U-1) | SERVICE (existing `timeout-sweep` job, dispatch step 0, engine host loops) | Execution Runtime |
 | Progress-write rejection after terminal status (FR-027a) | SERVICE (the durable-snapshot writer checks `status` before applying) | Execution Runtime |
 | `Evidence.redacted` before persistence for the three named classes | SERVICE (the one shared Evidence writer, no bypass) | Result/Evidence Platform |
 | `Artifact` per-object/per-scan size budgets | SERVICE (checked at write time) | Result/Evidence Platform |

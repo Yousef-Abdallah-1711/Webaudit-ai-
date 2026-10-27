@@ -43,6 +43,15 @@ finalizeExecutionUnit(
    own finalization — to `BLOCKED` — runs the identical step 5, so the propagation reaches every
    downstream unit through repeated application, not a single recursive sweep).
 
+## Scan/plan-end finalization (U-1)
+
+When a scan terminates or a plan's deadline passes, leftover non-terminal units are finalized by
+`expirePlanUnits` (`scan-deadline-contract.md`) through THIS function, reading the unit's current
+`idempotencyKey` inside the transaction; outcomes are `FAILED`/`TIMEOUT` (detail `SCAN_DEADLINE`), `REFUSED`
+`SCAN_DEADLINE_EXPIRED`, `CANCELLED` or `FAILED`/`TRANSIENT_INFRASTRUCTURE` per the outcome-mapping table. A
+`REFUSED` outcome from dispatch step 0 never holds a lease, so step 2 is a no-op. All existing rules (idempotent
+repeat, no re-finalization with a different outcome, lease release, `BLOCKED` propagation) apply unchanged.
+
 ## Non-negotiable boundary rules
 
 1. This function MUST be the only code path that transitions an `ExecutionUnit` to a terminal

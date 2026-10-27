@@ -27,6 +27,8 @@ MUST raise an explicit upstream amendment request against this spec (per this sp
 Cases' "surface a proposed amendment rather than silently diverge" rule, inherited from 006's
 identical governance model) — it MUST NOT silently bypass the contract.
 
+**Amendment history**: (1) 2026-10-07 closure pass — "Downstream contract freeze" paragraph above. (2) **2026-10-10 — Controlled Upstream Amendment U-1 (Scan Deadline Policy)**, raised by SPEC 011 and explicitly authorized by the project owner: adds FR-047, `contracts/scan-deadline-contract.md`, the `ScanPlan.deadlineMs`/`deadlineBreakdown` fields and the scoped interpretation note under FR-040. Nothing else in this spec was reopened. Full record (previous contract, proven conflict, new contract, tasks, acceptance criteria): `plan.md` section "Controlled Upstream Amendment U-1 — Scan Deadline Policy".
+
 **Consolidation note**: this spec is the single planning package for what
 `specs/006-scan-architecture-v2/roadmap.md` originally planned as three separate foundation
 specs — **F02** (Scan Profiles / Execution Planning / Orchestration), **F03** (Evidence / Findings
@@ -629,6 +631,13 @@ explicitly recorded (not silently absent) and distinguishable from each other.
   credit-debit/reverify/retention mechanisms are explicitly out of scope for modification — they
   continue to behave exactly as today, unmodified, per 006's own FR-024 strict-parallel-run
   requirement, which this spec inherits without exception.
+  **Amendment note (U-1, 2026-10-10)**: "exactly as today" is retained for every scan WITHOUT a
+  `ScanPlan` and for plans containing only `PASSIVE_HTTP`/`SOURCE_STATIC`/`TELEMETRY` units
+  (their deadline equals today's value). For a scan whose plan contains a non-passive unit, the
+  scan-wide timeout is governed by FR-047 and `contracts/scan-deadline-contract.md`, because the
+  frozen 15-minute sweep would otherwise terminate and refund such a scan while its unit is still
+  legitimately running (Constitution Principle XII forbids a long-running class from inheriting
+  that limit). The sweep itself remains the single existing job.
 - **FR-041**: Every new entity this spec defines MUST be tenant-scoped at creation and at every
   read, re-deriving ownership through its owning `Scan`'s `userId` (or, for `TargetAuthorization`-
   referencing fields, through F01's own already-tenant-scoped grant) — never a bare lookup by `id`
@@ -663,13 +672,32 @@ explicitly recorded (not silently absent) and distinguishable from each other.
   identical FR-025, so this spec's own package is self-contained on this point exactly as its two
   upstream dependencies are.
 
+### Functional Requirements — Scan Deadline (Controlled Upstream Amendment U-1; Scan Planning calculates, Execution Runtime enforces)
+
+- **FR-047 (scan deadline policy)**: Every `RESOLVED` `ScanPlan` MUST carry an immutable, bounded
+  `deadlineMs` calculated by `resolvePlan` as a pure function of the plan (FR-046): for a plan with
+  no non-passive unit it equals today's scan-wide limit; otherwise it is the passive window plus the
+  critical-path sum of each non-passive unit's budget (`maxAttempts` — the proven-idempotent bound — times
+  the sum of its `timeoutPolicyMs`, which MUST include setup, dependency installation, the work,
+  persistence, cleanup and finalization, its declared hard-stop margin and a queue allowance) plus a
+  fixed finalization margin, never above a platform ceiling and never beyond the authorized grants'
+  expiry. The authoritative deadline is anchored on `Scan.startedAt` (written once) or, for a
+  reverify plan, `ScanPlan.resolvedAt`, so retries, redeliveries, worker restarts and progress
+  events cannot extend it. The existing `timeout-sweep` job MUST enforce the plan deadline for planned
+  scans and today's value for scans without a plan; dispatch MUST refuse a unit that cannot finish
+  inside the remaining time (before F07 admission); running units MUST end when their scan or plan
+  ends; a scan MUST NOT complete while a plan unit is non-terminal; cancellation and F07 stops always
+  take precedence; refunds follow the existing guarded terminal-state rules; expired plans are never
+  resurrected. This requirement adds no scheduler, no F07 trigger and no change to F01/F07.
+  Normative detail: `contracts/scan-deadline-contract.md`.
+
 ## Key Entities
 
 - **ScanConfiguration**: NEW (ephemeral input shape, not necessarily its own table — a request DTO
   the Plan Resolver consumes). Target + Profile/custom selection + domains + advanced config +
   authorization-grant references.
 - **ScanProfile** / **ScanProfileVersion**: NEW. Named, versioned scan-configuration template.
-- **ScanPlan**: NEW, generalizes `Scan.capabilitySnapshot`'s intent. The immutable resolved graph.
+- **ScanPlan**: NEW, generalizes `Scan.capabilitySnapshot`'s intent. The immutable resolved graph, plus (U-1) its immutable bounded `deadlineMs` and `deadlineBreakdown`.
 - **ExecutionUnit**: NEW (not an extension of `CapabilityExecution` — see Clarifications). One
   engine invocation, generically.
 - **ExecutionDependency**: NEW. A DAG edge between two `ExecutionUnit`s in the same plan.
@@ -719,6 +747,11 @@ explicitly recorded (not silently absent) and distinguishable from each other.
   it is retried/cancelled/killed, and what it must declare before proceeding to its own
   `/speckit-tasks` — verified by the Independent Test framing of User Stories 1-2 taken together.
 
+- **SC-008 (U-1)**: A plan containing a long-running non-passive unit is not terminated by a universal
+  15-minute limit, is always bounded (deadline <= platform ceiling, <= authorized grant expiry), and no
+  execution outlives its scan: verified by the acceptance criteria AC-1..AC-20 in `plan.md`'s U-1
+  section, including a regression proving that scans without a `ScanPlan` behave exactly as before.
+
 ## Assumptions
 
 - F01 (`specs/007-foundation-target-authorization-scope/`) and F07
@@ -728,6 +761,10 @@ explicitly recorded (not silently absent) and distinguishable from each other.
   correction (Clarifications) and the `ExecutionUnit`-is-not-`CapabilityExecution` correction
   (Clarifications) — both corrections to 006's own explicitly-illustrative, non-final sketches, not
   contradictions of a frozen decision.
+- Scan-deadline numeric constants introduced by U-1 (`planFinalizationMarginMs` 300 000 ms,
+  `queueWaitAllowanceMs` 60 000 ms, default `hardStopMarginMs` 60 000 ms, `SCAN_PLAN_MAX_DEADLINE_MS`
+  21 600 000 ms) are provisional platform-configuration defaults, hard-enforced; raising the ceiling above
+  6 h is an amendment, not a configuration change.
 - This spec's current-state baseline (`docs/reviews/scan-audit-2026-10-07/`, plus this session's
   own direct reads of `apps/api/prisma/schema.prisma`, `packages/capability-sdk/src/contract.ts`,
   `apps/worker/src/orchestrator/orchestrator.ts`, `apps/worker/src/workspace/teardown.ts`,

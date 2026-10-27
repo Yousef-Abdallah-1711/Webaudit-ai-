@@ -433,7 +433,7 @@ asserted the debit-wins outcome.
 ### Implementation for User Story 5
 
 - [X] T184 [US5] Implement subscription lifecycle (subscribe, change, cancel) in `apps/api/src/services/billing/subscription.service.ts`
-- [X] T185 [US5] Implement entitlement enforcement middleware in `apps/api/src/middleware/entitlements.middleware.ts`
+- [X] T185 [US5] Implement entitlement enforcement middleware in `apps/api/src/middleware/entitlements.middleware.ts` _(closure 2026-10-28: no such file ever existed; enforcement is implemented in `apps/api/src/services/billing/entitlements.ts`, covered by `entitlements.test.ts`)_
 - [X] T186 [US5] Implement credit purchase creating non-expiring lots in `apps/api/src/services/billing/purchase.service.ts`
 - [X] T187 [US5] Implement signature-verified idempotent billing webhook in `apps/api/src/routes/webhooks.routes.ts`
 - [X] T188 [P] [US5] Implement pre-renewal expiry warning notification in `apps/api/src/services/billing/renewal-warning.ts`
