@@ -58,7 +58,11 @@ Preconditions, checked in this order (fail on the first unmet one, matching `cre
 5. Each budget field is within FR-011's bounds (`requestBudget` 1-1,000,000; `concurrencyBudget`
    1-1,000; `durationBudget` 1-2,592,000 seconds).
 6. `scope.targetKind` matches the Target's `inputType` per `data-model.md`'s validation rule.
-7. **Every host/repository entry in `scope` is bounded to the Target itself** — each
+7. *(Clarification, 2026-10-27: a URL Target's stored `canonicalValue` is an origin such as
+   `https://example.com`; for a `WEB` scope "the Target's own `canonicalValue`" below means the
+   normalized **hostname** of that origin, with a bare stored host accepted as-is. Scheme, port and
+   path of the stored origin are not compared. Repository comparison is unchanged.)*
+   **Every host/repository entry in `scope` is bounded to the Target itself** — each
    `includedHosts`/`excludedHosts` entry (and each wildcard's base domain) equals the Target's own
    `canonicalValue` or is a subdomain of it; a `REPOSITORY`-kind scope's `repositoryFullName` equals
    the Target's `canonicalValue` exactly. **"Subdomain of `B`" is a dot-boundary suffix check
@@ -126,6 +130,20 @@ an operator creating or widening a grant, and narrowing-via-replacement is struc
 The new grant's `authorization.granted` audit entry and the original's `authorization.replaced`
 entry (`after: { replacedByGrantId }`) are written atomically with the revoke, per `data-model.md`'s
 audit table.
+
+**Closure clarification (owner decision, 2026-10-27 — documents existing behavior; nothing in the
+implementation changed).** `narrowAuthorization` is a *replacement* operation. The new grant carries
+a new `ScopeDefinition` that must be **bounded to the Target** exactly as `createAuthorization`
+precondition 7 requires, but it is **not** required to be a subset of the original grant's Scope, and
+this contract defines no subset/subsumption rule. Everything else is unchanged and mandatory: the
+caller must own the grant and Target (owner-only, never an operator); the control level is
+reconfirmed live; `executionClasses` and `environmentRestriction` are carried over from the original
+and pass the same validation (including FR-015a); a replacement's budgets can only decrease
+(`requestBudget`/`concurrencyBudget` at most the original's, `durationBudget` at most the original's
+*remaining* lifetime); only a live grant can be narrowed (`GRANT_NOT_ACTIVE` otherwise); the original
+is revoked, never edited; and the revoke, the new grant and both audit entries commit in one
+transaction. Because a replacement may cover destinations the original did not, "narrow" describes
+the intended use, not a guarantee; the Target-bounded rule is what keeps it safe.
 
 **Widening is not a documented operation of this contract.** A user who wants broader Scope,
 different budgets, or an additional execution class on an existing grant calls

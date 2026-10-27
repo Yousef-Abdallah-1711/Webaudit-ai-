@@ -61,7 +61,9 @@ match requires agreement across dimensions).
 - **Path-prefix matching**: an entry matches if the normalized destination path starts with the
   normalized entry, on a path-segment boundary (`/api` matches `/api/v1/users`, not `/apiary`).
 - **Scheme/port matching**: the destination's resolved scheme/port must be in the scope's `schemes`/
-  `ports` list, or that list must be empty (meaning "default only," per FR-007).
+  `ports` list, or that list must be empty (per FR-007 and `data-model.md`: an empty `schemes` list
+  means **both** `http` and `https`; an empty `ports` list means the scheme's standard port only —
+  corrected 2026-10-27 from the earlier "default only" shorthand, which read as "http only").
 - **Repository matching**: `repositoryFullName` must equal exactly; `ref` must be in
   `includedRefs`/not in `excludedRefs` by exact string match (no glob, per FR-007); path prefixes
   follow the same rule as web.

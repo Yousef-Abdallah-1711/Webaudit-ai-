@@ -12,10 +12,17 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
+import { assertIsolatedTestDatabaseUrl } from './isolated-database.js';
 
-export const TEST_DB_URL =
+/**
+ * The repository-owned default is the isolated `webaudit_test` database. An
+ * explicit TEST_DATABASE_URL is validated too: anything that is not clearly a
+ * test database (name ending `_test`/`-test`, never `webaudit`) fails closed.
+ */
+export const TEST_DB_URL = assertIsolatedTestDatabaseUrl(
   process.env['TEST_DATABASE_URL'] ??
-  'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public';
+    'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public',
+);
 
 export const testDb = new PrismaClient({
   datasources: { db: { url: TEST_DB_URL } },
@@ -75,6 +82,9 @@ const TABLES_TO_CLEAR = [
   'ReadinessVerdict',
   'DesignIntent',
   'Scan',
+  'TargetAuthorization',
+  'TargetEnvironment',
+  'ScopeDefinition',
   'TargetVerification',
   'Target',
   'Subscription',

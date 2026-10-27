@@ -63,6 +63,30 @@ enum VerificationMethod {
   DNS
 }
 
+/// SPEC 007 (F01): execution classes that require a TargetAuthorization beyond
+/// ownership verification. PASSIVE_HTTP and SOURCE_STATIC are not members.
+enum ExecutionClass {
+  BROWSER
+  CRAWLER
+  SOURCE_EXECUTION
+  ACTIVE_SECURITY
+  AUTHENTICATED_WORKFLOW
+  LOAD_CAPACITY
+}
+
+/// SPEC 007 (F01): a Target's current environment classification.
+enum TargetEnvironmentClassification {
+  PRODUCTION
+  STAGING
+  DEVELOPMENT
+}
+
+/// SPEC 007 (F01): the kind of destination a ScopeDefinition describes.
+enum ScopeTargetKind {
+  WEB
+  REPOSITORY
+}
+
 enum ScanKind {
   INITIAL
   READINESS
@@ -439,6 +463,11 @@ model Target {
   verifications TargetVerification[]
   scans         Scan[]
 
+  /// SPEC 007 (F01): relation-only back-references required by Prisma; no
+  /// column, default or business meaning of their own.
+  targetEnvironment    TargetEnvironment?
+  targetAuthorizations TargetAuthorization[]
+
   /// FR-018: one target row per user per thing.
   @@unique([userId, inputType, canonicalValue])
   @@index([userId])
@@ -461,6 +490,84 @@ model TargetVerification {
   target Target @relation(fields: [targetId], references: [id], onDelete: Cascade)
 
   @@index([targetId, confirmedAt])
+}
+
+/// SPEC 007 (F01) FR-001: a Target has zero or one current environment
+/// classification. Reclassifying updates this row in place (no history table).
+/// Tenant scope is inherited through `targetId` -> `Target.userId`: every read
+/// MUST join through its Target and check `Target.userId` (FR-020).
+model TargetEnvironment {
+  id             String                          @id @default(cuid())
+  targetId       String
+  classification TargetEnvironmentClassification
+  classifiedAt   DateTime                        @default(now())
+  classifiedBy   String // userId
+
+  target Target @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([targetId])
+  @@index([targetId])
+}
+
+/// SPEC 007 (F01): what a grant covers. No `userId` column (FR-020): reachable
+/// only through a tenant-scoped TargetAuthorization. Immutable once referenced
+/// (FR-009) — enforced structurally: no update operation exists in the contracts.
+model ScopeDefinition {
+  id         String          @id @default(cuid())
+  targetKind ScopeTargetKind
+  createdAt  DateTime        @default(now())
+
+  // --- WEB fields (unused when targetKind = REPOSITORY) ---
+  includedHosts        String[] // exact hostname, or "*.example.com" (single-level wildcard)
+  excludedHosts        String[]
+  includedPathPrefixes String[] // normalized (decoded, "."/".."-resolved) path prefixes; "" = root
+  excludedPathPrefixes String[]
+  schemes              String[] // subset of ["http","https"]; empty array = both (FR-007 default)
+  ports                Int[] // empty array = scheme's standard port only (FR-007 default)
+
+  // --- REPOSITORY fields (unused when targetKind = WEB) ---
+  repositoryFullName String? // exact, matches existing REPO_PATTERN canonical form
+  includedRefs       String[] // exact branch/tag names or exact commit SHAs; no glob
+  excludedRefs       String[]
+  // includedPathPrefixes/excludedPathPrefixes above are shared with WEB
+
+  // --- AUTHENTICATED_WORKFLOW layer (shape only; F05 owns the semantics) ---
+  includedAccountRefs      String[]
+  includedRoles            String[]
+  includedActionCategories String[]
+
+  authorizations TargetAuthorization[]
+}
+
+/// SPEC 007 (F01): an explicit, separately-granted, per-execution-class grant.
+/// No state enum: GRANTED/ACTIVE/REVOKED/EXPIRED/BUDGET_EXHAUSTED are derived
+/// live from grantedAt/revokedAt/expiresAt/consumption (FR-012).
+/// FR-019: every lookup by `id` MUST also filter by the requesting `userId`.
+model TargetAuthorization {
+  id       String @id @default(cuid())
+  targetId String
+  userId   String // denormalized from Target.userId at creation; immutable
+
+  executionClasses       ExecutionClass[] // FR-006: one or more; never empty
+  scopeId                String
+  environmentRestriction TargetEnvironmentClassification[] // never empty; see FR-013(d)
+
+  requestBudget     Int // count; <= 1,000,000 (FR-011)
+  concurrencyBudget Int // simultaneous in-flight; <= 1,000
+  durationBudget    Int // seconds; <= 2,592,000 (30 days); always finite
+
+  grantedBy String // userId; equals `userId` except on an operator-initiated action's audit trail
+  grantedAt DateTime @default(now())
+  expiresAt DateTime // = grantedAt + durationBudget seconds; stored for query efficiency
+
+  revokedAt DateTime?
+  revokedBy String? // userId of the actor who revoked (self, or an operator per FR-017)
+
+  target Target          @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  scope  ScopeDefinition @relation(fields: [scopeId], references: [id])
+
+  @@index([targetId, userId])
+  @@index([userId])
 }
 
 model Scan {

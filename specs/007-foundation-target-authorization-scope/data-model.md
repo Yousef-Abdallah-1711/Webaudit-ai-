@@ -308,6 +308,12 @@ No new model. Every grant lifecycle event writes an `AuditLogEntry`
   Targets MUST use `targetKind: REPOSITORY`'s shape, since an archive's content is source, matching
   the parent spec's own intake-mode-to-execution-class mapping precedent of treating an archive as
   source regardless of transport).
+- **(Clarification, 2026-10-27 — documentation only.)** `Target.canonicalValue` is stored per input
+  type: a URL Target holds an **origin** (`https://example.com`, scheme and host, plus port if
+  non-default), a repository Target a lowercased `owner/repo`, an archive Target a content-addressed
+  storage key. In the host-boundedness rule below, "the owning `Target.canonicalValue`" therefore
+  means, for a `WEB` scope, the normalized **hostname** of that origin (a bare stored host is
+  accepted as-is); scheme, port and path of the stored origin are not part of the comparison.
 - **(Found during this spec's independent adversarial review — the most severe gap this spec's own
   review process found.)** Every `includedHosts`/`excludedHosts` entry on a `WEB`-kind
   `ScopeDefinition` (and, for a wildcard entry, the domain it is relative to) MUST be the owning

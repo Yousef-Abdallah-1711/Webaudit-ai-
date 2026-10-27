@@ -49,6 +49,30 @@ testable data-model/contract properties specific to this spec's narrower, more i
   platform-wide maximums now, closing the "technically finite but absurd" gap before any engine
   exists to consume a grant — see the concrete values added to FR-011.
 
+### Session 2026-10-27 (closure-audit owner decisions — documentation only; no runtime, schema or signature change)
+
+Recorded as additions; every earlier clarification above stays as decided at the time.
+
+- Q: Must a `narrowAuthorization` replacement scope be a strict subset of the scope it replaces?
+  -> A: **No (owner-approved, "Option A").** `narrowAuthorization` is a *replacement* operation: it
+  revokes the original grant and creates a new grant on a **new, Target-bounded** `ScopeDefinition`.
+  No subset/subsumption algorithm is defined or required. What stays mandatory and unchanged: Target
+  ownership, live control-level reconfirmation, Target-bounded scope validation, execution-class and
+  production restrictions, budget ceilings (a replacement's budgets can only decrease, never exceed
+  the original's), immediate revocation of the original, and the `authorization.granted` /
+  `authorization.replaced` audit entries. See `contracts/grant-lifecycle-contract.md`.
+- Q: What does "equals the Target's own `canonicalValue`" mean for a URL Target, whose stored value
+  is an origin such as `https://example.com`?
+  -> A: **Documentation clarification.** For a `WEB` scope, boundedness is a comparison of
+  *hostnames*: the host of the Target's origin (a bare stored host is accepted as-is) against each
+  scope host entry, using the normalization and dot-boundary rule already specified. Scheme, port
+  and path of the stored origin are not part of that comparison. `REPOSITORY` scopes still require
+  `repositoryFullName` to equal `canonicalValue` exactly. Implementation already behaves this way.
+- Q: What does an empty `schemes` list mean?
+  -> A: **Both `http` and `https`** (FR-007 and `data-model.md` already say so). The scope-matching
+  contract's earlier "default only" phrase is corrected to match; an empty `ports` list still means
+  the scheme's standard port only.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - A target owner grants scoped permission for a new testing capability (Priority: P1)

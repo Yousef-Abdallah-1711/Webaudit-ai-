@@ -29,6 +29,7 @@ import {
   CONTROL_LEVELS,
   VERIFICATION_METHODS,
   CREDIT_KINDS,
+  EXECUTION_CLASSES,
   INPUT_TYPES,
   INTENT_SOURCES,
   ISSUE_STATES,
@@ -40,10 +41,12 @@ import {
   SCAN_KINDS,
   SCAN_STATES,
   SCAN_STATES_TERMINAL,
+  SCOPE_TARGET_KINDS,
   SEVERITIES,
   SEVERITIES_BLOCKING,
   SEVERITY_ORDER,
   SUBSCRIPTION_STATUSES,
+  TARGET_ENVIRONMENT_CLASSIFICATIONS,
   TRUST_LEVELS,
   TX_TYPES,
   VERIFICATION_OUTCOMES,
@@ -139,6 +142,13 @@ const MIRRORED: readonly Mirror[] = [
   },
   { prisma: 'AiOutcome', exported: 'AI_OUTCOMES', members: AI_OUTCOMES },
   { prisma: 'IntentSource', exported: 'INTENT_SOURCES', members: INTENT_SOURCES },
+  { prisma: 'ExecutionClass', exported: 'EXECUTION_CLASSES', members: EXECUTION_CLASSES },
+  {
+    prisma: 'TargetEnvironmentClassification',
+    exported: 'TARGET_ENVIRONMENT_CLASSIFICATIONS',
+    members: TARGET_ENVIRONMENT_CLASSIFICATIONS,
+  },
+  { prisma: 'ScopeTargetKind', exported: 'SCOPE_TARGET_KINDS', members: SCOPE_TARGET_KINDS },
 ];
 
 /**

@@ -43,6 +43,31 @@ export function controlLevelRank(level: ControlLevel): number {
 export const VERIFICATION_METHODS = ['FILE', 'DNS'] as const;
 export type VerificationMethod = (typeof VERIFICATION_METHODS)[number];
 
+// ─── Target authorization (SPEC 007 / F01) ─────────────────────────────────
+
+/**
+ * Execution classes that require a TargetAuthorization beyond ownership
+ * verification (SPEC 007 FR-006). PASSIVE_HTTP and SOURCE_STATIC are not
+ * members: they are gated by ownership verification alone.
+ */
+export const EXECUTION_CLASSES = [
+  'BROWSER',
+  'CRAWLER',
+  'SOURCE_EXECUTION',
+  'ACTIVE_SECURITY',
+  'AUTHENTICATED_WORKFLOW',
+  'LOAD_CAPACITY',
+] as const;
+export type ExecutionClass = (typeof EXECUTION_CLASSES)[number];
+
+/** A Target's current environment classification (SPEC 007). */
+export const TARGET_ENVIRONMENT_CLASSIFICATIONS = ['PRODUCTION', 'STAGING', 'DEVELOPMENT'] as const;
+export type TargetEnvironmentClassification = (typeof TARGET_ENVIRONMENT_CLASSIFICATIONS)[number];
+
+/** The kind of destination a ScopeDefinition describes (SPEC 007). */
+export const SCOPE_TARGET_KINDS = ['WEB', 'REPOSITORY'] as const;
+export type ScopeTargetKind = (typeof SCOPE_TARGET_KINDS)[number];
+
 // ─── Scan lifecycle ───────────────────────────────────────────────────────────
 
 export const SCAN_KINDS = ['INITIAL', 'READINESS'] as const;
