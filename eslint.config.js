@@ -19,6 +19,11 @@ export default tseslint.config(
       'showcase-esaalnybot/**',
       'showcase-eink/**',
       'showcase-trimora/**',
+      'showcase-omanda-ai/**',
+      // A second checkout of this repository (git worktree) and recorded audit
+      // evidence (screenshot tooling) — neither is part of this tree's gate.
+      '.worktrees/**',
+      'docs/audits/**',
       'load-testing/**',
       '.claude/**',
       '.agents/**',

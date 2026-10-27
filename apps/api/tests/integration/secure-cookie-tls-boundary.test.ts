@@ -25,6 +25,8 @@ import { describe, expect, it } from 'vitest';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import http from 'node:http';
+import { TEST_DB_URL } from '../helpers/db.js';
+import { isolatedChildEnv } from '../helpers/isolated-database.js';
 
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const TSX_CLI = join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
@@ -32,12 +34,11 @@ const API_ENTRY = join(REPO_ROOT, 'apps', 'api', 'src', 'index.ts');
 const TEST_PORT = 38123;
 
 const BASE_ENV: Record<string, string | undefined> = {
-  ...process.env,
+  // `DATABASE_URL` comes from the validated test configuration and replaces the
+  // ambient value: the booted API must never reach the development database.
+  ...isolatedChildEnv(process.env, TEST_DB_URL),
   NODE_ENV: 'production',
   PORT: String(TEST_PORT),
-  DATABASE_URL:
-    process.env['DATABASE_URL'] ??
-    'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit?schema=public',
   REDIS_URL: 'redis://localhost:6389/15',
   JWT_ACCESS_SECRET: 'test-only-access-secret-not-used-anywhere-else-0123456789',
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-not-used-anywhere-else-0123456789',
@@ -83,13 +84,17 @@ function startChild(): Promise<{ kill: () => void }> {
     child.on('exit', (code) => {
       if (!settled) {
         reject(
-          new Error(`api exited before listening (code ${String(code)})\nstdout: ${stdout}\nstderr: ${stderr}`),
+          new Error(
+            `api exited before listening (code ${String(code)})\nstdout: ${stdout}\nstderr: ${stderr}`,
+          ),
         );
       }
     });
     setTimeout(() => {
       if (!settled) {
-        reject(new Error(`api did not log "listening" within 15s\nstdout: ${stdout}\nstderr: ${stderr}`));
+        reject(
+          new Error(`api did not log "listening" within 15s\nstdout: ${stdout}\nstderr: ${stderr}`),
+        );
       }
     }, 15_000);
   });
@@ -132,38 +137,30 @@ function oauthStart(extraHeaders: Record<string, string>): Promise<StartResult> 
 }
 
 describe('cookie Secure attribute tracks the real connection, not just NODE_ENV — real child process', () => {
-  it(
-    'NODE_ENV=production over a plain HTTP connection with no trusted TLS hop: the cookie is set but never Secure',
-    async () => {
-      const server = await startChild();
-      try {
-        const result = await oauthStart({});
-        expect(result.status).toBe(302); // real redirect to the provider, confirms the route ran
-        expect(result.setCookie).toBeDefined();
-        expect(result.setCookie).not.toMatch(/;\s*Secure/i);
-      } finally {
-        server.kill();
-      }
-    },
-    20_000,
-  );
+  it('NODE_ENV=production over a plain HTTP connection with no trusted TLS hop: the cookie is set but never Secure', async () => {
+    const server = await startChild();
+    try {
+      const result = await oauthStart({});
+      expect(result.status).toBe(302); // real redirect to the provider, confirms the route ran
+      expect(result.setCookie).toBeDefined();
+      expect(result.setCookie).not.toMatch(/;\s*Secure/i);
+    } finally {
+      server.kill();
+    }
+  }, 20_000);
 
-  it(
-    'NODE_ENV=production behind a trusted X-Forwarded-Proto: https hop (real TLS termination at the proxy): the cookie is Secure',
-    async () => {
-      const server = await startChild();
-      try {
-        const result = await oauthStart({
-          'X-Forwarded-Proto': 'https',
-          'X-Forwarded-For': '203.0.113.7',
-        });
-        expect(result.status).toBe(302);
-        expect(result.setCookie).toBeDefined();
-        expect(result.setCookie).toMatch(/;\s*Secure/i);
-      } finally {
-        server.kill();
-      }
-    },
-    20_000,
-  );
+  it('NODE_ENV=production behind a trusted X-Forwarded-Proto: https hop (real TLS termination at the proxy): the cookie is Secure', async () => {
+    const server = await startChild();
+    try {
+      const result = await oauthStart({
+        'X-Forwarded-Proto': 'https',
+        'X-Forwarded-For': '203.0.113.7',
+      });
+      expect(result.status).toBe(302);
+      expect(result.setCookie).toBeDefined();
+      expect(result.setCookie).toMatch(/;\s*Secure/i);
+    } finally {
+      server.kill();
+    }
+  }, 20_000);
 });

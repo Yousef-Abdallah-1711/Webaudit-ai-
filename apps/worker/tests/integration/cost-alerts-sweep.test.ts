@@ -27,6 +27,11 @@ describe('FR-C01-C04 cost-alert sweep — scheduled and wired', () => {
     });
     await db.aiInvocation.create({
       data: {
+        // Seeded inside the window, not "now": the sweep filters on
+        // `createdAt <= <its own JS clock>`, and a row stamped at insert time can
+        // land 1 ms ahead of that clock (captured: createdAt .523 vs now .522),
+        // which made this test fail roughly 1 run in 10.
+        createdAt: new Date(Date.now() - 5 * 60_000),
         provider: 'test',
         model: 'fixture',
         chainPosition: 0,

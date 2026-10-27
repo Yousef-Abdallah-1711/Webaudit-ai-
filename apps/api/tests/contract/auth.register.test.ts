@@ -16,7 +16,12 @@ import { createCapturingMailer } from '../helpers/mailer.js';
 const mailer = createCapturingMailer();
 const app = createApp({ db: testDb, mailer });
 
+// The notice links come from `WEB_URL`, which a developer's `.env` may set to
+// another port. Pin it so this file never depends on the local environment.
+const WEB_URL = 'http://localhost:3000';
+
 beforeAll(async () => {
+  vi.stubEnv('WEB_URL', WEB_URL);
   await resetDb();
   await seedPlans();
 });
@@ -28,7 +33,10 @@ beforeEach(async () => {
   });
   mailer.clear();
 });
-afterAll(closeDb);
+afterAll(async () => {
+  vi.unstubAllEnvs();
+  await closeDb();
+});
 
 const VALID = { email: 'dev@example.com', password: 'correct-horse-battery-staple' };
 
@@ -89,13 +97,28 @@ describe('POST /auth/register', () => {
     expect(res.headers['set-cookie']?.[0]).toContain('pending_verification=');
     expect(notice).toHaveBeenCalledWith(
       VALID.email,
-      'http://localhost:3000/login',
-      'http://localhost:3000/reset-password',
+      `${WEB_URL}/login`,
+      `${WEB_URL}/reset-password`,
     );
     expect(mailer.sent().filter((mail) => mail.kind === 'verify')).toHaveLength(1);
 
     // Exactly one account, not two.
     expect(await testDb.user.count({ where: { email: VALID.email } })).toBe(1);
+  });
+
+  it('builds the account-notice links from the configured WEB_URL, not a hard-coded port', async () => {
+    vi.stubEnv('WEB_URL', 'http://localhost:3010/');
+    await request(app).post('/auth/register').send(VALID).expect(201);
+    const notice = vi.spyOn(mailer, 'sendRegistrationAttemptNotice');
+
+    await request(app).post('/auth/register').send(VALID);
+
+    expect(notice).toHaveBeenCalledWith(
+      VALID.email,
+      'http://localhost:3010/login',
+      'http://localhost:3010/reset-password',
+    );
+    vi.stubEnv('WEB_URL', WEB_URL);
   });
 
   it('sends at most one registration-attempt notice per recipient during the cooldown', async () => {
