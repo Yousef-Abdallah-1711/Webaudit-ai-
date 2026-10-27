@@ -399,7 +399,8 @@ test('AuditAreas keeps the End-selected tab within the visible rail', async ({ p
     const railElement = el.closest('[role="tablist"]')!;
     const tab = el.getBoundingClientRect();
     const bounds = railElement.getBoundingClientRect();
-    return tab.left >= bounds.left && tab.right <= bounds.right;
+    // 1px tolerance: fractional layout (e.g. 363.44 vs 363) is rounding, not overflow.
+    return tab.left >= bounds.left - 1 && tab.right <= bounds.right + 1;
   });
   expect(visible).toBe(true);
   await expect(tabs.last()).toHaveAttribute('aria-selected', 'true');

@@ -24,10 +24,12 @@ import { startApi, type ApiService } from '@webaudit/api';
 import { startWorker, type WorkerService } from '@webaudit/worker';
 import { createCapturingMailer, type CapturingMailer } from '@webaudit/api/test-mailer';
 import { startServer, type ServerHandle } from '../../visual/harness.js';
+import { isolatedTestDatabaseUrl, isolatedTestRedisUrl } from './test-config.js';
 
-const TEST_DB_URL =
-  process.env['TEST_DATABASE_URL'] ??
-  'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public';
+const TEST_DB_URL = isolatedTestDatabaseUrl();
+const TEST_REDIS_URL = isolatedTestRedisUrl();
+// The in-process API (fan-out subscriber, limiters) reads REDIS_URL from the environment.
+process.env['REDIS_URL'] = TEST_REDIS_URL;
 
 const WEB_DIR = new URL('../../../', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1');
 const WEB_PORT = 4400;
@@ -204,7 +206,7 @@ export async function startStack(): Promise<Stack> {
 
   const worker: WorkerService = startWorker({
     connection: {
-      url: process.env['REDIS_URL'] ?? 'redis://localhost:6389',
+      url: TEST_REDIS_URL,
       maxRetriesPerRequest: null,
     },
     db,

@@ -394,17 +394,19 @@ test('landing scanner fields, area tabs, FAQ and copy action expose stable inter
   ]) {
     const input = page.locator(selector).first();
     const resting = await controlGeometry(input);
-    expect(await hasSameComputedToken(input, 'borderColor', '--border-marketing-control')).toBe(
+    // The dark landing scanner fields use the scanner border token (99a0e69); the
+    // generic marketing-control token belongs to the light auth/form controls.
+    expect(await hasSameComputedToken(input, 'borderColor', '--border-marketing-scanner')).toBe(
       true,
     );
     expect(resting.borderStyle).toBe('solid');
     await input.hover();
     await expect
-      .poll(() => hasSameComputedToken(input, 'borderColor', '--brand-electric'))
+      .poll(() => hasSameComputedToken(input, 'borderColor', '--brand-marketing'))
       .toBe(true);
     expect(await controlGeometry(input)).toEqual(resting);
     await input.focus();
-    expect(await hasSameComputedToken(input, 'outlineColor', '--brand-electric')).toBe(true);
+    expect(await hasSameComputedToken(input, 'outlineColor', '--brand-highlight')).toBe(true);
     expect(await controlGeometry(input)).toEqual(resting);
   }
 

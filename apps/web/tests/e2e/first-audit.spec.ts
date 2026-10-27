@@ -53,10 +53,12 @@ import { PrismaClient } from '@webaudit/api/prisma-client';
 import { startApi, type ApiService } from '@webaudit/api';
 import { startWorker, type WorkerService } from '@webaudit/worker';
 import { startFixtureSite, type FixtureSite } from './fixtures/static-site.js';
+import { isolatedTestDatabaseUrl, isolatedTestRedisUrl } from './support/test-config.js';
 
-const TEST_DB_URL =
-  process.env['TEST_DATABASE_URL'] ??
-  'postgresql://webaudit:webaudit_dev@localhost:5442/webaudit_test?schema=public';
+const TEST_DB_URL = isolatedTestDatabaseUrl();
+const TEST_REDIS_URL = isolatedTestRedisUrl();
+// The in-process API (fan-out subscriber, limiters) reads REDIS_URL from the environment.
+process.env['REDIS_URL'] = TEST_REDIS_URL;
 
 let db: PrismaClient;
 let fixture: FixtureSite;
@@ -131,7 +133,7 @@ test.beforeAll(async () => {
   api = await startApi({ db, port: 0, installSignalHandlers: false });
   worker = startWorker({
     connection: {
-      url: process.env['REDIS_URL'] ?? 'redis://localhost:6389',
+      url: TEST_REDIS_URL,
       maxRetriesPerRequest: null,
     },
     db,
