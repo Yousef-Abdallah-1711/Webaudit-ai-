@@ -62,6 +62,7 @@ const config = {
         accent: 'var(--accent)',
         'accent-hover': 'var(--accent-hover)',
         'accent-ring': 'var(--accent-ring)',
+        'accent-text': 'var(--accent-text)',
         'promo-bg': 'var(--promo-bg)',
         'promo-bg-dark': 'var(--promo-bg-dark)',
         'text-primary': 'var(--text-primary)',

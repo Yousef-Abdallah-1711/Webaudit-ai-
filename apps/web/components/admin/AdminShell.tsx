@@ -225,7 +225,7 @@ function AdminSidebar({
             {contentOpen ? (
               <div
                 className={
-                  'px-3 pb-1.5 font-sans text-[0.625rem] font-bold tracking-[0.09375rem] text-gray-500 uppercase'
+                  'px-3 pb-1.5 font-sans text-[0.625rem] font-bold tracking-[0.09375rem] text-gray-400 uppercase'
                 }
               >
                 {t(group)}
@@ -251,7 +251,7 @@ function AdminSidebar({
 
       <div className={footClasses}>
         {contentOpen && (
-          <div className={'font-mono text-[0.6875rem] text-gray-500'}>{t('actions_recorded')}</div>
+          <div className={'font-mono text-[0.6875rem] text-gray-400'}>{t('actions_recorded')}</div>
         )}
         <div className={footRowClasses}>
           <a
@@ -285,6 +285,16 @@ export function AdminShell({ children }: AdminShellProps): React.ReactElement {
   const mobileTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileDrawerWasOpenRef = useRef(false);
   const { user } = useAuth();
+  const pathname = usePathname();
+
+  // Every admin route otherwise shares one document title (WCAG 2.4.2).
+  useEffect(() => {
+    const current = NAV_GROUPS.flatMap(([, items]) => items).find(
+      (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    );
+    document.title =
+      current === undefined ? PRODUCT_NAME : `${t(current.label)} · ${t('operator')} · ${PRODUCT_NAME}`;
+  }, [pathname, t]);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
@@ -428,8 +438,10 @@ export function Table({ cols, rows }: TableProps): React.ReactElement {
 
   return (
     <div
+      // Keyboard users must be able to scroll a horizontally scrollable region (WCAG 2.1.1).
+      tabIndex={0}
       className={
-        'overflow-x-auto overflow-y-hidden rounded-card border border-hairline border-solid border-border-default bg-surface-page'
+        'overflow-x-auto overflow-y-hidden rounded-card border border-hairline border-solid border-border-default bg-surface-page outline-none focus-visible:shadow-focus'
       }
     >
       <div
@@ -438,9 +450,9 @@ export function Table({ cols, rows }: TableProps): React.ReactElement {
         }
         style={{ gridTemplateColumns }}
       >
-        {cols.map((col) => (
+        {cols.map((col, colIndex) => (
           <span
-            key={col.label}
+            key={`${col.label}-${String(colIndex)}`}
             className={
               'font-sans text-[0.6875rem] font-bold tracking-[0.05rem] text-text-muted uppercase'
             }

@@ -34,7 +34,7 @@ export default async function AdminOverviewPage(): Promise<React.ReactElement> {
 
       <div
         className={
-          'mb-[1.125rem] grid grid-cols-4 gap-4 [@media(max-width:40rem)]:grid-cols-2 [@media(max-width:40rem)]:[&>*]:min-w-0 [@media(max-width:40rem)]:[&>*]:[overflow-wrap:anywhere]'
+          'mb-[1.125rem] grid grid-cols-4 gap-4 [&>*]:min-w-0 [@media(max-width:64rem)]:grid-cols-2 [@media(max-width:40rem)]:[&>*]:[overflow-wrap:anywhere]'
         }
       >
         {STATS.map(([label, value, sub]) => (
@@ -44,7 +44,7 @@ export default async function AdminOverviewPage(): Promise<React.ReactElement> {
 
       <div
         className={
-          'grid grid-cols-2 gap-4 [@media(max-width:40rem)]:grid-cols-1 [@media(max-width:40rem)]:[&>*]:min-w-0'
+          'grid grid-cols-2 gap-4 [&>*]:min-w-0 [@media(max-width:40rem)]:grid-cols-1'
         }
       >
         <Card padding={22} title={t('overview_needs_attention')}>

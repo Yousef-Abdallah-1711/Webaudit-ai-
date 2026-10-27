@@ -16,7 +16,7 @@ const TONE_CLASS: Record<NonNullable<BadgeProps['tone']>, string> = {
   // These three legacy swatches are hardcoded by the approved source component
   // and have no Wave-0 semantic-token equivalents; keep their exact values.
   // eslint-disable-next-line no-restricted-syntax -- preserve source swatches without introducing new tokens
-  accent: 'bg-[#fff3ec] text-accent border-[#ffd9c2]',
+  accent: 'bg-[#fff3ec] text-accent-text border-[#ffd9c2]',
   // eslint-disable-next-line no-restricted-syntax -- preserve source swatch without introducing a new token
   success: 'bg-sev-resolved-bg text-sev-resolved border-[#a7f3d0]',
   inverse: 'bg-surface-inverse text-text-on-accent border-transparent',

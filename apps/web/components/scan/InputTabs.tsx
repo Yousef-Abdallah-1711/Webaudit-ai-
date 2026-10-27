@@ -54,7 +54,7 @@ const styles = {
   dropzoneTitle: 'text-[0.9375rem] font-semibold',
   dropzoneNote: 'mt-1.5 font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
   refused: 'mt-3 mb-0 font-sans text-[0.875rem] leading-5 font-normal text-sev-critical text-pretty',
-  browse: 'mt-[0.875rem] bg-transparent border-0 p-0 font-sans text-[0.875rem] text-accent underline cursor-pointer',
+  browse: 'mt-[0.875rem] bg-transparent border-0 p-0 font-sans text-[0.875rem] text-accent-text underline cursor-pointer',
 } as const;
 
 export type InputTab = 'url' | 'repo' | 'archive';

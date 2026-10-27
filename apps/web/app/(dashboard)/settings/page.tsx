@@ -210,6 +210,7 @@ export default function SettingsPage(): React.ReactElement {
             <Row label={t('settings_name')}>
               <div className={styles.fieldWrap}>
                 <Input
+                  aria-label={t('settings_name')}
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -219,7 +220,7 @@ export default function SettingsPage(): React.ReactElement {
             </Row>
             <Row label={t('settings_email')} note={t('settings_email_cannot_change_here')}>
               <div className={styles.fieldWrap}>
-                <Input value={email} type="email" readOnly dir="ltr" />
+                <Input aria-label={t('settings_email')} value={email} type="email" readOnly dir="ltr" />
               </div>
             </Row>
             {profileError !== null && <p className={styles.deleteError}>{profileError}</p>}
@@ -228,12 +229,14 @@ export default function SettingsPage(): React.ReactElement {
                 <div className={styles.fieldWrap}>
                   <Input
                     type="password"
+                    aria-label={t('settings_current_password')}
                     placeholder={t('settings_current_password')}
                     value={currentPassword}
                     onChange={(event) => setCurrentPassword(event.target.value)}
                   />
                   <Input
                     type="password"
+                    aria-label={t('settings_new_password')}
                     placeholder={t('settings_new_password')}
                     value={newPassword}
                     onChange={(event) => setNewPassword(event.target.value)}

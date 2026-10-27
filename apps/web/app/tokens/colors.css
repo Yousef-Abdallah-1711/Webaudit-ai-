@@ -4,6 +4,8 @@
   --accent: #fe5a01;
   --accent-hover: #fe4a00;
   --accent-ring: #fa7014;
+  /* Accent as small text on light surfaces: --accent is 3.0:1 on white, this is 5.65:1 (AA). */
+  --accent-text: #b93c0a;
   /* Text */
   --text-primary: #1f2937;
   --text-secondary: #6b7280;

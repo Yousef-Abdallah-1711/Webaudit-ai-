@@ -11,7 +11,7 @@ export function Eyebrow({ tone = 'muted', children }: EyebrowProps): React.React
   const classes = cn(
     // eslint-disable-next-line no-restricted-syntax -- existing Eyebrow overrides the shared 15.2px token to 12px
     'type-eyebrow text-[12px] uppercase text-text-muted',
-    tone === 'accent' && 'text-accent',
+    tone === 'accent' && 'text-accent-text',
   );
   return <div className={classes}>{children}</div>;
 }

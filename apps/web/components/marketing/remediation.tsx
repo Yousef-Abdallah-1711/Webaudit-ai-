@@ -54,7 +54,7 @@ export async function Remediation(): Promise<React.ReactElement> {
               >
                 →
               </span>
-              <span className="rounded-control bg-brand-marketing px-3 py-2 text-marketing-inverse">
+              <span className="rounded-control bg-brand-marketing-contrast px-3 py-2 text-marketing-inverse">
                 {t('ai_verify_label')}
               </span>
             </div>

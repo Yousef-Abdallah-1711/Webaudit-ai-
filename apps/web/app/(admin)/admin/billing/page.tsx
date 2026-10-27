@@ -110,7 +110,7 @@ export default function AdminBillingPage(): React.ReactElement {
 
       {error !== null && <p className={'mb-4 mt-0 type-small text-sev-critical'}>{error}</p>}
 
-      <div className={'mb-[1.125rem] grid grid-cols-[repeat(4,1fr)] gap-4'}>
+      <div className={'mb-[1.125rem] grid grid-cols-[repeat(4,minmax(0,1fr))] gap-4 [&>*]:min-w-0 [&>*]:[overflow-wrap:anywhere] [@media(max-width:64rem)]:grid-cols-2 [@media(max-width:30rem)]:grid-cols-1'}>
         <Stat
           label={t('credits_recognised')}
           value={report === null ? t('dash') : t('credits_value', { count: totalCharged })}

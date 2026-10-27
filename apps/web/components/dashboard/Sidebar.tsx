@@ -80,7 +80,7 @@ const styles = {
   sidebarHeadOpen: 'justify-start px-3 py-0',
   toggleBtn: 'grid h-[2.125rem] w-[2.125rem] shrink-0 cursor-pointer place-items-center rounded-control border-0 bg-transparent text-text-secondary transition-colors duration-150 ease-[var(--easing)]',
   wordmark: 'whitespace-nowrap text-[1rem] font-bold tracking-[-0.01875rem] text-text-strong',
-  wordmarkAccent: 'text-accent',
+  wordmarkAccent: 'text-accent-text',
   navScroll: 'flex-1 overflow-y-auto py-[0.375rem]',
   navScrollClosed: 'px-2',
   navScrollOpen: 'px-[0.625rem]',
@@ -597,6 +597,16 @@ export function AppShell({ children }: AppShellProps): React.ReactElement {
   const t = useTranslations('dashboard');
   const mobileTriggerRef = useRef<HTMLButtonElement>(null);
   const mobileDrawerWasOpenRef = useRef(false);
+  const pathname = usePathname();
+
+  // Every dashboard route otherwise shares one document title (WCAG 2.4.2).
+  useEffect(() => {
+    const current = NAV_GROUPS.flatMap(([, items]) => items).find((item) =>
+      isActive(pathname, item.href),
+    );
+    document.title =
+      current === undefined ? PRODUCT_NAME : `${t(current.label)} · ${PRODUCT_NAME}`;
+  }, [pathname, t]);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;

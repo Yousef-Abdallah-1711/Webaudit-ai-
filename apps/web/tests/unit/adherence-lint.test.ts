@@ -133,7 +133,11 @@ describe('the adherence gate actually fails on what it claims to forbid', () => 
 });
 
 describe('the adherence gate does not fire on what is already shipped', () => {
-  it('every ported .tsx file in apps/web/components lints clean', async () => {
+  // Both glob-lint tests below run in-process ESLint over dozens of files (direct `eslint`
+  // exits 0, so this is not a lint failure). Measured here: ~19-20s when it is the first ESLint
+  // use in the process (e.g. `-t` filtered), ~4-7s once the fixture tests above have warmed it.
+  // The default 5s timeout is therefore too short; same cause as the 20s timeout above.
+  it('every ported .tsx file in apps/web/components lints clean', { timeout: 20_000 }, async () => {
     const eslint = new ESLint({ cwd: REPO_ROOT });
     const results = await eslint.lintFiles(['apps/web/components/**/*.tsx']);
     const withProblems = results.filter((r) => r.messages.length > 0);
@@ -142,7 +146,9 @@ describe('the adherence gate does not fire on what is already shipped', () => {
     ).toEqual([]);
   });
 
-  it('every route file in apps/web/app lints clean', async () => {
+  // Needs the same timeout as the test above: it lints a comparable glob (apps/web/app) and
+  // measured 4.3-5.1s warm (it timed out once at 5.07s) and ~19s cold.
+  it('every route file in apps/web/app lints clean', { timeout: 20_000 }, async () => {
     // A glob, not a hardcoded path: T236a's placeholder page.tsx named itself
     // as temporary ("T240 replaces this with the real landing page") and
     // T240 did exactly that — a fixed path here would have gone stale the

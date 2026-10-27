@@ -33,7 +33,7 @@ export function TwoToneHeading({
 
   return (
     <Tag className={classes}>
-      {lead} <span className="text-accent">{accent}</span>
+      {lead} <span className="text-accent-text">{accent}</span>
     </Tag>
   );
 }

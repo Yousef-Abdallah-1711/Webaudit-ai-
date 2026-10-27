@@ -168,7 +168,7 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
 
       <form
         className={
-          'mb-5 grid grid-cols-[1fr_160px_1.2fr_auto] items-end gap-3 border border-hairline border-solid border-border-default bg-surface-raised p-4 [@media(max-width:48rem)]:grid-cols-1'
+          'mb-5 grid grid-cols-[minmax(0,1fr)_160px_minmax(0,1.2fr)_auto] items-end gap-3 [&>*]:min-w-0 [&_label]:grid-cols-[minmax(0,1fr)] [&_input]:max-w-full border border-hairline border-solid border-border-default bg-surface-raised p-4 [@media(max-width:48rem)]:grid-cols-1'
         }
         onSubmit={(event) => void onUpload(event)}
       >
@@ -290,7 +290,7 @@ export default function AdminCapabilitiesPage(): React.ReactElement {
         })}
       </p>
 
-      <div className={'mt-4 grid grid-cols-[1fr_1fr] gap-4'}>
+      <div className={'mt-4 grid grid-cols-[repeat(2,minmax(0,1fr))] gap-4 [&>*]:min-w-0 [@media(max-width:40rem)]:grid-cols-1'}>
         <Card padding={20} title={t('disabling_safe_title')} accentRule="var(--sev-resolved)">
           <p className={'m-0 type-small text-text-secondary'}>{t('disabling_safe_body')}</p>
         </Card>
