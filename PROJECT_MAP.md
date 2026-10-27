@@ -54,7 +54,7 @@ For DB changes, use the schema section below and the row's named models.
 | Area | Source / API / UI | DB and test locator | Detailed reading only for this area |
 | --- | --- | --- | --- |
 | Auth, sessions, OAuth, authorization | `API/services/auth/`, `API/middleware/auth.middleware.ts`; `API/routes/auth.routes.ts`, `API/routes/oauth.routes.ts`; `WEB/app/(auth)/`, `WEB/components/auth/` | User, OAuthIdentity, EmailToken, RefreshToken; API tests: auth/session/oauth/reset; E2E auth | BASE spec FR-001-009; `AUTH-SECURITY-AUDIT.md`; auth-related PROGRESS sections |
-| Targets, control proof | `API/services/control-gate/`, `API/routes/targets.routes.ts`; `API/services/registry/resolve-required-control-level.ts` | Target, TargetVerification; adverse control-gate tests | BASE research R6/R11; `docs/superpowers/plans/2026-08-27-control-gate-enforcement.md` |
+| Targets, control proof | `API/services/control-gate/`, `API/routes/targets.routes.ts`; `API/services/registry/resolve-required-control-level.ts`; `API/services/authorization/` (grants, scope, environment, revoke/narrow, `isAuthorized`) | Target, TargetVerification; TargetAuthorization, ScopeDefinition, TargetEnvironment; adverse control-gate tests; `API/tests/{unit,contract,adverse}/authorization*.test.ts` | BASE research R6/R11; `docs/superpowers/plans/2026-08-27-control-gate-enforcement.md`; `specs/007-foundation-target-authorization-scope/` |
 | Intake: URL/repo/ZIP | `API/services/intake/`, `API/routes/intake.routes.ts`, `WORKER/intake/`, `packages/safe-archive/`; `WEB/components/scan/InputTabs.tsx` | Target/Scan; upload, extraction, source-materialisation, repo-revoked tests | BASE spec FR-010-021/research R6; source/archive bullets in domain safeguards |
 | Quotes, credits, refunds | `API/services/credits/`, `API/services/intake/create-scan.ts`, `API/routes/billing.routes.ts`; `packages/config/src/pricing.ts`, `packages/config/src/refund.ts` | CreditLot, CreditTransaction, CreditAllocation; credits, refund, enqueue-failure tests; `scripts/credits-integrity-check.ts` | `PLAN.md` + `TASKS.md` are **credit hardening only**; `docs/superpowers/plans/2026-08-27-credit-refund-integrity.md`; cancellation spec below |
 | Plans, payments, retention | `API/services/billing/`, `API/routes/billing.routes.ts`, `API/routes/webhooks.routes.ts`, `API/services/storage/retention.ts`; `WEB/app/(dashboard)/billing/` | Plan, Subscription, BillingEvent + credit models; billing, renewal, entitlement, retention tests | BASE spec FR-073-082/FR-092; credit PLAN; production-readiness plan for payment gaps |
@@ -126,9 +126,16 @@ page; it is not approved WebAudit design and does not authorize copying its bran
 | Load / capacity | `load-testing/scripts/golden-path.js`, `load-testing/seed-test-user.ts` | `load-testing/RUNBOOK.md`, `load-testing/REPORT.md`, `specs/004-load-testing-harness/` |
 
 DB-backed suites must use TEST_DATABASE_URL, not the development database. Serialize shared
-DB/Redis runs; E2E workers compete with a live dev worker if they share queues.
-Fixture-provider load evidence currently covers up to 10 concurrent audits; it does not prove
-real-provider latency, higher concurrency or production capacity.
+DB/Redis runs; E2E workers compete with a live dev worker if they share queues. Test helpers refuse
+the development database and (E2E) Redis DB 0 (`API/../tests/helpers/isolated-database.ts`,
+`WEB/tests/e2e/support/test-config.ts`; E2E reads `TEST_DATABASE_URL`/`TEST_REDIS_URL`, never the
+ambient `REDIS_URL`). A DB-backed Vitest run truncates the test database and shares Redis DB 15 (and
+the credential rate-limiter keys) with any isolated stack - never overlap them. Real-Chromium SSRF
+refusal tests: `apps/probe-pool/tests/adverse/`.
+Fixture-provider load evidence currently covers up to 10 concurrent audits (re-measured 2026-10-28:
+`load-testing/results/2026-10-28-isolated/`); it does not prove real-provider latency, higher
+concurrency or production capacity. Latest closure record:
+`docs/audits/SPECS_001_007_FINAL_INTEGRATION_CLOSURE_2026-10-28.md`.
 
 ## Documentation and risk routing
 

@@ -11,6 +11,17 @@ Startup: global instructions -> shared project rules -> compact map -> current d
 relevant source/docs -> work and test. AGENTS.md owns the rules; this file intentionally does not
 duplicate project documentation.
 
+## Master process document
+
+At session start also read [PROCESS_FOR_THE_APP.md](PROCESS_FOR_THE_APP.md): SPEC status, dependency
+order, task ledger, open decisions and the per-task lifecycle. Before any implementation decision:
+read the canonical SPEC and repository rules for the task, check `git status` before editing, follow
+the task sequence and decision gates, and preserve unrelated work. That file is a navigation and
+execution guide and never authorizes overriding a canonical contract; contradictions are reported,
+not silently resolved. Update it when verified task status, dependencies, decisions or blockers
+change. For small tasks use it plus targeted references instead of re-reading every historical audit
+document; open the original sources when a decision or claim needs verification.
+
 ## Mandatory delegation for implementation work
 
 For this project, Claude acts as **orchestrator/reviewer only**. All code implementation —
