@@ -11,7 +11,11 @@
  */
 
 import type { Queue } from 'bullmq';
-import { reclaimExpiredLeases, reconcileStrandedStops } from '@webaudit/api/safety';
+import {
+  purgeExpiredExecutionAudit,
+  reclaimExpiredLeases,
+  reconcileStrandedStops,
+} from '@webaudit/api/safety';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
 import { JOB_NAMES } from '../queue/workers.js';
 
@@ -46,21 +50,55 @@ export interface SafetySweepOutcome {
   driftCorrected: number;
   acknowledged: number;
   stopped: number;
+  /** Execution-audit rows past the tenant's plan retention (FR-024); runs at most hourly. */
+  auditPurged: number;
+}
+
+const AUDIT_PURGE_EVERY_MS = 3_600_000;
+let lastAuditPurgeAt = 0;
+
+/** Test seam: the throttle is process-local state. */
+export function resetSafetySweepThrottleForTests(): void {
+  lastAuditPurgeAt = 0;
 }
 
 export async function runSafetySweep(db: PrismaClient): Promise<SafetySweepOutcome> {
   const reclaim = await reclaimExpiredLeases(db);
   const reconcile = await reconcileStrandedStops(db, { ackGraceSeconds: ackGraceSeconds() });
+  let auditPurged = 0;
+  if (Date.now() - lastAuditPurgeAt >= AUDIT_PURGE_EVERY_MS) {
+    // Retention is housekeeping: it must never fail the job or starve the safety-critical work
+    // above, so a failure is logged and retried at the next hourly window, not on every sweep.
+    lastAuditPurgeAt = Date.now();
+    try {
+      const purge = await purgeExpiredExecutionAudit(db);
+      auditPurged = purge.purged + purge.unownedPurged;
+    } catch (error) {
+      console.error(
+        '[safety-sweep] execution-audit retention failed (will retry next hour):',
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
   const outcome: SafetySweepOutcome = {
     reclaimed: reclaim.reclaimed,
     driftCorrected: reclaim.driftCorrected,
     acknowledged: reconcile.acknowledged,
     stopped: reconcile.stopped,
+    auditPurged,
   };
-  if (outcome.reclaimed + outcome.driftCorrected + outcome.acknowledged + outcome.stopped > 0) {
+  if (
+    outcome.reclaimed +
+      outcome.driftCorrected +
+      outcome.acknowledged +
+      outcome.stopped +
+      outcome.auditPurged >
+    0
+  ) {
     console.warn(
       `[safety-sweep] reclaimed ${String(outcome.reclaimed)} lease(s), corrected ${String(outcome.driftCorrected)} counter(s), ` +
-        `acknowledged ${String(outcome.acknowledged)} and stopped ${String(outcome.stopped)} stranded stop(s).`,
+        `acknowledged ${String(outcome.acknowledged)} and stopped ${String(outcome.stopped)} stranded stop(s), ` +
+        `purged ${String(outcome.auditPurged)} expired audit event(s).`,
     );
   }
   return outcome;

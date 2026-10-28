@@ -7,3 +7,4 @@ export * from './kill-switch.js';
 export * from './kill-switch-state.js';
 export * from './stop-lifecycle.js';
 export * from './sweeps.js';
+export * from './retention.js';

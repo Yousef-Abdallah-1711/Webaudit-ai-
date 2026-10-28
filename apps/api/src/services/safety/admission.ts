@@ -33,6 +33,8 @@ export type AdmissionRefusalReason =
   | 'BUDGET_EXHAUSTED_REQUEST'
   | 'BUDGET_EXHAUSTED_CONCURRENCY'
   | 'KILL_SWITCH_PENDING'
+  /** FR-015: another live lease already holds this execution unit. */
+  | 'EXECUTION_ALREADY_LEASED'
   | 'INTERNAL_ERROR';
 
 export type AdmissionResult =
@@ -144,7 +146,7 @@ async function admit(tx: SafetyTx, request: AdmissionRequest): Promise<Admission
   const rows = await tx.$queryRaw<Array<{ r: AdmitRow }>>(Prisma.sql`
     SELECT public.f07_admit(${request.targetId}, ${grantId}, ${request.executionId},
       ${request.scanId ?? null}, ${request.idempotencyKey},
-      ${request.consumes.request}, ${request.consumes.concurrency}) AS r`);
+      ${request.consumes.request}, ${request.consumes.concurrency}, ${request.executionClass}) AS r`);
   const r = rows[0]?.r;
   if (r === undefined) throw new Error('f07_admit returned nothing');
 
@@ -187,11 +189,17 @@ export async function requestAdmission(
 export type RenewResult =
   | { status: 'RENEWED'; expiresAt: Date }
   | { status: 'STOP_PENDING'; scope: SafetyScope; scopeId: string }
-  | { status: 'FENCED' };
+  /** FR-016a: the grant was revoked or has expired; a lease may not outlive it. */
+  | { status: 'GRANT_INVALID'; reason: 'REVOKED' | 'EXPIRED' }
+  | { status: 'FENCED' }
+  /** FR-021: the state could not be read; treated as "a stop might be pending". */
+  | { status: 'UNCERTAIN' };
 
 /**
  * Token-fenced renewal. A superseded or reclaimed holder gets `FENCED`, which
- * the caller MUST treat as an immediate stop (FR-006a). Any failure is `FENCED`.
+ * the caller MUST treat as an immediate stop (FR-006a); a revoked or expired
+ * grant refuses renewal (FR-016a); a failure to read state is `UNCERTAIN`,
+ * never "no stop pending" (FR-021).
  */
 export async function renewLease(
   db: SafetyDb,
@@ -199,23 +207,29 @@ export async function renewLease(
 ): Promise<RenewResult> {
   return failClosed(
     db,
-    async (tx) => {
+    async (tx): Promise<RenewResult> => {
       const rows = await tx.$queryRaw<Array<{ r: Record<string, string> }>>(Prisma.sql`
         SELECT public.f07_renew_lease(${input.leaseId}, ${input.holderToken}) AS r`);
       const r = rows[0]?.r;
       if (r?.['status'] === 'RENEWED') {
-        return { status: 'RENEWED', expiresAt: new Date(r['expiresAt'] ?? Date.now()) } as const;
+        return { status: 'RENEWED', expiresAt: new Date(r['expiresAt'] ?? Date.now()) };
       }
       if (r?.['status'] === 'STOP_PENDING') {
         return {
           status: 'STOP_PENDING',
           scope: r['scope'] as SafetyScope,
           scopeId: r['scopeId'] ?? '',
-        } as const;
+        };
       }
-      return { status: 'FENCED' } as const;
+      if (r?.['status'] === 'GRANT_INVALID') {
+        return {
+          status: 'GRANT_INVALID',
+          reason: r['reason'] === 'EXPIRED' ? 'EXPIRED' : 'REVOKED',
+        };
+      }
+      return { status: 'FENCED' };
     },
-    () => ({ status: 'FENCED' }) as const,
+    (): RenewResult => ({ status: 'UNCERTAIN' }),
   );
 }
 

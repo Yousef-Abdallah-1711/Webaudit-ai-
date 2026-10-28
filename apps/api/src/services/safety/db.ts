@@ -75,3 +75,11 @@ export function isForbiddenFailure(error: unknown): boolean {
     'f07_forbidden',
   );
 }
+
+/** The database clock for either a client or a transaction client. */
+export async function databaseNowFor(db: SafetyDb): Promise<Date> {
+  const rows = await db.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`;
+  const row = rows[0];
+  if (row === undefined) throw new Error('database clock unavailable');
+  return row.now;
+}
