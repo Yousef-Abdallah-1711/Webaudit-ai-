@@ -67,6 +67,12 @@ async function ensureTestDatabaseMigrated(): Promise<void> {
  * reference data seeded once, and every test needs them.
  */
 const TABLES_TO_CLEAR = [
+  // SPEC 008: no FKs into these (scalar ids only), cleared first.
+  'ExecutionAuditEvent',
+  'KillSwitchState',
+  'BudgetConsumption',
+  'AdmissionLease',
+  'BudgetCounter',
   'CreditAllocation',
   'CreditTransaction',
   'CreditLot',

@@ -77,6 +77,7 @@ function fakeDb() {
         grants.set(row.id, row);
         return row;
       },
+      findMany: async () => [],
       findFirst: async (args: { where: { id: string; userId?: string } }) => {
         const row = grants.get(args.where.id);
         if (row === undefined) return null;
@@ -112,6 +113,12 @@ function fakeDb() {
         audits.push(args.data);
         return args.data;
       },
+    },
+    // SPEC 008: revocation / reclassification now request a GRANT stop in the same transaction.
+    stopCalls: 0,
+    $queryRaw: async () => {
+      db.stopCalls += 1;
+      return [{ r: { created: true, state: 'REQUESTED', scope: 'GRANT', scopeId: 'grant-1' } }];
     },
     $transaction: async <T>(fn: (tx: unknown) => Promise<T>): Promise<T> => fn(db),
   };
