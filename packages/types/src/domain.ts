@@ -64,6 +64,46 @@ export type ExecutionClass = (typeof EXECUTION_CLASSES)[number];
 export const TARGET_ENVIRONMENT_CLASSIFICATIONS = ['PRODUCTION', 'STAGING', 'DEVELOPMENT'] as const;
 export type TargetEnvironmentClassification = (typeof TARGET_ENVIRONMENT_CLASSIFICATIONS)[number];
 
+/** The scope a kill-switch stop applies to (SPEC 008). Order is the precedence/lock rank. */
+export const SAFETY_SCOPES = [
+  'EXECUTION',
+  'SCAN',
+  'GRANT',
+  'TARGET',
+  'TENANT',
+  'PLATFORM',
+] as const;
+export type SafetyScope = (typeof SAFETY_SCOPES)[number];
+
+/** Kill-switch lifecycle; only REQUESTED -> ACKNOWLEDGED -> STOPPED is permitted (SPEC 008). */
+export const STOP_LIFECYCLE_STATES = ['REQUESTED', 'ACKNOWLEDGED', 'STOPPED'] as const;
+export type StopLifecycleState = (typeof STOP_LIFECYCLE_STATES)[number];
+
+export const KILL_SWITCH_REASONS = [
+  'USER_CANCELLATION',
+  'AUTHORIZATION_REVOKED',
+  'ENVIRONMENT_RECLASSIFIED',
+  'OPERATOR_EMERGENCY_STOP',
+  'SYSTEM_SAFETY_POLICY',
+] as const;
+export type KillSwitchReason = (typeof KILL_SWITCH_REASONS)[number];
+
+export const EXECUTION_AUDIT_EVENT_TYPES = [
+  'ADMISSION_GRANTED',
+  'ADMISSION_REFUSED',
+  'BUDGET_RESERVED',
+  'BUDGET_CONSUMED',
+  'BUDGET_RELEASED',
+  'BUDGET_EXHAUSTED',
+  'STOP_REQUESTED',
+  'STOP_ACKNOWLEDGED',
+  'STOPPED',
+  'ESCALATED',
+  'EXECUTION_COMPLETED',
+  'SAFETY_VIOLATION',
+] as const;
+export type ExecutionAuditEventType = (typeof EXECUTION_AUDIT_EVENT_TYPES)[number];
+
 /** The kind of destination a ScopeDefinition describes (SPEC 007). */
 export const SCOPE_TARGET_KINDS = ['WEB', 'REPOSITORY'] as const;
 export type ScopeTargetKind = (typeof SCOPE_TARGET_KINDS)[number];

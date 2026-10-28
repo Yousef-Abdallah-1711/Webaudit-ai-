@@ -71,6 +71,9 @@ importers:
       '@webaudit/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@webaudit/redaction':
+        specifier: workspace:*
+        version: link:../../packages/redaction
       '@webaudit/safe-archive':
         specifier: workspace:*
         version: link:../../packages/safe-archive

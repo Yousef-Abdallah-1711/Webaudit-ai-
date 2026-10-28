@@ -1036,3 +1036,137 @@ model EmailSendAttempt {
   @@index([recipient, createdAt])
   @@index([messageType, createdAt])
 }
+
+// ---------------------------------------------------------------------------
+// SPEC 008 (Foundation Spec 07) — Safety / Kill Switch / Budget / Execution Audit.
+// Additive only; zero @relation edges into any existing model (research.md R9).
+// Ownership, grants and every write path live in the hand-written migration
+// (`*_add_safety_foundation`): these tables are written only through the
+// `f07_*` SECURITY DEFINER functions (F-02 design, amendment A1).
+// ---------------------------------------------------------------------------
+
+enum SafetyScope {
+  EXECUTION
+  SCAN
+  GRANT
+  TARGET
+  TENANT
+  PLATFORM
+}
+
+enum StopLifecycleState {
+  REQUESTED
+  ACKNOWLEDGED
+  STOPPED
+}
+
+enum KillSwitchReason {
+  USER_CANCELLATION
+  AUTHORIZATION_REVOKED
+  ENVIRONMENT_RECLASSIFIED
+  OPERATOR_EMERGENCY_STOP
+  SYSTEM_SAFETY_POLICY
+}
+
+enum ExecutionAuditEventType {
+  ADMISSION_GRANTED
+  ADMISSION_REFUSED
+  BUDGET_RESERVED
+  BUDGET_CONSUMED
+  BUDGET_RELEASED
+  BUDGET_EXHAUSTED
+  STOP_REQUESTED
+  STOP_ACKNOWLEDGED
+  STOPPED
+  ESCALATED
+  EXECUTION_COMPLETED
+  SAFETY_VIOLATION
+}
+
+model BudgetCounter {
+  id                    String   @id @default(cuid())
+  targetAuthorizationId String   @unique
+  userId                String
+  consumedRequests      Int      @default(0)
+  /// Cache of the live AdmissionLease count; corrected by the reclaim sweep.
+  activeConcurrency     Int      @default(0)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model AdmissionLease {
+  id                    String    @id @default(cuid())
+  targetAuthorizationId String
+  userId                String
+  /// Amendment A1: lets the reconciler verify "no live lease" per scope.
+  targetId              String?
+  scanId                String?
+  executionId           String
+  idempotencyKey        String
+  /// Fresh per acquisition; fences renewal (FR-006a).
+  holderToken           String
+  acquiredAt            DateTime  @default(now())
+  expiresAt             DateTime
+  releasedAt            DateTime?
+  reclaimedAt           DateTime?
+
+  @@unique([targetAuthorizationId, idempotencyKey])
+  @@index([targetAuthorizationId])
+  @@index([expiresAt])
+  @@index([executionId])
+  @@index([scanId])
+  @@index([targetId])
+  @@index([userId])
+}
+
+model BudgetConsumption {
+  id                    String   @id @default(cuid())
+  targetAuthorizationId String
+  userId                String
+  executionId           String
+  idempotencyKey        String
+  consumedAt            DateTime @default(now())
+
+  @@unique([targetAuthorizationId, idempotencyKey])
+  @@index([targetAuthorizationId])
+  @@index([executionId])
+}
+
+model KillSwitchState {
+  id          String             @id @default(cuid())
+  scope       SafetyScope
+  scopeId     String
+  state       StopLifecycleState
+  triggeredBy String
+  reason      KillSwitchReason
+  requestedAt DateTime           @default(now())
+  acknowledgedAt DateTime?
+  stoppedAt   DateTime?
+  escalatedAt DateTime?
+
+  @@unique([scope, scopeId])
+  @@index([state])
+}
+
+model ExecutionAuditEvent {
+  id                    String                  @id @default(cuid())
+  eventType             ExecutionAuditEventType
+  actorId               String
+  targetId              String?
+  targetAuthorizationId String?
+  scopeId               String?
+  environmentAtEvent    String?
+  scanId                String?
+  executionId           String?
+  executionClass        String?
+  outcome               String
+  payload               Json?
+  timestamp             DateTime                @default(now())
+
+  @@index([targetAuthorizationId, timestamp])
+  @@index([executionId])
+  @@index([targetId, timestamp])
+  @@index([actorId, timestamp])
+}

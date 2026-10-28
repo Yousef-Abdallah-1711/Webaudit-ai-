@@ -11,6 +11,8 @@
     "./prisma-client": "./prisma/generated/client/index.js",
     "./credits": "./src/services/credits/index.ts",
     "./control-gate": "./src/services/control-gate/index.ts",
+    "./safety": "./src/services/safety/index.ts",
+    "./authorization": "./src/services/authorization/index.ts",
     "./issues": "./src/services/issues/index.ts",
     "./intake": "./src/services/intake/index.ts",
     "./billing": "./src/services/billing/index.ts",
@@ -19,6 +21,7 @@
     "./cost-alerts": "./src/services/monitoring/cost-alerts.ts",
     "./email": "./src/services/email/mailer.ts",
     "./test-db": "./tests/helpers/db.ts",
+    "./test-safety-fixtures": "./tests/helpers/safety-fixtures.ts",
     "./test-mailer": "./tests/helpers/mailer.ts"
   },
   "scripts": {
@@ -35,6 +38,7 @@
     "@webaudit/ai-executor": "workspace:*",
     "@webaudit/capability-sdk": "workspace:*",
     "@webaudit/config": "workspace:*",
+    "@webaudit/redaction": "workspace:*",
     "@webaudit/safe-archive": "workspace:*",
     "@webaudit/safe-net": "workspace:*",
     "@webaudit/sandbox-runner": "workspace:*",

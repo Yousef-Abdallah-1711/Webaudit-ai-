@@ -7,3 +7,4 @@ export * from './refund.js';
 export * from './design-intent.js';
 export * from './logger.js';
 export * from './cancellation.js';
+export * from './safety-channels.js';
