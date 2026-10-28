@@ -37,3 +37,21 @@ and DEC-063 for the owner to approve; a proposal is not an approval.
    See F-02 §6 (two-layer proposal).
 3. `AdmissionLease` has no `scanId`/`targetId`, so SCAN/TARGET-scope reconciliation (DEC-048/049) cannot verify "no live
    in-scope lease" from the data model as frozen. An additive column is proposed in F-02 §7.
+
+## Addendum — owner-delegated technical decisions (same day, later in the session)
+
+The owner then delegated the remaining *technical* implementation decisions to the implementing engineer
+("resolve the remaining TECHNICAL implementation decisions autonomously"). The following were decided on that
+authority. They are **owner-delegated technical decisions, not owner answers**, and keep that label:
+
+| ID | Decision | Where recorded |
+|---|---|---|
+| DEC-050 (lock order) | Scope advisory locks → `BudgetCounter` → `AdmissionLease` → `KillSwitchState` → inserts; reconciler never waits | `f02-role-privilege-design.md` §7, §13; migration header |
+| DEC-063 (lease reclaim) | Repeatable `safety-sweep` job, database-clock expiry, skip-locked, no revival of expired leases | F-02 §13; `apps/worker/src/orchestrator/safety-lease-sweep.ts` |
+| DEC-068 (audit redaction) — SPEC 008 events only | TypeScript redaction for TypeScript callers; fixed structural payloads for SQL-originated events | F-02 §5, §13 |
+| F-02 Q1–Q5 | As in F-02 §13 | F-02 §13 |
+
+Still open and **not** decided here: DEC-047 (single terminal-finalization authority, SPEC 009), DEC-051, DEC-056/057/058/064
+(SPEC 009 claim mechanics), DEC-060 (provisional timing values: `ack_grace` 30 s and the 5 s/30 s/60 s constants are
+implementation defaults, not calibrated), DEC-061, DEC-032, and the D-1 browser-pool decision. Business pricing, legal
+policy and frozen product requirements were not changed.

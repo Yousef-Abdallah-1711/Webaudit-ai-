@@ -101,3 +101,7 @@ adversarial review, not originally separated this precisely.
 4. Every state transition (`REQUESTED`/`ACKNOWLEDGED`/`STOPPED`/escalation) writes exactly one
    `ExecutionAuditEvent` — never zero (an unaudited safety transition), never more than one per transition
    (double-counting).
+
+
+---
+**Amended by A1 (2026-10-28)** — see `amendments/AMENDMENT-A1.md` and `f02-role-privilege-design.md` §13. The text above is the frozen original and is unchanged; where it differs from A1, A1 governs.

@@ -54,3 +54,7 @@ CheckpointResult =
    transient, non-safety failure (a network blip) MUST NOT reuse a `STOP` result's semantics — a `STOP` is
    never retried with the same `idempotencyKey` expecting a different outcome, because nothing about the
    underlying kill-switch/budget/authorization state changed by retrying.
+
+
+---
+**Amended by A1 (2026-10-28)** — see `amendments/AMENDMENT-A1.md` and `f02-role-privilege-design.md` §13. The text above is the frozen original and is unchanged; where it differs from A1, A1 governs.

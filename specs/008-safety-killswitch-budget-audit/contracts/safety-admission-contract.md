@@ -87,3 +87,7 @@ Postgres transaction)
 6. This function is synchronous with respect to its own transaction (the caller does not proceed past it
    until a definitive `GRANTED`/`REFUSED` result is returned) — there is no "optimistically proceed, reconcile
    later" mode anywhere in this contract.
+
+
+---
+**Amended by A1 (2026-10-28)** — see `amendments/AMENDMENT-A1.md` and `f02-role-privilege-design.md` §13. The text above is the frozen original and is unchanged; where it differs from A1, A1 governs.

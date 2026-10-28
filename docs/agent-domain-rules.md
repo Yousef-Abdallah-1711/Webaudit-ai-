@@ -24,6 +24,7 @@ These are the traps. Each has already cost a design revision.
   trusted.
 - **SSRF validation happens at connect time, not resolve time.** Resolve-time-only checks are
   defeated by DNS rebinding. Redirects are followed manually so every hop is re-validated.
+- **Safety / kill switch / budget enforcement (SPEC 008) goes through `apps/api/src/services/safety` only.** Admission, leases, budget counters, kill-switch rows and execution audit rows are written exclusively by the `f07_*` SECURITY DEFINER functions; no runtime role has direct DML on those five tables. Never insert/update them with Prisma, never call `isAuthorized` for a safety-sensitive action without `requestAdmission`/`safetyCheckpoint`, and never record `STOPPED` without verifying no live in-scope lease. Lock order is fixed (scope advisory locks, counter, leases, kill-switch row); a new operation must follow it. Time is the database clock. See `specs/008-safety-killswitch-budget-audit/f02-role-privilege-design.md` §7 and §13.
 - **Credit balances are derived, never stored.** No balance column exists. Debits allocate against
   lots ordered by expiry so expiring credits are spent first; refunds return to the originating lot.
 - **`ModuleResult.score` is nullable on purpose, and DEGRADED still carries a score.** Read FR-053

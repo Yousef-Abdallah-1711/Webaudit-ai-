@@ -290,3 +290,7 @@ is read but never written or structurally modified by this spec.
 | Platform-wide budget ceilings (`requestBudget`/`concurrencyBudget`/`durationBudget` maxima) | F01 (unchanged) | F01 |
 | Tenant isolation on every lookup (`userId` re-derivation, no bare relation traversal) | SERVICE | F07 |
 | Zero `@relation` edges into `TargetAuthorization`/`Target`/`Scan` (no structural amendment needed) | STRUCTURAL (schema design itself, research.md R9) | F07 |
+
+
+---
+**Amended by A1 (2026-10-28)** — see `amendments/AMENDMENT-A1.md` and `f02-role-privilege-design.md` §13. The text above is the frozen original and is unchanged; where it differs from A1, A1 governs.

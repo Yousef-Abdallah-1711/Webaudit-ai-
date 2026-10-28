@@ -72,3 +72,7 @@ recordExecutionAuditEvent(
 3. Querying `ExecutionAuditEvent` for a reconstruction (User Story 3) MUST be tenant-scoped exactly like
    every other lookup in this spec's package — a caller re-derives tenant ownership through
    `targetAuthorizationId`'s owning grant's `userId`, never exposing a bare cross-tenant query path.
+
+
+---
+**Amended by A1 (2026-10-28)** — see `amendments/AMENDMENT-A1.md` and `f02-role-privilege-design.md` §13. The text above is the frozen original and is unchanged; where it differs from A1, A1 governs.

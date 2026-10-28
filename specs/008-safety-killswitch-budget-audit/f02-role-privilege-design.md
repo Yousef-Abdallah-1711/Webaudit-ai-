@@ -1,6 +1,6 @@
 # F-02 — Database role, privilege and transactional-surface design for SPEC 008 (Foundation Spec 07)
 
-**Status: DRAFT — PENDING OWNER SIGN-OFF (2026-10-28).** Drafted under DEC-034 (Option A). DEC-044, DEC-045,
+**Status: FINAL TECHNICAL DESIGN — owner-delegated decisions (2026-10-28); see §13.** The draft text below (§1–§12) is preserved as drafted; §13 records the final answers to Q1–Q5, DEC-050 and DEC-063 and every place the implementation differs from the draft. These are decisions the project owner explicitly delegated to the implementing engineer in the 2026-10-28 session; they are **not** earlier owner answers and must not be cited as such. Drafted under DEC-034 (Option A). DEC-044, DEC-045,
 DEC-048, DEC-049 are approved as *directions* (`docs/audits/fahes-master-audit/final-planning/
 DECISION_AMENDMENT_2026-10-28_SPEC008_LEVEL1.md`); this text is not approved until the owner signs §10. Nothing
 here is implemented. No frozen 008 file is edited; contract changes are in `amendments/AMENDMENT-A1-DRAFT.md`.
@@ -203,3 +203,35 @@ answered; independent work continues (§12).
 - Test harness design only (no schema-dependent tests).
 
 Everything else (T001-stub dirs excepted) waits: T002–T006, T008, T013–T015, T019c–T029.
+
+
+## 13. Final technical decisions (owner-delegated, 2026-10-28) and implementation deltas
+
+Provenance: the owner approved DEC-034/044/045/048/049 (Option A) and then delegated all remaining *technical*
+implementation decisions to the implementing engineer. Nothing here changes pricing, legal policy or a frozen
+product requirement. Each answer is verified by the tests named in
+`docs/audits/SPEC_008_FULL_IMPLEMENTATION_CLOSURE_2026-10-28.md`.
+
+| Item | Final answer | Why (safest option consistent with the approved directions) |
+|---|---|---|
+| Q1 roles/matrix | Approved as drafted, **with one change**: `fahes_worker_exec` also receives the *token-bound or read-only* functions (`f07_renew_lease`, `f07_release_lease_by_token`, `f07_stop_pending`, `f07_ack_stop`, `f07_record_stopped`, `f07_mark_escalated`) because the execution host needs them today and none can be abused with guessed identifiers (renew/release need the unguessable `holderToken`; ack only moves `REQUESTED→ACKNOWLEDGED`, still blocking admission; `record_stopped` verifies no live lease itself). It still receives **no** admission, trigger, release-by-authority, reclaim, reconcile or audit-write function. | Least privilege that still lets the host work; matrix asserted in `safety-role-isolation.test.ts` (real non-superuser logins). |
+| Q2 admission layers | Two-layer design as drafted. SQL `f07_admit` derives the tenant from `Target.userId`, uses `clock_timestamp()`, re-verifies grant ownership/revocation/expiry, takes the §7 locks, checks the kill switch under them, then ceilings, then writes. Scope matching stays in TypeScript `isAuthorized`; an equivalence-tested SQL port is **deferred to the SPEC 009/012 claim-bound wrappers (AR-19)** and is not claimed here. | Avoids duplicating SPEC 007 logic (drift) while closing the cross-tenant charge and clock holes. |
+| Q3 / DEC-050 lock order | §7 order adopted unchanged, with one refinement: the reconciler uses `FOR UPDATE SKIP LOCKED` on rows and `pg_try_advisory_xact_lock` on scope keys, so it never waits and cannot join a cycle; `lock_timeout = 3s` on every definer function turns any unexpected wait into a fail-closed error. | Proven by interleaving tests (stop vs admission in both orders; mixed-operation stress with zero errors). |
+| Q3 / DEC-063 reclaim | `f07_reclaim_expired_leases` run by the repeatable `safety-sweep` job (60 s). Only leases past their **database-clock** expiry and never released are reclaimed; contended grants are skipped (`SKIP LOCKED`) and retried; the counter is recomputed from live leases (drift correction). **A lease past expiry can no longer be renewed**, so a late heartbeat cannot revive it; a live lease is never reclaimed. Idempotent; concurrent sweeps safe. | Prevents double release and resurrection; observable (return counts + `BUDGET_RELEASED/RECLAIMED_EXPIRED` audit rows). |
+| Q4 audit redaction | As drafted: TypeScript redaction for TypeScript callers; SQL-originated events carry fixed structural payloads; `f07_record_audit_ts` caps payload (object, ≤8 KiB). No SQL-level free-text redaction is claimed. | A forgeable "redacted" stamp is not a boundary. |
+| Q5 data model | `AdmissionLease.scanId` and `.targetId` (nullable, additive); CHECK constraints (`>= 0`); partial live-lease index; platform scope id CHECK. | Needed to verify "no live lease" per SCAN/TARGET scope. |
+
+Differences from the draft (all deliberate):
+1. **Idempotent replay** of an `(grant, idempotencyKey)` pair returns the stored outcome *including the stored holder token even if that lease has since been released or reclaimed*; the stale holder is then fenced on its next renewal (FR-006a). A new acquisition after reclaim uses a new idempotency key (the frozen unique constraint makes a same-key re-acquire impossible).
+2. **Finalizer acknowledgement** (`f07_ack_stop_by_authority`) moves only the unit's own `(EXECUTION, id)` row. Broader-scope rows are advanced only by the reconciler, the safer reading of DEC-048 (a)+(b): nothing advances a broad row on a single unit's say-so.
+3. **STOPPED** is written only from `ACKNOWLEDGED` and only after `f07_scope_has_live_execution` is false inside the same transaction (host path `f07_record_stopped` and reconciler alike). `REQUESTED→STOPPED` is impossible (`stop-lifecycle.ts`, mutant-tested).
+4. **Reconciler** needs two passes (ack, then stop) and an `ack_grace` (default 30 s, env `SAFETY_STOP_ACK_GRACE_SECONDS`).
+5. **Stop events** record the scope's own id in the matching audit column (`f07_audit_scope`), so a tenant-scoped reconstruction through the grant finds them.
+6. `f07_stop_pending` also returns `requestedAt` (database clock) so the host's 5 s escalation bound is measured from the request, not from observation.
+7. Roles are cluster-level: the migration creates five `NOLOGIN` group roles (idempotent). They now exist in the shared dev cluster. Operations must create login roles as members and, in production, grant the app login `fahes_api` membership **and** keep its existing legacy-table privileges.
+
+Known limits (not hidden):
+- The dev API/worker still connect as the shared superuser (`webaudit`); **no isolation is in effect for the running dev stack** until each process is given its own login role. Isolation is proven only for real non-superuser logins in tests.
+- Until SPEC 009 supplies `ExecutionUnit`, leases are the only liveness evidence; a running unit that holds no lease is covered only by its own checkpoint acknowledgement plus the grace window. Identity is derived from `Target`/`TargetAuthorization`, not from a claimed unit.
+- No engine consumes F07 yet; legacy scans do not call it (additive, default-off).
+- Redis is an accelerant only; the 5 s bound rests on the database poll.

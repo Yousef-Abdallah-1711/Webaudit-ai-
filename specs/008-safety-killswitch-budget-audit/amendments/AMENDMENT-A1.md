@@ -1,4 +1,6 @@
-# SPEC 008 Amendment A1 (DRAFT — pending owner sign-off of F-02 §10)
+# SPEC 008 Amendment A1 (FINAL — owner-delegated technical amendment, 2026-10-28)
+
+> **Status**: applied by implementation. Approved *directions*: DEC-045/048/049/044 Option A (owner, 2026-10-28). The contract *text* below and every deviation recorded in `f02-role-privilege-design.md` §13 are owner-delegated technical decisions, not earlier owner answers. Frozen files were **not rewritten**; each carries an appended "Amended by A1" pointer. Where this amendment and a frozen file differ, this amendment governs (deviations from the draft: F-02 §13).
 
 Dated 2026-10-28. Implements the approved directions DEC-045 (A), DEC-048 (A), DEC-049 (A), DEC-044 (A) as
 contract text. The frozen files (`contracts/*.md`, `data-model.md`, `spec.md`) are **not edited**; on sign-off this
@@ -43,9 +45,8 @@ then the frozen text governs and **no implementation of A1 behaviour may start**
 ## 4. `kill-switch-contract.md` (DEC-048 A, DEC-049 A)
 
 1. **Finalizer acknowledgement**: `acknowledgeStopByAuthority(tx, executionId)` — called inside the terminalization
-   transaction; moves the `(EXECUTION, executionId)` row `REQUESTED→ACKNOWLEDGED`; it also moves a broader
-   (`SCAN/GRANT/TARGET/TENANT/PLATFORM`) row only if no other live lease remains in that scope. Idempotent; audit
-   `STOP_ACKNOWLEDGED` once.
+   transaction; moves **only** the `(EXECUTION, executionId)` row `REQUESTED→ACKNOWLEDGED` (final: broader-scope rows are
+   advanced only by the reconciler, F-02 §13 delta 2). Idempotent; audit `STOP_ACKNOWLEDGED` once.
 2. **Reconciler** (new maintenance job, 60 s cadence): for rows in `REQUESTED/ACKNOWLEDGED` — advances
    `REQUESTED→ACKNOWLEDGED` when no live in-scope lease exists and `now - requestedAt >= ack_grace` (30 s,
    provisional); advances `ACKNOWLEDGED→STOPPED` only after re-verifying, in the same transaction and under the lock
