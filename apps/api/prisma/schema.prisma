@@ -1111,6 +1111,8 @@ model AdmissionLease {
   expiresAt             DateTime
   releasedAt            DateTime?
   reclaimedAt           DateTime?
+  /// Carried onto release/reclaim audit events (FR-020); amendment A2.
+  executionClass        String?
 
   @@unique([targetAuthorizationId, idempotencyKey])
   @@index([targetAuthorizationId])

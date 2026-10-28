@@ -3,7 +3,7 @@
 -- Leaves the five NOLOGIN roles in place (cluster-level, shared by every database) and touches no
 -- pre-existing table or row. Back up before running anywhere non-ephemeral: the five tables and all
 -- safety state (budget counters, leases, kill-switch rows, execution audit events) are dropped.
--- After running, delete the migration's row from "_prisma_migrations" so `migrate deploy` can re-apply it.
+-- Removes BOTH SPEC 008 migrations (A and B); the history rows are deleted below so `migrate deploy` re-applies both.
 
 BEGIN;
 
@@ -27,6 +27,8 @@ DO $$ BEGIN
   END IF;
 END $$;
 
-DELETE FROM "_prisma_migrations" WHERE migration_name = '20261028120000_add_safety_foundation';
+DELETE FROM "_prisma_migrations"
+ WHERE migration_name IN ('20261028120000_add_safety_foundation',
+                         '20261029000000_safety_audit_context_and_lease_exclusivity');
 
 COMMIT;
