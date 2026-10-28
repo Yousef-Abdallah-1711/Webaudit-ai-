@@ -1,0 +1,10 @@
+{
+  "browser": "Google Chrome 150.0.7871.124",
+  "method": "Playwright library (channel=chrome), throwaway user-data-dir; NOT Playwright MCP",
+  "web": "http://localhost:3020",
+  "api": "http://localhost:3021",
+  "apiRole": "rt_api (non-superuser)",
+  "workerRole": "rt_worker (non-superuser)",
+  "db": "m008_audit_test on dedicated container :5452",
+  "redis": "dedicated container :6391 (AOF)"
+}

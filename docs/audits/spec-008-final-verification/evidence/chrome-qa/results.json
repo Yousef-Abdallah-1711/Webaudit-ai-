@@ -1,0 +1,198 @@
+[
+  {
+    "id": "M1.1",
+    "title": "home page renders (desktop)",
+    "status": "PASS",
+    "detail": "title=Fahes",
+    "ms": 3461
+  },
+  {
+    "id": "M1.2",
+    "title": "signup refuses a weak password: submit stays disabled and a requirement hint is visible",
+    "status": "PASS",
+    "detail": "submit disabled=true; hint=\"12 characters\"; users created=0",
+    "ms": 3631
+  },
+  {
+    "id": "M1.3",
+    "title": "register user A through the real form -> verify-email page",
+    "status": "PASS",
+    "detail": "user row exists: 1, emailVerifiedAt null: t",
+    "ms": 3670
+  },
+  {
+    "id": "M1.4",
+    "title": "unverified account cannot sign in",
+    "status": "PASS",
+    "detail": "stayed at /login",
+    "ms": 4294
+  },
+  {
+    "id": "M1.5",
+    "title": "wrong password shows an announced error and no session",
+    "status": "PASS",
+    "detail": "role=alert texts: [\"Incorrect email or password.\"]",
+    "ms": 4302
+  },
+  {
+    "id": "M1.6",
+    "title": "login via the real form lands on /scan with a session",
+    "status": "PASS",
+    "detail": "cookies: pending_verification(httpOnly=true,secure=false,sameSite=Lax), wa-lang(httpOnly=false,secure=false,sameSite=Lax), refresh_token(httpOnly=true,secure=false,sameSite=Lax)",
+    "ms": 3198
+  },
+  {
+    "id": "M2.1",
+    "title": "report page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "REPORT No report selected Open a completed scan's live-progress page to see its report.",
+    "ms": 3245
+  },
+  {
+    "id": "M2.2",
+    "title": "usage page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "USAGE Credit usage current period · last 30 days Export CSV SPENT THIS PERIOD 0 real ledger debits REMAINING 50 50 plan · 0 purchased AUDITS",
+    "ms": 3282
+  },
+  {
+    "id": "M2.3",
+    "title": "billing page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "BILLING Billing and plans Free plan · credits granted once Credit balance 50 Plan credits Expire at renewal 0 Purchased credits Never expire",
+    "ms": 3293
+  },
+  {
+    "id": "M2.4",
+    "title": "settings page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "PROFILE Profile qa-a@example.test · Free plan Save changes Account Name Email This email address can’t be changed here. Password At least 12",
+    "ms": 3243
+  },
+  {
+    "id": "M2.5",
+    "title": "live scan page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "LIVE SCAN No scan in progress Start a new scan to see live progress here.",
+    "ms": 3203
+  },
+  {
+    "id": "M2.6",
+    "title": "fixes page loads for a new user (empty state, no crash)",
+    "status": "PASS",
+    "detail": "FIXES No audit selected Open a report and choose Fixes.",
+    "ms": 3222
+  },
+  {
+    "id": "M4.0",
+    "title": "over-budget: 80-credit quote vs 50 plan credits is refused and nothing is charged (credit budget)",
+    "status": "PASS",
+    "detail": "button disabled before click=false; message=\"NEW SCAN What should we audit? URL Repository Archive https:// AREAS Performance 20 cr Security 20 cr Design 25 cr Testing 20 cr Search visibility 10 cr Five ar\"; DEBIT rows=0; scans created=0",
+    "ms": 6533
+  },
+  {
+    "id": "M4.1",
+    "title": "quote is shown for the synthetic target and credits are available",
+    "status": "PASS",
+    "detail": "quote text: Quote 80 credits",
+    "ms": 3658
+  },
+  {
+    "id": "M4.2",
+    "title": "accept and run: scan is created and charged once; design questionnaire is skippable; worker completes it",
+    "status": "PASS",
+    "detail": "scan cmvrn9bqs000euomwtcfhczhg: COMPLETED|quoted=80|charged=80; DEBIT rows 0->1",
+    "ms": 3302
+  },
+  {
+    "id": "M8.1",
+    "title": "results page for the completed scan",
+    "status": "PASS",
+    "detail": "UI: REPORT No report selected Open a completed scan's live-progress page to see its report. || DB modules: PERFORMANCE:COMPLETE:93 | SECURITY:COMPLETE:62 | UI:DEGRADED:100 | TESTING:COMPLETE:100 | SEO:COMPLETE:91",
+    "ms": 3410
+  },
+  {
+    "id": "M8.2",
+    "title": "D-1 reproduction: Performance reported with browser capabilities that could not run",
+    "status": "PASS",
+    "detail": "PERFORMANCE module = COMPLETE:score=93; browser-dependent executions = cwv-analyzer:succeeded=true:findings=0 | lighthouse-analyzer:succeeded=true:findings=2 | network-inspector:succeeded=true:findings=0 | playwright-runner:succeeded=true:findings=0 | screenshot-capture:succeeded=true:findings=0",
+    "ms": 405
+  },
+  {
+    "id": "M6.1",
+    "title": "legacy scan flow wrote no SPEC 008 rows (FR-026: additive, untouched)",
+    "status": "PASS",
+    "detail": "rows across the 5 safety tables before/after the full scan journey: 78136 -> 78136 (delta 0)",
+    "ms": 384
+  },
+  {
+    "id": "M7.1",
+    "title": "second scan: cancel through the real \"Cancel scan\" button; state, refund and ledger are consistent",
+    "status": "PASS",
+    "detail": "confirmDialog=false; scan CANCELLED after 4/5 areas delivered; charged 80, refunded 16 = floor(80*1/5) (the product's refund rule); balance 170 -> 106; ledger GRANT:50, GRANT:200, DEBIT:80, DEBIT:80, REFUND:16; SPEC 008 rows delta=0",
+    "ms": 6107
+  },
+  {
+    "id": "M9.1",
+    "title": "user B cannot read user A's scan through the UI or the API; unauthenticated access is refused",
+    "status": "PASS",
+    "detail": "UI leaked=false; API GET other scan=404, cancel other scan=404, no token=401, bad token=401; cleared session -> /login redirect=false",
+    "ms": 19393
+  },
+  {
+    "id": "M10.desktop",
+    "title": "responsive desktop 1440px: /login and /signup have no horizontal overflow",
+    "status": "PASS",
+    "detail": "/login overflow=0px, /signup overflow=0px",
+    "ms": 6510
+  },
+  {
+    "id": "M10.tablet",
+    "title": "responsive tablet 768px: /login and /signup have no horizontal overflow",
+    "status": "PASS",
+    "detail": "/login overflow=0px, /signup overflow=0px",
+    "ms": 6486
+  },
+  {
+    "id": "M10.mobile",
+    "title": "responsive mobile 390px: /login and /signup have no horizontal overflow",
+    "status": "PASS",
+    "detail": "/login overflow=0px, /signup overflow=0px",
+    "ms": 6466
+  },
+  {
+    "id": "M10.mobile-auth",
+    "title": "mobile 390px and tablet 768px: signed-in dashboard layout (session reused, no extra credential attempt)",
+    "status": "PASS",
+    "detail": "mobile /scan overflow=0px url=/scan; tablet /scan overflow=0px url=/scan",
+    "ms": 8107
+  },
+  {
+    "id": "M11.1",
+    "title": "keyboard: login form tab order, visible focus indicator, Enter submits (single credential attempt)",
+    "status": "PASS",
+    "detail": "tab order: A:Fahes[outline=solid 2px] > BUTTON:Switch to العربية[outline=solid 2px] > BUTTON:Switch to dark mod[outline=solid 2px] > INPUT:[outline=solid 2px, box-shadow] > A:Forgot?[outline=solid 2px] > INPUT:Password[outline=solid 2px, box-shadow] ; Enter submitted and signed in",
+    "ms": 5526
+  },
+  {
+    "id": "M9.2",
+    "title": "logout invalidates the session: protected pages redirect to /login and the refresh cookie is gone",
+    "status": "PASS",
+    "detail": "redirected to /login?next=%2Fscan; cookies after logout: pending_verification,wa-lang",
+    "ms": 6630
+  },
+  {
+    "id": "M11.2",
+    "title": "axe-core accessibility scan of /login, /signup, /scan (serious/critical violations)",
+    "status": "PASS",
+    "detail": "/login: total=0 seriousOrCritical=0 ; /signup: total=0 seriousOrCritical=0 ; /scan: total=0 seriousOrCritical=0",
+    "ms": 12135
+  },
+  {
+    "id": "M12.1",
+    "title": "browser diagnostics across the whole session",
+    "status": "PASS",
+    "detail": "pageErrors=0 hydration=0 failedRequests=6 console.error=31 http401/403/5xx=28 (excluding expected auth probes: 2)",
+    "ms": 2
+  }
+]

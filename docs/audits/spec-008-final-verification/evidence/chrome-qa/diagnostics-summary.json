@@ -1,0 +1,40 @@
+{
+  "http": [
+    [
+      "401 GET API/auth/me",
+      13
+    ],
+    [
+      "401 POST API/auth/refresh",
+      13
+    ],
+    [
+      "403 POST API/auth/login",
+      1
+    ],
+    [
+      "401 POST API/auth/login",
+      1
+    ]
+  ],
+  "console": [
+    [
+      "error: Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+      27
+    ],
+    [
+      "error: Failed to load resource: the server responded with a status of 404 (Not Found)",
+      2
+    ],
+    [
+      "error: Failed to load resource: the server responded with a status of 403 (Forbidden)",
+      1
+    ],
+    [
+      "error: Failed to load resource: the server responded with a status of 402 (Payment Required)",
+      1
+    ]
+  ],
+  "failedRequests": 6,
+  "pageErrors": 0
+}
