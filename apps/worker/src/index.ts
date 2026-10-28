@@ -58,6 +58,10 @@ import {
   createTimeoutSweepHandler,
   scheduleTimeoutSweep,
 } from './orchestrator/timeout-scheduler.js';
+import {
+  createSafetySweepHandler,
+  scheduleSafetySweep,
+} from './orchestrator/safety-lease-sweep.js';
 import { createBillingSweepHandler, scheduleBillingSweeps } from './orchestrator/billing-sweeps.js';
 import {
   createPaymentExpirySweepHandler,
@@ -305,6 +309,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // their undelivered share. Registered as a repeatable job below.
         timeoutSweep: createTimeoutSweepHandler({ db, publisher }),
         paymentExpirySweep: createPaymentExpirySweepHandler(db),
+        safetySweep: createSafetySweepHandler({ db }),
         // FR-059 (T150): the targeted re-verification runner. `apps/api`'s
         // assert-fixed route is its only producer.
         reverify: createReverifyHandler({ db, publisher }),
@@ -358,6 +363,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // done for the real handler path; a caller supplying its own `handlers`
   // (a test, the placeholder path) opts out.
   if (options.handlers === undefined) {
+    void scheduleSafetySweep(queues.maintenance).catch((error: unknown) => {
+      logger.error(
+        'could not schedule the safety sweep; expired leases and stranded stops will not be ' +
+          'reconciled until this is resolved',
+        { error: error instanceof Error ? error.message : String(error) },
+      );
+    });
     void scheduleTimeoutSweep(queues.maintenance).catch((error: unknown) => {
       logger.error(
         'could not schedule the timeout sweep; stuck scans will not be recovered until ' +

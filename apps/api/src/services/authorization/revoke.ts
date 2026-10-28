@@ -29,6 +29,7 @@
  */
 
 import type { PrismaClient, TargetAuthorization } from '../../../prisma/generated/client/index.js';
+import { triggerStop } from '../safety/kill-switch.js';
 import { AuthorizationNotFoundError } from './errors.js';
 
 export type RevokeAuthorizationDb = Pick<PrismaClient, '$transaction'>;
@@ -91,6 +92,16 @@ export async function revokeAuthorization(
         before: { revokedAt: null },
         after: { revokedAt: now.toISOString(), revokedBy: actingUserId },
       },
+    });
+
+    // SPEC 008 FR-012 / T022: the stop is part of the same transaction as the
+    // revocation, so a revoked grant can never be left with running work that
+    // nothing has been told to stop. Idempotent against an already-pending stop.
+    await triggerStop(tx, {
+      scope: 'GRANT',
+      scopeId: grant.id,
+      triggeredBy: 'SYSTEM',
+      reason: 'AUTHORIZATION_REVOKED',
     });
 
     const revoked = await tx.targetAuthorization.findFirst({ where: { id: grant.id } });

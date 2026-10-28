@@ -17,6 +17,7 @@ import {
   type TargetEnvironmentClassification,
 } from '@webaudit/types';
 import type { PrismaClient, TargetEnvironment } from '../../../prisma/generated/client/index.js';
+import { triggerStop } from '../safety/kill-switch.js';
 import { AuthorizationNotFoundError, AuthorizationValidationError } from './errors.js';
 
 export type ClassifyEnvironmentDb = Pick<PrismaClient, '$transaction'>;
@@ -76,6 +77,31 @@ export async function classifyEnvironment(
         after: { classification: row.classification },
       },
     });
+
+    // SPEC 008 FR-016: a reclassification that a live grant's environment
+    // restriction no longer permits stops that grant's running work. A later
+    // reclassification back does not cancel a stop already requested.
+    if (existing !== null && existing.classification !== row.classification) {
+      const now = new Date();
+      const affected = await tx.targetAuthorization.findMany({
+        where: {
+          targetId: target.id,
+          userId: input.actingUserId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+          NOT: { environmentRestriction: { has: row.classification } },
+        },
+        select: { id: true },
+      });
+      for (const grant of affected) {
+        await triggerStop(tx, {
+          scope: 'GRANT',
+          scopeId: grant.id,
+          triggeredBy: 'SYSTEM',
+          reason: 'ENVIRONMENT_RECLASSIFIED',
+        });
+      }
+    }
 
     return row;
   });

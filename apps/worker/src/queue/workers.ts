@@ -71,6 +71,8 @@ export const JOB_NAMES = {
   questionnaireDeadline: 'questionnaire-deadline',
   /** `timeout-scheduler.ts` → `maintenanceQueue.add('timeout-sweep', …, { repeat })`. */
   timeoutSweep: 'timeout-sweep',
+  /** `safety-lease-sweep.ts` (SPEC 008): lease reclaim + stranded kill-switch reconciliation. */
+  safetySweep: 'safety-sweep',
   paymentExpirySweep: 'payment-expiry-sweep',
   /** `apps/api`'s `reverify-producer.ts` → `reverifyQueue.add('reverify', …)` (T154). */
   reverify: 'reverify',
@@ -146,6 +148,7 @@ export const questionnaireTimeoutJobSchema = z
 
 /** The repeatable FR-038 sweep carries no per-run data. */
 export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep') }).strict();
+export const safetySweepJobSchema = z.object({ kind: z.literal('safety-sweep') }).strict();
 export const paymentExpirySweepJobSchema = z
   .object({ kind: z.literal('payment-expiry-sweep') })
   .strict();
@@ -259,6 +262,8 @@ export interface JobHandlers {
   /** The repeatable FR-038 sweep. Carries no data. */
   readonly timeoutSweep?: () => Promise<void>;
   readonly paymentExpirySweep?: () => Promise<void>;
+  /** SPEC 008's repeatable lease-reclaim and stop-reconciler sweep. Carries no data. */
+  readonly safetySweep?: () => Promise<void>;
   readonly authTokenCleanup?: () => Promise<void>;
   /** The repeatable billing sweep (T188/T189). Carries no data. */
   readonly billingSweep?: () => Promise<void>;
@@ -329,6 +334,16 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
         throw new JobNotImplementedError(job, 'T113', 'The orchestrator run loop');
       }
       await handler(data, job);
+      return;
+    }
+
+    case JOB_NAMES.safetySweep: {
+      safetySweepJobSchema.parse(job.data);
+      const handler = handlers.safetySweep;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'T015', 'The SPEC 008 safety sweep');
+      }
+      await handler();
       return;
     }
 
