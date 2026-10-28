@@ -128,7 +128,11 @@ describe('B3: audit reconstruction with redaction', () => {
     expect(granted.outcome).toBe('GRANTED');
     const refused = await requestAdmission(
       testDb,
-      admissionRequest(world, { executionId: 'qs-b3', idempotencyKey: 'qs-b3-2' }),
+      admissionRequest(world, {
+        executionId: 'qs-b3',
+        idempotencyKey: 'qs-b3-2',
+        consumes: { request: true, concurrency: false }, // a further request step of the same unit
+      }),
     );
     expect(refused).toMatchObject({ reason: 'BUDGET_EXHAUSTED_REQUEST' });
 

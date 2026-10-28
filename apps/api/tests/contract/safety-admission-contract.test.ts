@@ -82,10 +82,10 @@ describe('T011 idempotency', () => {
       testDb,
       admissionRequest(world, { executionId: 'unit-x', idempotencyKey: 'k1' }),
     );
-    await requestAdmission(
-      testDb,
-      admissionRequest(world, { executionId: 'unit-x', idempotencyKey: 'k2' }),
-    );
+    // Admission now refuses a second live lease for one unit (FR-015, D-C); the multi-row release
+    // path is still exercised by planting that state directly and keeping the counter consistent.
+    await testDb.$executeRaw`INSERT INTO "AdmissionLease" (id,"targetAuthorizationId","userId","executionId","idempotencyKey","holderToken","expiresAt") VALUES ('planted-x2',${world.grantId},${world.userId},'unit-x','k2','tok', now() + interval '30 seconds')`;
+    await testDb.$executeRaw`UPDATE "BudgetCounter" SET "activeConcurrency" = "activeConcurrency" + 1`;
     await requestAdmission(
       testDb,
       admissionRequest(world, { executionId: 'unit-y', idempotencyKey: 'k3' }),

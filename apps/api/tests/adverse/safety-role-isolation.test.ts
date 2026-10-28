@@ -72,6 +72,9 @@ const FN = {
   reclaim: `public.f07_reclaim_expired_leases(10)`,
   reconcile: `public.f07_reconcile_stranded_stops(10,30)`,
   auditTs: `public.f07_record_audit_ts('SAFETY_VIOLATION'::"ExecutionAuditEventType",'a',NULL,NULL,NULL,NULL,NULL,NULL,NULL,'x',NULL)`,
+  ownerIds: `public.f07_audit_owner_ids(10)`,
+  purge: `public.f07_purge_execution_audit('u', now() - interval '1 day')`,
+  purgeUnowned: `public.f07_purge_unowned_execution_audit(now() - interval '1 day')`,
   // internals: executable by no runtime role
   lock: `public.f07_lock_scope('GRANT'::"SafetyScope",'g',true)`,
   audit: `public.f07_audit('SAFETY_VIOLATION'::"ExecutionAuditEventType",'a',NULL,NULL,NULL,NULL,'x')`,
@@ -101,6 +104,9 @@ const MATRIX: Record<Who, Partial<Record<Fn, boolean>>> = {
     audit: false,
     auditScope: false,
     live: false,
+    ownerIds: false,
+    purge: false,
+    purgeUnowned: false,
   },
   worker: {
     renew: true,
@@ -121,6 +127,9 @@ const MATRIX: Record<Who, Partial<Record<Fn, boolean>>> = {
     audit: false,
     auditScope: false,
     live: false,
+    ownerIds: false,
+    purge: false,
+    purgeUnowned: false,
   },
   orchestrator: {
     releaseExec: true,
@@ -141,6 +150,9 @@ const MATRIX: Record<Who, Partial<Record<Fn, boolean>>> = {
     audit: false,
     auditScope: false,
     live: false,
+    ownerIds: true,
+    purge: true,
+    purgeUnowned: true,
   },
   operator: {
     trigger: true,
@@ -161,6 +173,9 @@ const MATRIX: Record<Who, Partial<Record<Fn, boolean>>> = {
     audit: false,
     auditScope: false,
     live: false,
+    ownerIds: false,
+    purge: false,
+    purgeUnowned: false,
   },
   nobody: Object.fromEntries(Object.keys(FN).map((k) => [k, false])) as Record<Fn, boolean>,
 };

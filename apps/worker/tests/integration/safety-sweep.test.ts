@@ -6,7 +6,7 @@
 
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Queue } from 'bullmq';
-import { testDb as db, resetDb, closeDb } from '@webaudit/api/test-db';
+import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
 import { admissionRequest, makeWorld } from '@webaudit/api/test-safety-fixtures';
 import { requestAdmission, triggerStop } from '@webaudit/api/safety';
 import { JOB_NAMES, dispatch } from '../../src/queue/workers.js';
@@ -73,6 +73,7 @@ describe('a real sweep', () => {
         driftCorrected: 0,
         acknowledged: 0,
         stopped: 0,
+        auditPurged: 0,
       });
       await db.$executeRaw`UPDATE "AdmissionLease" SET "expiresAt" = now() - interval '1 second'`;
       const first = await runSafetySweep(db);
@@ -86,9 +87,30 @@ describe('a real sweep', () => {
         driftCorrected: 0,
         acknowledged: 0,
         stopped: 0,
+        auditPurged: 0,
       });
     } finally {
       delete process.env['SAFETY_STOP_ACK_GRACE_SECONDS'];
+    }
+  });
+});
+
+describe('retention housekeeping cannot starve the safety-critical work (audit finding D-H)', () => {
+  it('a retention failure (missing plan reference data) does not fail the sweep or block reclaim/reconcile', async () => {
+    const world = await makeWorld('sweep-dh@example.com');
+    await requestAdmission(db, admissionRequest(world, { executionId: 'dh-unit' }));
+    await db.$executeRaw`INSERT INTO "ExecutionAuditEvent" (id,"eventType","actorId","targetAuthorizationId",outcome) VALUES ('dh-evt','ADMISSION_GRANTED','x',${world.grantId},'x')`;
+    await db.$executeRaw`UPDATE "AdmissionLease" SET "expiresAt" = now() - interval '1 second'`;
+    await db.plan.deleteMany({}); // the purge resolves each owner's plan; with no plan rows it throws
+    const { resetSafetySweepThrottleForTests } =
+      await import('../../src/orchestrator/safety-lease-sweep.js');
+    resetSafetySweepThrottleForTests();
+    try {
+      const outcome = await runSafetySweep(db);
+      expect(outcome.reclaimed).toBe(1); // the safety-critical work still ran
+      expect(outcome.auditPurged).toBe(0);
+    } finally {
+      await seedPlans(); // restore the shared reference data this test removed
     }
   });
 });
