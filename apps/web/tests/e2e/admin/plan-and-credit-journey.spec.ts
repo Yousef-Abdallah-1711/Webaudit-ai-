@@ -66,7 +66,11 @@ test('assign a plan and grant credits through the real admin UI, then the user c
 
   const row = page.getByText(target.email, { exact: true }).locator('../..');
   await row.getByRole('button', { name: 'View detail', exact: true }).click();
-  await expect(page.getByText('Plan credits')).toBeVisible({ timeout: 10_000 });
+  // "Plan credits" is also the table's column header (always visible); the detail panel's
+  // definition term is what proves the detail actually opened.
+  await expect(page.getByRole('term').filter({ hasText: 'Plan credits' })).toBeVisible({
+    timeout: 10_000,
+  });
 
   // --- Assign plan: free -> pro, no payment ---
   const assignForm = page.locator('form', { hasText: 'Assign plan (no payment)' });
