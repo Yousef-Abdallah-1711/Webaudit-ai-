@@ -133,3 +133,10 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Final checks: full isolated unit/contract/integration workspace 243/243 files and 1,851/1,851 tests; API typecheck; scoped ESLint; scoped Prettier; `git diff --check` all passed.
 - Only pre-existing website/auth work, `pnpm-lock.yaml`, `apps/web/.next-final-cta-verify/`, and `logs/` remain dirty/untracked; they were not staged or committed.
 - SPEC 009 remains PARTIALLY COMPLETE; see current DoD and remaining gaps above.
+
+## Full adverse workspace — 2026-10-29
+
+- Ran the complete serial adverse Vitest workspace with both `DATABASE_URL` and `TEST_DATABASE_URL` explicitly set to disposable `m009_privilege_test`, and Redis set to `127.0.0.1:6391`.
+- Result: **72/72 files passed, 1,134 tests passed, 1 test skipped** (1,135 total). The skip is reported by `packages/capability-sdk/tests/adverse/context-confinement.test.ts`.
+- Included `apps/api/tests/adverse/safety-role-isolation.test.ts` (116/116), `core01-role-isolation.test.ts` (7/7), and the other API/worker security, safety, concurrency, SSRF, sandbox, and containment cases. Real Chromium SSRF tests for the probe-pool boundary passed; manual Chrome acceptance for SPEC 009 was not performed.
+- The worker/API plan producer path, production adapter registration, complete privilege matrix, visual/Playwright, manual Chrome, k6/load, coverage, and real R2 checks remain open. DoD remains 25 PARTIAL / 3 NOT STARTED / 0 PASS.

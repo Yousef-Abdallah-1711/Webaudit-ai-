@@ -63,18 +63,19 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 19 | PARTIAL | Idempotent finalizer exercised by integration; exact privilege fix is fresh-install tested but not applied to shared dev database. |
 | 20 | NOT STARTED | No unit/finalization audit-event rollback proof found. |
 | 21 | PARTIAL | Tenant-scoped service code inspected; no full IDOR/adverse matrix or real API attack path run. |
-| 22 | PARTIAL | Focused privilege regression covers finalizer and terminal status only; lease, tenant, effects, definer, SSRF, and secret matrix remains. |
+| 22 | PARTIAL | Full adverse suite passed, including 116 safety role-isolation tests and 7 CORE-01 role-isolation tests; complete lease-secret, tenant, effect, admission, definer-function, and real service-role matrix remains. |
 | 23 | NOT STARTED | No measured SPEC 009 performance baseline or k6 run. |
 | 24 | PARTIAL | Direct PG/Redis/BullMQ test is real integration; no API+worker process or HTTP scan lifecycle. Existing healthy containers were observed only. |
 | 25 | NOT STARTED | No real Chrome manual acceptance or browser evidence. |
-| 26 | PARTIAL | Full serial unit/contract/integration workspace passed 243/243 files and 1,851/1,851 tests; adverse, visual, Playwright, and full 49-FR re-review remain. |
+| 26 | PARTIAL | Full serial unit/contract/integration passed 243 files / 1,851 tests; adverse passed 72 files / 1,134 executed tests (1 skipped); visual, Playwright, and full 49-FR re-review remain. |
 | 27 | PARTIAL | This dated report and reassessment were added; full 49-FR re-review and all stale historical documents remain. |
-| 28 | PARTIAL | Changes are local pending final review/commit/push; remote remains at the verified starting HEAD. |
+| 28 | PARTIAL | Reviewed changes were committed and pushed; local `HEAD`, `origin/main`, and remote `main` agree. SPEC 009 remains incomplete due to the open gates above. |
 
 **Current reassessment: 25 PARTIAL · 3 NOT STARTED · 0 PASS. Verdict: NOT COMPLETE.** The zero PASS count is deliberate: the current DoD requires end-to-end evidence for each gate and this session did not perform the complete gate-specific verification for any one gate.
 
 ### Verification update — 2026-10-29
 
 - The serial unit/contract/integration workspace passed against disposable PostgreSQL and isolated Redis: **243/243 files, 1,851/1,851 tests**.
+- The serial adverse workspace passed against the same disposable services: **72/72 files, 1,134 passed, 1 skipped**. This includes expanded safety role-isolation and real Chromium SSRF checks for probe-pool boundaries.
 - The full-suite failures found earlier were fixed: blank `EMAIL_TRANSPORT` now behaves as omitted and selects the documented production SMTP default; the sandbox-unconfigured contract removes the repository `.env` URL before checking that path.
-- This does not change the 25 PARTIAL / 3 NOT STARTED / 0 PASS gate count. Production API plan dispatch, production adapter registration, complete least-privilege matrix, adverse/visual/Playwright, browser, load, coverage, and real R2 evidence remain incomplete.
+- The 28-gate count remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. Production API plan dispatch, production adapter registration, complete least-privilege matrix, visual/Playwright, manual browser journey, load, coverage, and real R2 evidence remain incomplete.

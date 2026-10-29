@@ -65,7 +65,7 @@ Controlled runtime tests covered cancellation, kill switch, authorization revoca
 
 ## P. Security review
 
-Confirmed defect: the initial grant migrations left the finalizer callable by API and generic-worker roles. Reproduced with real login roles, fixed additively, and verified on a fresh migration chain. Direct host terminal update is trigger-blocked. Review found no claim of full least-privilege closure: test coverage still needs lease secret, tenant, immutable plan, effects, admission, and SECURITY DEFINER negative cases, and the correction is not yet deployed to the existing shared dev database.
+Confirmed defect: the initial grant migrations left the finalizer callable by API and generic-worker roles. Reproduced with real login roles, fixed additively, and verified on a fresh migration chain. Direct host terminal update is trigger-blocked. The full adverse suite passed, including 116 safety role-isolation cases and 7 CORE-01 role-isolation cases. This is substantial coverage but not the complete SPEC 009 least-privilege matrix across lease secrets, tenant mutations, immutable plan data, effects, admission, every SECURITY DEFINER function, and real API/worker service connections. The correction is not yet deployed to the existing shared dev database.
 
 ## Q. Full unit suite
 
@@ -75,11 +75,11 @@ The earlier whole-suite failures were resolved with two findings: `EMAIL_TRANSPO
 
 ## R. Adverse suite
 
-The new focused role-isolation adverse test passed 7/7 after the correction. The full adverse suite was not run.
+The full serial adverse workspace passed **72/72 files and 1,134/1,134 executed tests**, with one SDK adverse test skipped by the suite (1,135 total). This includes `safety-role-isolation.test.ts` (116/116), `core01-role-isolation.test.ts` (7/7), kill-switch, admission-race, auth, billing, sandbox escape, process-crash containment, capability containment, redaction, workspace-confinement, and real Chromium browser-pool SSRF checks. The Chromium tests cover the probe-pool SSRF boundary; they are not the manual SPEC 009 user journey.
 
 ## S. Contract suite
 
-Contract tests were included in the complete serial unit/contract/integration workspace: **243/243 files and 1,851/1,851 tests passed**. The separate adverse project remains unrun.
+Contract tests were included in the complete serial unit/contract/integration workspace: **243/243 files and 1,851/1,851 tests passed**. Adverse project results are recorded separately in section R.
 
 ## T. Playwright regression
 
@@ -112,7 +112,7 @@ Not run. No coverage report was produced.
 
 ## Y. Definition-of-Done results
 
-The 28-gate reassessment is in `DEFINITION_OF_DONE.md`. The full serial unit/contract/integration workspace passed, but the report still does not establish the production worker/API path, complete privilege matrix, adverse and visual gates, browser acceptance, performance baseline, or instrumented coverage. No historical PASS was promoted solely from this suite result.
+The 28-gate reassessment is in `DEFINITION_OF_DONE.md`. The full serial unit/contract/integration and adverse workspaces passed, but the report still does not establish the production worker/API path, complete privilege matrix, visual/Playwright gates, manual browser acceptance, performance baseline, or instrumented coverage. No historical PASS was promoted solely from these suite results.
 
 ## Z. Git commits and remote synchronization
 
@@ -127,6 +127,7 @@ The reviewed SPEC 009 changes were committed as `b2f05c0d41d61f59f9cf385a63719f7
 - `pnpm.cmd --filter @webaudit/worker typecheck` — exit 0 after startup composition.
 - Targeted ESLint on the five changed worker TypeScript files — exit 0 after correcting one strict-equality lint finding.
 - The full serial unit/contract/integration workspace passed 243 files / 1,851 tests. API typecheck, scoped ESLint, scoped Prettier, and `git diff --check` also passed.
+- The full serial adverse workspace passed 72 files / 1,134 executed tests with one skipped test.
 - No separately launched API+worker plan-dispatch lifecycle, Chrome, Playwright MCP/CLI, real R2, k6, or coverage evidence is claimed.
 
 ### Latest delivery synchronization — 2026-10-29
