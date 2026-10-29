@@ -13,7 +13,13 @@ import {
   uid,
   type RuntimeWorld,
 } from '../../helpers/runtime-fixtures.js';
-import { finalizeExecutionUnit } from '../../../src/services/execution-runtime/index.js';
+import {
+  casHostTransition,
+  claimUnitHost,
+  finalizeExecutionUnit,
+  hashClaimToken,
+  recordExecutionEvidence,
+} from '../../../src/services/execution-runtime/index.js';
 import {
   ARTIFACT_LIMITS,
   ArtifactRefusedError,
@@ -397,6 +403,115 @@ describe('recordEvidence', () => {
       failureClass: 'ENGINE_DEFECT',
     });
     expect(await testDb.evidence.count({ where: { id: ev.id } })).toBe(1);
+  });
+
+  it('fences engine evidence by running state, current claim, and deadline while leaving registry evidence permissive', async () => {
+    const w = await makeRuntimeWorld();
+    const u = await makeUnit(w);
+    const store = createMemoryArtifactStore();
+    const claimToken = `unit-evidence-${uid('token')}`;
+    const host = {
+      executionUnitId: u.id,
+      userId: w.userId,
+      hostInstanceId: uid('host'),
+    };
+    const claim = await claimUnitHost(testDb as never, host, hashClaimToken(claimToken));
+    expect(claim.result).toBe('CLAIMED');
+    for (const edge of ['PLANNED>ADMITTED', 'ADMITTED>DISPATCHED', 'DISPATCHED>RUNNING'] as const) {
+      expect(
+        await casHostTransition(testDb as never, {
+          ...host,
+          attempt: u.attempt,
+          claimToken,
+          edge,
+          leaseClass: 'N',
+        }),
+      ).toBe('OK');
+    }
+
+    const accepted = await recordExecutionEvidence(testDb as never, store, {
+      ...host,
+      attempt: u.attempt,
+      claimToken,
+      leaseClass: 'N',
+      kind: 'HTTP_TRANSACTION',
+      payload: { before: 'expiry' },
+    });
+    expect(accepted.inline).toBe(true);
+
+    await testDb.scan.update({ where: { id: w.scanId }, data: { state: 'TIMED_OUT' } });
+    await expect(
+      recordExecutionEvidence(testDb as never, store, {
+        ...host,
+        attempt: u.attempt,
+        claimToken,
+        leaseClass: 'N',
+        kind: 'HTTP_TRANSACTION',
+        payload: { after: 'scan-terminal' },
+      }),
+    ).rejects.toMatchObject({ reason: 'SCAN_TIMED_OUT' });
+    await testDb.scan.update({ where: { id: w.scanId }, data: { state: 'RUNNING_PHASE_1' } });
+
+    await finalizeExecutionUnit(testDb, u.id, u.key, { kind: 'COMPLETED' });
+    await expect(
+      recordExecutionEvidence(testDb as never, store, {
+        ...host,
+        attempt: u.attempt,
+        claimToken,
+        leaseClass: 'N',
+        kind: 'HTTP_TRANSACTION',
+        payload: { after: 'terminal' },
+      }),
+    ).rejects.toMatchObject({ reason: 'UNIT_TERMINAL' });
+
+    const registryEvidence = await recordEvidence(testDb, store, {
+      executionUnitId: u.id,
+      userId: w.userId,
+      kind: 'HTTP_TRANSACTION',
+      payload: { from: 'registry-after-terminal' },
+    });
+    expect(registryEvidence.inline).toBe(true);
+  });
+
+  it('refuses engine evidence when the database-clock plan deadline has passed', async () => {
+    const w = await makeRuntimeWorld({ deadlineMs: 300_000 });
+    const u = await makeUnit(w);
+    const store = createMemoryArtifactStore();
+    const claimToken = `unit-evidence-${uid('token')}`;
+    const host = {
+      executionUnitId: u.id,
+      userId: w.userId,
+      hostInstanceId: uid('host'),
+    };
+    const claim = await claimUnitHost(testDb as never, host, hashClaimToken(claimToken));
+    expect(claim.result).toBe('CLAIMED');
+    for (const edge of ['PLANNED>ADMITTED', 'ADMITTED>DISPATCHED', 'DISPATCHED>RUNNING'] as const) {
+      expect(
+        await casHostTransition(testDb as never, {
+          ...host,
+          attempt: u.attempt,
+          claimToken,
+          edge,
+          leaseClass: 'N',
+        }),
+      ).toBe('OK');
+    }
+    await testDb.scan.update({
+      where: { id: w.scanId },
+      data: { startedAt: new Date(Date.now() - 400_000) },
+    });
+
+    await expect(
+      recordExecutionEvidence(testDb as never, store, {
+        ...host,
+        attempt: u.attempt,
+        claimToken,
+        leaseClass: 'N',
+        kind: 'HTTP_TRANSACTION',
+        payload: { late: true },
+      }),
+    ).rejects.toMatchObject({ reason: 'SCAN_DEADLINE_EXPIRED' });
+    expect(await testDb.evidence.count({ where: { executionUnitId: u.id } })).toBe(0);
   });
 });
 

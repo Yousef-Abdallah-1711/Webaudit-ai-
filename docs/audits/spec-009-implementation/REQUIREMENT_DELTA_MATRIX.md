@@ -123,7 +123,7 @@ Freshly verified in this continuation:
 | FR-017/018 queue and durable execution path | `execution-runtime.test.ts` 16/16 on disposable PG, Redis and BullMQ; duplicate delivery and strict payload covered | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; production worker composition remains missing |
 | FR-021/022 safety and kill handling | same suite covers cancellation, operator kill, revoked grant and lease loss | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; actual API/worker role composition remains open |
 | FR-027 progress | Redis messages observed on the execution-unit channel in the same suite | PARTIAL; authenticated client consumption/reconnect recovery unverified |
-| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry and ready-gate paths present; runtime integration suite passed | PARTIAL; AC-1…20 matrix, race/fairness and production worker wiring remain |
+| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry, ready-gate, and engine evidence-fence paths verified; 25 API evidence tests and 21 real PG/Redis/BullMQ runtime tests pass | PARTIAL; AC-1…20 matrix, race/fairness and production worker wiring remain |
 | CORE-01 finalizer privileges | fresh 34-migration disposable DB; real LOGIN-role suite 20/20, including only host/orchestrator finalizer access, host direct-terminal-write refusal, cross-plan dependency rejection, `PUBLIC` EXECUTE revocation, and API-login passive/authorized BROWSER plan resolution plus F01 authorization; generic worker still cannot read authorization rows | PARTIAL; tenant/effect/lease-secret and complete SECURITY DEFINER matrix, plus full HTTP API/queue and API/worker production-service flow, remain open |
 | FR-031…035 artifact lifecycle | reaper handler and repeatable schedule are wired by static inspection | PARTIAL; R2 and end-to-end retention/reaper lifecycle not run |
 
@@ -185,7 +185,7 @@ This section supersedes the earlier status totals above. The complete isolated s
 | 044 | NOT APPLICABLE | Pricing design is expressly out of scope; existing billing remains authoritative. |
 | 045 | NOT APPLICABLE | Credential storage design is expressly out of scope; opaque credential binding is the boundary. |
 | 046 | VERIFIED INVARIANT | Static review confirms no AI/provider calls in SPEC 009 planning, execution-control or evidence modules. |
-| 047 | PARTIAL | Deadline, gate, sweep and runtime hard-stop paths are tested; full AC-1…20 race/fairness matrix and production wiring remain. |
+| 047 | PARTIAL | Deadline, gate, sweep, runtime hard-stop and engine evidence-fence paths are tested; full AC-1…20 race/fairness matrix and production wiring remain. |
 
 **Current tally (49 entries): 2 VERIFIED INVARIANT · 27 TESTED · 16 PARTIAL · 1 MISSING · 3 NOT APPLICABLE.** This is a component-evidence tally, not a declaration that SPEC 009 is end-to-end complete. The production API plan producer, production engine registration, authenticated progress recovery, full runtime privilege matrix, R2 lifecycle, observability, performance, manual acceptance, and several contract-specific lifecycle checks remain open.
 

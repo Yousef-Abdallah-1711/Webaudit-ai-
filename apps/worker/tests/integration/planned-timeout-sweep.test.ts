@@ -168,6 +168,35 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
     expect(await refunds(w.scan.id)).toBe(1); // a second sweep never refunds twice
   });
 
+  it('races deadline expiry against unit completion without resuming the scan or refunding twice', async () => {
+    const w = await world({ state: 'RUNNING_PHASE_3', startedAgoMs: 10 * MIN });
+    const p = await plan(w, MIN);
+    const running = await unit(p.id, w.user.id, w.target.id, 'RUNNING');
+    let masterEnqueues = 0;
+
+    await Promise.all([
+      run(),
+      finalizeUnitAndContinue(
+        db,
+        running.id,
+        running.key,
+        {
+          kind: 'FAILED',
+          failureClass: 'TIMEOUT',
+          detail: 'SCAN_DEADLINE',
+        },
+        { enqueueMaster: () => (masterEnqueues++, Promise.resolve()) },
+      ),
+    ]);
+
+    expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe('TIMED_OUT');
+    expect(await statusOf(running.id)).toBe('FAILED');
+    expect(await refunds(w.scan.id)).toBe(1);
+    expect(masterEnqueues).toBe(0);
+    await run();
+    expect(await refunds(w.scan.id)).toBe(1);
+  });
+
   it('self-heals units that outlived a cancelled scan or an expired REVERIFY plan', async () => {
     const cancelled = await world({ state: 'CANCELLED', startedAgoMs: 1 * MIN });
     const p1 = await plan(cancelled, 120 * MIN);

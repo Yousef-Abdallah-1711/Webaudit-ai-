@@ -16,6 +16,7 @@ import {
   confirmEffect,
   dispatchExecutionUnit,
   emitProgress,
+  recordExecutionEvidence,
   finalizeUnitAndContinue,
   findPendingStopReason,
   hostLoopDecision,
@@ -27,7 +28,7 @@ import {
   type ProgressPublisher,
   type ProgressTick,
 } from '@webaudit/api/execution-runtime';
-import { recordEvidence, type ArtifactStore } from '@webaudit/api/evidence';
+import type { ArtifactStore } from '@webaudit/api/evidence';
 import {
   acknowledgeStop,
   releaseLeasesByExecution,
@@ -319,9 +320,13 @@ async function runUnit(
       confirmEffect: (kind, ordinal) =>
         confirmEffect(db, { executionUnitId: row.id, attempt: row.attempt, kind, ordinal }),
       recordEvidence: (kind, payload, contentType) =>
-        recordEvidence(db, deps.artifactStore, {
+        recordExecutionEvidence(db, deps.artifactStore, {
           executionUnitId: row.id,
           userId: row.userId,
+          attempt: row.attempt,
+          claimToken,
+          hostInstanceId: deps.hostInstanceId,
+          leaseClass: adapter.leaseClass,
           kind,
           payload,
           ...(contentType === undefined ? {} : { contentType }),

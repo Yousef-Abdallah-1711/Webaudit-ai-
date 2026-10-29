@@ -1383,6 +1383,16 @@ assessment live in `docs/audits/spec-009-implementation/REQUIREMENT_DELTA_MATRIX
   audit/map/handoff documents. Preserve unrelated public/auth refactor edits, `pnpm-lock.yaml`,
   `.next-final-cta-verify/`, and `logs/`; delivery uses a normal push after fresh remote verification.
 
+Latest SPEC 009 continuation (2026-10-29): T-U1-1 through T-U1-9 are now checked after focused
+verification on isolated PostgreSQL `127.0.0.1:5545` and Redis `127.0.0.1:6391`. Fresh database
+`m009_core01_evidence_fence_test` applied all 35 migrations. Evidence tests passed 25/25; worker
+runtime 21/21; resolver/dispatch/host-loop/expiry/planned-sweep/gate checks 124/124; CORE-01
+schema 17/17; refund-staleness adverse regression 1/1. Added a planned timeout-vs-unit-finalization
+race that leaves the scan `TIMED_OUT`, does not enqueue master synthesis, and refunds once. U-1
+T-U1-10 remains open: the full AC-1…AC-20 adverse race/fairness mapping is not proven. SPEC 009
+remains NOT COMPLETE. Current implementation/report changes are local and uncommitted; preserve
+the pre-existing website/auth changes, lockfile, `.next-final-cta-verify/`, and `logs/`.
+
 Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
 also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails
 to connect. Never rely on the repository's shared Redis DB 15 default for a test run.

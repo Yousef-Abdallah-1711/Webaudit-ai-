@@ -12,7 +12,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { testDb as db, resetDb, closeDb } from '@webaudit/api/test-db';
 import { PrismaClient } from '@webaudit/api/prisma-client';
 import { triggerStop } from '@webaudit/api/safety';
-import { expirePlanUnits } from '@webaudit/api/execution-runtime';
+import {
+  casHostTransition,
+  claimUnitHost,
+  expirePlanUnits,
+  finalizeExecutionUnit,
+  hashClaimToken,
+  recordExecutionEvidence,
+} from '@webaudit/api/execution-runtime';
 import { liveLeaseCount, counterOf } from '../../../api/tests/helpers/safety-fixtures.js';
 import {
   addEdge,
@@ -181,6 +188,46 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
       >`SELECT current_user`;
       expect(currentUser[0]?.current_user).toBe(login);
       const w = await makeRuntimeWorld();
+      const evidenceUnit = await makeUnit(w);
+      const evidenceToken = `host-role-evidence-${randomBytes(8).toString('hex')}`;
+      const evidenceHost = {
+        executionUnitId: evidenceUnit.id,
+        userId: w.userId,
+        hostInstanceId: `host-${randomBytes(4).toString('hex')}`,
+      };
+      expect(
+        await claimUnitHost(hostDb as never, evidenceHost, hashClaimToken(evidenceToken)),
+      ).toMatchObject({ result: 'CLAIMED' });
+      for (const edge of [
+        'PLANNED>ADMITTED',
+        'ADMITTED>DISPATCHED',
+        'DISPATCHED>RUNNING',
+      ] as const) {
+        expect(
+          await casHostTransition(hostDb as never, {
+            ...evidenceHost,
+            attempt: evidenceUnit.attempt,
+            claimToken: evidenceToken,
+            edge,
+            leaseClass: 'N',
+          }),
+        ).toBe('OK');
+      }
+      const roleEvidence = await recordExecutionEvidence(hostDb as never, store, {
+        ...evidenceHost,
+        attempt: evidenceUnit.attempt,
+        claimToken: evidenceToken,
+        leaseClass: 'N',
+        kind: 'HTTP_TRANSACTION',
+        payload: { writtenBy: 'fahes_exec_host' },
+      });
+      expect(roleEvidence.inline).toBe(true);
+      await expect(
+        hostDb.$executeRaw`UPDATE "Scan" SET "startedAt" = "startedAt" WHERE id = ${w.scanId}`,
+      ).rejects.toMatchObject({ meta: { code: '42501' } });
+      await finalizeExecutionUnit(db as never, evidenceUnit.id, evidenceUnit.key, {
+        kind: 'COMPLETED',
+      });
       const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
       expect(
         await hostDb.target.findUnique({ where: { id: w.targetId }, select: { userId: true } }),
@@ -221,7 +268,7 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
           `non-superuser execution did not finalize (status=${unit?.status}; worker=${workerFailures.join('; ')}): ${error instanceof Error ? error.message : String(error)}`,
         );
       });
-      expect(outcome).toBe('COMPLETED');
+      expect(outcome, JSON.stringify(await reasonOf(a.id))).toBe('COMPLETED');
       const evidence = await db.evidence.findFirstOrThrow({ where: { executionUnitId: a.id } });
       expect(evidence.inlinePayload).toMatchObject({
         unit: a.id,

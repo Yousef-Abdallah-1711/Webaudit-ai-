@@ -51,3 +51,9 @@ See `SESSION_PROGRESS.md` "Next exact tasks".
 
 - Evidence persistence, artifact retention, and reaper integration passed **32/32** on isolated PostgreSQL with an in-memory object store. Existing API/worker phase progress passed **1/1** over isolated Redis; this does not verify SPEC 009 authenticated unit-progress reconnect/recovery.
 - Scoped changes were committed and pushed as `80118ad59f03fb80c523c3d10bfb795850f62c6e`; local `HEAD`, `origin/main`, and remote `main` matched after fetch/`ls-remote`. The website/auth refactor remains uncommitted and untouched.
+
+### Evidence-fence continuation — 2026-10-29
+
+- Added the narrow `recordExecutionEvidence` wrapper and a SECURITY DEFINER lock/check helper for unit-produced evidence. The host runtime now routes engine evidence through it; generic registry evidence remains permissive after terminalization.
+- Fresh isolated PostgreSQL applied all **35 migrations**. API evidence tests passed **25/25**; the real isolated PostgreSQL/Redis/BullMQ runtime suite passed **21/21**, including execution as a non-superuser host login. The host login's direct update of `Scan.startedAt` is explicitly rejected.
+- The serialized resolver, dispatch/host-loop, expiry, planned-sweep, and plan-gate checks passed **124/124** across four files; CORE-01 schema/immutability passed **17/17**; the refund-staleness adverse regression passed **1/1**. A new timeout-vs-finalization race also passed with no duplicate refund or master enqueue. T-U1-1 through T-U1-9 are checked in the task list. The complete AC-1…AC-20 adverse race/fairness matrix is still open, so U-1 and the SPEC 009 overall verdict remain open. The current scoped changes are local and uncommitted; unrelated website/auth changes were preserved.

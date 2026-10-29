@@ -106,7 +106,7 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 11 | PARTIAL | F07 budget enforcement is covered; unit-path oversubscription/performance evidence is absent. |
 | 12 | PARTIAL | Kill/cancel/revoke/lease-loss distinctions pass integration; all status/race combinations are not proven. |
 | 13 | PARTIAL | Runtime cancellation passes; HTTP cancel plus existing refund lifecycle is not verified end to end. |
-| 14 | PARTIAL | Deadline, hard stop, checkpoint, sweep and expiry paths pass tests; complete AC-1…20 and fairness matrix is open. |
+| 14 | PARTIAL | Deadline, hard stop, checkpoint, sweep, expiry, and engine evidence fencing pass targeted tests; T-U1-9 is complete. The full AC-1…20 race/fairness matrix remains open. |
 | 15 | PARTIAL | Duplicate delivery and persisted RUNNING recovery are covered; actual worker restart/outage recovery is not. |
 | 16 | PASS | Evidence envelope, provenance, tenant scoping and redaction tests pass in the full suite. |
 | 17 | PARTIAL | Fake-store budget/retention/reaper tests and wiring exist; real R2 lifecycle is unverified. |
@@ -123,3 +123,10 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 28 | PASS | Scoped changes are pushed normally; delivery hash will be recorded after remote verification. |
 
 **Current count: 11 PASS · 13 PARTIAL · 0 FAIL · 0 BLOCKED · 4 NOT STARTED. Verdict: NOT COMPLETE.** Full browser/unit/security test suites do not close missing production wiring, visual parity, R2, observability, performance, audit, or manual acceptance gates.
+
+### Evidence-fence continuation — 2026-10-29
+
+- A fresh isolated PostgreSQL database received all **35 migrations**. The new additive `20261030210000_core01_execution_evidence_fence` helper is owned by `fahes_owner`; it acquires the unit/scan locks, verifies the database-clock deadline and immutable claim, and is executable only by `fahes_exec_host`. `fahes_owner` receives only `UPDATE("startedAt")` on `Scan` to permit the lock; the host role still cannot update `Scan`.
+- API evidence tests passed **25/25**, including terminal unit, terminal scan, expired deadline, and permissive post-terminal registry evidence. The real PostgreSQL/Redis/BullMQ worker integration passed **21/21**, including evidence writes through a non-superuser host login and an assertion that direct host-role `Scan.startedAt` updates are denied.
+- The serialized resolver, dispatch/host-loop, expiry, planned-sweep, and plan-gate checks passed **124/124** across four files; CORE-01 schema/immutability passed **17/17**; the refund-staleness adverse regression passed **1/1**. The added timeout-vs-finalization race passed with one `TIMED_OUT` scan, no master enqueue, and one refund. T-U1-1 through T-U1-9 are checked in `tasks.md`; T-U1-10 remains open because these component suites do not establish the complete AC-1…AC-20 race/fairness matrix. DoD gate 14 remains PARTIAL; overall verdict remains **NOT COMPLETE**.
+- These scoped implementation and documentation changes are local and uncommitted at this update. User-owned website/auth changes and unrelated working files were left untouched.
