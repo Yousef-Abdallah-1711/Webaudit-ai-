@@ -1,0 +1,52 @@
+# SPEC 009 — implementation backlog
+
+The historical planning ledger (`specs/009-…/tasks.md` T001–T039) is **not** implementation evidence and is left untouched; this backlog is the implementation plan.
+"Independent" = does not depend on an unapproved decision or on the unmigrated schema, so it can proceed now. IDs are `P9-<context>NN` (A = Scan Planning, B = Execution Runtime, C = Result & Evidence, X = cross-cutting).
+Landing directories (from `plan.md`): `apps/api/src/services/planning/`, `apps/worker/src/execution-runtime/`, `apps/worker/src/evidence/`; three additive migrations for the eight tables.
+
+## Phase 0 — gates (owner)
+| ID | Item | Status |
+|---|---|---|
+| G-DEC-047 | single finalization authority | PENDING OWNER (`DECISION_PACKET.md`) |
+| G-DEC-051 | effect-authorization ledger | PENDING OWNER |
+| G-DEC-066 | U-1b text (v6 draft needed first) | PENDING OWNER (assistant drafts v6 on request) |
+| G-TECH | DEC-056/057/058/064 technical clarifications | not approved for 009 (008 delegation did not extend) |
+
+## Phase 1 — decision-free work (done / doable now)
+| ID | FR | Task | Source files | Tests | Status |
+|---|---|---|---|---|---|
+| P9-A01 | 008, 010, 013 | graph validation, deterministic topological order, eligibility, one-level `BLOCKED` propagation | `planning/graph.ts` | `graph.test.ts` (35: cycles incl. 20 000-deep, random DAG properties, shuffled-input determinism) | **DONE, verified** |
+| P9-A02 | 047 (T-U1-2) | `computePlanDeadline`, `unitBudgetMs`, `dispatchThresholdMs`, `criticalPathMs` | `planning/plan-deadline.ts` | contract worked example exact; brute-force critical path (80 seeds); Lemma property (200 seeds); ceiling/grant boundaries | **DONE, verified** (4/4 mutants killed) |
+| P9-A03 | 047 | `effectiveDeadlineAt` (INITIAL / REVERIFY / legacy anchors) | same | 7 cases | **DONE, verified** |
+| P9-A04 | 047 (arithmetic half of T-U1-4) | `dispatchDeadlineDecision` (step 0) | same | boundary tests (`<` strict) | **DONE, verified** — wiring is P9-B05 |
+| P9-A05 | 001 | `ScanConfiguration` validated type (zod) | `planning/scan-configuration.ts` | contract tests | independent — next |
+| P9-C01 | 023 | pure failure classifier → `FailureClass`/retry eligibility (research R9) | `execution-runtime/failure-class.ts` | table + property tests | independent — next |
+| P9-X01 | 020 | secret-in-payload guard reused from `@webaudit/redaction` for unit/evidence writers | — | adversarial strings | independent |
+| P9-X02 | — | deterministic concurrency harness (barrier helper over `pg_advisory_xact_lock`, as used in 008 tests) extracted for reuse | `apps/api/tests/helpers/` | self-test | independent |
+| P9-X03 | D-M | non-superuser runtime provisioning script + doc | `infrastructure/` | applied on a disposable DB | independent (see `SESSION_PROGRESS.md`) |
+
+## Phase 2 — after the owner closes DEC-047 / DEC-051 and the v6 text (DEC-066)
+| ID | FR | Task | Depends | Notes |
+|---|---|---|---|---|
+| P9-A10 | 002–003, 006, 011–013, 015, 028, 032 | **CORE-01** migration: 8 models, 6 enums (zero `@relation` into frozen models), unique `(scanPlanId, idempotencyKey)`, `ScanPlan.deadlineMs/deadlineBreakdown` (T-U1-1), supporting index for the self-healing pass (T-U1-7) | DEC-051, G-02 | three additive migrations + tested rollback; verify fresh/upgrade/rollback as in 008 |
+| P9-A11 | 002–004 | profile + version services | P9-A10 | tenant-scoped |
+| P9-A12 | 005, 007, 029 | `resolvePlan` steps 1–6 with F01 `isAuthorized` per class, graph generation from engine templates, deadline (T-U1-3: `PLAN_DEADLINE_EXCEEDS_CEILING`, `GRANT_EXPIRES_BEFORE_DEADLINE`), one transaction | P9-A10, A02 | fail-closed to `REFUSED` |
+| P9-B01 | 012, 014, 018 | `ExecutionUnit` service + guarded transition table (single-statement CAS) | P9-A10, DEC-057/064 | |
+| P9-B02 | 010, 019, 038 | `finalizeExecutionUnit` (single authority) incl. lease release via 008 `f07_release_leases_by_execution` in the same transaction, one-level `BLOCKED` via P9-A01 | DEC-047, P9-B01 | |
+| P9-B03 | 017, 018 | per-class queue topology + dispatch from durable state; **008 interim identity** `executionId` := `ExecutionUnit.id` | P9-B01, 008 | no ambiguity old/new path |
+| P9-B04 | 021, 022, 022a | checkpoint wiring + three-way stop distinction | DEC-058, 008 | |
+| P9-B05 | 047 (T-U1-4) | dispatch step 0 before F07 (uses P9-A04) | P9-B03 | |
+| P9-B06 | 047 (T-U1-5) | engine host-loop expiry helper | engines | |
+| P9-B07 | 047 (T-U1-6/7) | `sweepTimedOutScans` planned pass; `expirePlanUnits` + status-by-cause matrix; self-healing pass | DEC-058/064, P9-B02 | legacy sweep tests unchanged and green |
+| P9-B08 | 047 (T-U1-8) | `continueScanIfPlanTerminal` gate + module-result finalizer extension point | DEC-047 | atomic deadline predicate |
+| P9-B09 | 047 (T-U1-9) | execution-wrapper fencing (fence first, claim second, write third) | DEC-051 | generic `recordEvidence` stays permissive |
+| P9-B10 | 047 (T-U1-10) | adverse tests AC-1…AC-20 | all above | |
+| P9-B11 | 027, 027a | progress events | P9-B01 | |
+| P9-C10 | 030–035, 037, 042 | evidence envelope + artifact writers (redaction-wrapped; R2 key layout; size budget; staged-upload retention; orphan reaper) | P9-A10 | storage via existing R2 services |
+| P9-C11 | 028, 036, 037, 039 | finding materialization + coverage metadata | P9-C10 | |
+
+## Phase 3 — cross-cutting delivery
+Real full-stack run (non-superuser roles), Chrome journey, failure injection, load baselines, regression, final delta review. D-1 is **not** closable by SPEC 009 alone: it needs the `BROWSER` engine (SPEC 010, E-01: DEC-052/042); SPEC 009 provides only the routing/runtime that engine plugs into.
+
+## U-1 task map (`tasks.md` T-U1-1…10)
+T-U1-1 → P9-A10 (blocked) · **T-U1-2 → P9-A02 DONE** · T-U1-3 → P9-A12 · T-U1-4 → P9-A04 (done) + P9-B05 · T-U1-5 → P9-B06 · T-U1-6/7 → P9-B07 · T-U1-8 → P9-B08 · T-U1-9 → P9-B09 · T-U1-10 → P9-B10.

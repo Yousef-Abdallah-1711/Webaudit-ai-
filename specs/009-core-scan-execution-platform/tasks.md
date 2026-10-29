@@ -189,7 +189,7 @@ Planning-only amendment authorized by the project owner; implementation tasks be
 - [X] T038 Author `contracts/scan-deadline-contract.md`; add FR-047, the FR-040 amendment note, SC-008, Key-Entity and Assumption notes to `spec.md`; add `ScanPlan.deadlineMs`/`deadlineBreakdown` and invariants to `data-model.md`; amend `execution-plan-contract.md` (step 4a), `execution-runtime-contract.md` (step 0, 6a, rule 6), `runtime-finalization-contract.md` and `evidence-envelope-contract.md`.
 - [X] T039 Record the amendment history in `spec.md` header and `plan.md`; preserve FR-040's original text.
 - [ ] T-U1-1 Add `ScanPlan.deadlineMs Int?` and `deadlineBreakdown Json?` with a migration (implementation).
-- [ ] T-U1-2 Implement and unit-test `computePlanDeadline` (critical path, ceiling, grant expiry, passive-only equals legacy).
+- [x] T-U1-2 Implement and unit-test `computePlanDeadline` (critical path, ceiling, grant expiry, passive-only equals legacy). Done in `apps/api/src/services/planning/plan-deadline.ts` (62 tests in `apps/api/tests/unit/planning/`, 4/4 mutants killed); persistence and resolver wiring remain under T-U1-1/3.
 - [ ] T-U1-3 Integrate into `resolvePlan` with `PLAN_DEADLINE_EXCEEDS_CEILING` / `GRANT_EXPIRES_BEFORE_DEADLINE`.
 - [ ] T-U1-4 Dispatch step 0 with `SCAN_DEADLINE_EXPIRED` / `SCAN_DEADLINE_INSUFFICIENT` before F07 admission.
 - [ ] T-U1-5 Engine host-loop expiry check and shared helper.
