@@ -27,6 +27,7 @@ import {
   type LeaseRenewal,
   type ProgressPublisher,
   type ProgressTick,
+  type UnitObservation,
 } from '@webaudit/api/execution-runtime';
 import type { ArtifactStore } from '@webaudit/api/evidence';
 import {
@@ -37,8 +38,13 @@ import {
   safetyCheckpoint,
 } from '@webaudit/api/safety';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
+import type { ExecutionUnitClass } from '@webaudit/api/planning';
 import type { AdapterRegistry, AdapterUnit, AdapterContext, ExecutionAdapter } from './adapter.js';
-import { forkExecutionChild, type IsolatedExecutionChild } from './process-child.js';
+import {
+  forkExecutionChild,
+  type ChildResourceUsage,
+  type IsolatedExecutionChild,
+} from './process-child.js';
 
 export interface HostDeps {
   readonly db: PrismaClient;
@@ -72,7 +78,7 @@ interface UnitRow {
   userId: string;
   scanPlanId: string;
   engineId: string;
-  executionUnitClass: string;
+  executionUnitClass: ExecutionUnitClass;
   status: string;
   idempotencyKey: string;
   attempt: number;
@@ -86,6 +92,7 @@ export function createExecutionJobHandler(
 ): (data: { executionUnitId: string }) => Promise<HostResult> {
   const log = deps.log ?? (() => undefined);
   const interval = Math.min(deps.loopIntervalMs ?? MAX_LOOP_MS, MAX_LOOP_MS);
+  const activeByEngine = new Map<string, number>();
 
   return async function handle({ executionUnitId }): Promise<HostResult> {
     // The payload only names a row; everything else is re-read. The owner is read from the row (internal, trusted queue).
@@ -118,6 +125,17 @@ export function createExecutionJobHandler(
         { kind: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' },
         await gateForUnit(deps, row),
       );
+      if (!r.finalize.replayed) {
+        await emitExecutionTelemetry(
+          deps,
+          row,
+          { source: 'INVALID_CONFIGURATION' },
+          null,
+          0,
+          log,
+          'UNAVAILABLE',
+        );
+      }
       return r.finalize.replayed
         ? { result: 'IGNORED', reason: `STATUS_${r.finalize.status}` }
         : { result: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' };
@@ -130,6 +148,17 @@ export function createExecutionJobHandler(
         { kind: 'REFUSED', reason: 'ENGINE_CLASS_MISMATCH' },
         await gateForUnit(deps, row),
       );
+      if (!r.finalize.replayed) {
+        await emitExecutionTelemetry(
+          deps,
+          row,
+          { source: 'ENGINE_EXCEPTION' },
+          null,
+          0,
+          log,
+          'DEGRADED',
+        );
+      }
       return r.finalize.replayed
         ? { result: 'IGNORED', reason: `STATUS_${r.finalize.status}` }
         : { result: 'REFUSED', reason: 'ENGINE_CLASS_MISMATCH' };
@@ -172,23 +201,46 @@ export function createExecutionJobHandler(
       { executionUnitId: row.id, userId: row.userId, hostInstanceId: deps.hostInstanceId },
     );
     if (dispatched.outcome !== 'RUNNING') {
+      if (dispatched.outcome === 'REFUSED') {
+        await emitExecutionTelemetry(
+          deps,
+          row,
+          { source: 'F07_STOP' },
+          null,
+          activeByEngine.get(row.engineId) ?? 0,
+          log,
+          'NOT_RUN',
+        );
+      }
       return { result: dispatched.outcome, reason: dispatched.reason };
     }
-    return runUnit(
-      deps,
-      adapter,
-      row,
-      dispatched.claimToken,
-      lease,
-      dispatched.child as IsolatedExecutionChild,
-      interval,
-      log,
-      gateOf,
-    );
+    const activeOnHost = (activeByEngine.get(row.engineId) ?? 0) + 1;
+    activeByEngine.set(row.engineId, activeOnHost);
+    try {
+      return await runUnit(
+        deps,
+        adapter,
+        row,
+        dispatched.claimToken,
+        lease,
+        dispatched.child as IsolatedExecutionChild,
+        interval,
+        log,
+        gateOf,
+        activeOnHost,
+      );
+    } finally {
+      const activeAfter = (activeByEngine.get(row.engineId) ?? 1) - 1;
+      if (activeAfter <= 0) activeByEngine.delete(row.engineId);
+      else activeByEngine.set(row.engineId, activeAfter);
+    }
   };
 
   function gateOf(_row: { id: string; scanPlanId: string }): GateDeps {
-    return { enqueueMaster: () => Promise.resolve() };
+    return {
+      claimContinuation: () => Promise.resolve(false),
+      enqueueMaster: () => Promise.resolve(),
+    };
   }
 }
 
@@ -202,7 +254,10 @@ async function gateForUnit(
   });
   return plan?.scanId !== null && plan?.scanId !== undefined && deps.gateFor !== undefined
     ? deps.gateFor(plan.scanId)
-    : { enqueueMaster: () => Promise.resolve() };
+    : {
+        claimContinuation: () => Promise.resolve(false),
+        enqueueMaster: () => Promise.resolve(),
+      };
 }
 
 async function runUnit(
@@ -215,6 +270,7 @@ async function runUnit(
   interval: number,
   log: (m: string, e?: Record<string, unknown>) => void,
   gateOf: (r: { id: string; scanPlanId: string }) => GateDeps,
+  activeOnHost: number,
 ): Promise<HostResult> {
   const { db } = deps;
   const controller = new AbortController();
@@ -237,11 +293,15 @@ async function runUnit(
   const host = { executionUnitId: row.id, userId: row.userId, hostInstanceId: deps.hostInstanceId };
   let unit: AdapterUnit;
   let scanId: string | null;
+  let planKind: 'INITIAL' | 'REVERIFY' = 'INITIAL';
   try {
     unit = (await loadAdapterUnit(db, row.id)) as AdapterUnit;
-    scanId =
-      (await db.scanPlan.findUnique({ where: { id: row.scanPlanId }, select: { scanId: true } }))
-        ?.scanId ?? null;
+    const plan = await db.scanPlan.findUnique({
+      where: { id: row.scanPlanId },
+      select: { scanId: true, kind: true },
+    });
+    scanId = plan?.scanId ?? null;
+    planKind = plan?.kind ?? 'INITIAL';
   } catch (error) {
     clearTimeout(hardStop);
     await terminateChild().catch(() => undefined);
@@ -290,19 +350,36 @@ async function runUnit(
   loop.unref();
 
   const progress = (tick: ProgressTick): void => {
-    emitProgress(deps.publisher, row.id, tick);
     const now = Date.now();
-    if (now - lastProgress < (deps.progressMinIntervalMs ?? 2000)) return;
+    const publish = (): void =>
+      emitProgress(deps.publisher, row.id, tick, {
+        ...(scanId === null
+          ? {}
+          : {
+              scanId,
+              executionPlanId: row.scanPlanId,
+              planKind,
+              executionUnitClass: row.executionUnitClass,
+            }),
+        now: new Date(now),
+      });
+    if (now - lastProgress < (deps.progressMinIntervalMs ?? 2000)) {
+      publish();
+      return;
+    }
     lastProgress = now;
     void snapshotProgress(db, row.id, tick, {
       ...(deps.progressMinIntervalMs === undefined
         ? {}
         : { minIntervalMs: deps.progressMinIntervalMs }),
       onAnomaly: (m) => log(m),
-    }).catch(() => undefined);
+    })
+      .then(publish)
+      .catch(() => undefined);
   };
 
-  let observation: Awaited<ReturnType<IsolatedExecutionChild['run']>> | null = null;
+  let observation: UnitObservation | null = null;
+  let resourceUsage: ChildResourceUsage | null = null;
   let runFinished = false;
   try {
     const context: AdapterContext = {
@@ -376,7 +453,8 @@ async function runUnit(
     ]);
     if (outcome.kind === 'RUN') {
       runFinished = true;
-      observation = outcome.value;
+      observation = outcome.value.observation;
+      resourceUsage = outcome.value.resourceUsage;
     }
   } catch {
     // An uncaught exception in the engine's own code: ENGINE_DEFECT, classified by the host.
@@ -411,6 +489,8 @@ async function runUnit(
     action,
     hardStopFired,
     observation ?? { source: 'ENGINE_EXCEPTION' },
+    resourceUsage,
+    activeOnHost,
     gate(),
     log,
     scanId,
@@ -443,7 +523,9 @@ async function finalizeFor(
   row: UnitRow,
   action: HostLoopAction,
   hardStopFired: boolean,
-  observation: Awaited<ReturnType<IsolatedExecutionChild['run']>>,
+  observation: UnitObservation,
+  resourceUsage: ChildResourceUsage | null,
+  activeOnHost: number,
   gate: GateDeps,
   log: (m: string, e?: Record<string, unknown>) => void,
   scanId: string | null,
@@ -499,6 +581,9 @@ async function finalizeFor(
   }
 
   const r = await finalizeUnitAndContinue(db, row.id, row.idempotencyKey, outcome, gate);
+  if (!r.finalize.replayed) {
+    await emitExecutionTelemetry(deps, row, observation, resourceUsage, activeOnHost, log);
+  }
   if (!r.finalize.replayed && outcome.kind === 'COMPLETED' && deps.onUnitCompleted !== undefined) {
     await deps.onUnitCompleted(row.scanPlanId).catch((e: unknown) =>
       log('enqueue of eligible units failed', {
@@ -508,4 +593,80 @@ async function finalizeFor(
   }
   void scanId;
   return { result: 'FINALIZED', status: r.finalize.status, replayed: r.finalize.replayed };
+}
+
+async function emitExecutionTelemetry(
+  deps: HostDeps,
+  row: UnitRow,
+  observation: UnitObservation,
+  resourceUsage: ChildResourceUsage | null,
+  activeOnHost: number,
+  log: (message: string, extra?: Record<string, unknown>) => void,
+  healthOverride?: 'HEALTHY' | 'DEGRADED' | 'STOPPED' | 'UNAVAILABLE' | 'NOT_RUN',
+): Promise<void> {
+  try {
+    const persisted = await deps.db.executionUnit.findUnique({
+      where: { id: row.id },
+      select: {
+        status: true,
+        failureClass: true,
+        terminalReason: true,
+        attempt: true,
+        costMicros: true,
+        dispatchedAt: true,
+        startedAt: true,
+        completedAt: true,
+      },
+    });
+    if (persisted === null) return;
+    const queueWaitMs =
+      persisted.dispatchedAt !== null && persisted.startedAt !== null
+        ? Math.max(0, persisted.startedAt.getTime() - persisted.dispatchedAt.getTime())
+        : null;
+    const durationMs =
+      persisted.startedAt !== null && persisted.completedAt !== null
+        ? Math.max(0, persisted.completedAt.getTime() - persisted.startedAt.getTime())
+        : null;
+    const degradedSources = new Set([
+      'ENGINE_EXCEPTION',
+      'HARD_STOP_DEADLINE',
+      'INFRASTRUCTURE_ERROR',
+      'EXTERNAL_DEPENDENCY_ERROR',
+    ]);
+    log('execution unit telemetry', {
+      event: 'execution.unit.telemetry',
+      engineId: row.engineId,
+      executionUnitClass: row.executionUnitClass,
+      attempt: persisted.attempt,
+      status: persisted.status,
+      failureClass: persisted.failureClass,
+      queueWaitMs,
+      durationMs,
+      costMicros: persisted.costMicros,
+      activeOnHost,
+      engineHealth:
+        healthOverride ??
+        (persisted.status === 'CANCELLED' || persisted.status === 'KILLED'
+          ? 'STOPPED'
+          : degradedSources.has(observation.source)
+            ? 'DEGRADED'
+            : observation.source === 'F07_STOP'
+              ? 'STOPPED'
+              : 'HEALTHY'),
+      terminationEvent:
+        persisted.status === 'CANCELLED'
+          ? 'CANCELLED'
+          : persisted.status === 'KILLED'
+            ? persisted.terminalReason
+            : null,
+      resourceUsage,
+    });
+  } catch {
+    // Telemetry must not change an already committed execution outcome.
+    log('execution unit telemetry unavailable', {
+      event: 'execution.unit.telemetry_unavailable',
+      engineId: row.engineId,
+      executionUnitClass: row.executionUnitClass,
+    });
+  }
 }

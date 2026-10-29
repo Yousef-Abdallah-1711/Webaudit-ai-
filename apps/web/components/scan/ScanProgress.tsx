@@ -46,16 +46,25 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ModuleState, ModuleType, ScanEvent, ScanState } from '@webaudit/types';
+import type {
+  ExecutionUnitClass,
+  ExecutionUnitStatus,
+  ModuleState,
+  ModuleType,
+  ScanEvent,
+  ScanState,
+} from '@webaudit/types';
 import { Button } from '../ui';
 import { PageHead } from '../dashboard';
 import { ModuleStatus, ProgressRow, type ModuleStatusProps } from '../report';
-import { getAccessToken, getScan } from '../../lib/api';
+import { getAccessToken, getScan, type ScanSummary } from '../../lib/api';
 import { connectRealtime } from '../../lib/realtime';
 import { UIQuestionnaire } from './UIQuestionnaire';
 const styles = {
   stack: 'flex flex-col gap-[0.625rem] max-w-marketing',
   done: 'mt-3',
+  unitProgress: 'flex flex-col gap-[0.625rem] mt-2',
+  unitHeading: 'text-[0.9375rem] font-semibold text-text-strong',
 } as const;
 
 type UiState = ModuleStatusProps['state'];
@@ -80,6 +89,70 @@ const MODULE_LABEL_KEY: Readonly<Record<ModuleType, string>> = {
   TESTING: 'a_test',
   SEO: 'a_seo',
 };
+
+const UNIT_LABEL_KEY: Readonly<Record<ExecutionUnitClass, string>> = {
+  PASSIVE_HTTP: 'unit_passive_http',
+  SOURCE_STATIC: 'unit_source_static',
+  BROWSER: 'unit_browser',
+  CRAWLER: 'unit_crawler',
+  SOURCE_EXECUTION: 'unit_source_execution',
+  ACTIVE_SECURITY: 'unit_active_security',
+  AUTHENTICATED_WORKFLOW: 'unit_authenticated_workflow',
+  LOAD_CAPACITY: 'unit_load_capacity',
+  TELEMETRY: 'unit_telemetry',
+};
+
+const UNIT_UI_STATE: Readonly<Record<ExecutionUnitStatus, NonNullable<UiState>>> = {
+  PLANNED: 'waiting',
+  ADMITTED: 'waiting',
+  DISPATCHED: 'waiting',
+  RUNNING: 'running',
+  COMPLETED: 'complete',
+  SKIPPED: 'not-applicable',
+  BLOCKED: 'degraded',
+  REFUSED: 'degraded',
+  FAILED: 'degraded',
+  CANCELLED: 'degraded',
+  KILLED: 'degraded',
+};
+
+type ScanTranslator = ReturnType<typeof useTranslations<'scan'>>;
+
+function unitProgressDetail(
+  unit: NonNullable<ScanSummary['executionPlans']>[number]['units'][number],
+  t: ScanTranslator,
+): string | undefined {
+  switch (unit.status) {
+    case 'SKIPPED':
+      return t('unit_skipped');
+    case 'BLOCKED':
+      return t('unit_blocked');
+    case 'REFUSED':
+      return t('unit_refused');
+    case 'FAILED':
+      return t('unit_failed');
+    case 'CANCELLED':
+      return t('unit_cancelled');
+    case 'KILLED':
+      return t('unit_killed');
+    default:
+      break;
+  }
+
+  if (unit.progressSnapshot !== null) {
+    const { label, completedUnits, totalUnits } = unit.progressSnapshot;
+    if (
+      !unit.progressIndeterminate &&
+      completedUnits !== null &&
+      totalUnits !== null &&
+      totalUnits > 0
+    ) {
+      return t('unit_progress_count', { label, completed: completedUnits, total: totalUnits });
+    }
+    return t('unit_progress_indeterminate', { label });
+  }
+  return undefined;
+}
 
 function formatElapsed(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -108,6 +181,9 @@ export function ScanProgress({
   const [now, setNow] = useState(() => Date.now());
   const [scanState, setScanState] = useState<ScanState>('QUEUED');
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [executionPlans, setExecutionPlans] = useState<NonNullable<ScanSummary['executionPlans']>>(
+    [],
+  );
 
   // Authoritative baseline (FR-047): fetched once on mount, and again after
   // every realtime resubscribe — a client that missed events while
@@ -126,6 +202,7 @@ export function ScanProgress({
         setStartedAt(scan.startedAt === null ? null : new Date(scan.startedAt).getTime());
         setScanState(scan.state as ScanState);
         setQueuePosition(scan.queuePosition ?? null);
+        setExecutionPlans(scan.executionPlans ?? []);
         if (scan.moduleResults !== undefined) {
           setModuleStates((current) => {
             const next = { ...current };
@@ -153,6 +230,30 @@ export function ScanProgress({
           setModuleStates((s) => ({ ...s, [event.module]: TO_UI_STATE[event.state] }));
         } else if (event.type === 'scan:state') {
           setScanState(event.state);
+        } else if (event.type === 'execution:progress') {
+          setExecutionPlans((current) =>
+            current.map((plan) =>
+              plan.id !== event.executionPlanId
+                ? plan
+                : {
+                    ...plan,
+                    units: plan.units.map((unit) =>
+                      unit.id !== event.executionUnitId
+                        ? unit
+                        : {
+                            ...unit,
+                            progressSnapshot: {
+                              label: event.label,
+                              completedUnits: event.completedUnits,
+                              totalUnits: event.totalUnits,
+                              at: event.at,
+                            },
+                            progressIndeterminate: event.indeterminate,
+                          },
+                    ),
+                  },
+            ),
+          );
         }
       },
     });
@@ -225,6 +326,24 @@ export function ScanProgress({
               state={moduleStates[module] ?? 'waiting'}
             />
           ))}
+          {executionPlans.flatMap((plan) => plan.units).length > 0 && (
+            <section className={styles.unitProgress} aria-label={t('execution_units_heading')}>
+              <h2 className={styles.unitHeading}>{t('execution_units_heading')}</h2>
+              {executionPlans
+                .flatMap((plan) => plan.units)
+                .map((unit) => {
+                  const detail = unitProgressDetail(unit, t);
+                  return (
+                    <ModuleStatus
+                      key={unit.id}
+                      area={t(UNIT_LABEL_KEY[unit.executionUnitClass])}
+                      state={UNIT_UI_STATE[unit.status]}
+                      {...(detail === undefined ? {} : { detail })}
+                    />
+                  );
+                })}
+            </section>
+          )}
           {finished && (
             <div className={styles.done}>
               <Button {...(onDone ? { onClick: onDone } : {})}>{t('progress_open_report')}</Button>

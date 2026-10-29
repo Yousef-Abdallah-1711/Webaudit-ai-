@@ -3,11 +3,8 @@
 #
 # Minimal topology this master plan's discovery/Phase 8 arrived at:
 # reverse proxy, apps/web, apps/api, apps/worker, Postgres, Redis. PgBouncer
-# is optional (already proven working end-to-end in a prior session's own
-# testing — infrastructure/docker-compose.yml's own `pgbouncer` service and
-# infrastructure/deploy.md's "Connection pooling" section) and included here,
-# profile-gated exactly as the dev compose file already does, so enabling it
-# is a deliberate `--profile pooled` choice, not a silent default.
+# remains available in the development compose file; this production topology
+# uses direct, role-separated API and worker database connections.
 #
 # NOT deployed, deliberately (master plan §5, Out of scope this release):
 #   - apps/probe-pool — not a deployable unit at all (no server entrypoint,
@@ -27,6 +24,8 @@
 #   - Real SMTP/Resend email required — Phase 2 (the API refuses to boot
 #     without one of them in production; this is enforced by application
 #     code, not by this file, but this file supplies the real values).
+#   - API and worker use separate non-superuser PostgreSQL logins. The
+#     migration/provision jobs alone receive MIGRATION_DATABASE_URL.
 #
 # Usage:
 #   docker compose -f infrastructure/docker-compose.production.yml \
@@ -77,30 +76,6 @@ services:
           memory: 768m
     networks: [backend]
 
-  # Optional connection pooler — infrastructure/deploy.md's own "Connection
-  # pooling (PgBouncer)" section: proven working, not a speculative addition.
-  # Point DATABASE_URL at this service (host `pgbouncer`, port 5432) instead
-  # of `postgres` directly, and set DATABASE_CONNECTION_LIMIT=1, to use it.
-  pgbouncer:
-    image: edoburu/pgbouncer:v1.25.2-p0
-    restart: unless-stopped
-    profiles: ['pooled']
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-webaudit}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-webaudit}
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: '200'
-      DEFAULT_POOL_SIZE: '20'
-      AUTH_TYPE: scram-sha-256
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h 127.0.0.1 -p 5432 -U ${POSTGRES_USER:-webaudit}']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks: [backend]
-
   # Runs `prisma migrate deploy` once, then exits 0 — api/worker both
   # `depends_on: migrate: condition: service_completed_successfully`, so
   # neither starts accepting traffic/jobs against a schema that is not yet
@@ -112,9 +87,31 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
     entrypoint: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy', '--schema', 'prisma/schema.prisma']
     working_dir: /app/apps/api
+    networks: [backend]
+
+  # Provision two narrowly scoped LOGIN roles after the migrations create
+  # fahes_api and fahes_worker_exec. The admin DSN and runtime passwords are
+  # confined to these one-shot jobs, never passed to the app containers.
+  provision-runtime-roles:
+    image: postgres:16-alpine
+    restart: 'no'
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    environment:
+      MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
+      API_DB_PASSWORD: ${API_DB_PASSWORD:?API_DB_PASSWORD is required}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?WORKER_DB_PASSWORD is required}
+    entrypoint: ['/bin/sh', '-ec']
+    command:
+      [
+        'psql "$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --file /provision-runtime-db-roles.sql',
+      ]
+    volumes:
+      - ./provision-runtime-db-roles.sql:/provision-runtime-db-roles.sql:ro
     networks: [backend]
 
   api:
@@ -130,6 +127,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      provision-runtime-roles:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
       # Phase 1 (master plan): the worker is the process that actually
@@ -138,7 +137,7 @@ services:
       # AI-enabled deployment flips both from the same env file.
       AI_MODE: disabled
       PORT: '3001'
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_URL: ${API_DATABASE_URL:?API_DATABASE_URL is required}
       DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-10}
       DATABASE_POOL_TIMEOUT: ${DATABASE_POOL_TIMEOUT:-20}
       REDIS_URL: redis://redis:6379
@@ -165,7 +164,13 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: production
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       start_period: 15s
@@ -190,6 +195,8 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
+      provision-runtime-roles:
+        condition: service_completed_successfully
     environment:
       NODE_ENV: production
       # The load-bearing setting for this whole temporary product (Phase 1):
@@ -197,7 +204,7 @@ services:
       # boot, and without this it refuses to start at all — this is not a
       # cosmetic default.
       AI_MODE: disabled
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      DATABASE_URL: ${WORKER_DATABASE_URL:?WORKER_DATABASE_URL is required}
       DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-10}
       REDIS_URL: redis://redis:6379
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
@@ -276,7 +283,13 @@ services:
       HOSTNAME: '0.0.0.0'
       API_URL: ${API_URL:?API_URL is required}
     healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 15s
       timeout: 5s
       start_period: 15s
@@ -322,7 +335,7 @@ volumes:
   proxy-certs:
 
 networks:
-  # api/worker/postgres/redis/pgbouncer — never reachable from outside the
+  # api/worker/postgres/redis — never reachable from outside the
   # docker network directly; only `proxy` and (for api) nothing else has a
   # published host port.
   backend:

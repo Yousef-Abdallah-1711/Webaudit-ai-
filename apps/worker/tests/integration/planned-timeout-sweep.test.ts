@@ -17,6 +17,7 @@ import {
   createTimeoutSweepHandler,
   scheduleTimeoutSweep,
 } from '../../src/orchestrator/timeout-scheduler.js';
+import { transitionBeforeDeadline } from '../../src/orchestrator/state-machine.js';
 
 const noopPublisher = { publish: () => Promise.resolve(1) };
 const MIN = 60_000;
@@ -88,17 +89,34 @@ async function plan(
   });
 }
 
-async function unit(planId: string, userId: string, targetId: string, status = 'PLANNED') {
+async function unit(
+  planId: string,
+  userId: string,
+  targetId: string,
+  status = 'PLANNED',
+  executionUnitClass = 'PASSIVE_HTTP',
+  engineId = 'e',
+) {
   const id = `unit-${String(++seq)}-${Math.random().toString(36).slice(2, 6)}`;
   await db.$executeRawUnsafe(
     `INSERT INTO "ExecutionUnit" (id,"scanPlanId","userId","targetId","executionUnitClass","engineId",configuration,priority,"timeoutPolicyMs","retryPolicy","requiresSafetyCheckpoint","idempotencyKey",status)
-     VALUES ($1,$2,$3,$4,'PASSIVE_HTTP','e','{}'::jsonb,0,1000,'{}'::jsonb,false,$5,$6::"ExecutionUnitStatus")`,
+     VALUES ($1,$2,$3,$4,$7::"ExecutionUnitClass",$8,'{}'::jsonb,0,1000,'{}'::jsonb,$9,$5,$6::"ExecutionUnitStatus")`,
     id,
     planId,
     userId,
     targetId,
     `${id}:1`,
     status,
+    executionUnitClass,
+    engineId,
+    [
+      'BROWSER',
+      'CRAWLER',
+      'SOURCE_EXECUTION',
+      'ACTIVE_SECURITY',
+      'AUTHENTICATED_WORKFLOW',
+      'LOAD_CAPACITY',
+    ].includes(executionUnitClass),
   );
   return { id, key: `${id}:1` };
 }
@@ -125,6 +143,23 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
     const w = await world();
     await db.moduleResult.create({
       data: { scanId: w.scan.id, module: 'SECURITY', state: 'COMPLETE', score: 90 },
+    });
+    await run();
+    expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe('TIMED_OUT');
+    expect(await refunds(w.scan.id)).toBe(1);
+  });
+
+  it('preserves the 15-minute legacy timeout boundary for scans without a plan', async () => {
+    const w = await world({ startedAgoMs: 15 * MIN - 10_000 });
+    await run();
+    expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe(
+      'RUNNING_PHASE_1',
+    );
+    expect(await refunds(w.scan.id)).toBe(0);
+
+    await db.scan.update({
+      where: { id: w.scan.id },
+      data: { startedAt: new Date(Date.now() - 15 * MIN - 10_000) },
     });
     await run();
     expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe('TIMED_OUT');
@@ -173,6 +208,68 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
     expect(await refunds(w.scan.id)).toBe(1); // a second sweep never refunds twice
   });
 
+  it('asks the registered engine to terminate an expired RUNNING unit before finalizing it', async () => {
+    const w = await world({ startedAgoMs: 5 * MIN });
+    const p = await plan(w, MIN);
+    const running = await unit(
+      p.id,
+      w.user.id,
+      w.target.id,
+      'RUNNING',
+      'BROWSER',
+      'browser-engine',
+    );
+    let expiryCalls = 0;
+    const handler = createTimeoutSweepHandler({
+      db,
+      publisher: noopPublisher,
+      executionAdapters: [
+        {
+          engineId: 'browser-engine',
+          hardStopMarginMs: 30_000,
+          onUnitExpired: async ({ id }) => {
+            expect(id).toBe(running.id);
+            expiryCalls += 1;
+            return 'TERMINATED';
+          },
+        },
+      ],
+    });
+
+    await handler();
+
+    expect(expiryCalls).toBe(1);
+    expect(await statusOf(running.id)).toBe('FAILED');
+  });
+
+  it('uses the registered engine hard-stop margin when termination is still pending', async () => {
+    const w = await world({ startedAgoMs: MIN + 5_000 });
+    const p = await plan(w, MIN);
+    const running = await unit(
+      p.id,
+      w.user.id,
+      w.target.id,
+      'RUNNING',
+      'BROWSER',
+      'browser-engine',
+    );
+    const handler = createTimeoutSweepHandler({
+      db,
+      publisher: noopPublisher,
+      executionAdapters: [
+        {
+          engineId: 'browser-engine',
+          hardStopMarginMs: 30_000,
+          onUnitExpired: async () => 'PENDING',
+        },
+      ],
+    });
+
+    await handler();
+
+    expect(await statusOf(running.id)).toBe('RUNNING');
+  });
+
   it('races deadline expiry against unit completion without resuming the scan or refunding twice', async () => {
     const w = await world({ state: 'RUNNING_PHASE_3', startedAgoMs: 10 * MIN });
     const p = await plan(w, MIN);
@@ -190,7 +287,10 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
           failureClass: 'TIMEOUT',
           detail: 'SCAN_DEADLINE',
         },
-        { enqueueMaster: () => (masterEnqueues++, Promise.resolve()) },
+        {
+          claimContinuation: () => Promise.resolve(false),
+          enqueueMaster: () => (masterEnqueues++, Promise.resolve()),
+        },
       ),
     ]);
 
@@ -220,18 +320,39 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
   });
 
   it('self-heals a terminal scan unit within one live repeat-scheduler interval', async () => {
-    const redisAddress = process.env['EXEC_TEST_REDIS'] ?? '127.0.0.1:6399';
+    const redisAddress = process.env['EXEC_TEST_REDIS'];
+    if (redisAddress === undefined) {
+      throw new Error('EXEC_TEST_REDIS must point to an explicit disposable Redis service.');
+    }
     const [host, port] = redisAddress.split(':');
-    const connection = { host: host ?? '127.0.0.1', port: Number(port ?? 6399) };
+    const portNumber = Number(port);
+    if (!host || !Number.isInteger(portNumber) || portNumber < 1 || portNumber > 65535) {
+      throw new Error('EXEC_TEST_REDIS must be a valid disposable host:port.');
+    }
+    const connection = { host, port: portNumber };
     const prefix = `timeout-cadence-${Math.random().toString(36).slice(2, 8)}`;
     const queueName = 'webaudit-maintenance';
     const queue = new Queue(queueName, { connection, prefix });
     const publisher = new Redis(connection);
+    let expiryCalls = 0;
     const previousInterval = process.env['TIMEOUT_SWEEP_INTERVAL_MS'];
     process.env['TIMEOUT_SWEEP_INTERVAL_MS'] = '5000';
     const worker = new Worker(
       queueName,
-      createTimeoutSweepHandler({ db: db as never, publisher }),
+      createTimeoutSweepHandler({
+        db: db as never,
+        publisher,
+        executionAdapters: [
+          {
+            engineId: 'scheduler-browser-engine',
+            hardStopMarginMs: 5_000,
+            onUnitExpired: async () => {
+              expiryCalls += 1;
+              return 'TERMINATED';
+            },
+          },
+        ],
+      }),
       { connection, prefix, concurrency: 1 },
     );
     let completedSweeps = 0;
@@ -254,15 +375,30 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
       const w = await world({ state: 'CANCELLED', startedAgoMs: 1_000 });
       const p = await plan(w, 120 * MIN);
       const pending = await unit(p.id, w.user.id, w.target.id);
+      const running = await unit(
+        p.id,
+        w.user.id,
+        w.target.id,
+        'RUNNING',
+        'BROWSER',
+        'scheduler-browser-engine',
+      );
       const startedAt = performance.now();
       const deadline = startedAt + sweepIntervalMs + hostLoopBoundMs;
       let status = await statusOf(pending.id);
-      while (status === 'PLANNED' && performance.now() < deadline) {
+      let runningStatus = await statusOf(running.id);
+      while (
+        (status === 'PLANNED' || runningStatus === 'RUNNING') &&
+        performance.now() < deadline
+      ) {
         await new Promise((resolve) => setTimeout(resolve, 50));
         status = await statusOf(pending.id);
+        runningStatus = await statusOf(running.id);
       }
 
       expect(status).toBe('REFUSED');
+      expect(runningStatus).toBe('CANCELLED');
+      expect(expiryCalls).toBe(1);
       expect(performance.now() - startedAt).toBeLessThanOrEqual(sweepIntervalMs + hostLoopBoundMs);
       expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe(
         'CANCELLED',
@@ -314,6 +450,15 @@ describe('plan-unit barrier (T-U1-8)', () => {
       get count() {
         return n;
       },
+      claimContinuation: async (scanId: string, deadlineMs: number) =>
+        (
+          await transitionBeforeDeadline(db as never, {
+            scanId,
+            from: 'RUNNING_PHASE_3',
+            to: 'RUNNING_MASTER',
+            deadlineMs,
+          })
+        ).moved,
       enqueueMaster: () => ((n += 1), Promise.resolve()),
     };
   };
@@ -374,6 +519,77 @@ describe('plan-unit barrier (T-U1-8)', () => {
     const e = enqueued();
     expect(await continueScanIfPlanTerminal(db, w.scan.id, e)).toBe('deadline-passed');
     expect(e.count).toBe(0);
+  });
+
+  it('uses one deadline-guarded transition to elect exactly one concurrent continuation', async () => {
+    const { w } = await atBarrier();
+    let masterEnqueues = 0;
+    const gate = {
+      ...enqueued(),
+      enqueueMaster: async () => {
+        masterEnqueues += 1;
+      },
+    };
+
+    const outcomes = await Promise.all([
+      continueScanIfPlanTerminal(db, w.scan.id, gate),
+      continueScanIfPlanTerminal(db, w.scan.id, gate),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome === 'continued')).toHaveLength(1);
+    expect(outcomes.filter((outcome) => outcome === 'not-ready')).toHaveLength(1);
+    expect(masterEnqueues).toBe(1);
+    expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe(
+      'RUNNING_MASTER',
+    );
+  });
+
+  it('rechecks the database deadline after module finalizers before enqueueing master synthesis', async () => {
+    const w = await world({
+      state: 'RUNNING_PHASE_3',
+      startedAgoMs: MIN,
+      modules: ['SECURITY', 'TESTING'],
+    });
+    await db.moduleResult.create({
+      data: { scanId: w.scan.id, module: 'SECURITY', state: 'COMPLETE', score: 80 },
+    });
+    const p = await plan(w, 60 * MIN);
+    let masterEnqueues = 0;
+    const gate = await continueScanIfPlanTerminal(db, w.scan.id, {
+      finalizers: [
+        {
+          ownedModules: ['TESTING'],
+          finalizeModuleResults: async () => {
+            await db.scan.update({
+              where: { id: w.scan.id },
+              data: { startedAt: new Date(Date.now() - p.deadlineMs! - 5_000) },
+            });
+            await run();
+          },
+        },
+      ],
+      claimContinuation: async (scanId: string, deadlineMs: number) =>
+        (
+          await transitionBeforeDeadline(db as never, {
+            scanId,
+            from: 'RUNNING_PHASE_3',
+            to: 'RUNNING_MASTER',
+            deadlineMs,
+          })
+        ).moved,
+      enqueueMaster: async () => {
+        masterEnqueues += 1;
+      },
+    });
+
+    expect(gate).toBe('not-ready');
+    expect(masterEnqueues).toBe(0);
+    expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe('TIMED_OUT');
+    expect(await refunds(w.scan.id)).toBe(1);
+    const refund = await db.creditTransaction.findFirstOrThrow({
+      where: { scanId: w.scan.id, type: 'REFUND' },
+    });
+    expect(refund.amount).toBe(15);
   });
 
   it('runs registered module-result finalizers first and treats the modules they own as theirs to write', async () => {

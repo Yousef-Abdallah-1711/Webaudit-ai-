@@ -10,9 +10,8 @@
  *  - "At the barrier" means `RUNNING_PHASE_3` with every module that no finalizer owns already in a terminal
  *    state; before that the orchestrator's own phase jobs are still running and a unit finalization must not
  *    advance the scan.
- *  - The scan state itself is moved by the orchestrator's guarded phase-entry transition when the enqueued
- *    master-synthesis job starts (it is not pre-moved here), so the deadline predicate guards the ENQUEUE decision on
- *    the database clock. A race past the deadline is bounded by the plan's finalization margin and the sweep.
+ *  - The planned scan's RUNNING_PHASE_3 -> RUNNING_MASTER transition is claimed here with one database-clock CAS
+ *    before enqueue. The master job carries alreadyTransitioned so its entry does not repeat the transition.
  */
 
 import { Prisma } from '../../../prisma/generated/client/index.js';
@@ -30,7 +29,9 @@ export interface ModuleResultFinalizer {
 
 export interface GateDeps {
   finalizers?: readonly ModuleResultFinalizer[];
-  /** Called by the winner only; the master phase job's entry transition is the guarded state move. */
+  /** State-machine-owned atomic transition from RUNNING_PHASE_3 to RUNNING_MASTER. */
+  claimContinuation: (scanId: string, deadlineMs: number) => Promise<boolean>;
+  /** Called by the CAS winner only; the master job must carry alreadyTransitioned=true. */
   enqueueMaster: () => Promise<void>;
 }
 
@@ -73,12 +74,27 @@ export async function continueScanIfPlanTerminal(
   if (units.some((u) => !isTerminalUnitStatus(u.status))) return 'not-ready';
 
   if (scan.startedAt === null || plan.deadlineMs === null) return 'not-ready';
-  const clock = await db.$queryRaw<Array<{ ok: boolean }>>(Prisma.sql`
-    SELECT clock_timestamp() < s."startedAt" + (${plan.deadlineMs}::int * interval '1 millisecond') AS ok
-      FROM "Scan" s WHERE s.id = ${scanId}`);
-  if (clock[0]?.ok !== true) return 'deadline-passed';
 
   for (const finalizer of deps.finalizers ?? []) await finalizer.finalizeModuleResults(plan.id);
+
+  // This single CAS is the continuation claim. It closes the read/queue race:
+  // only the caller that moves the scan before its DB-clock deadline may enqueue
+  // master synthesis. A sweep or competing finalizer makes the predicate fail.
+  const claimed = await deps.claimContinuation(scanId, plan.deadlineMs);
+  if (!claimed) {
+    const current = await db.$queryRaw<Array<{ state: string; beforeDeadline: boolean }>>(
+      Prisma.sql`
+        SELECT state::text AS state,
+               "startedAt" IS NOT NULL
+                 AND clock_timestamp() < "startedAt" + (${plan.deadlineMs}::int * interval '1 millisecond')
+                 AS "beforeDeadline"
+          FROM "Scan" WHERE id = ${scanId}`,
+    );
+    return current[0]?.state === 'RUNNING_PHASE_3' && current[0]?.beforeDeadline === false
+      ? 'deadline-passed'
+      : 'not-ready';
+  }
+
   await deps.enqueueMaster();
   return 'continued';
 }

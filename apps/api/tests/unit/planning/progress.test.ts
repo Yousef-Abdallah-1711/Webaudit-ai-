@@ -95,6 +95,24 @@ describe('snapshotProgress', () => {
     ).toBe('APPLIED');
   });
 
+  it('redacts credentials from durable progress labels before persisting them', async () => {
+    const w = await makeRuntimeWorld();
+    const u = await makeUnit(w, { status: 'RUNNING' });
+    const credential = 'AKIAIOSFODNN7EXAMPLE';
+    expect(
+      await snapshotProgress(
+        testDb,
+        u.id,
+        { label: `Requesting ${credential}` },
+        { boundary: true },
+      ),
+    ).toBe('APPLIED');
+    const snapshot = (await testDb.executionUnit.findUniqueOrThrow({ where: { id: u.id } }))
+      .progressSnapshot as { label: string };
+    expect(snapshot.label).not.toContain(credential);
+    expect(snapshot.label).toContain('[[REDACTED:');
+  });
+
   it('rejects a write for a terminal unit and reports an anomaly (FR-027a); the trigger would refuse it anyway', async () => {
     const w = await makeRuntimeWorld();
     const u = await makeUnit(w, { status: 'RUNNING' });
@@ -138,7 +156,7 @@ describe('snapshotProgress', () => {
 
 describe('emitProgress (ephemeral)', () => {
   it('publishes to the per-unit channel, never touches Postgres, and survives a failing publisher or an invalid tick', async () => {
-    const publish = vi.fn(() => Promise.resolve(1));
+    const publish = vi.fn((_channel: string, _message: string) => Promise.resolve(1));
     emitProgress({ publish }, 'u1', { label: 'go', completedUnits: 1, totalUnits: 2 });
     expect(publish).toHaveBeenCalledTimes(1);
     const [channel, message] = publish.mock.calls[0] as unknown as [string, string];
@@ -156,5 +174,52 @@ describe('emitProgress (ephemeral)', () => {
       }),
     ).not.toThrow();
     await new Promise((r) => setTimeout(r, 10));
+  });
+
+  it('redacts credentials from ephemeral progress labels before publishing', () => {
+    const publish = vi.fn((_channel: string, _message: string) => Promise.resolve(1));
+    const credential = 'AKIAIOSFODNN7EXAMPLE';
+    emitProgress({ publish }, 'u1', { label: `Requesting ${credential}` });
+    const [, message] = publish.mock.calls[0] as unknown as [string, string];
+    expect(message).not.toContain(credential);
+    expect(message).toContain('[[REDACTED:');
+  });
+
+  it('publishes scan-owned unit progress through the scan event channel', () => {
+    const publish = vi.fn((_channel: string, _message: string) => Promise.resolve(1));
+    emitProgress(
+      { publish },
+      'u1',
+      { label: 'Opening pages' },
+      {
+        scanId: 'scan-1',
+        executionPlanId: 'plan-1',
+        planKind: 'INITIAL',
+        executionUnitClass: 'BROWSER',
+        now: new Date('2026-10-29T12:00:00.000Z'),
+      },
+    );
+    expect(publish).toHaveBeenCalledTimes(2);
+    const [channel, raw] = publish.mock.calls[0] as unknown as [string, string];
+    expect(channel).toBe('webaudit:scan-events');
+    expect(JSON.parse(raw)).toEqual({
+      scanId: 'scan-1',
+      emittedAt: '2026-10-29T12:00:00.000Z',
+      event: {
+        type: 'execution:progress',
+        scanId: 'scan-1',
+        executionPlanId: 'plan-1',
+        planKind: 'INITIAL',
+        executionUnitId: 'u1',
+        executionUnitClass: 'BROWSER',
+        at: '2026-10-29T12:00:00.000Z',
+        label: 'Opening pages',
+        completedUnits: null,
+        totalUnits: null,
+        indeterminate: true,
+      },
+    });
+    expect(publish.mock.calls[1]?.[0]).toBe('unit-progress:u1');
+    expect(publish.mock.calls[1]?.[1]).not.toContain('AKIAIOSFODNN7EXAMPLE');
   });
 });

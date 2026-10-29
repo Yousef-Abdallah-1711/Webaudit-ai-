@@ -53,6 +53,7 @@ import { createWorkerDb, type PrismaClient } from './db.js';
 import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
 import { continueScanIfPlanTerminal } from '@webaudit/api/execution-runtime';
 import { createPhaseHandler, planQueuePriorityFor } from './orchestrator/orchestrator.js';
+import { transitionBeforeDeadline } from './orchestrator/state-machine.js';
 import { createQuestionnaireTimeoutHandler } from './orchestrator/questionnaire-timeout-handler.js';
 import { createReverifyHandler } from './reverify/runner.js';
 import {
@@ -281,6 +282,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   let executionPublisher: EventPublisher | undefined;
   let uninstallTerminalRefund: (() => void) | undefined;
   let uninstallTerminalTeardown: (() => void) | undefined;
+  const adapters = options.executionAdapters ?? [];
   const handlers =
     options.handlers ??
     (() => {
@@ -329,7 +331,18 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           masterReportExecutor,
           // SPEC 009 U-1 plan-unit barrier: answers 'no-plan' for every legacy scan, so the legacy chain is unchanged.
           planGate: ({ scanId, enqueueMaster }) =>
-            continueScanIfPlanTerminal(db, scanId, { enqueueMaster }),
+            continueScanIfPlanTerminal(db, scanId, {
+              claimContinuation: async (id, deadlineMs) =>
+                (
+                  await transitionBeforeDeadline(db, {
+                    scanId: id,
+                    from: 'RUNNING_PHASE_3',
+                    to: 'RUNNING_MASTER',
+                    deadlineMs,
+                  })
+                ).moved,
+              enqueueMaster,
+            }),
           cancellation,
           moduleTimeoutMs,
           // T174. `createUploadStorage` reads the R2 variables when it is
@@ -354,7 +367,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         }),
         // FR-038: the repeatable sweep that terminates stuck scans and refunds
         // their undelivered share. Registered as a repeatable job below.
-        timeoutSweep: createTimeoutSweepHandler({ db, publisher }),
+        timeoutSweep: createTimeoutSweepHandler({ db, publisher, executionAdapters: adapters }),
         paymentExpirySweep: createPaymentExpirySweepHandler(db),
         safetySweep: createSafetySweepHandler({ db }),
         // FR-059 (T150): the targeted re-verification runner. `apps/api`'s
@@ -391,7 +404,6 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
 
   let executionQueues: ExecQueueSet | undefined;
   let executionWorkers: ExecWorkerSet | undefined;
-  const adapters = options.executionAdapters ?? [];
   if (adapters.length > 0) {
     const db = executionDb ?? options.db;
     const artifactStore = options.executionArtifactStore ?? executionArtifactStore;
@@ -415,18 +427,37 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       publisher,
       hostInstanceId: process.env['EXECUTION_HOST_ID'] ?? `host-${process.pid}`,
       gateFor: (scanId) => ({
+        claimContinuation: async (id, deadlineMs) =>
+          (
+            await transitionBeforeDeadline(db, {
+              scanId: id,
+              from: 'RUNNING_PHASE_3',
+              to: 'RUNNING_MASTER',
+              deadlineMs,
+            })
+          ).moved,
         enqueueMaster: async () => {
           const scan = await db.scan.findUnique({
             where: { id: scanId },
             select: { userId: true, requestedModules: true },
           });
           if (scan === null) return;
+          const emitter = createScanEmitter(scanId, { publisher });
+          await emitter.emit(
+            {
+              type: 'scan:state',
+              scanId,
+              state: 'RUNNING_MASTER',
+              progressPercent: 80,
+            },
+            () => Promise.resolve(),
+          );
           await enqueuePhase(
             {
               scanPhaseQueue: queues.scanPhase,
               maintenanceQueue: queues.maintenance,
               db,
-              emitter: createScanEmitter(scanId, { publisher }),
+              emitter,
               planQueuePriority: await planQueuePriorityFor(db, scan.userId),
             },
             {
@@ -434,11 +465,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
               phase: 'RUNNING_MASTER',
               modules: scan.requestedModules,
               attempt: 1,
+              alreadyTransitioned: true,
             },
           );
         },
       }),
       onUnitCompleted: (scanPlanId) => enqueueEligibleUnits(db, executionQueues!, scanPlanId),
+      log: (message, fields) => logger.info(message, fields as Parameters<typeof logger.info>[1]),
     });
     executionWorkers = createExecWorkers({
       connection,

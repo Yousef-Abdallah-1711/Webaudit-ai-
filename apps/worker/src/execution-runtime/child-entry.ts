@@ -19,12 +19,27 @@ type ChildMessage =
       args: unknown[];
     }
   | { type: 'progress'; tick: Parameters<AdapterContext['progress']>[0] }
-  | { type: 'result'; observation: unknown }
+  | { type: 'result'; observation: unknown; resourceUsage: ChildResourceUsage }
   | { type: 'failure' };
 
+interface ChildResourceUsage {
+  userCPUTimeMicros: number;
+  systemCPUTimeMicros: number;
+  maxRSSNativeUnits: number;
+  rssBytesAtCompletion: number;
+  platform: NodeJS.Platform;
+}
+
 let started = false;
+let disconnectingNormally = false;
 let nextRequestId = 0;
 const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+
+process.once('disconnect', () => {
+  // A live adapter may hold sockets or timers after its host has crashed. The
+  // host can no longer enforce its hard stop, so fail closed at the process boundary.
+  if (!disconnectingNormally) process.exit(1);
+});
 
 process.on('message', (raw: ParentMessage) => {
   if (raw.type === 'rpc-result') {
@@ -45,6 +60,7 @@ process.on('message', (raw: ParentMessage) => {
 });
 
 async function execute(message: Extract<ParentMessage, { type: 'start' }>): Promise<void> {
+  const resourceUsageBefore = process.resourceUsage();
   const controller = new AbortController();
   const rpc = <T>(
     method: 'authorizeEffect' | 'confirmEffect' | 'recordEvidence' | 'safetyCheckpoint',
@@ -73,12 +89,28 @@ async function execute(message: Extract<ParentMessage, { type: 'start' }>): Prom
     const run = loaded[message.exportName];
     if (typeof run !== 'function') throw new Error('execution child export is missing');
     const observation = await (run as (context: AdapterContext) => Promise<unknown>)(context);
-    send({ type: 'result', observation });
+    send({ type: 'result', observation, resourceUsage: measureResourceUsage(resourceUsageBefore) });
   } catch {
-    send({ type: 'failure' });
+    send({
+      type: 'result',
+      observation: { source: 'ENGINE_EXCEPTION' },
+      resourceUsage: measureResourceUsage(resourceUsageBefore),
+    });
   } finally {
+    disconnectingNormally = true;
     setImmediate(() => process.disconnect());
   }
+}
+
+function measureResourceUsage(before: NodeJS.ResourceUsage): ChildResourceUsage {
+  const after = process.resourceUsage();
+  return {
+    userCPUTimeMicros: Math.max(0, after.userCPUTime - before.userCPUTime),
+    systemCPUTimeMicros: Math.max(0, after.systemCPUTime - before.systemCPUTime),
+    maxRSSNativeUnits: after.maxRSS,
+    rssBytesAtCompletion: process.memoryUsage().rss,
+    platform: process.platform,
+  };
 }
 
 function send(message: ChildMessage): void {

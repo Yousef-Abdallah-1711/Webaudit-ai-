@@ -25,6 +25,7 @@
  */
 
 import { z } from 'zod';
+import { redactText } from '@webaudit/redaction';
 import {
   SCAN_EVENTS_CHANNEL,
   SCAN_EVENT_TYPES,
@@ -47,6 +48,42 @@ const envelopeSchema = z.object({
   emittedAt: z.string().datetime(),
   event: z.object({ type: z.enum(SCAN_EVENT_TYPES) }).passthrough(),
 });
+
+const unitProgressSchema = z
+  .object({
+    type: z.literal('execution:progress'),
+    scanId: z.string().min(1).max(64),
+    executionPlanId: z.string().min(1).max(64),
+    planKind: z.enum(['INITIAL', 'REVERIFY']),
+    executionUnitId: z.string().min(1).max(64),
+    executionUnitClass: z.enum([
+      'PASSIVE_HTTP',
+      'SOURCE_STATIC',
+      'BROWSER',
+      'CRAWLER',
+      'SOURCE_EXECUTION',
+      'ACTIVE_SECURITY',
+      'AUTHENTICATED_WORKFLOW',
+      'LOAD_CAPACITY',
+      'TELEMETRY',
+    ]),
+    at: z.string().datetime(),
+    label: z.string().trim().min(1).max(200),
+    completedUnits: z.number().int().nonnegative().nullable(),
+    totalUnits: z.number().int().nonnegative().nullable(),
+    indeterminate: z.boolean(),
+  })
+  .superRefine((event, ctx) => {
+    if (
+      !event.indeterminate &&
+      (event.completedUnits === null ||
+        event.totalUnits === null ||
+        event.totalUnits === 0 ||
+        event.completedUnits > event.totalUnits)
+    ) {
+      ctx.addIssue({ code: 'custom', message: 'determinate progress requires valid unit counts' });
+    }
+  });
 
 /** What a socket layer must give the fan-out. Nothing more. */
 export interface RoomBroadcaster {
@@ -114,7 +151,22 @@ export async function startFanout(options: FanoutOptions): Promise<Fanout> {
       return;
     }
 
-    const envelope = result.data as unknown as ScanEventEnvelope;
+    let envelope = result.data as unknown as ScanEventEnvelope;
+    if (envelope.event.type === 'execution:progress') {
+      const event = unitProgressSchema.safeParse(envelope.event);
+      if (!event.success) {
+        drop(raw, event.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
+        return;
+      }
+      if (event.data.scanId !== envelope.scanId) {
+        drop(raw, 'execution progress scanId does not match its envelope');
+        return;
+      }
+      envelope = {
+        ...envelope,
+        event: { ...event.data, label: redactText(event.data.label).slice(0, 200) },
+      };
+    }
     // Routed on the envelope. See the module note.
     options.broadcaster.broadcast(scanRoom(envelope.scanId), JSON.stringify(envelope));
     forwarded += 1;

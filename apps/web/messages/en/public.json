@@ -1,5 +1,6 @@
 {
-  "promo": "First audit free — {freeCredits, number} credits",
+  "promo": "Get {freeCredits, number} free credits to audit two or three areas",
+  "hero_url_invalid": "Enter a valid website URL starting with http:// or https://.",
   "hero_lead": "Think your site is ready?",
   "hero_accent": "Prove it, then ship it.",
   "hero_kicker": "Production readiness starts with evidence",
@@ -78,6 +79,7 @@
   "pricing_cta_choose_business": "Choose Business",
   "pricing_badge_most_depth": "Most depth",
   "pricing_price_period_month": " / mo",
+  "pricing_cash_unset": "Price not announced",
   "pricing_cost_eyebrow": "What things cost",
   "pricing_cost_one_area": "One audit area",
   "pricing_cost_full_audit": "Full audit, all {areaCount, plural, =5 {five} other {#}}, bundled",

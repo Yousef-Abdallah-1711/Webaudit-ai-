@@ -44,6 +44,7 @@
  */
 
 import { SCAN_STATES_TERMINAL, type ScanState } from '@webaudit/types';
+import { Prisma } from '@webaudit/api/prisma-client';
 
 /**
  * Legal transitions. Anything absent is refused.
@@ -155,6 +156,10 @@ export interface ScanStateStore {
   };
 }
 
+interface DeadlineTransitionStore extends ScanStateStore {
+  $queryRaw<T = unknown>(query: Prisma.Sql): Promise<T>;
+}
+
 /** What an observer is told about a scan that just ended. */
 export interface TerminalTransition {
   readonly scanId: string;
@@ -251,6 +256,43 @@ export async function transition(
     if (isTerminal(input.to)) {
       await notifyTerminal({ scanId: input.scanId, from: input.from, to: input.to });
     }
+    return { moved: true, from: input.from, to: input.to };
+  }
+
+  const current = await db.scan.findUnique({
+    where: { id: input.scanId },
+    select: { state: true },
+  });
+  return { moved: false, reason: 'LOST_RACE', current: current?.state ?? null };
+}
+
+/**
+ * The plan gate's deadline-bound continuation. This remains a state-machine
+ * transition, with its extra database-clock predicate in the same UPDATE so a
+ * timeout sweep cannot win between a deadline read and the state move.
+ */
+export async function transitionBeforeDeadline(
+  db: DeadlineTransitionStore,
+  input: {
+    readonly scanId: string;
+    readonly from: ScanState;
+    readonly to: ScanState;
+    readonly deadlineMs: number;
+  },
+): Promise<TransitionOutcome> {
+  if (!canTransition(input.from, input.to)) {
+    return { moved: false, reason: 'ILLEGAL', current: input.from };
+  }
+
+  const moved = await db.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    UPDATE "Scan"
+       SET state = ${input.to}::"ScanState", "updatedAt" = clock_timestamp()
+     WHERE id = ${input.scanId}
+       AND state = ${input.from}::"ScanState"
+       AND "startedAt" IS NOT NULL
+       AND clock_timestamp() < "startedAt" + (${input.deadlineMs}::int * interval '1 millisecond')
+     RETURNING id`);
+  if (moved.length === 1) {
     return { moved: true, from: input.from, to: input.to };
   }
 

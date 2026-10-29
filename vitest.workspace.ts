@@ -1,5 +1,7 @@
 import { defineWorkspace } from 'vitest/config';
 
+const TEST_REDIS_URL = process.env['TEST_REDIS_URL'] ?? 'redis://localhost:6389/15';
+
 /**
  * Three projects, three purposes.
  *
@@ -40,9 +42,10 @@ export default defineWorkspace([
       hookTimeout: 30_000,
       env: {
         AI_MODE: 'fixtures',
-        // Keep Vitest queues isolated from any live development worker. The
-        // tests use real BullMQ workers and must not race a user's dev stack.
-        REDIS_URL: 'redis://localhost:6389/15',
+        // Tests that use BullMQ honor the dedicated test endpoint. Set
+        // TEST_REDIS_URL to a disposable Redis for workspace runs; the local
+        // DB 15 fallback preserves the existing developer workflow.
+        REDIS_URL: TEST_REDIS_URL,
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values
@@ -61,7 +64,7 @@ export default defineWorkspace([
       environment: 'node',
       env: {
         AI_MODE: 'fixtures',
-        REDIS_URL: 'redis://localhost:6389/15',
+        REDIS_URL: TEST_REDIS_URL,
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values
@@ -85,7 +88,7 @@ export default defineWorkspace([
       environment: 'node',
       env: {
         AI_MODE: 'fixtures',
-        REDIS_URL: 'redis://localhost:6389/15',
+        REDIS_URL: TEST_REDIS_URL,
         // config/env.ts fails closed: it refuses to start without real secrets
         // rather than silently signing with a committed constant (finding C3).
         // Suites therefore have to supply them. Deliberately real 48-byte values

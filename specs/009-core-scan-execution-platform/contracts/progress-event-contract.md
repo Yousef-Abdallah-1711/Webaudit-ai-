@@ -33,6 +33,17 @@ snapshotProgress(executionUnitId: string, tick: ProgressTick, now: DateTime) -> 
 3. Otherwise: `UPDATE` (never `INSERT` — one row per unit, last-write-wins)
    `progressSnapshot`/`progressIndeterminate` in place.
 
+## Scan-owned delivery and reconnect recovery
+
+For scan-owned execution units, the worker also publishes a typed `execution:progress` scan event
+to `webaudit:scan-events`. API fanout validates the envelope, redacts the label, and delivers it
+through the existing per-scan authorization check. The per-unit `unit-progress:<id>` event remains
+available for existing consumers; scan-room delivery is additive and does not make Redis a source
+of truth. On reconnect or device change, the authenticated `GET /scans/:id` response returns the
+owner's persisted plan/unit progress snapshots. It exposes only plan/unit IDs, kind/state/class,
+status, and bounded progress fields, never execution configuration or credential bindings. Unknown
+totals remain indeterminate in both the event and UI.
+
 ## Non-negotiable boundary rules
 
 1. `snapshotProgress` never fabricates a percentage when `totalUnits` is genuinely unknown —

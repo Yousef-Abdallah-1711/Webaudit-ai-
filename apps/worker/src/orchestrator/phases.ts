@@ -55,9 +55,9 @@ export interface PhaseJobData {
    *
    * `handlePhase` normally OPENS by transitioning the scan into the phase its
    * job names — `enqueuePhase` deliberately does not move the scan (see its
-   * own note), so entering the phase is the running job's first act. Exactly
-   * one caller breaks that pattern, and has to: a questionnaire resume
-   * performs `AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2` itself, because
+   * own note), so entering the phase is the running job's first act. Two paths
+   * deliberately move state before queueing: a questionnaire resume performs
+   * `AWAITING_QUESTIONNAIRE -> RUNNING_PHASE_2` itself, because
    * `state-machine.ts`'s table makes phase 2 the *only* way out of the pause
    * ("a pause in the middle of the audit, not a state an audit can start or
    * finish in") and leaving the scan parked in `AWAITING_QUESTIONNAIRE` while
@@ -69,8 +69,9 @@ export interface PhaseJobData {
    * RUNNING_PHASE_2` — a self-edge, which the `ALLOWED` table has for no
    * state. That returned `moved: false`, `handlePhase` returned having run
    * nothing, and the UI area was never audited on any scan that paused for
-   * design intent. This flag is how the resume says "entry already happened",
-   * and it is set at exactly the two resume call sites.
+   * design intent. The resume uses this flag because entry already happened.
+   * The planned continuation gate also uses it after its deadline-guarded
+   * `RUNNING_PHASE_3 -> RUNNING_MASTER` compare-and-swap.
    *
    * **Absent or `false` on every other phase job, and that matters.** The
    * entry transition is also what stops a phase job that is *redelivered*
@@ -120,11 +121,10 @@ function jobIdFor(scanId: string, phase: ScanState, attempt: number): string {
  * marking a scan `RUNNING_PHASE_2` while it sits in a queue would make the
  * progress bar claim work that has not begun.
  *
- * The one caller that must break that rule — `resumeAfterQuestionnaire`, which
- * has to leave `AWAITING_QUESTIONNAIRE` because it is the only edge out of the
- * pause — says so on the payload via `alreadyTransitioned`, so the running job
- * skips an entry transition that would otherwise be an illegal self-edge. Read
- * `PhaseJobData.alreadyTransitioned` before setting it anywhere else.
+ * Questionnaire resume and the planned-scan gate must break that rule: each
+ * commits its guarded state transition before queueing. Their jobs set
+ * `alreadyTransitioned` so entry does not attempt an illegal self-edge. Read
+ * `PhaseJobData.alreadyTransitioned` before setting it elsewhere.
  */
 export async function enqueuePhase(
   context: EnqueueContext,

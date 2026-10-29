@@ -116,6 +116,9 @@ export interface ExecWorkerOptions {
   readonly concurrency?: number;
   /** BullMQ key prefix; tests use one so they never share keys with another run. */
   readonly prefix?: string;
+  /** Test-only acceleration knobs; production consumers use the contract defaults. */
+  readonly lockDurationMs?: number;
+  readonly stalledIntervalMs?: number;
   readonly onFailed?: (job: Job | undefined, error: Error) => void;
   readonly onError?: (error: Error) => void;
 }
@@ -143,8 +146,8 @@ export function createExecWorkers(options: ExecWorkerOptions): ExecWorkerSet {
         connection: options.connection,
         ...(options.prefix === undefined ? {} : { prefix: options.prefix }),
         concurrency: options.concurrency ?? 2,
-        lockDuration: QUEUE_LOCK_DURATION_MS,
-        stalledInterval: QUEUE_STALLED_INTERVAL_MS,
+        lockDuration: options.lockDurationMs ?? QUEUE_LOCK_DURATION_MS,
+        stalledInterval: options.stalledIntervalMs ?? QUEUE_STALLED_INTERVAL_MS,
         maxStalledCount: 0,
       },
     );

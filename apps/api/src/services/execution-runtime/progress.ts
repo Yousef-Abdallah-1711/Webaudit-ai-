@@ -7,6 +7,12 @@
  */
 
 import { Prisma } from '../../../prisma/generated/client/index.js';
+import { redactText } from '@webaudit/redaction';
+import {
+  SCAN_EVENTS_CHANNEL,
+  type ExecutionUnitClass,
+  type ScanEventEnvelope,
+} from '@webaudit/types';
 import type { SafetyDb } from '../safety/db.js';
 
 export const PROGRESS_LIMITS = {
@@ -49,6 +55,7 @@ export function normalizeTick(tick: ProgressTick): NormalizedProgress {
   const label = typeof tick.label === 'string' ? tick.label.trim() : '';
   if (label === '' || label.length > PROGRESS_LIMITS.labelMax)
     throw new ProgressTickError('INVALID_TICK');
+  const redactedLabel = redactText(label);
   if (tick.completedUnits !== undefined && !nonNegInt(tick.completedUnits))
     throw new ProgressTickError('INVALID_TICK');
   if (tick.totalUnits !== undefined && !nonNegInt(tick.totalUnits))
@@ -58,7 +65,7 @@ export function normalizeTick(tick: ProgressTick): NormalizedProgress {
   if (total !== null && done !== null && done > total) throw new ProgressTickError('INVALID_TICK');
   const known = total !== null && total > 0 && done !== null;
   return {
-    label,
+    label: redactedLabel,
     completedUnits: known ? done : null,
     totalUnits: known ? total : null,
     indeterminate: tick.indeterminate === true || !known,
@@ -72,18 +79,68 @@ export interface ProgressPublisher {
   publish(channel: string, message: string): Promise<number>;
 }
 
-/** Ephemeral: fire-and-forget to the per-unit channel. Never touches Postgres; a publish failure is not a work failure. */
+export interface EmitProgressOptions {
+  scanId?: string;
+  executionPlanId?: string;
+  planKind?: 'INITIAL' | 'REVERIFY';
+  executionUnitClass?: ExecutionUnitClass;
+  now?: Date;
+}
+
+/** Ephemeral: publishes to the per-unit channel and, for scan-owned units, the authenticated scan-room event path. */
 export function emitProgress(
   publisher: ProgressPublisher,
   executionUnitId: string,
   tick: ProgressTick,
-  now: Date = new Date(),
+  options: EmitProgressOptions = {},
 ): void {
   let message: string;
   try {
-    message = JSON.stringify({ executionUnitId, ...normalizeTick(tick), at: now.toISOString() });
+    const now = options.now ?? new Date();
+    const progress = normalizeTick(tick);
+    if (
+      options.scanId !== undefined &&
+      options.executionPlanId !== undefined &&
+      options.planKind !== undefined &&
+      options.executionUnitClass !== undefined
+    ) {
+      const envelope: ScanEventEnvelope = {
+        scanId: options.scanId,
+        emittedAt: now.toISOString(),
+        event: {
+          type: 'execution:progress',
+          scanId: options.scanId,
+          executionPlanId: options.executionPlanId,
+          planKind: options.planKind,
+          executionUnitId,
+          executionUnitClass: options.executionUnitClass,
+          at: now.toISOString(),
+          ...progress,
+        },
+      };
+      message = JSON.stringify(envelope);
+    } else {
+      message = JSON.stringify({ executionUnitId, ...progress, at: now.toISOString() });
+    }
   } catch {
     return; // an invalid tick is dropped: progress is informational
+  }
+  const isScanOwned =
+    options.scanId !== undefined &&
+    options.executionPlanId !== undefined &&
+    options.planKind !== undefined &&
+    options.executionUnitClass !== undefined;
+  if (isScanOwned) {
+    const unitMessage = JSON.stringify({
+      executionUnitId,
+      ...normalizeTick(tick),
+      at: (options.now ?? new Date()).toISOString(),
+    });
+    void publisher.publish(SCAN_EVENTS_CHANNEL, message).catch(() => undefined);
+    void publisher
+      .publish(unitProgressChannel(executionUnitId), unitMessage)
+      .catch(() => undefined);
+    return;
   }
   void publisher.publish(unitProgressChannel(executionUnitId), message).catch(() => undefined);
 }

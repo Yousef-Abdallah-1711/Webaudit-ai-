@@ -14,8 +14,17 @@ export async function runTestAdapterChild(ctx: AdapterContext): Promise<UnitObse
     case 'CUSTOMER_EXIT':
       return { source: 'CUSTOMER_CODE_EXIT', exitCode: behavior.code };
     case 'HANG':
-    case 'PROCESS_HANG':
       ctx.progress({ label: 'working', completedUnits: 0, totalUnits: 2 });
+      return await new Promise<UnitObservation>(() => undefined);
+    case 'PROCESS_HANG':
+      ctx.progress({ label: `child-${String(process.pid)}`, completedUnits: 0, totalUnits: 2 });
+      if ((await ctx.safetyCheckpoint()).outcome !== 'PROCEED') return { source: 'F07_STOP' };
+      if ((await ctx.authorizeEffect('REQUEST', 1)).result !== 'AUTHORIZED') {
+        return { source: 'F07_STOP' };
+      }
+      await ctx.confirmEffect('REQUEST', 1);
+      // Keep the process alive after IPC disconnect so crash cleanup is exercised.
+      setInterval(() => undefined, 1000);
       return await new Promise<UnitObservation>(() => undefined);
     case 'CHECKPOINT_WAIT': {
       ctx.progress({ label: 'checkpoint-wait-start', completedUnits: 0, totalUnits: 2 });

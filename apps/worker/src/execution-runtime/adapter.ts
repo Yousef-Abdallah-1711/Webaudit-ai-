@@ -8,6 +8,7 @@ import type { AdmissionRequest } from '@webaudit/api/safety';
 import type { RecordedEvidence } from '@webaudit/api/evidence';
 import type { DispatchUnit, EffectDecision, ProgressTick } from '@webaudit/api/execution-runtime';
 import type { EvidenceKind } from '@webaudit/api/prisma-client';
+import { isPassiveClass, type ExecutionUnitClass } from '@webaudit/api/planning';
 import { EXEC_QUEUE_NAMES, queueNameForUnitClass } from '@webaudit/config';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -39,7 +40,7 @@ export interface AdapterContext {
 export interface ExecutionAdapter {
   readonly engineId: string;
   /** Queue class consumed by this adapter. Engine IDs remain the lookup key for a unit. */
-  readonly executionUnitClass: string;
+  readonly executionUnitClass: ExecutionUnitClass;
   /** Class L consumes an F07 concurrency lease; class N does not. */
   readonly leaseClass: 'L' | 'N';
   readonly hardStopMarginMs?: number;
@@ -50,8 +51,8 @@ export interface ExecutionAdapter {
   hasCapacity?(unit: DispatchUnit): Promise<boolean>;
   guards?(unit: DispatchUnit): Promise<string | null>;
   proofs?(unit: DispatchUnit): Promise<string | null>;
-  /** Termination confirmation for `expirePlanUnits`; absent means "not confirmed gone". */
-  onUnitExpired?(unit: { id: string }): Promise<'TERMINATED' | 'PENDING'>;
+  /** Idempotent termination confirmation used by `expirePlanUnits` before a non-passive engine is activated. */
+  onUnitExpired(unit: { id: string }): Promise<'TERMINATED' | 'PENDING'>;
 }
 
 export interface AdapterRegistry {
@@ -96,6 +97,17 @@ export function createAdapterRegistry(adapters: readonly ExecutionAdapter[] = []
       throw new Error(
         `execution adapter ${a.engineId} has no dispatch queue for ${a.executionUnitClass}`,
       );
+    }
+    if (!isPassiveClass(a.executionUnitClass) && a.onUnitExpired === undefined) {
+      throw new Error(
+        `execution adapter ${a.engineId} must define onUnitExpired for ${a.executionUnitClass}`,
+      );
+    }
+    if (
+      a.hardStopMarginMs !== undefined &&
+      (!Number.isSafeInteger(a.hardStopMarginMs) || a.hardStopMarginMs <= 0)
+    ) {
+      throw new Error(`execution adapter ${a.engineId} has an invalid hardStopMarginMs`);
     }
     byId.set(a.engineId, a);
   }

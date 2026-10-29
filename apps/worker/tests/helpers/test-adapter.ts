@@ -37,6 +37,7 @@ export function createTestAdapter(
     childModuleUrl: new URL('./test-adapter-child.ts', import.meta.url).href,
     childExportName: 'runTestAdapterChild',
     ...(opts.hardStopMarginMs === undefined ? {} : { hardStopMarginMs: opts.hardStopMarginMs }),
+    onUnitExpired: () => Promise.resolve('TERMINATED'),
     admissionRequestFor: (u) =>
       admissionRequest(world, {
         executionId: u.id,

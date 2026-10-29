@@ -355,6 +355,20 @@ describe('classifyPreRunCause precedence (v6 §6)', () => {
       vi.useRealTimers();
     }
   });
+
+  it('expires on the database clock even when the worker clock is behind', async () => {
+    const w = await makeRuntimeWorld({ startedAgoMs: HOUR + 5000, deadlineMs: HOUR });
+    const u = await makeUnit(w);
+    // A worker clock 10 h behind must not keep an already-expired plan alive.
+    vi.useFakeTimers({ toFake: ['Date'], now: Date.now() - 10 * HOUR });
+    try {
+      expect(
+        (await classifyPreRunCause(testDb, await rowFor(u.id), { phase: 'PRE_RUN' })).cause,
+      ).toBe('SCAN_DEADLINE_EXPIRED');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe('casHostTransition', () => {
@@ -620,6 +634,58 @@ describe('finalizeExecutionUnit through the TypeScript face', () => {
       outcomeMatches: false,
     });
   });
+
+  it('rolls back the F07 release audit when the unit finalization write fails', async () => {
+    const w = await makeRuntimeWorld();
+    const { u } = await runningUnit(w, 'L');
+    const functionName = 'core01_test_reject_unit_finalization';
+    const triggerName = 'core01_test_reject_unit_finalization';
+    try {
+      await testDb.$executeRawUnsafe(`
+        CREATE FUNCTION public.${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN
+          IF NEW.status::text IN ('COMPLETED','FAILED','CANCELLED','KILLED','REFUSED') THEN
+            RAISE EXCEPTION 'test_finalize_rollback';
+          END IF;
+          RETURN NEW;
+        END $$
+      `);
+      await testDb.$executeRawUnsafe(
+        `CREATE TRIGGER ${triggerName} BEFORE UPDATE OF status ON public."ExecutionUnit" FOR EACH ROW EXECUTE FUNCTION public.${functionName}()`,
+      );
+      await expect(
+        finalizeExecutionUnit(testDb, u.id, u.key, {
+          kind: 'FAILED',
+          failureClass: 'ENGINE_DEFECT',
+        }),
+      ).rejects.toThrow(/test_finalize_rollback/i);
+      expect(await statusOf(u.id)).toBe('RUNNING');
+      expect(await liveLeaseCount(w.grantId)).toBe(1);
+      expect(
+        await testDb.executionAuditEvent.count({
+          where: { executionId: u.id, eventType: 'BUDGET_RELEASED' },
+        }),
+      ).toBe(0);
+    } finally {
+      await testDb.$executeRawUnsafe(
+        `DROP TRIGGER IF EXISTS ${triggerName} ON public."ExecutionUnit"`,
+      );
+      await testDb.$executeRawUnsafe(`DROP FUNCTION IF EXISTS public.${functionName}()`);
+    }
+
+    await expect(
+      finalizeExecutionUnit(testDb, u.id, u.key, {
+        kind: 'FAILED',
+        failureClass: 'ENGINE_DEFECT',
+      }),
+    ).resolves.toMatchObject({ status: 'FAILED', replayed: false });
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
+    expect(
+      await testDb.executionAuditEvent.count({
+        where: { executionId: u.id, eventType: 'BUDGET_RELEASED' },
+      }),
+    ).toBe(1);
+  });
 });
 
 describe('expirePlanUnits — status-by-cause matrix', () => {
@@ -725,18 +791,24 @@ describe('expirePlanUnits — status-by-cause matrix', () => {
   });
 
   it('keeps a RUNNING non-passive unit non-terminal until the engine confirms, then fails it TERMINATION_UNCONFIRMED after the margin', async () => {
-    const w = await makeRuntimeWorld({ startedAgoMs: HOUR + 5000, deadlineMs: HOUR });
-    const u = await makeUnit(w, { status: 'RUNNING' });
+    const w = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const { u } = await runningUnit(w, 'L');
+    await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 5000) });
+    expect(await liveLeaseCount(w.grantId)).toBe(1);
     const pending = await expirePlanUnits(testDb, w.planId, {
       onUnitExpired: () => Promise.resolve('PENDING'),
     });
     expect(pending.pending).toEqual([u.id]);
     expect(await statusOf(u.id)).toBe('RUNNING');
+    expect(await liveLeaseCount(w.grantId)).toBe(1);
     const noHook = await expirePlanUnits(testDb, w.planId);
     expect(noHook.pending).toEqual([u.id]);
+    expect(await liveLeaseCount(w.grantId)).toBe(1);
 
-    const late = await makeRuntimeWorld({ startedAgoMs: HOUR + 120_000, deadlineMs: HOUR });
-    const v = await makeUnit(late, { status: 'RUNNING' });
+    const late = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const { u: v } = await runningUnit(late, 'L');
+    await setScan(late.scanId, { startedAt: new Date(Date.now() - HOUR - 120_000) });
+    expect(await liveLeaseCount(late.grantId)).toBe(1);
     await expirePlanUnits(testDb, late.planId, {
       onUnitExpired: () => Promise.resolve('PENDING'),
       hardStopMarginMs: 60_000,
@@ -746,13 +818,50 @@ describe('expirePlanUnits — status-by-cause matrix', () => {
       failureClass: 'TRANSIENT_INFRASTRUCTURE',
       terminalReason: 'TERMINATION_UNCONFIRMED',
     });
+    expect(await liveLeaseCount(late.grantId)).toBe(0);
 
-    const ok = await makeRuntimeWorld({ startedAgoMs: HOUR + 5000, deadlineMs: HOUR });
-    const x = await makeUnit(ok, { status: 'RUNNING' });
+    const ok = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const { u: x } = await runningUnit(ok, 'L');
+    await setScan(ok.scanId, { startedAt: new Date(Date.now() - HOUR - 5000) });
+    expect(await liveLeaseCount(ok.grantId)).toBe(1);
     await expirePlanUnits(testDb, ok.planId, {
       onUnitExpired: () => Promise.resolve('TERMINATED'),
     });
     expect(await reasonOf(x.id)).toMatchObject({ status: 'FAILED', failureClass: 'TIMEOUT' });
+    expect(await liveLeaseCount(ok.grantId)).toBe(0);
+  });
+
+  it('does not turn a pending F07 stop into TIMEOUT while termination is unconfirmed', async () => {
+    const w = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const { u } = await runningUnit(w, 'L');
+    await triggerStop(testDb, {
+      scope: 'SCAN',
+      scopeId: w.scanId,
+      triggeredBy: op,
+      reason: 'OPERATOR_EMERGENCY_STOP',
+    });
+    await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 5000) });
+
+    const waiting = await expirePlanUnits(testDb, w.planId, {
+      onUnitExpired: () => Promise.resolve('PENDING'),
+      hardStopMarginMs: 60_000,
+    });
+    expect(waiting.pending).toEqual([u.id]);
+    expect(await statusOf(u.id)).toBe('RUNNING');
+    expect(await liveLeaseCount(w.grantId)).toBe(1);
+
+    await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 120_000) });
+    await expirePlanUnits(testDb, w.planId, {
+      onUnitExpired: () => Promise.resolve('PENDING'),
+      hardStopMarginMs: 60_000,
+    });
+    expect(await reasonOf(u.id)).toMatchObject({
+      status: 'FAILED',
+      failureClass: 'TRANSIENT_INFRASTRUCTURE',
+      terminalReason: 'TERMINATION_UNCONFIRMED',
+    });
+    expect(await reasonOf(u.id)).not.toMatchObject({ failureClass: 'TIMEOUT' });
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
   });
 
   it('treats an authorized-but-unconfirmed effect as "not confirmed gone"', async () => {

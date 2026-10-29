@@ -36,6 +36,8 @@ export interface ExpireOptions {
   /** Engine termination hook (idempotent). Absent for a non-passive class means "not confirmed gone". */
   onUnitExpired?: (unit: ExpiredUnit) => Promise<ExpiryConfirmation>;
   hardStopMarginMs?: number;
+  /** Per-engine backstop margin; takes precedence over the shared compatibility default. */
+  hardStopMarginForUnit?: (unit: ExpiredUnit) => number;
   legacyMaxDurationMs?: number;
 }
 
@@ -85,7 +87,7 @@ export async function expirePlanUnits(
   );
   const byId = new Map(rows.map((r) => [r.id, r]));
   const legacy = options.legacyMaxDurationMs ?? DEFAULT_PLAN_DEADLINE_CONSTANTS.legacyMaxDurationMs;
-  const margin = options.hardStopMarginMs ?? 60_000;
+  const defaultMargin = options.hardStopMarginMs ?? 60_000;
 
   for (const id of order) {
     const seen = byId.get(id);
@@ -147,6 +149,9 @@ export async function expirePlanUnits(
         engineId: seen.engineId,
         attempt: cur.attempt,
       };
+      const margin = options.hardStopMarginForUnit?.(unit) ?? defaultMargin;
+      if (!Number.isSafeInteger(margin) || margin < 0)
+        throw new Error(`invalid hard-stop margin for execution unit ${unit.id}`);
       let confirmation: ExpiryConfirmation =
         options.onUnitExpired !== undefined
           ? await options.onUnitExpired(unit)

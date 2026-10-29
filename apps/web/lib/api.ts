@@ -18,6 +18,8 @@
  * module never reads or writes it directly.
  */
 
+import type { ExecutionUnitClass, ExecutionUnitStatus } from '@webaudit/types';
+
 export const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001';
 const TOKEN_KEY = 'wa-access-token';
 const isBrowser = typeof window !== 'undefined';
@@ -348,6 +350,24 @@ export interface ScanSummary {
    * events that would otherwise carry this (see ScanProgress.tsx's own
    * note on why this exists). */
   readonly moduleResults?: readonly { readonly module: string; readonly state: string }[];
+  /** Persisted execution progress for reconnect/resync. */
+  readonly executionPlans?: readonly {
+    readonly id: string;
+    readonly kind: 'INITIAL' | 'REVERIFY';
+    readonly state: 'RESOLVED' | 'REFUSED';
+    readonly units: readonly {
+      readonly id: string;
+      readonly executionUnitClass: ExecutionUnitClass;
+      readonly status: ExecutionUnitStatus;
+      readonly progressSnapshot: {
+        readonly label: string;
+        readonly completedUnits: number | null;
+        readonly totalUnits: number | null;
+        readonly at: string;
+      } | null;
+      readonly progressIndeterminate: boolean;
+    }[];
+  }[];
 }
 
 export function createScan(
@@ -1045,7 +1065,8 @@ export function getAdminAuditLog(
   if (opts.offset !== undefined) params.set('offset', String(opts.offset));
   if (opts.action !== undefined && opts.action !== '') params.set('action', opts.action);
   if (opts.actorId !== undefined && opts.actorId !== '') params.set('actorId', opts.actorId);
-  if (opts.subjectId !== undefined && opts.subjectId !== '') params.set('subjectId', opts.subjectId);
+  if (opts.subjectId !== undefined && opts.subjectId !== '')
+    params.set('subjectId', opts.subjectId);
   if (opts.search !== undefined && opts.search !== '') params.set('search', opts.search);
   if (opts.from !== undefined && opts.from !== '') params.set('from', opts.from);
   if (opts.to !== undefined && opts.to !== '') params.set('to', opts.to);
@@ -1059,12 +1080,7 @@ export function getAdminAuditLog(
 // match what the backend can now actually report — every real scan/reverify
 // job carries a BullMQ priority, which puts it in this state, not `waiting`.
 export type AdminQueueState =
-  | 'waiting'
-  | 'prioritized'
-  | 'active'
-  | 'delayed'
-  | 'failed'
-  | 'completed';
+  'waiting' | 'prioritized' | 'active' | 'delayed' | 'failed' | 'completed';
 
 export interface AdminJobSummary {
   readonly queue: string;

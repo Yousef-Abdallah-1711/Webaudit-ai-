@@ -36,9 +36,9 @@
  *   `UIQuestionnaire.tsx` renders the pause (T201); and the answers reach the
  *   design capability through `buildDesignIntentInput` below, which this file
  *   calls once per phase job and threads into `CapabilityInput.designIntent`.
- *   Both resume paths flag their phase-2 job `alreadyTransitioned` — see the
- *   entry transition in `handlePhase` below, and
- *   `PhaseJobData.alreadyTransitioned`'s own note, for why they must.
+ *   Both questionnaire resume paths flag their phase-2 job `alreadyTransitioned`;
+ *   the planned-scan gate flags its master job after its database-clock CAS.
+ *   See `PhaseJobData.alreadyTransitioned` for the entry guard.
  * - A phase job that throws transitions the scan to `FAILED` via `failScan`,
  *   which refunds the undelivered share through `installTerminalRefund`
  *   (`terminal-refund.ts`, a terminal observer that runs inside the awaited
@@ -609,7 +609,7 @@ export function createPhaseHandler(
       // Every other phase job still transitions, because that transition is
       // also what stops a redelivered job from re-running a phase's modules —
       // see `PhaseJobData.alreadyTransitioned`. This is a per-job opt-out for
-      // the one caller that genuinely already transitioned, not a relaxation of
+      // the callers that genuinely already transitioned, not a relaxation of
       // the guard.
       //
       // The flagged path still refuses to run a scan that is no longer in this
@@ -735,11 +735,21 @@ export function createPhaseHandler(
         }
 
         const enqueueMaster = async (): Promise<void> => {
+          await context.emitter.emit(
+            {
+              type: 'scan:state',
+              scanId: data.scanId,
+              state: 'RUNNING_MASTER',
+              progressPercent: 80,
+            },
+            () => Promise.resolve(),
+          );
           await enqueuePhase(context, {
             scanId: data.scanId,
             phase: next,
             modules: scan.requestedModules,
             attempt: 1,
+            alreadyTransitioned: true,
           });
         };
         if (options.planGate !== undefined) {

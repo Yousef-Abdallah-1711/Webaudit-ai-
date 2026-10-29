@@ -1,5 +1,26 @@
 # SPEC 009 — session progress and continuation handoff
 
+## Current verified handoff — 2026-10-29
+
+This section supersedes earlier status/count snapshots below. Current local branch is `main`; `HEAD`, `origin/main`, and live `origin` `main` all resolve to `e03577d6ccaa115f49648e6a24be6cb0bba18a45`. The worktree is dirty with pre-existing website/auth edits and local SPEC 009 implementation/evidence changes; preserve them. No reset, broad staging, commit, or push was performed.
+
+- Latest full isolated unit/contract/integration run: **244 files / 1,874 tests passed**; adverse: **73 files / 1,153 passed / 1 skipped**. Full Playwright E2E passed **93/93 in 22.6 minutes** with real Chromium, API, worker and Next.js on isolated PostgreSQL/Redis. The completed scan path is the legacy queue, not SPEC 009 plan dispatch. Visual checks passed 8 mechanisms with 17 TODO comparisons.
+- The current `execution-runtime.test.ts` passed **24/24**, including secret-free lifecycle/resource telemetry for success, infrastructure failure and F07 kill, and a real worker process crash/replacement case. Worker typecheck, scoped ESLint and Prettier checks passed. `git diff --check` passed with the existing user-owned migration CRLF warning.
+- Latest recorded separate privilege/lifecycle evidence: CORE-01 real-login privilege matrix **24/24**; worker PostgreSQL/Redis/BullMQ lifecycle **22/22**, including process crash/replacement. Earlier email boot guard **3/3** and exact sandbox-unconfigured contract **1/1** reruns pass; the complete current unit and adverse runs are green.
+- The U-1 acceptance audit now maps AC-1 through AC-20 to source/tests. AC-12/19 still lack production SPEC 010–012 engine termination/backstop evidence, and AC-17 lacks deployed NTP/skew-bound evidence. DoD gate 14 and T-U1-10 remain open. SPEC 009 is **NOT COMPLETE**.
+- Full workspace typecheck passed 30/30 packages; Prisma validation passed. Scoped SPEC 009 V8 coverage: 25 files, **87.06% lines, 88.28% functions, 80.89% branches**. Full workspace lint needs to exclude the existing untracked Next build output; full format reports 322 files. Scoped source lint/adherence and touched-file Prettier passed.
+- Current DoD is **11 PASS · 17 PARTIAL · 0 FAIL · 0 BLOCKED · 0 NOT STARTED**. Gates 24 and 25 are PARTIAL on the real Chromium E2E and isolated browser screenshots; neither is complete because the scan follows the legacy path and the 24-step manual/visual-parity acceptance is unfinished.
+- Other open DoD gates include production API-to-plan-to-queue-to-worker execution, production engine termination, real R2 and outage recovery, visual/manual acceptance, sustained production-relevant performance, and deployment credential verification. The E2E path confirms the existing legacy route and remains unchanged under FR-040.
+- Isolated disposable PostgreSQL/Redis verification containers remain on ports 5545/6391; the existing application/dev stack was not touched. The isolated `m009_closure_unit_test` database remains disposable and available.
+
+Resume from the U-1 evidence audit in `DEFINITION_OF_DONE.md`; do not treat historical counts/status blocks below as current where they conflict with this handoff.
+
+### Final closure-pass update — 2026-10-29
+
+- The full serial unit/contract/integration suite passed **244 files / 1,882 tests**; the full adverse suite passed **73 files / 1,153 passed / 1 skipped** on isolated PostgreSQL and Redis. The current progress recovery subset was **66/66** across five files.
+- Workspace typecheck passed **30/30 packages**; focused ESLint and Prettier passed. Visual mechanisms passed **8**, with **17 TODO** parity comparisons. Full Chromium E2E remains the prior **93/93** run and was not repeated during this closure pass.
+- SPEC 009 remains **NOT COMPLETE**, DoD remains **11 PASS / 17 PARTIAL**, and T-U1-10 remains open for production-engine termination/backstop and deployed clock-skew evidence. See `HANDOFF_2026-10-29.md` for the delivery inventory and remaining acceptance tasks.
+
 Last updated 2026-10-29. Session start: HEAD `a1034fa` = `origin/main`.
 **Verdict: SPEC 009 is NOT COMPLETE.** Service layer implemented and tested on real PostgreSQL; dispatch/queues, host loop, progress events, engines, real full-stack, Chrome acceptance, performance and the dev-database migration are not done. Gate count (`DEFINITION_OF_DONE.md`): 9 PASS · 13 PARTIAL · 6 NOT STARTED of 28. Requirement count (`REQUIREMENT_DELTA_MATRIX.md` addendum): 26 IMPLEMENTED-TESTED · 2 VERIFIED · 14 PARTIAL · 4 MISSING · 3 N/A.
 
@@ -222,6 +243,13 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - The full file passes **12/12** against isolated PostgreSQL and Redis. The tested bound is one configured 5-second interval plus the 5-second host-loop allowance.
 - This proves the PLANNED/no-child case only. Active-engine termination/confirmation remains open because no production adapter is registered; AC-12 remains PARTIAL.
 
+## AC-12 registered engine expiry-hook follow-up — 2026-10-29
+
+- The production worker now passes its execution adapter registrations into the timeout-sweep handler. Expiry routes RUNNING units to the matching adapter's `onUnitExpired` hook, preserves passive-unit semantics, and applies that adapter's `hardStopMarginMs`; a missing hook stays PENDING until the compatibility margin.
+- The regression first failed because the timeout handler never called the hook. After wiring, confirmed termination and PENDING-within-engine-margin cases pass; the full `planned-timeout-sweep.test.ts` file passes **14/14** against isolated PostgreSQL and Redis. Worker typecheck passes.
+- The registry now rejects non-passive adapters that omit `onUnitExpired`; the test-only crash worker was updated to provide the hook. The focused process crash/replacement regression passes, and the full execution runtime file passes **22/22**. The planned sweep plus adapter-registry tests pass **15/15**. API and worker typechecks, scoped ESLint, and Prettier pass.
+- This tests the worker seam with a registered test adapter. No production SPEC 010–012 adapter/backstop exists, so AC-12/19 remain PARTIAL, T-U1-10 is open, and SPEC 009 remains NOT COMPLETE. Changes remain local and uncommitted; unrelated website/auth work and the pre-existing migration edit were preserved.
+
 ## AC-5 consumer recreation follow-up — 2026-10-29
 
 - Extended the real PostgreSQL/Redis/BullMQ runtime case: after progress and duplicate delivery complete a unit, it closes that worker consumer, creates a new host identity, and redelivers the terminal unit.
@@ -233,3 +261,118 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Re-ran `email-boot-guard.test.ts` with `EMAIL_TRANSPORT=''` and the isolated Redis endpoint: **3/3 passed**. Updated its child-process environment to follow `TEST_REDIS_URL` or `EXEC_TEST_REDIS`, removing the prior hard-coded shared Redis DB 15 dependency.
 - Re-ran the unconfigured sandbox capability contract with a throwaway JWT secret and isolated services: **1/1 passed**. The test deletes the repository `.env` URL before exercising the 503 path.
 - Full serial suite was not rerun after this test-harness change. Its latest full pass is in `FINAL_VERIFICATION_REPORT_2026-10-29.md`; the two targeted reruns confirm the previously diagnosed regressions only.
+
+## AC-5 execution-worker crash/replacement follow-up — 2026-10-29
+
+- The real isolated worker runtime file passes **22/22** on disposable PostgreSQL and Redis. Its new subprocess case creates a temporary non-superuser execution-host login, confirms one F07 effect, kills the worker process while the unit is RUNNING, and starts a replacement worker.
+- The replacement fails the stalled BullMQ job without re-claiming the unit or repeating its confirmed effect. The test observes the per-unit child exit after IPC disconnect, keeps `ScanPlan.deadlineMs` unchanged, then advances the scan start time beyond that deadline and verifies expiry finalizes the unit.
+- `execution-child-disconnect.test.ts` separately passes **1/1**. AC-5 is COVERED; outage recovery and AC-12/17/19 gaps remain. SPEC 009 remains NOT COMPLETE.
+- CORE-01 real-login privilege matrix passes **22/22** on the same isolated PostgreSQL database; the planned timeout sweep passes **12/12** on isolated PostgreSQL/Redis. The complete workspace suites were not rerun after these scoped changes.
+
+## Full regression refresh — 2026-10-29
+
+- Full unit/contract/integration workspace passed **244/244 files, 1,864/1,864 tests** on disposable PostgreSQL and Redis `127.0.0.1:6391`. Full adverse workspace passed **73/73 files, 1,151 passed, 1 skipped**.
+- The Vitest project Redis setting now honors `TEST_REDIS_URL`; the API secure-cookie integration child was updated to honor it too and passed **2/2** on isolated Redis. This fixes the remaining unconditional 6389/15 child override found during the audit.
+- Focused SPEC 009 checks: worker runtime **22/22**, planned sweep/registry **15/15**, CORE-01 real-login matrix **22/22**, and execution-child disconnect **1/1**. API/worker typechecks, scoped ESLint, Prettier and diff check pass.
+- Full Playwright E2E 93/93 remains prior evidence, not rerun in this continuation. Visual parity assertions (17 todo), the 24-step manual Chrome journey, production API plan producer, production engine/backstop, R2, performance and coverage remain open. SPEC 009 is NOT COMPLETE.
+
+## AC-19 lease-retention verification — 2026-10-29
+
+- Strengthened `apps/api/tests/unit/planning/runtime.test.ts` to create a real RUNNING unit through F07 admission, then expire its plan. The real PostgreSQL assertions prove a PENDING termination keeps the admission lease live, a confirmed termination releases it, and the bounded `TERMINATION_UNCONFIRMED` outcome releases it only after the margin.
+- The first focused run caught a fixture-order issue: the unit was being admitted after its deadline. The fixture now admits the unit before advancing `Scan.startedAt`, matching the production lifecycle. The complete runtime file passes **54/54** against isolated PostgreSQL.
+- AC-19 gains component-level lease-ordering evidence, but remains PARTIAL because no production engine termination backstop is registered. T-U1-10 remains open for the full AC matrix and deployed clock-skew/production-engine evidence.
+
+## AC-17 reverse clock-skew verification — 2026-10-29
+
+- Added the missing reverse-skew case to `apps/api/tests/unit/planning/runtime.test.ts`: with the scan already past its immutable deadline, the worker clock is moved 10 hours behind and the pre-run classifier must still return `SCAN_DEADLINE_EXPIRED` from PostgreSQL's clock. The existing companion test moves the worker clock 10 hours ahead while the plan is live and expects `NONE`.
+- The complete API runtime file passes **55/55** against isolated PostgreSQL. AC-17 now has deterministic two-direction worker-skew evidence; the deployed NTP/skew bound remains unverified, so DoD gate 14 and T-U1-10 stay partial/open.
+
+## Finalization audit rollback verification — 2026-10-29
+
+- A disposable PostgreSQL trigger forces the terminal row update to fail after F07 lease release. The unit remains RUNNING, the live lease and concurrency counter remain unchanged, and no `BUDGET_RELEASED` row is committed. After removing the trigger, finalization succeeds and exactly one release audit event is committed.
+- The API runtime suite passes **56/56**. DoD gate 20 is PASS for transactional consistency of the existing F07 event. The SPEC 009 finalizer does not create a duplicate audit event; overall SPEC remains NOT COMPLETE.
+
+## Local performance smoke baseline — 2026-10-29
+
+- Extended `scripts/spec009-dag-benchmark.ts` to measure passive plan resolution, DAG scheduling, BullMQ queue latency and a 500-job burst, inline evidence writes, artifact metadata plus a memory object store, planned-unit REFUSED finalization, and failed-scan sweep. Nine 100-iteration DAG/queue runs, five 100-plan PostgreSQL runs, and three 100-operation runs for the remaining DB-backed paths are recorded in `PERFORMANCE_BASELINE_2026-10-29.md`. Two no-op bursts measured 2,950–3,083 jobs/s; serial finalization measured 720–898 REFUSED units/s.
+- Full workload, host details, reproduction command, limits and unmeasured dimensions are recorded in `PERFORMANCE_BASELINE_2026-10-29.md`. The benchmark ran on the host against isolated PG/Redis containers. Sustained capacity, resource usage, successful running-engine completion, real R2 and outage performance remain unmeasured, so DoD gate 23 stays PARTIAL.
+- DoD gate 23 is now PARTIAL. Current DoD count is **11 PASS · 15 PARTIAL · 2 NOT STARTED**; SPEC 009 remains NOT COMPLETE.
+
+## Fresh CORE-01 login-role verification — 2026-10-29
+
+- Re-ran `apps/api/tests/adverse/core01-role-isolation.test.ts` against a newly created `m009_core01_role_audit_test` database on the isolated PostgreSQL container. All **22/22** tests passed after all **35** migrations were applied. The suite checked real LOGIN roles, effective CORE-01 table grants, SECURITY DEFINER function execution grants, direct-write denial, API planning/F01, host/orchestrator finalizer roles, and worker/F07 entry points.
+- The suite removed its temporary LOGIN roles. Catalog verification found **0** `zz_t_009_*` roles remaining. This strengthens isolated grant evidence; tenant/effect abuse coverage and deployed API/worker credential verification remain open, so security/privilege gates stay PARTIAL.
+- Re-ran `apps/worker/tests/integration/execution-runtime.test.ts` on separate fresh databases `m009_core01_runtime_audit_test` and `m009_core01_runtime_recheck_test` with isolated Redis `127.0.0.1:6391`; both runs passed **22/22**. This exercises real BullMQ, PostgreSQL, an execution-host LOGIN, F07 admission/effect/evidence, hard stops, lease loss, duplicate delivery, and worker crash/replacement using the deterministic test adapter. The production engines remain owned by SPEC 010–012.
+- A before/after role-catalog comparison around the recheck showed the worker test suite added no `zz_exec_host_*` or `zz_exec_crash_*` login. One `zz_exec_host_*` login that existed before the recheck remains; it has only `fahes_exec_host` membership and no database-owned objects. Its origin predates the recorded inventory, so it remains untouched.
+
+## Known suite-failure recheck — 2026-10-29
+
+- On a separate fresh `_test` database and isolated Redis, the production email boot guard passed **3/3** again, including empty/unset `EMAIL_TRANSPORT` and both SMTP startup cases.
+- The previously fixed sandbox-unconfigured API contract case passed **1/1** when run by exact test-name filter from `admin.capabilities.test.ts` (26 unrelated cases were skipped by the filter). The full recorded serial unit/contract/integration and adverse runs remain **244/244 files, 1,864/1,864 tests** and **73/73 files, 1,151 passed, 1 skipped**; they were not rerun in this continuation.
+
+## AC-1 legacy timeout boundary follow-up — 2026-10-29
+
+- Added a no-plan regression that runs the real timeout sweep at 14m50s and confirms the scan remains `RUNNING_PHASE_1` with no refund, then moves it just beyond 15 minutes and confirms `TIMED_OUT` with exactly one refund.
+- The complete `planned-timeout-sweep.test.ts` file passes **15/15** on a fresh isolated PostgreSQL database and isolated Redis. This closes the explicit legacy-boundary assertion, not the full AC-1…AC-20 matrix.
+- T-U1-10 remains open; production-engine timing/backstop, deployed NTP/skew bound, and remaining acceptance breadth remain unverified. Overall SPEC 009 remains **NOT COMPLETE**; DoD stays **11 PASS · 15 PARTIAL · 2 NOT STARTED**.
+
+## AC-20 passive dispatch follow-up — 2026-10-29
+
+- Added a dispatch case with an expired plan and a `PASSIVE_HTTP` unit. Dispatch returns `PASSIVE_LEGACY_QUEUE` before deadline step 0; the unit stays `PLANNED` and no host claim, F07 call, lease, or budget counter is created.
+- `apps/api/tests/unit/planning/dispatch.test.ts` passes **21/21** on isolated PostgreSQL. This verifies the passive boundary only; the complete AC matrix and production API-to-queue lifecycle remain open.
+- Gate 14 remains PARTIAL and SPEC 009 remains **NOT COMPLETE**.
+
+## AC-7 refund-staleness recheck — 2026-10-29
+
+- Re-ran the adverse legacy/planned timeout refund regression against isolated PostgreSQL: **2/2 passed**. A module result committed after candidate discovery is included in the fresh refund read, limiting the refund to the still-undelivered module.
+- This adds no broader race-matrix coverage; gate 14 remains PARTIAL and SPEC 009 remains **NOT COMPLETE**.
+
+## AC-16 dispatched-unit expiry follow-up — 2026-10-29
+
+- Added a real dispatch-to-expiry race against PostgreSQL: F07 admits the unit, dispatch pauses at `DISPATCHED` before the child can run, and expiry refuses it while blocking the dependent and releasing its lease. Resuming dispatch loses the transition race and invokes `terminate()` on the inert-child test handle; no second admission or effect authorization occurs.
+- `dispatch.test.ts` passes **22/22**. The API runtime suite passes **56/56** after removing the earlier seeded-state test. This covers the dispatched pre-child state only; T-U1-10 and DoD gate 14 remain open/partial.
+
+## CORE-01 real-login tenant-boundary recheck — 2026-10-29
+
+- Added a cross-tenant resolver attempt through the actual `fahes_api` LOGIN role: the scan belongs to one user while the supplied target belongs to another. The resolver returns `REFUSED/SCAN_NOT_FOUND` and persists no plan or execution units.
+- `apps/api/tests/adverse/core01-role-isolation.test.ts` passes **23/23** on isolated PostgreSQL with the complete 35-migration schema. Catalog verification found **0** temporary `zz_t_009_*` roles after cleanup. DoD gate 22 remains PARTIAL because broader effect abuse and deployed credential checks remain open.
+
+## AC-15 pending-stop termination-boundary follow-up — 2026-10-29
+
+- Compared the edge against `scan-deadline-contract.md` and U-1b v6: an F07 stop prevents a deadline `TIMEOUT`, while a non-passive engine still reporting `PENDING` past its hard-stop margin must end as `TRANSIENT_INFRASTRUCTURE/TERMINATION_UNCONFIRMED` and hold its F07 lease until that boundary.
+- Added a real-F07 test for the uncovered combination. It verifies the unit stays RUNNING and retains its lease during the margin, then finalizes as `TERMINATION_UNCONFIRMED` rather than `TIMEOUT` after the margin. The API runtime file passes **57/57** against isolated PostgreSQL `m009_core01_u1_boundary_test`; API typecheck, targeted ESLint, Prettier, and `git diff --check` pass.
+- This adds one AC-15/19 interaction case; it does not close T-U1-10. Production-engine backstop, deployed NTP/skew evidence, and remaining acceptance breadth remain open. SPEC 009 remains **NOT COMPLETE**.
+
+## CORE-01 direct ledger-access abuse follow-up — 2026-10-29
+
+- Extended the real LOGIN-role suite to attempt claim reads/inserts, effect ledger reads/inserts/updates, and execution of the host-only live-lease helper. API, generic worker, operator, and ungrouped roles are denied these operations; the orchestrator can read effect rows as explicitly granted but cannot mutate them or invoke the host helper. This checks actual SQL access as well as the catalog privilege matrix.
+- The suite passes **24/24** on isolated PostgreSQL with all **35** migrations applied. Post-run catalog inspection found **0** temporary `zz_t_009_*` roles.
+- DoD gate 22 remains PARTIAL because production service credentials and broader tenant/effect abuse paths are not verified. SPEC 009 remains **NOT COMPLETE**.
+
+## Production-compose database role separation — 2026-10-29
+
+- Read-only inspection of the existing local `webaudit-ai-production` Compose stack showed API and worker both connect as `webaudit_local`, a PostgreSQL superuser with full DML on F07 and CORE-01 sensitive tables. The existing services and data were not changed.
+- Updated the production Compose topology to reserve `MIGRATION_DATABASE_URL` for the one-shot migration and provisioning jobs. The provisioner creates/reconciles `webaudit_api_runtime` and `webaudit_worker_runtime` with only `fahes_api`/`fahes_worker_exec` membership; the API and worker receive distinct runtime URLs. Removed the production single-user PgBouncer option because its fixed backend identity would bypass role separation; the dev-only pooler remains documented.
+- Verified the SQL provisioner against the isolated PostgreSQL service, including TCP login for both roles: both are non-superusers, have their expected group membership, and cannot read sensitive effect/lease tables. Roles were dropped after that isolated check.
+- Reconciliation hardening test seeded stale direct grants on `public` schema/table objects and an unintended `fahes_operator` membership for the API login. The provisioner removed those, preserved only each expected group membership, and left both roles without elevated cluster flags or the seeded access. A separate owned-table probe made provisioning fail closed; after removing the probe, provisioning succeeded. Both temporary runtime roles and the probe were dropped after the checks.
+- A separate throwaway Compose project applied all 35 migrations, completed role provisioning, brought API and worker healthy with the distinct non-superuser logins, showed live DB sessions under those identities, omitted admin/provision secrets from app containers, and returned API `/health` 200. Its containers and volumes were created separately from the existing stack.
+- Gate 22 remains PARTIAL because the already-running local stack still uses `webaudit_local` until it is recreated with the new role URLs, and deployed credentials/broader abuse paths remain unverified. Gate 24 stays NOT STARTED: this smoke is not a real scan end-to-end.
+
+## AC-13 post-finalizer timeout race — 2026-10-29
+
+- Added an isolated regression where the plan gate passes its first deadline check, a registered module-result finalizer advances the scan past the database deadline, and the real timeout sweep marks it `TIMED_OUT` and refunds the undelivered module.
+- The regression failed before the fix because the gate still returned `continued` and enqueued master synthesis after the sweep won. `continueScanIfPlanTerminal` now rechecks the scan barrier state and database-clock deadline after finalizers and before the queue side effect.
+- `planned-timeout-sweep.test.ts` passes **16/16** on a fresh disposable database with isolated Redis, including the race asserting no enqueue and exactly one 15-credit refund. Its repeat-scheduler case requires `EXEC_TEST_REDIS=host:port`; the first full-file attempt omitted it and tried the former default port 6399. The test now fails fast when the endpoint is missing, and the isolated rerun with `127.0.0.1:6391` passed.
+- API/worker typechecks, targeted ESLint, Prettier and `git diff --check` pass. T-U1-10 remains open for remaining AC breadth and production-engine/deployed-clock evidence; DoD gate 14 remains PARTIAL and SPEC 009 remains NOT COMPLETE.
+
+## AC-12 live active-adapter sweep — 2026-10-29
+
+- Extended the real BullMQ repeat-scheduler integration case to include a RUNNING BROWSER execution unit with a registered test adapter, alongside the existing PLANNED unit. The live timeout-sweep handler invokes the adapter's `onUnitExpired` hook and finalizes the unit within the configured 5-second sweep interval plus 5-second host-loop allowance.
+- The targeted live-scheduler test passes **1/1**, and the combined `planned-timeout-sweep.test.ts` file passes **16/16** on disposable PostgreSQL and Redis DB 14. Worker typecheck, targeted ESLint and Prettier pass. This verifies bounded sweep composition with a deterministic test adapter; no SPEC 010–012 production engine/backstop exists, so AC-12 and DoD gate 14 remain PARTIAL.
+
+## AC-13 atomic continuation claim — 2026-10-29
+
+- The plan gate now requires the worker state-machine's one database-clock CAS from `RUNNING_PHASE_3` to `RUNNING_MASTER` after module-result finalizers. A timeout sweep or concurrent gate caller that wins first prevents the losing caller from enqueueing master synthesis; the write remains behind the central transition authority.
+- The CAS winner emits the persisted-state progress event and queues the master phase with `alreadyTransitioned=true`; worker phase entry therefore does not attempt a second state transition.
+- The isolated worker suites pass **39/39** (`planned-timeout-sweep.test.ts` 17/17 and `execution-runtime.test.ts` 22/22), including concurrent gate callers, finalizer-versus-timeout, and standard-worker queue composition. The latter confirms the scan state is `RUNNING_MASTER` and the queued payload is `alreadyTransitioned=true`.
+- API/worker typechecks, targeted ESLint, source Prettier, and `git diff --check` pass. T-U1-10 and gate 14 remain open/partial; SPEC 009 remains **NOT COMPLETE**.

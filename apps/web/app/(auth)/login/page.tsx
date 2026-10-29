@@ -25,6 +25,7 @@ import { useTranslations } from 'next-intl';
 import { ApiError, API_BASE } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
 import { safeNextDestination } from '../../../components/auth/RouteGuard';
+import { FREE_ALLOCATION } from '@webaudit/config';
 
 export default function LoginPage(): React.ReactElement | null {
   const t = useTranslations('auth');
@@ -48,7 +49,7 @@ export default function LoginPage(): React.ReactElement | null {
     if (!email || !password) return;
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(email.trim(), password);
       router.replace(next);
     } catch (e) {
       if (e instanceof ApiError && e.code === 'EMAIL_NOT_VERIFIED') {
@@ -83,15 +84,17 @@ export default function LoginPage(): React.ReactElement | null {
           foot={
             <span>
               {t('signin_foot_lead')} <a href="/signup">{t('signin_foot_link')}</a>{' '}
-              {t('signin_foot_tail')}
+              {t('signin_foot_tail', { freeCredits: FREE_ALLOCATION })}
             </span>
           }
         >
-          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
             <Field
               label={t('email')}
               type="email"
               autoComplete="email"
+              required
+              maxLength={320}
               placeholder="you@company.com"
               value={email}
               onChange={(e) => {
@@ -113,6 +116,9 @@ export default function LoginPage(): React.ReactElement | null {
               <AuthInput
                 type="password"
                 autoComplete="current-password"
+                required
+                minLength={12}
+                maxLength={200}
                 placeholder="••••••••"
                 value={password}
                 aria-label={t('password')}

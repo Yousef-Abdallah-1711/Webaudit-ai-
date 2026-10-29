@@ -250,6 +250,70 @@ describe('API role can resolve an unchanged passive baseline plan', () => {
     }
   });
 
+  it('refuses a cross-tenant scan/target pairing through the real API LOGIN without persisting a plan', async () => {
+    const marker = randomBytes(4).toString('hex');
+    const owner = await testDb.user.create({
+      data: {
+        email: `core01-api-owner-${suffix}-${marker}@example.com`,
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const other = await testDb.user.create({
+      data: {
+        email: `core01-api-other-${suffix}-${marker}@example.com`,
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const ownerTarget = await testDb.target.create({
+      data: {
+        userId: owner.id,
+        inputType: 'URL',
+        canonicalValue: `https://owner-${marker}.example.com`,
+        displayName: 'API tenant boundary owner target',
+      },
+    });
+    const otherTarget = await testDb.target.create({
+      data: {
+        userId: other.id,
+        inputType: 'URL',
+        canonicalValue: `https://other-${marker}.example.com`,
+        displayName: 'API tenant boundary foreign target',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: owner.id,
+        targetId: ownerTarget.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 1,
+        chargedCredits: 1,
+        state: 'QUEUED',
+      },
+    });
+    const api = clientFor('api');
+
+    const result = await resolvePlan(
+      {
+        db: api as never,
+        registry: passiveBaselineRegistry(),
+        isAuthorized: (input) => isAuthorized(api as never, input),
+      },
+      { targetId: otherTarget.id, profile: { kind: 'CUSTOM', domains: ['SECURITY'] } },
+      'INITIAL',
+      new Date(),
+      { scanId: scan.id },
+    );
+
+    expect(result).toMatchObject({
+      state: 'REFUSED',
+      refusalReason: 'SCAN_NOT_FOUND',
+      planId: null,
+    });
+    expect(await api.scanPlan.count({ where: { scanId: scan.id } })).toBe(0);
+    expect(await api.executionUnit.count({ where: { userId: owner.id } })).toBe(0);
+  });
+
   it('runs the real F01 authorization query through its login without widening the generic worker role', async () => {
     const marker = randomBytes(4).toString('hex');
     const world = await makeWorld(`core01-api-f01-${suffix}-${marker}@example.com`, {
@@ -366,7 +430,7 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
       'ExecutionUnitHostClaim',
       'EffectAuthorization',
     ] as const;
-    const expected = {
+    const expected: Record<RoleName, Partial<Record<(typeof tableNames)[number], string[]>>> = {
       api: {
         ScanProfile: ['INSERT', 'SELECT'],
         ScanProfileVersion: ['INSERT', 'SELECT'],
@@ -407,7 +471,7 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
         ExecutionDependency: ['SELECT'],
       },
       nobody: {},
-    } satisfies Record<RoleName, Partial<Record<(typeof tableNames)[number], string[]>>>;
+    };
     for (const roleName of Object.keys(roles) as RoleName[]) {
       const client = clientFor(roleName);
       const matrix = await client.$queryRaw<Array<{ tableName: string; privileges: string[] }>>`
@@ -445,6 +509,70 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
       expect(await hasTablePrivilege(client, 'AdmissionLease', 'SELECT'), role).toBe(false);
       expect(await hasTablePrivilege(client, 'BudgetCounter', 'SELECT'), role).toBe(false);
       expect(await hasTablePrivilege(client, 'KillSwitchState', 'SELECT'), role).toBe(false);
+    }
+  });
+
+  it('enforces claim/effect ledger access for non-host LOGIN roles', async () => {
+    const unitId = await unitIdForDirectWrite();
+    const claimId = `core01-role-claim-${suffix}`;
+    const effectId = `core01-role-effect-${suffix}`;
+    await testDb.executionUnitHostClaim.create({
+      data: {
+        id: claimId,
+        executionUnitId: unitId,
+        attempt: 1,
+        scanPlanId: `core01-role-plan-${suffix}`,
+        userId: `core01-role-user-${suffix}`,
+        hostInstanceId: 'fixture-host',
+        claimTokenHash: 'a'.repeat(64),
+      },
+    });
+    await testDb.effectAuthorization.create({
+      data: {
+        id: effectId,
+        executionUnitId: unitId,
+        attempt: 1,
+        kind: 'PROVISION',
+        ordinal: 1,
+        userId: `core01-role-user-${suffix}`,
+      },
+    });
+
+    for (const roleName of ['api', 'worker', 'orchestrator', 'operator', 'nobody'] as const) {
+      const client = clientFor(roleName);
+      await expect(
+        client.$queryRaw`SELECT "claimTokenHash" FROM "ExecutionUnitHostClaim" WHERE id = ${claimId}`,
+        `${roleName} must not read a host claim`,
+      ).rejects.toThrow(/permission denied|42501/i);
+      await expect(
+        client.$executeRaw`INSERT INTO "ExecutionUnitHostClaim"
+          (id,"executionUnitId",attempt,"scanPlanId","userId","hostInstanceId","claimTokenHash")
+          VALUES (${`${claimId}-${roleName}`},${unitId},2,'foreign-plan','foreign-user','attacker',${'b'.repeat(64)})`,
+        `${roleName} must not create a host claim`,
+      ).rejects.toThrow(/permission denied|42501/i);
+      const effectRead = client.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM "EffectAuthorization" WHERE id = ${effectId}`;
+      if (roleName === 'orchestrator') {
+        await expect(effectRead).resolves.toEqual([{ id: effectId }]);
+      } else {
+        await expect(effectRead, `${roleName} must not read effect authorizations`).rejects.toThrow(
+          /permission denied|42501/i,
+        );
+      }
+      await expect(
+        client.$executeRaw`INSERT INTO "EffectAuthorization"
+          (id,"executionUnitId",attempt,kind,ordinal,"userId")
+          VALUES (${`${effectId}-${roleName}`},${unitId},2,'PROVISION',2,'foreign-user')`,
+        `${roleName} must not create an effect authorization`,
+      ).rejects.toThrow(/permission denied|42501/i);
+      await expect(
+        client.$executeRaw`UPDATE "EffectAuthorization" SET state = 'CONFIRMED' WHERE id = ${effectId}`,
+        `${roleName} must not confirm an effect directly`,
+      ).rejects.toThrow(/permission denied|42501/i);
+      await expect(
+        client.$queryRaw`SELECT public.fahes_lock_live_lease('missing-execution')`,
+        `${roleName} must not invoke the host-only lease-lock helper`,
+      ).rejects.toThrow(/permission denied|42501/i);
     }
   });
 
@@ -509,13 +637,13 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
 
 describe('SECURITY DEFINER entry points are granted narrowly', () => {
   it('matches the exact CORE-01 SECURITY DEFINER execution matrix with no PUBLIC grants', async () => {
-    const matrix = {
+    const matrix: Record<string, RoleName[]> = {
       'fahes_dependency_same_plan()': [],
       'fahes_finalize_unit(text,text,text,"FailureClass",text,jsonb)': ['host', 'orchestrator'],
       'fahes_lock_execution_evidence(text,text,integer,text,text)': ['host'],
       'fahes_lock_live_lease(text)': ['host'],
       'fahes_pending_stop_reason(text,text,text,text,text)': ['host', 'orchestrator'],
-    } satisfies Record<string, RoleName[]>;
+    };
 
     for (const [signature, allowedRoles] of Object.entries(matrix)) {
       expect(await publicCanExecuteFunction(clientFor('nobody'), signature), signature).toBe(false);

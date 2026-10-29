@@ -11,7 +11,7 @@
 import { Suspense, useRef, useState, type FormEvent } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthPrimaryButton, Field } from '../../../components/auth/AuthFrame';
-import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
+import { AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
 import { useTranslations } from 'next-intl';
 import { ApiError, resetPassword } from '../../../lib/api';
 
@@ -68,6 +68,20 @@ function ResetPageInner(): React.ReactElement {
     );
   }
 
+  if (token === '') {
+    return (
+      <AuthShell
+        form={
+          <AuthFormPanel
+            title={t('reset_invalid_title')}
+            lead={t('reset_missing_link')}
+            foot={<a href="/forgot-password">{t('reset_foot_link')}</a>}
+          />
+        }
+      />
+    );
+  }
+
   return (
     <AuthShell
       form={
@@ -76,11 +90,14 @@ function ResetPageInner(): React.ReactElement {
           lead={t('reset_lead')}
           foot={<a href="/login">{t('reset_foot_link')}</a>}
         >
-          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
             <Field
               label={t('new_password')}
               type="password"
               autoComplete="new-password"
+              required
+              minLength={12}
+              maxLength={200}
               placeholder={t('password_hint')}
               value={pw}
               onChange={(e) => {
@@ -91,6 +108,9 @@ function ResetPageInner(): React.ReactElement {
               label={t('confirm_password')}
               type="password"
               autoComplete="new-password"
+              required
+              minLength={12}
+              maxLength={200}
               placeholder={t('repeat_it')}
               value={confirm}
               onChange={(e) => {
@@ -115,14 +135,8 @@ function ResetPageInner(): React.ReactElement {
               </svg>
               {t('min_chars')}
             </div>
-            {confirm !== '' && !matches && (
-              <div className="text-marketing-body font-marketing text-sev-critical">
-                {t('error_passwords_match')}
-              </div>
-            )}
-            {error !== null && (
-              <div className="text-marketing-body font-marketing text-sev-critical">{error}</div>
-            )}
+            {confirm !== '' && !matches && <AuthStatus>{t('error_passwords_match')}</AuthStatus>}
+            {error !== null && <AuthStatus>{error}</AuthStatus>}
             <AuthPrimaryButton type="submit" fullWidth disabled={!ok || submitting}>
               {t('reset_submit')}
             </AuthPrimaryButton>

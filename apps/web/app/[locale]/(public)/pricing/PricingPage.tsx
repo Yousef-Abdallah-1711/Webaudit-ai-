@@ -5,12 +5,9 @@
  * design-system/ui_kits/marketing/Pricing.jsx (`PricingPage`, `TierGrid`,
  * `CostTable`).
  *
- * The tier prices ($0 / $29 / $99 / $299) are the vendored source's own
- * placeholder figures — monetary price points are an unresolved open item
- * (see research.md / CLAUDE.md "Known open items" #3), so this port keeps
- * the source's numbers rather than inventing a wiring to `GET /billing/plans`
- * that the marketing page has no session for. The credit and retention
- * figures do match `packages/config`'s `PLAN_TIERS`.
+ * Cash prices for paid tiers are unresolved. Do not display placeholder
+ * amounts from the vendored reference; plan credits and entitlements come
+ * from `@webaudit/config` and remain accurate here.
  *
  * `useLang()` keeps this a Client Component so the existing language-based
  * headline direction updates with the active language.
@@ -42,18 +39,14 @@ type StaticFeatureKey =
   | 'pricing_feature_everything_pro';
 
 type PricingFeature =
-  | { readonly key: CountedFeatureKey; readonly count: number }
-  | { readonly key: StaticFeatureKey };
+  { readonly key: CountedFeatureKey; readonly count: number } | { readonly key: StaticFeatureKey };
 
 interface Tier {
   readonly nameKey:
-    | 'pricing_tier_free'
-    | 'pricing_tier_starter'
-    | 'pricing_tier_pro'
-    | 'pricing_tier_business';
+    'pricing_tier_free' | 'pricing_tier_starter' | 'pricing_tier_pro' | 'pricing_tier_business';
   readonly credits: number;
   readonly creditsKey: 'pricing_credits_once' | 'pricing_credits_monthly';
-  readonly price: string;
+  readonly price: string | null;
   readonly feat: readonly PricingFeature[];
   readonly ctaKey:
     | 'pricing_cta_start_free'
@@ -91,7 +84,7 @@ const TIERS: readonly Tier[] = [
     nameKey: 'pricing_tier_starter',
     credits: PLAN_CREDITS.starter,
     creditsKey: 'pricing_credits_monthly',
-    price: '$29',
+    price: null,
     feat: [
       { key: 'pricing_feature_concurrent_audits', count: 1 },
       { key: 'pricing_feature_retention_days', count: 30 },
@@ -104,7 +97,7 @@ const TIERS: readonly Tier[] = [
     nameKey: 'pricing_tier_pro',
     credits: PLAN_CREDITS.pro,
     creditsKey: 'pricing_credits_monthly',
-    price: '$99',
+    price: null,
     feat: [
       { key: 'pricing_feature_concurrent_audits', count: 3 },
       { key: 'pricing_feature_retention_months', count: 12 },
@@ -118,7 +111,7 @@ const TIERS: readonly Tier[] = [
     nameKey: 'pricing_tier_business',
     credits: PLAN_CREDITS.business,
     creditsKey: 'pricing_credits_monthly',
-    price: '$299',
+    price: null,
     feat: [
       { key: 'pricing_feature_concurrent_audits', count: 6 },
       { key: 'pricing_feature_retention_months', count: 24 },
@@ -139,7 +132,10 @@ interface CostRow {
 }
 
 const COST_ROWS: readonly CostRow[] = [
-  { labelKey: 'pricing_cost_one_area', credits: { minimum: MIN_AREA_COST, maximum: MAX_AREA_COST } },
+  {
+    labelKey: 'pricing_cost_one_area',
+    credits: { minimum: MIN_AREA_COST, maximum: MAX_AREA_COST },
+  },
   { labelKey: 'pricing_cost_full_audit', credits: FULL_AUDIT_COST },
   { labelKey: 'pricing_cost_targeted_recheck', credits: REVERIFY_COST },
   { labelKey: 'pricing_cost_readiness_pass', credits: READINESS_PASS_COST },
@@ -161,8 +157,12 @@ export function TierGrid(): React.ReactElement {
             {tier.pop && <Badge tone="accent">{t('pricing_badge_most_depth')}</Badge>}
           </div>
           <div>
-            <span className="type-h3">{tier.price}</span>
-            <span className="type-small text-text-muted">{t('pricing_price_period_month')}</span>
+            <span className={tier.price === null ? 'type-small text-text-muted' : 'type-h3'}>
+              {tier.price ?? t('pricing_cash_unset')}
+            </span>
+            {tier.price !== null && tier.nameKey !== 'pricing_tier_free' && (
+              <span className="type-small text-text-muted">{t('pricing_price_period_month')}</span>
+            )}
           </div>
           <div className="font-mono text-[0.8125rem] text-text-secondary">
             {t(tier.creditsKey, { count: tier.credits })}
@@ -173,9 +173,7 @@ export function TierGrid(): React.ReactElement {
                 key={feature.key + ('count' in feature ? feature.count : '')}
                 className="type-small text-text-primary"
               >
-                {'count' in feature
-                  ? t(feature.key, { count: feature.count })
-                  : t(feature.key)}
+                {'count' in feature ? t(feature.key, { count: feature.count }) : t(feature.key)}
               </div>
             ))}
           </div>
@@ -227,7 +225,9 @@ export default function PricingPage(): React.ReactElement {
     <PublicPage active="nav_pricing">
       <section dir={dir} className="px-6 pt-[4.5rem] pb-11 text-center">
         <h1 className="m-0 type-display">{t('pricing_headline')}</h1>
-        <p className="mx-auto mt-[1.125rem] mb-0 max-w-[56ch] type-lead text-text-secondary">{t('pricing_lead')}</p>
+        <p className="mx-auto mt-[1.125rem] mb-0 max-w-[56ch] type-lead text-text-secondary">
+          {t('pricing_lead')}
+        </p>
       </section>
       <section dir={dir} className="px-6 pb-20">
         <div className="mx-auto max-w-public-shell">

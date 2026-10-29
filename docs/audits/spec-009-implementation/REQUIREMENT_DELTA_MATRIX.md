@@ -106,7 +106,7 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 040 | VERIFIED COMPLETE as an invariant so far | legacy sweep/orchestrator tests green with the new optional hooks; re-verified after the full unit run |
 | 043 | MISSING | per-engine observability |
 | 046 | VERIFIED COMPLETE for code that exists | no AI/provider imports in any new module |
-| 047 | PARTIAL | T-U1-1..9 checked; T-U1-10 AC matrix partially covered, with AC-5/12/17/19 evidence gaps |
+| 047 | PARTIAL | T-U1-1..9 checked; T-U1-10 AC matrix partially covered, with AC-12/17/19 evidence gaps and remaining race/fairness and production wiring checks |
 
 **Totals (49 FR items):** IMPLEMENTED-TESTED 27 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
 
@@ -123,7 +123,7 @@ Freshly verified in this continuation:
 | FR-017/018 queue and durable execution path | `execution-runtime.test.ts` 16/16 on disposable PG, Redis and BullMQ; duplicate delivery and strict payload covered | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; production worker composition remains missing |
 | FR-021/022 safety and kill handling | same suite covers cancellation, operator kill, revoked grant and lease loss | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; actual API/worker role composition remains open |
 | FR-027 progress | Redis messages observed on the execution-unit channel in the same suite | PARTIAL; authenticated client consumption/reconnect recovery unverified |
-| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry, ready-gate, and engine evidence-fence paths verified; 125 focused U-1 tests, 25 API evidence tests, 21 real PG/Redis/BullMQ runtime tests, and 2 refund-staleness adverse tests pass | PARTIAL; AC-5/12/17/19 evidence gaps, remaining race/fairness and production worker wiring remain |
+| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry, ready-gate, engine evidence-fence, and actual worker crash/replacement paths verified; 125 focused U-1 tests, 25 API evidence tests, 22 real PG/Redis/BullMQ runtime tests, and 2 refund-staleness adverse tests pass | PARTIAL; AC-12/17/19 evidence gaps, remaining race/fairness and production worker wiring remain |
 | CORE-01 finalizer privileges | fresh 35-migration disposable DB; real LOGIN-role suite 22/22, including exact table-level grants for all CORE-01 tables/roles, exact CORE-01 SECURITY DEFINER execute grants with no PUBLIC access, host direct-terminal-write refusal, cross-plan dependency rejection, raw F07 table denial, and API-login passive/authorized BROWSER plan resolution plus F01 authorization | PARTIAL; broader tenant/effect abuse cases and full HTTP API/queue plus deployed API/worker production-service flow remain open |
 | FR-031…035 artifact lifecycle | reaper handler and repeatable schedule are wired by static inspection | PARTIAL; R2 and end-to-end retention/reaper lifecycle not run |
 
@@ -133,7 +133,7 @@ This session did not rebuild every FR row from source and tests; no replacement 
 
 ## Current full-suite re-review — 2026-10-29
 
-This section supersedes the earlier status totals above. The complete isolated serial unit/contract/integration workspace and adverse workspace have now been rerun, the SPEC 009 worker integration is 21/21, and the complete Playwright E2E suite is 93/93. “TESTED” means the requirement's implemented component has current automated evidence; it does **not** imply the production API-to-worker scan path exists. “PARTIAL” means material lifecycle, production wiring, external service, or acceptance evidence is still absent.
+This section supersedes the earlier status totals above. The complete isolated serial unit/contract/integration workspace and adverse workspace have been rerun, the latest SPEC 009 worker integration is 22/22, and the complete Playwright E2E suite is 93/93. “TESTED” means the requirement's implemented component has current automated evidence; it does **not** imply the production API-to-worker scan path exists. “PARTIAL” means material lifecycle, production wiring, external service, or acceptance evidence is still absent.
 
 | FR | Current status | Current evidence and remaining gap |
 |---|---|---|
@@ -181,13 +181,13 @@ This section supersedes the earlier status totals above. The complete isolated s
 | 040 | VERIFIED INVARIANT | Passive/legacy scan behavior remains unchanged in full regression and browser suites; no SPEC 009 path is wired into legacy scans. |
 | 041 | TESTED | Tenant scoping on new entities is tested; production API exposure remains absent. |
 | 042 | TESTED | R2 key shape and tenant/scan scoping validation pass fake-store tests; real R2 remains unverified. |
-| 043 | MISSING | Per-engine observability instrumentation and measured engine metrics are not implemented. |
+| 043 | PARTIAL | Worker host now emits a redacted structured per-engine event with DB-derived queue wait/duration, attempt, terminal status/failure class, cost, active-on-host concurrency, child CPU/RSS, health and cancellation/kill reason. Real PostgreSQL/Redis/BullMQ integration covers successful, infrastructure-failure, and operator-kill telemetry. No production SPEC 010–012 adapter is registered, and there is no deployed log aggregation/health view or load-level concurrency/resource baseline. |
 | 044 | NOT APPLICABLE | Pricing design is expressly out of scope; existing billing remains authoritative. |
 | 045 | NOT APPLICABLE | Credential storage design is expressly out of scope; opaque credential binding is the boundary. |
 | 046 | VERIFIED INVARIANT | Static review confirms no AI/provider calls in SPEC 009 planning, execution-control or evidence modules. |
-| 047 | PARTIAL | Deadline, gate, sweep, runtime hard-stop and engine evidence-fence paths are tested; AC-5 covers mutable progress, duplicate delivery and consumer recreation, and AC-12 covers a live scheduled PLANNED-unit expiry; process restart/in-flight recovery, active-engine termination, deployed clock-skew, production-engine and production-wiring evidence remain. |
+| 047 | PARTIAL | Deadline, gate, sweep, runtime hard-stop, engine evidence-fence, and actual execution-worker crash/replacement paths are tested. The dated U-1 evidence audit in `DEFINITION_OF_DONE.md` maps AC-1..AC-20 to current source/tests. Production-engine termination/backstop evidence for AC-12/19 and deployed NTP/skew-bound evidence for AC-17 remain absent. |
 
-**Current tally (49 entries): 2 VERIFIED INVARIANT · 27 TESTED · 16 PARTIAL · 1 MISSING · 3 NOT APPLICABLE.** This is a component-evidence tally, not a declaration that SPEC 009 is end-to-end complete. The production API plan producer, production engine registration, authenticated progress recovery, full runtime privilege matrix, R2 lifecycle, observability, performance, manual acceptance, and several contract-specific lifecycle checks remain open.
+**Current tally (49 entries): 2 VERIFIED INVARIANT · 27 TESTED · 17 PARTIAL · 0 MISSING · 3 NOT APPLICABLE.** This is a component-evidence tally, not a declaration that SPEC 009 is end-to-end complete. The production API plan producer, production engine registration, authenticated progress recovery, full runtime privilege matrix, R2 lifecycle, deployed observability/health aggregation, performance, manual acceptance, and several contract-specific lifecycle checks remain open.
 
 ### Success criteria recheck
 
@@ -200,4 +200,24 @@ This section supersedes the earlier status totals above. The complete isolated s
 | 005 | PARTIAL | Database-backed quickstart components are tested; no production API-to-worker plan lifecycle exists. |
 | 006 | NOT APPLICABLE | Planning-pass scope criterion, superseded by implementation phase. |
 | 007 | PARTIAL | Generic child/adapter contract is testable; no registered production engine to validate the author workflow. |
-| 008 | PARTIAL | Deadline arithmetic and runtime checks pass; the full U-1 AC matrix and production lifecycle remain. |
+| 008 | PARTIAL | Deadline arithmetic and runtime checks pass; production-engine termination/backstop evidence and deployed clock-skew proof remain. |
+
+## Full regression refresh — 2026-10-29
+
+- Full serial unit/contract/integration workspace: **244/244 files, 1,864/1,864 tests passed** on disposable PostgreSQL and Redis `127.0.0.1:6391`.
+- Full adverse workspace: **73/73 files, 1,151 passed, 1 skipped** on the same isolated services. The skip is the existing capability-sdk adverse skip.
+- `vitest.workspace.ts` now uses `TEST_REDIS_URL` when supplied. The production cookie integration child was corrected to use that setting and passed **2/2** against isolated Redis.
+- The current focused SPEC 009 evidence is worker runtime **22/22**, planned sweep plus registry **15/15**, CORE-01 LOGIN-role matrix **22/22**, and child-disconnect **1/1**. Neither the production API-to-plan path nor production engines were introduced; FR-047 remains PARTIAL and the overall SPEC remains NOT COMPLETE.
+
+## Current verification and U-1 audit — 2026-10-29
+
+- At the U-1 checkpoint before telemetry, the isolated serial workspace passed **244/244 files, 1,872/1,872 tests**; adverse passed **73/73 files, 1,153 passed, 1 skipped**. The newest post-telemetry totals are recorded in the current regression refresh below.
+- The focused AC-13 sweep/runtime integration pair passed **39/39**. Separate latest recorded evidence remains CORE-01 real LOGIN-role matrix **24/24**, worker PostgreSQL/Redis/BullMQ lifecycle **22/22**, email boot guard **3/3**, and sandbox-unconfigured API contract **1/1**.
+- AC-1..AC-20 now have an explicit source/test mapping in the DoD. This refines the prior “matrix incomplete” wording: local component and test-adapter evidence is mapped, but AC-12/19 still lack production-engine termination/backstop proof and AC-17 lacks deployed NTP/skew-bound proof.
+- FR-043 moved from MISSING to PARTIAL: generic host telemetry is implemented and tested, but production engines and a deployed metrics/log aggregation surface are absent. Updated 49-FR tally: **2 verified invariants, 27 tested, 17 partial, 0 missing, 3 not applicable**.
+
+### Current regression refresh — 2026-10-29
+
+- After the telemetry implementation, the full isolated unit/contract/integration suite passed **244/244 files and 1,874/1,874 tests**; the adverse suite passed **73/73 files, 1,153 passed, 1 skipped**.
+- The complete execution-runtime file passed **24/24**. FR-043 remains PARTIAL because deployed aggregation/health, production-engine measurements, and cross-host/load evidence are not available.
+- The 49-FR tally above is unchanged by this verification refresh. Production API-to-queue scan flow, registered production engines, authenticated progress recovery, full privilege/deployment proof, real R2/outage lifecycle, engine observability, sustained resource/capacity measurements, coverage, visual parity, and manual acceptance remain open. SPEC 009 is **NOT COMPLETE**.

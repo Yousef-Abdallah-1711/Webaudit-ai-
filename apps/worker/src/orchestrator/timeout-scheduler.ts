@@ -18,6 +18,9 @@ import { sweepTimedOutScans, type SweepOptions } from './timeout.js';
 import { createScanEmitter, type EventPublisher } from './emit.js';
 import { createPlannedSweepPort } from './planned-sweep.js';
 import { JOB_NAMES } from '../queue/workers.js';
+import { isPassiveClass } from '@webaudit/api/planning';
+import type { ExecutionAdapter } from '../execution-runtime/adapter.js';
+import type { ExpiredUnit } from '@webaudit/api/execution-runtime';
 
 export const TIMEOUT_SWEEP_JOB_NAME = JOB_NAMES.timeoutSweep;
 
@@ -55,6 +58,10 @@ export async function scheduleTimeoutSweep(maintenanceQueue: Queue): Promise<voi
 export interface TimeoutSweepHandlerDeps {
   readonly db: PrismaClient;
   readonly publisher: EventPublisher;
+  readonly executionAdapters?: readonly Pick<
+    ExecutionAdapter,
+    'engineId' | 'onUnitExpired' | 'hardStopMarginMs'
+  >[];
 }
 
 /**
@@ -63,6 +70,23 @@ export interface TimeoutSweepHandlerDeps {
  * `terminal-refund.ts` and the orchestrator already use.
  */
 export function createTimeoutSweepHandler(deps: TimeoutSweepHandlerDeps): () => Promise<void> {
+  const adapters = new Map(
+    (deps.executionAdapters ?? []).map((adapter) => [adapter.engineId, adapter]),
+  );
+  const expiry =
+    deps.executionAdapters === undefined
+      ? undefined
+      : {
+          onUnitExpired: async (unit: ExpiredUnit) => {
+            if (isPassiveClass(unit.executionUnitClass)) return 'TERMINATED' as const;
+            const adapter = adapters.get(unit.engineId);
+            return adapter?.onUnitExpired === undefined
+              ? ('PENDING' as const)
+              : adapter.onUnitExpired(unit);
+          },
+          hardStopMarginForUnit: (unit: { engineId: string }) =>
+            adapters.get(unit.engineId)?.hardStopMarginMs ?? 60_000,
+        };
   const refund: SweepOptions['refund'] = async ({ scanId, credits, reason }) => {
     const debitTx = await deps.db.creditTransaction.findFirst({
       where: { scanId, type: 'DEBIT' },
@@ -82,7 +106,7 @@ export function createTimeoutSweepHandler(deps: TimeoutSweepHandlerDeps): () => 
       maxDurationMs: maxScanDurationMs(),
       batchSize: 50,
       // SPEC 009 U-1: planned + self-healing passes; a no-op for scans without a plan.
-      planned: createPlannedSweepPort(deps.db),
+      planned: createPlannedSweepPort(deps.db, expiry === undefined ? {} : { expiry }),
     });
     const timedOut = outcomes.filter((o) => o.timedOut);
     if (timedOut.length > 0) {

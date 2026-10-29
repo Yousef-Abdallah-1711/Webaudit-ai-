@@ -315,11 +315,34 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       res.status(404).json(NOT_FOUND);
       return;
     }
+    const plans = await db.scanPlan.findMany({
+      where: { scanId: scan.id, userId },
+      orderBy: { resolvedAt: 'asc' },
+      select: {
+        id: true,
+        kind: true,
+        state: true,
+        executionUnits: {
+          orderBy: [{ priority: 'asc' }, { id: 'asc' }],
+          select: {
+            id: true,
+            executionUnitClass: true,
+            status: true,
+            progressSnapshot: true,
+            progressIndeterminate: true,
+          },
+        },
+      },
+    });
+    const executionPlans = plans.map(({ executionUnits, ...plan }) => ({
+      ...plan,
+      units: executionUnits,
+    }));
     const queuePosition =
       scan.state === 'QUEUED' && producer.getQueuePosition !== undefined
         ? await producer.getQueuePosition(scan.id)
         : null;
-    res.status(200).json({ scan: { ...scan, queuePosition } });
+    res.status(200).json({ scan: { ...scan, executionPlans, queuePosition } });
   });
 
   router.post('/:id/cancel', async (req: AuthedRequest, res: Response) => {

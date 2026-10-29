@@ -3,6 +3,19 @@ import { fileURLToPath } from 'node:url';
 import type { ForkedChild, UnitObservation } from '@webaudit/api/execution-runtime';
 import type { AdapterContext, AdapterUnit } from './adapter.js';
 
+export interface ChildResourceUsage {
+  readonly userCPUTimeMicros: number;
+  readonly systemCPUTimeMicros: number;
+  readonly maxRSSNativeUnits: number;
+  readonly rssBytesAtCompletion: number;
+  readonly platform: NodeJS.Platform;
+}
+
+export interface ChildRunResult {
+  readonly observation: UnitObservation;
+  readonly resourceUsage: ChildResourceUsage | null;
+}
+
 type RpcRequest = {
   type: 'rpc';
   requestId: number;
@@ -13,7 +26,7 @@ type RpcRequest = {
 type ChildMessage =
   | RpcRequest
   | { type: 'progress'; tick: Parameters<AdapterContext['progress']>[0] }
-  | { type: 'result'; observation: unknown }
+  | { type: 'result'; observation: unknown; resourceUsage: unknown }
   | { type: 'failure' };
 
 type RpcResponse = {
@@ -31,7 +44,7 @@ export interface IsolatedExecutionChild extends ForkedChild {
     unit: AdapterUnit,
     context: AdapterContext,
     onCheckpointStop: () => void,
-  ): Promise<UnitObservation>;
+  ): Promise<ChildRunResult>;
 }
 
 /** Start one clean OS process with no database, Redis, storage, or provider credentials in its environment. */
@@ -59,7 +72,7 @@ export function forkExecutionChild(): IsolatedExecutionChild {
 
 function createHandle(child: ChildProcess): IsolatedExecutionChild {
   const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
-  let execution: { resolve(value: UnitObservation): void; reject(error: Error): void } | undefined;
+  let execution: { resolve(value: ChildRunResult): void; reject(error: Error): void } | undefined;
   let termination: Promise<void> | undefined;
 
   child.on('message', (raw: unknown) => {
@@ -87,7 +100,8 @@ function createHandle(child: ChildProcess): IsolatedExecutionChild {
       const observation = parseObservation(raw.observation);
       if (observation === null)
         execution?.reject(new Error('execution child returned invalid observation'));
-      else execution?.resolve(observation);
+      else
+        execution?.resolve({ observation, resourceUsage: parseResourceUsage(raw.resourceUsage) });
       execution = undefined;
       return;
     }
@@ -157,7 +171,7 @@ function createHandle(child: ChildProcess): IsolatedExecutionChild {
       if (execution !== undefined) throw new Error('execution child already started');
       context = adapterContext;
       requestHostStop = onCheckpointStop;
-      const result = new Promise<UnitObservation>((resolve, reject) => {
+      const result = new Promise<ChildRunResult>((resolve, reject) => {
         execution = { resolve, reject };
       });
       await send(child, { type: 'start', moduleUrl, exportName, unit });
@@ -271,7 +285,46 @@ function isProgressMessage(value: unknown): value is Extract<ChildMessage, { typ
 }
 
 function isResultMessage(value: unknown): value is Extract<ChildMessage, { type: 'result' }> {
-  return isRecord(value) && value['type'] === 'result' && 'observation' in value;
+  return (
+    isRecord(value) &&
+    value['type'] === 'result' &&
+    'observation' in value &&
+    'resourceUsage' in value
+  );
+}
+
+function parseResourceUsage(value: unknown): ChildResourceUsage | null {
+  if (!isRecord(value)) return null;
+  const numberFields = [
+    'userCPUTimeMicros',
+    'systemCPUTimeMicros',
+    'maxRSSNativeUnits',
+    'rssBytesAtCompletion',
+  ] as const;
+  if (
+    !numberFields.every((field) => Number.isFinite(value[field]) && Number(value[field]) >= 0) ||
+    typeof value['platform'] !== 'string' ||
+    ![
+      'win32',
+      'linux',
+      'darwin',
+      'freebsd',
+      'openbsd',
+      'sunos',
+      'aix',
+      'android',
+      'cygwin',
+    ].includes(value['platform'])
+  ) {
+    return null;
+  }
+  return {
+    userCPUTimeMicros: Number(value['userCPUTimeMicros']),
+    systemCPUTimeMicros: Number(value['systemCPUTimeMicros']),
+    maxRSSNativeUnits: Number(value['maxRSSNativeUnits']),
+    rssBytesAtCompletion: Number(value['rssBytesAtCompletion']),
+    platform: value['platform'] as NodeJS.Platform,
+  };
 }
 
 function isFailureMessage(value: unknown): value is Extract<ChildMessage, { type: 'failure' }> {

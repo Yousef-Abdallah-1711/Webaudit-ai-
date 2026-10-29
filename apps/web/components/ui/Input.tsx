@@ -6,10 +6,13 @@
  * the same reason: `Input.prompt.md` says "focus is a 1px #fa7014 ring and
  * nothing else", which `:focus` alone is enough to express.
  */
-import type { ChangeEventHandler, HTMLInputTypeAttribute } from 'react';
+import type { ChangeEventHandler, HTMLInputTypeAttribute, InputHTMLAttributes } from 'react';
 import { cn } from '../../lib/cn';
 
-export interface InputProps {
+export interface InputProps extends Pick<
+  InputHTMLAttributes<HTMLInputElement>,
+  'autoFocus' | 'inputMode' | 'maxLength' | 'minLength' | 'name' | 'pattern' | 'required'
+> {
   /** Inline prefix, e.g. "https://" — reserves the measured 64px left padding */
   prefix?: string;
   placeholder?: string;

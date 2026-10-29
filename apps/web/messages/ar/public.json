@@ -1,5 +1,6 @@
 {
-  "promo": "أول تدقيق مجاناً — {freeCredits, number} رصيداً",
+  "promo": "احصل على {freeCredits, number} رصيداً مجانياً لفحص مجالين أو ثلاثة",
+  "hero_url_invalid": "أدخل رابط موقع صالحاً يبدأ بـ http:// أو https://.",
   "hero_lead": "تظن أن موقعك جاهز؟",
   "hero_accent": "أثبت ذلك، ثم أطلقه.",
   "hero_kicker": "جاهزية الإنتاج تبدأ بالدليل",
@@ -65,6 +66,7 @@
   "pricing_cta_choose_business": "اختر خطة الأعمال",
   "pricing_badge_most_depth": "الأشمل",
   "pricing_price_period_month": " / شهريًا",
+  "pricing_cash_unset": "السعر لم يُعلن بعد",
   "pricing_cost_eyebrow": "تكلفة الخدمات",
   "pricing_cost_one_area": "تدقيق مجال واحد",
   "pricing_cost_full_audit": "تدقيق كامل يشمل المجالات {areaCount, plural, =5 {الخمسة} other {#}} ضمن الحزمة",

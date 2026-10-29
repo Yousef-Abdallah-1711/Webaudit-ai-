@@ -60,7 +60,7 @@ For DB changes, use the schema section below and the row's named models.
 | Quotes, credits, refunds | `API/services/credits/`, `API/services/intake/create-scan.ts`, `API/routes/billing.routes.ts`; `packages/config/src/pricing.ts`, `packages/config/src/refund.ts` | CreditLot, CreditTransaction, CreditAllocation; credits, refund, enqueue-failure tests; `scripts/credits-integrity-check.ts` | `PLAN.md` + `TASKS.md` are **credit hardening only**; `docs/superpowers/plans/2026-08-27-credit-refund-integrity.md`; cancellation spec below |
 | Plans, payments, retention | `API/services/billing/`, `API/routes/billing.routes.ts`, `API/routes/webhooks.routes.ts`, `API/services/storage/retention.ts`; `WEB/app/(dashboard)/billing/` | Plan, Subscription, BillingEvent + credit models; billing, renewal, entitlement, retention tests | BASE spec FR-073-082/FR-092; credit PLAN; production-readiness plan for payment gaps |
 | Scan phases, cancellation, timeout | `WORKER/orchestrator/`, `WORKER/module-runner/`, `WORKER/queue/`, `API/services/queue/`, `API/routes/scans.routes.ts`; `packages/config/src/queues.ts`, `packages/config/src/cancellation.ts` | Scan, ModuleResult, CapabilityExecution; worker integration/adverse: phase, cancel, timeout, layer-ordering | BASE plan/realtime contract; `specs/002-fix-cancel-timeout-refunds/` |
-| Scan planning and execution units (SPEC 009) | `API/services/planning/` (profiles, deterministic resolver, graph, deadlines); `API/services/execution-runtime/`; `WORKER/execution-runtime/` (queues, host, per-unit child process + IPC); `WORKER/src/index.ts` adapter composition | ScanPlan, ExecutionUnit, ExecutionDependency, Evidence, Artifact; `apps/worker/tests/integration/execution-runtime.test.ts`; API planning unit/contract tests; worker kill-switch adverse tests | `specs/009-core-scan-execution-platform/` contracts, especially `execution-plan-contract.md`, `execution-runtime-contract.md`, and `scan-deadline-contract.md`; `docs/audits/spec-009-implementation/DEFINITION_OF_DONE.md` |
+| Scan planning and execution units (SPEC 009) | `API/services/planning/` (profiles, deterministic resolver, graph, deadlines); `API/services/execution-runtime/`; `WORKER/execution-runtime/` (queues, host, per-unit child process + IPC); `WORKER/src/index.ts` adapter composition | ScanPlan, ExecutionUnit, ExecutionDependency, Evidence, Artifact; `apps/worker/tests/integration/{execution-runtime,planned-timeout-sweep}.test.ts`; `apps/worker/tests/unit/execution-adapter-registry.test.ts`; `apps/worker/tests/adverse/execution-child-disconnect.test.ts`; `apps/api/tests/adverse/core01-role-isolation.test.ts`; API planning unit/contract tests; `scripts/spec009-dag-benchmark.ts` | `specs/009-core-scan-execution-platform/` contracts, especially `execution-plan-contract.md`, `execution-runtime-contract.md`, and `scan-deadline-contract.md`; `docs/audits/spec-009-implementation/DEFINITION_OF_DONE.md`; `docs/audits/spec-009-implementation/PERFORMANCE_BASELINE_2026-10-29.md` |
 | Design-intent questionnaire | `API/services/scans/questionnaire.service.ts`, `WORKER/orchestrator/questionnaire-timeout-handler.ts`, `WEB/components/scan/UIQuestionnaire.tsx` | DesignIntent/Scan; questionnaire integration/race tests | BASE spec FR-040-047, research R4/R19; domain safeguards |
 | Realtime progress | `API/services/realtime/`, `WORKER/orchestrator/emit.ts`, `WEB/lib/realtime.ts`, `WEB/components/scan/ScanProgress.tsx` | Persisted Scan/ModuleResult; progress-streaming, realtime-upgrade-limits tests | `BASE/contracts/realtime-and-internal.md`; realtime safeguards |
 | Registry, vendored/installed capabilities | `API/services/registry/`, `API/services/admin/capability-upload.service.ts`, `WORKER/orchestrator/capability-loader.ts`, `packages/capability-sdk/` | Capability, CapabilityPlan, CapabilityExecution; conformance, installed-capability, capability-lifecycle tests | `BASE/contracts/capability-contract.md`; `docs/superpowers/plans/2026-09-09-t253-installed-capability-dispatch.md`; BASE tasks T249-255 |
@@ -105,7 +105,11 @@ page; it is not approved WebAudit design and does not authorize copying its bran
   workspace/installed roots and sandbox URL. Do not copy real environment values into docs.
 - Local services: `infrastructure/docker-compose.yml` (Postgres host 5442, Redis 6389).
   Setup commands: [README.md](README.md). Production:
-  [deployment](infrastructure/deploy.md), [sandbox isolation](infrastructure/sandbox-runner.md).
+  [deployment](infrastructure/deploy.md), including `infrastructure/provision-runtime-db-roles.sql`
+  (migration-only admin DSN provisions separate API/worker LOGIN roles), and
+  [sandbox isolation](infrastructure/sandbox-runner.md). The production compose topology was
+  proven in an isolated throwaway project; the pre-existing local production-named stack still
+  uses its old superuser login until explicitly recreated with the new environment.
   Verify runbook claims against entry points: API **does** have /health; sandbox dispatch **is**
   used by installed-capability scans, despite older runbook wording.
 - Workspace/build gates: `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.base.json`,
@@ -132,6 +136,8 @@ DB/Redis runs; E2E workers compete with a live dev worker if they share queues. 
 the development database and (E2E) Redis DB 0 (`API/../tests/helpers/isolated-database.ts`,
 `WEB/tests/e2e/support/test-config.ts`). E2E stack startup explicitly copies `TEST_REDIS_URL` to
 the API's `REDIS_URL`; always provide both TEST URLs and use an isolated Redis port/database.
+The worker timeout-scheduler integration also requires `EXEC_TEST_REDIS=host:port`; it fails
+closed when this explicit disposable endpoint is missing rather than attempting a default port.
 Without an explicit test workspace override, DB-backed Vitest projects inherit the repository's
 Redis DB 15 default and may touch the shared development Redis, including credential rate-limiter
 keys; do not overlap them with other work. A DB-backed Vitest run truncates the configured test

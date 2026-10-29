@@ -75,6 +75,63 @@ describe('the fan-out forwards what it can validate', () => {
     expect(forwarded.emittedAt).toBe('2026-08-24T12:00:00.000Z');
   });
 
+  it('validates and redacts unit-progress events before forwarding them to an authenticated scan room', async () => {
+    const { subscriber, broadcaster } = await harness();
+    subscriber.deliver(
+      SCAN_EVENTS_CHANNEL,
+      JSON.stringify({
+        scanId: 'scan_1',
+        emittedAt: '2026-08-24T12:00:00.000Z',
+        event: {
+          type: 'execution:progress',
+          scanId: 'scan_1',
+          executionPlanId: 'plan_1',
+          planKind: 'INITIAL',
+          executionUnitId: 'unit_1',
+          executionUnitClass: 'BROWSER',
+          at: '2026-08-24T12:00:00.000Z',
+          label: 'Requesting AKIAIOSFODNN7EXAMPLE',
+          completedUnits: 1,
+          totalUnits: 3,
+          indeterminate: false,
+          leakedConfiguration: 'must be stripped',
+        },
+      }),
+    );
+
+    expect(broadcaster.sent).toHaveLength(1);
+    expect(broadcaster.sent[0]?.room).toBe(scanRoom('scan_1'));
+    expect(broadcaster.sent[0]?.payload).not.toContain('AKIAIOSFODNN7EXAMPLE');
+    expect(broadcaster.sent[0]?.payload).not.toContain('must be stripped');
+    expect(broadcaster.sent[0]?.payload).toContain('[[REDACTED:');
+  });
+
+  it('drops malformed unit-progress fields instead of forwarding an untyped event', async () => {
+    const { subscriber, broadcaster, fanout } = await harness();
+    subscriber.deliver(
+      SCAN_EVENTS_CHANNEL,
+      JSON.stringify({
+        scanId: 'scan_1',
+        emittedAt: '2026-08-24T12:00:00.000Z',
+        event: {
+          type: 'execution:progress',
+          scanId: 'scan_1',
+          executionPlanId: 'plan_1',
+          planKind: 'INITIAL',
+          executionUnitId: 'unit_1',
+          executionUnitClass: 'BROWSER',
+          at: '2026-08-24T12:00:00.000Z',
+          label: 'Progress',
+          completedUnits: 5,
+          totalUnits: 2,
+          indeterminate: false,
+        },
+      }),
+    );
+    expect(broadcaster.sent).toHaveLength(0);
+    expect(fanout.stats.dropped).toBe(1);
+  });
+
   it('ignores a message on another channel', async () => {
     const { subscriber, broadcaster, fanout } = await harness();
     subscriber.deliver('some:other:channel', VALID);

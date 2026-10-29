@@ -7,11 +7,14 @@
  */
 
 import { Redis } from 'ioredis';
+import { fork, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
+import { fileURLToPath } from 'node:url';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { testDb as db, resetDb, closeDb } from '@webaudit/api/test-db';
+import { testDb as db, TEST_DB_URL, resetDb, closeDb } from '@webaudit/api/test-db';
 import { PrismaClient } from '@webaudit/api/prisma-client';
 import { triggerStop } from '@webaudit/api/safety';
+import { SCAN_EVENTS_CHANNEL } from '@webaudit/types';
 import {
   casHostTransition,
   claimUnitHost,
@@ -37,6 +40,7 @@ import {
   createExecWorkers,
   createExecutionJobHandler,
   enqueueEligibleUnits,
+  execJobId,
   enqueueExecutionUnit,
   EXEC_JOB_NAME,
   type ExecQueueSet,
@@ -94,7 +98,10 @@ function start(
     hostInstanceId: `host-${Math.random().toString(36).slice(2, 6)}`,
     loopIntervalMs: 100,
     progressMinIntervalMs: 50,
-    gateFor: () => ({ enqueueMaster: () => (gateCalls.push(w.scanId), Promise.resolve()) }),
+    gateFor: () => ({
+      claimContinuation: () => Promise.resolve(true),
+      enqueueMaster: () => (gateCalls.push(w.scanId), Promise.resolve()),
+    }),
     onUnitCompleted: (planId) => enqueueEligibleUnits(db as never, queues, planId),
     ...extra,
   });
@@ -120,6 +127,7 @@ beforeAll(async () => {
   sub = new Redis({ host: connection.host, port: connection.port });
   sub.on('message', (channel, message) => messages.push({ channel, message }));
   await sub.psubscribe('unit-progress:*');
+  await sub.subscribe(SCAN_EVENTS_CHANNEL);
   sub.on('pmessage', (_p, channel, message) => messages.push({ channel, message }));
 });
 beforeEach(() => {
@@ -133,7 +141,7 @@ afterEach(async () => {
   await queues.close();
 });
 afterAll(async () => {
-  await sub.quit();
+  if (typeof sub !== 'undefined') await sub.quit();
   await closeDb();
 });
 
@@ -148,12 +156,15 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
     const h = createTestAdapter(w);
     const publisher = new Redis({ host: connection.host, port: connection.port });
-    const phaseJobs: string[] = [];
+    const phaseJobs: { phase: string; alreadyTransitioned?: boolean | undefined }[] = [];
     const service = startWorker({
       connection,
       db: db as never,
       publisher,
-      handlers: { phase: async (data) => void phaseJobs.push(data.phase) },
+      handlers: {
+        phase: async (data) =>
+          void phaseJobs.push({ phase: data.phase, alreadyTransitioned: data.alreadyTransitioned }),
+      },
       executionAdapters: [h.adapter],
       executionArtifactStore: store,
       installSignalHandlers: false,
@@ -164,7 +175,13 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
       expect(service.executionQueues).toBeDefined();
       expect(await enqueueEligibleUnits(db as never, service.executionQueues!, w.planId)).toBe(1);
       expect(await terminal(a.id)).toBe('COMPLETED');
-      await waitFor(async () => (phaseJobs.includes('RUNNING_MASTER') ? true : false));
+      await waitFor(async () =>
+        phaseJobs.some((job) => job.phase === 'RUNNING_MASTER') ? true : false,
+      );
+      expect(phaseJobs).toContainEqual({ phase: 'RUNNING_MASTER', alreadyTransitioned: true });
+      expect((await db.scan.findUniqueOrThrow({ where: { id: w.scanId } })).state).toBe(
+        'RUNNING_MASTER',
+      );
       expect(await db.evidence.count({ where: { executionUnitId: a.id } })).toBe(1);
     } finally {
       await service.shutdown('integration-test');
@@ -300,6 +317,68 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     expect((evidence.inlinePayload as { processId: number }).processId).not.toBe(process.pid);
   });
 
+  it('emits secret-free per-engine telemetry with measured child resources and lifecycle metrics', async () => {
+    const w = await makeRuntimeWorld();
+    const a = await makeUnit(w, {
+      configuration: { behavior: { kind: 'COMPLETE' }, credentialSentinel: 'must-not-be-logged' },
+    });
+    const telemetry: Array<Record<string, unknown>> = [];
+    start(w, createTestAdapter(w), {
+      log: (message, fields) => {
+        if (message === 'execution unit telemetry' && fields !== undefined) telemetry.push(fields);
+      },
+    });
+    await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
+    expect(await terminal(a.id)).toBe('COMPLETED');
+    await waitFor(async () => (telemetry.length === 1 ? true : false), 4000);
+
+    expect(telemetry[0]).toMatchObject({
+      event: 'execution.unit.telemetry',
+      engineId: 'engine.x',
+      executionUnitClass: 'BROWSER',
+      status: 'COMPLETED',
+      failureClass: null,
+      engineHealth: 'HEALTHY',
+      costMicros: 0,
+    });
+    expect(telemetry[0]!['queueWaitMs']).toEqual(expect.any(Number));
+    expect(telemetry[0]!['durationMs']).toEqual(expect.any(Number));
+    expect(telemetry[0]!['activeOnHost']).toBe(1);
+    expect(telemetry[0]!['resourceUsage']).toMatchObject({
+      userCPUTimeMicros: expect.any(Number),
+      systemCPUTimeMicros: expect.any(Number),
+      rssBytesAtCompletion: expect.any(Number),
+    });
+    expect(JSON.stringify(telemetry)).not.toContain('must-not-be-logged');
+    expect(JSON.stringify(telemetry)).not.toContain('configuration');
+  });
+
+  it('records per-engine failure classification and degraded health in telemetry', async () => {
+    const w = await makeRuntimeWorld();
+    const a = await makeUnit(w, { configuration: { behavior: { kind: 'INFRA' } } });
+    const telemetry: Array<Record<string, unknown>> = [];
+    start(w, createTestAdapter(w), {
+      log: (message, fields) => {
+        if (message === 'execution unit telemetry' && fields !== undefined) telemetry.push(fields);
+      },
+    });
+    await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
+    expect(await terminal(a.id)).toBe('FAILED');
+    await waitFor(async () => (telemetry.length === 1 ? true : false), 4000);
+
+    expect(telemetry[0]).toMatchObject({
+      event: 'execution.unit.telemetry',
+      engineId: 'engine.x',
+      status: 'FAILED',
+      failureClass: 'TRANSIENT_INFRASTRUCTURE',
+      engineHealth: 'DEGRADED',
+      resourceUsage: {
+        userCPUTimeMicros: expect.any(Number),
+        systemCPUTimeMicros: expect.any(Number),
+      },
+    });
+  });
+
   it('runs a two-unit chain: only the root is enqueued, the dependent follows its completion; evidence, progress, effects and lease all settle', async () => {
     const w = await makeRuntimeWorld();
     const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
@@ -320,7 +399,7 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     expect(row.progressSnapshot).not.toBeNull();
   });
 
-  it('delivers progress ticks over Redis on a per-unit channel, never fabricating a total', async () => {
+  it('delivers redacted per-unit progress through the authenticated scan event channel', async () => {
     const w = await makeRuntimeWorld();
     const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
     start(w, createTestAdapter(w));
@@ -328,19 +407,29 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     await terminal(a.id);
     const mine = await waitFor(async () => {
-      const m = messages.filter((x) => x.channel === `unit-progress:${a.id}`);
+      const m = messages.filter((x) => x.channel === SCAN_EVENTS_CHANNEL);
       return m.length >= 2 ? m : false;
     });
     const parsed = mine.map(
       (m) =>
         JSON.parse(m.message) as {
-          label: string;
-          totalUnits: number | null;
-          indeterminate: boolean;
+          scanId: string;
+          event: {
+            type: string;
+            executionUnitId: string;
+            executionUnitClass: string;
+            label: string;
+            totalUnits: number | null;
+            indeterminate: boolean;
+          };
         },
     );
-    expect(parsed.map((p) => p.label)).toContain('done');
-    expect(parsed.every((p) => typeof p.indeterminate === 'boolean')).toBe(true);
+    expect(parsed.some((p) => p.event.label === 'done')).toBe(true);
+    expect(parsed.every((p) => p.scanId === w.scanId)).toBe(true);
+    expect(parsed.every((p) => p.event.type === 'execution:progress')).toBe(true);
+    expect(parsed.every((p) => p.event.executionUnitId === a.id)).toBe(true);
+    expect(parsed.every((p) => p.event.executionUnitClass === 'BROWSER')).toBe(true);
+    expect(parsed.every((p) => typeof p.event.indeterminate === 'boolean')).toBe(true);
   });
 
   it('refuses any extra payload key at the consumer: the job fails and the unit is untouched', async () => {
@@ -414,10 +503,22 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
       data: { scanId: w.scanId, module: 'SECURITY', state: 'COMPLETE', score: 80 },
     });
     const a = await makeUnit(w, { engineId: 'engine.unknown' });
-    start(w, createTestAdapter(w));
+    const telemetry: Array<Record<string, unknown>> = [];
+    start(w, createTestAdapter(w), {
+      log: (message, fields) => {
+        if (message === 'execution unit telemetry' && fields !== undefined) telemetry.push(fields);
+      },
+    });
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     expect(await terminal(a.id)).toBe('REFUSED');
     expect(await reasonOf(a.id)).toMatchObject({ terminalReason: 'ENGINE_NOT_REGISTERED' });
+    await waitFor(async () => (telemetry.length === 1 ? true : false));
+    expect(telemetry[0]).toMatchObject({
+      engineId: 'engine.unknown',
+      status: 'REFUSED',
+      engineHealth: 'UNAVAILABLE',
+      terminationEvent: null,
+    });
     expect(gateCalls).toContain(w.scanId);
   });
 
@@ -493,7 +594,12 @@ describe('controlled failure injection on the running path', () => {
   it('operator kill switch mid-run: KILLED with the F07 reason', async () => {
     const w = await makeRuntimeWorld();
     const a = await makeUnit(w, { configuration: beh({ kind: 'HANG' }) });
-    start(w, createTestAdapter(w));
+    const telemetry: Array<Record<string, unknown>> = [];
+    start(w, createTestAdapter(w), {
+      log: (message, fields) => {
+        if (message === 'execution unit telemetry' && fields !== undefined) telemetry.push(fields);
+      },
+    });
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
     await triggerStop(db as never, {
@@ -504,6 +610,12 @@ describe('controlled failure injection on the running path', () => {
     });
     expect(await terminal(a.id)).toBe('KILLED');
     expect(await reasonOf(a.id)).toMatchObject({ terminalReason: 'OPERATOR_EMERGENCY_STOP' });
+    await waitFor(async () => (telemetry.length === 1 ? true : false));
+    expect(telemetry[0]).toMatchObject({
+      status: 'KILLED',
+      engineHealth: 'STOPPED',
+      terminationEvent: 'OPERATOR_EMERGENCY_STOP',
+    });
   });
 
   it('revoked grant mid-run: the next renewal refuses and the unit is KILLED (AUTHORIZATION_REVOKED)', async () => {
@@ -638,7 +750,7 @@ describe('controlled failure injection on the running path', () => {
     ).toBe(3);
   });
 
-  it('a unit left RUNNING by a crashed host is never re-dispatched; the sweep finalizes it after the deadline', async () => {
+  it('ignores delivery for a persisted RUNNING unit, then the deadline sweep finalizes it', async () => {
     const w = await makeRuntimeWorld({ deadlineMs: HOUR });
     const a = await makeUnit(w, { status: 'RUNNING' });
     start(w, createTestAdapter(w));
@@ -651,6 +763,169 @@ describe('controlled failure injection on the running path', () => {
     });
     expect((await reasonOf(a.id)).status).toBe('FAILED');
   });
+
+  it('survives an actual execution-worker crash without replaying a confirmed effect or moving the plan deadline', async () => {
+    const w = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const a = await makeUnit(w, {
+      configuration: beh({ kind: 'PROCESS_HANG' }),
+      timeoutPolicyMs: 60_000,
+    });
+    const login = `zz_exec_crash_${randomBytes(5).toString('hex')}`;
+    const password = randomBytes(18).toString('hex');
+    const url = new URL(TEST_DB_URL);
+    await db.$executeRawUnsafe(
+      `CREATE ROLE ${login} LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS IN ROLE fahes_exec_host`,
+    );
+    url.username = login;
+    url.password = password;
+    const workerDbUrl = url.toString();
+    const helper = fileURLToPath(
+      new URL('../helpers/crashable-execution-worker.ts', import.meta.url),
+    );
+    const safeEnv: NodeJS.ProcessEnv = {
+      NODE_ENV: 'test',
+      TEST_DATABASE_URL: workerDbUrl,
+      EXEC_TEST_REDIS: `${connection.host}:${String(connection.port)}`,
+    };
+    for (const key of ['PATH', 'PATHEXT', 'SystemRoot', 'WINDIR', 'TEMP', 'TMP']) {
+      const value = process.env[key];
+      if (value !== undefined) safeEnv[key] = value;
+    }
+
+    let firstHost: ChildProcess | undefined;
+    let replacementHost: ChildProcess | undefined;
+    let executionChildPid: number | undefined;
+    let executionChildExited = false;
+    const waitForHostReady = (child: ChildProcess): Promise<void> =>
+      new Promise((resolve, reject) => {
+        const timer = setTimeout(
+          () => reject(new Error('execution worker process did not become ready')),
+          10_000,
+        );
+        child.on('message', (message: unknown) => {
+          if (typeof message !== 'object' || message === null || !('type' in message)) return;
+          if (message.type === 'ready') {
+            clearTimeout(timer);
+            resolve();
+          } else if (message.type === 'error') {
+            clearTimeout(timer);
+            reject(new Error('execution worker reported an error'));
+          }
+        });
+        child.once('error', (error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+      });
+    const stopHost = async (
+      child: ChildProcess | undefined,
+      signal: NodeJS.Signals,
+    ): Promise<void> => {
+      if (child === undefined || child.exitCode !== null || child.signalCode !== null) return;
+      await new Promise<void>((resolve) => {
+        child.once('exit', () => resolve());
+        child.kill(signal);
+      });
+    };
+    try {
+      firstHost = fork(helper, [prefix], {
+        cwd: process.cwd(),
+        env: safeEnv,
+        execArgv: ['--import', 'tsx'],
+        serialization: 'advanced',
+        stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      });
+      await waitForHostReady(firstHost);
+      const planBefore = await db.scanPlan.findUniqueOrThrow({
+        where: { id: w.planId },
+        select: { deadlineMs: true },
+      });
+      await enqueueExecutionUnit(queues, {
+        id: a.id,
+        executionUnitClass: 'BROWSER',
+        attempt: a.attempt,
+      });
+
+      const childPid = await waitFor(async () => {
+        const row = await db.executionUnit.findUniqueOrThrow({
+          where: { id: a.id },
+          select: { status: true, progressSnapshot: true },
+        });
+        const snapshot = row.progressSnapshot as { label?: unknown } | null;
+        const match =
+          typeof snapshot?.label === 'string' ? /^child-(\d+)$/.exec(snapshot.label) : null;
+        return row.status === 'RUNNING' && match !== null ? Number(match[1]) : false;
+      });
+      executionChildPid = childPid;
+      await waitFor(async () => {
+        const count = await db.effectAuthorization.count({
+          where: { executionUnitId: a.id, state: 'CONFIRMED' },
+        });
+        return count === 1 ? true : false;
+      });
+      expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
+
+      await stopHost(firstHost, 'SIGKILL');
+      firstHost = undefined;
+      await waitFor(async () => {
+        try {
+          process.kill(childPid, 0);
+          return false;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== 'ESRCH') return false;
+          executionChildExited = true;
+          return true;
+        }
+      });
+
+      replacementHost = fork(helper, [prefix], {
+        cwd: process.cwd(),
+        env: safeEnv,
+        execArgv: ['--import', 'tsx'],
+        serialization: 'advanced',
+        stdio: ['ignore', 'ignore', 'ignore', 'ipc'],
+      });
+      await waitForHostReady(replacementHost);
+      const queue = queues.queueFor('BROWSER');
+      if (queue === null) throw new Error('BROWSER execution queue is unavailable');
+      await waitFor(async () => {
+        const job = await queue.getJob(execJobId(a.id, a.attempt));
+        return job !== undefined && (await job.getState()) === 'failed' ? true : false;
+      }, 15_000);
+
+      expect(await statusOf(a.id)).toBe('RUNNING');
+      expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
+      expect(
+        await db.effectAuthorization.count({
+          where: { executionUnitId: a.id, state: 'CONFIRMED' },
+        }),
+      ).toBe(1);
+      expect(
+        await db.scanPlan.findUniqueOrThrow({
+          where: { id: w.planId },
+          select: { deadlineMs: true },
+        }),
+      ).toEqual(planBefore);
+
+      await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 120_000) });
+      await expirePlanUnits(db as never, w.planId, {
+        onUnitExpired: () => Promise.resolve('TERMINATED'),
+      });
+      expect((await reasonOf(a.id)).status).toBe('FAILED');
+    } finally {
+      await stopHost(firstHost, 'SIGKILL');
+      await stopHost(replacementHost, 'SIGTERM');
+      if (executionChildPid !== undefined && !executionChildExited) {
+        try {
+          process.kill(executionChildPid, 'SIGKILL');
+        } catch {
+          // It already exited as expected after IPC disconnect.
+        }
+      }
+      await db.$executeRawUnsafe(`DROP OWNED BY ${login}`);
+      await db.$executeRawUnsafe(`DROP ROLE IF EXISTS ${login}`);
+    }
+  }, 45_000);
 
   it('runs the plan gate after the last unit completes (the scan can continue to synthesis)', async () => {
     const w = await makeRuntimeWorld({ scanState: 'RUNNING_PHASE_3' });

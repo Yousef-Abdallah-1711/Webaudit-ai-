@@ -22,13 +22,13 @@ const app = createApp({ db: testDb, mailer });
 
 const CREDS = { email: 'scan-get@example.com', password: 'correct-horse-battery-staple' };
 
-async function signIn(): Promise<string> {
-  await request(app).post('/auth/register').send(CREDS).expect(201);
+async function signIn(credentials = CREDS): Promise<string> {
+  await request(app).post('/auth/register').send(credentials).expect(201);
   await testDb.user.update({
-    where: { email: CREDS.email },
+    where: { email: credentials.email },
     data: { emailVerifiedAt: new Date() },
   });
-  const res = await request(app).post('/auth/login').send(CREDS).expect(200);
+  const res = await request(app).post('/auth/login').send(credentials).expect(200);
   return (res.body as { accessToken: string }).accessToken;
 }
 
@@ -111,5 +111,139 @@ describe('GET /scans/:id', () => {
     const res = await request(app).get(`/scans/${scan.id}`).set(auth(token)).expect(200);
     const body = res.body as { scan: { moduleResults: unknown[] } };
     expect(body.scan.moduleResults).toEqual([]);
+  });
+
+  it('returns the durable execution-unit progress snapshot without execution secrets', async () => {
+    const token = await signIn();
+    const user = await testDb.user.findUniqueOrThrow({ where: { email: CREDS.email } });
+    const target = await testDb.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://example.com',
+        displayName: 'example.com',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        state: 'RUNNING_PHASE_1',
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: [],
+        quotedCredits: 30,
+        chargedCredits: 30,
+        startedAt: new Date(),
+      },
+    });
+    const plan = await testDb.scanPlan.create({
+      data: {
+        kind: 'INITIAL',
+        userId: user.id,
+        scanId: scan.id,
+        state: 'RESOLVED',
+        deadlineMs: 600_000,
+      },
+    });
+    const unit = await testDb.executionUnit.create({
+      data: {
+        id: 'scan-get-progress-unit',
+        scanPlanId: plan.id,
+        userId: user.id,
+        targetId: target.id,
+        executionUnitClass: 'BROWSER',
+        engineId: 'browser.engine',
+        configuration: { secret: 'config-must-not-leak' },
+        priority: 1,
+        timeoutPolicyMs: 30_000,
+        retryPolicy: { maxAttempts: 1 },
+        requiresSafetyCheckpoint: true,
+        idempotencyKey: 'scan-get-progress-unit:1',
+        status: 'RUNNING',
+        progressSnapshot: {
+          label: 'Opening pages',
+          completedUnits: null,
+          totalUnits: null,
+          at: new Date().toISOString(),
+        },
+        progressIndeterminate: true,
+        credentialBindingRef: 'credential-ref-must-not-leak',
+        startedAt: new Date(),
+      },
+    });
+
+    const res = await request(app).get(`/scans/${scan.id}`).set(auth(token)).expect(200);
+    const body = res.body as {
+      scan: {
+        executionPlans: {
+          kind: string;
+          state: string;
+          id: string;
+          units: {
+            id: string;
+            executionUnitClass: string;
+            status: string;
+            progressSnapshot: { label: string };
+            progressIndeterminate: boolean;
+          }[];
+        }[];
+      };
+    };
+
+    expect(body.scan.executionPlans).toEqual([
+      {
+        id: plan.id,
+        kind: 'INITIAL',
+        state: 'RESOLVED',
+        units: [
+          {
+            id: unit.id,
+            executionUnitClass: 'BROWSER',
+            status: 'RUNNING',
+            progressSnapshot: expect.objectContaining({ label: 'Opening pages' }),
+            progressIndeterminate: true,
+          },
+        ],
+      },
+    ]);
+    expect(JSON.stringify(body)).not.toContain('config-must-not-leak');
+    expect(JSON.stringify(body)).not.toContain('credential-ref-must-not-leak');
+    expect(JSON.stringify(body)).not.toContain('browser.engine');
+  });
+
+  it('does not disclose another tenant’s execution plans for a guessed scan id', async () => {
+    const ownerToken = await signIn({
+      email: 'scan-get-owner@example.com',
+      password: CREDS.password,
+    });
+    const owner = await testDb.user.findUniqueOrThrow({
+      where: { email: 'scan-get-owner@example.com' },
+    });
+    const target = await testDb.target.create({
+      data: {
+        userId: owner.id,
+        inputType: 'URL',
+        canonicalValue: 'https://owner.example.com',
+        displayName: 'owner.example.com',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: owner.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: [],
+        quotedCredits: 30,
+        chargedCredits: 30,
+      },
+    });
+
+    const otherToken = await signIn({
+      email: 'scan-get-other@example.com',
+      password: CREDS.password,
+    });
+    const res = await request(app).get(`/scans/${scan.id}`).set(auth(otherToken)).expect(404);
+    expect(res.body).toEqual({ error: { code: 'NOT_FOUND', message: 'No such scan.' } });
+    expect(ownerToken).not.toBe(otherToken);
   });
 });

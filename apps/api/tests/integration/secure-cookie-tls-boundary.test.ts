@@ -32,6 +32,7 @@ const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const TSX_CLI = join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const API_ENTRY = join(REPO_ROOT, 'apps', 'api', 'src', 'index.ts');
 const TEST_PORT = 38123;
+const TEST_REDIS_URL = process.env['TEST_REDIS_URL'] ?? 'redis://localhost:6389/15';
 
 const BASE_ENV: Record<string, string | undefined> = {
   // `DATABASE_URL` comes from the validated test configuration and replaces the
@@ -39,7 +40,7 @@ const BASE_ENV: Record<string, string | undefined> = {
   ...isolatedChildEnv(process.env, TEST_DB_URL),
   NODE_ENV: 'production',
   PORT: String(TEST_PORT),
-  REDIS_URL: 'redis://localhost:6389/15',
+  REDIS_URL: TEST_REDIS_URL,
   JWT_ACCESS_SECRET: 'test-only-access-secret-not-used-anywhere-else-0123456789',
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-not-used-anywhere-else-0123456789',
   // Must decode to exactly 32 bytes (token-vault.ts's own guard) — this

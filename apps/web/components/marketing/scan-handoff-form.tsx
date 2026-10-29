@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '../ui';
 import { storeHeroScanUrl } from '../../lib/hero-scan-handoff';
 import { cn } from '../../lib/cn';
@@ -27,10 +28,25 @@ export function ScanHandoffForm({
   tone = 'light',
 }: ScanHandoffFormProps): React.ReactElement {
   const [url, setUrl] = useState('');
+  const [urlError, setUrlError] = useState(false);
+  const t = useTranslations('public');
 
   function handleSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    storeHeroScanUrl(url);
+    const trimmed = url.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(trimmed);
+    } catch {
+      setUrlError(true);
+      return;
+    }
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      setUrlError(true);
+      return;
+    }
+    setUrlError(false);
+    storeHeroScanUrl(trimmed);
     window.location.assign('/signup');
   }
 
@@ -47,14 +63,20 @@ export function ScanHandoffForm({
       >
         <input
           id={id}
-          type="text"
+          type="url"
           inputMode="url"
           name="url"
           autoComplete="url"
+          required
           dir="ltr"
           value={url}
-          onChange={(event) => setUrl(event.target.value)}
+          onChange={(event) => {
+            setUrl(event.target.value);
+            if (urlError) setUrlError(false);
+          }}
           placeholder={placeholder}
+          aria-invalid={urlError || undefined}
+          aria-describedby={`${id}-note${urlError ? ` ${id}-error` : ''}`}
           className={cn(
             'h-landing-control min-w-0 rounded-control px-4 text-left font-mono text-sm',
             tone === 'dark' ? marketingDarkInputControl : marketingInputControl,
@@ -74,6 +96,7 @@ export function ScanHandoffForm({
         </Button>
       </div>
       <p
+        id={`${id}-note`}
         className={cn(
           'mb-0 mt-2.5 text-start text-marketing-label',
           tone === 'dark' ? 'text-marketing-inverse-muted' : 'text-marketing-muted',
@@ -81,6 +104,15 @@ export function ScanHandoffForm({
       >
         {note}
       </p>
+      {urlError && (
+        <p
+          id={`${id}-error`}
+          className="mb-0 mt-2 text-start text-marketing-label text-sev-critical"
+          role="alert"
+        >
+          {t('hero_url_invalid')}
+        </p>
+      )}
     </form>
   );
 }

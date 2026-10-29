@@ -8,6 +8,7 @@ import { EXEC_QUEUE_NAMES, QUEUE_NAMES, queueNameForUnitClass } from '@webaudit/
 import { closeDb, resetDb, testDb } from '../../helpers/db.js';
 import { admissionRequest, counterOf, liveLeaseCount } from '../../helpers/safety-fixtures.js';
 import {
+  addEdge,
   makeRuntimeWorld,
   makeUnit,
   reasonOf,
@@ -24,6 +25,7 @@ import {
 } from '../../../src/services/safety/index.js';
 import {
   dispatchExecutionUnit,
+  expirePlanUnits,
   finalizeExecutionUnit,
   hostLoopDecision,
   type DispatchHooks,
@@ -161,6 +163,78 @@ describe('dispatchExecutionUnit', () => {
       expect(await counterOf(w.grantId)).toBeNull();
       expect(await reasonOf(u.id)).toMatchObject({ status: 'REFUSED', terminalReason: reason });
     }
+  });
+
+  it('does not apply deadline step 0 to a passive unit on an expired plan', async () => {
+    const w = await makeRuntimeWorld({ startedAgoMs: HOUR + 5000, deadlineMs: HOUR });
+    const u = await makeUnit(w, { cls: 'PASSIVE_HTTP', timeoutPolicyMs: 300_000 });
+    const { h, calls } = hooks(w);
+
+    expect(await run(w, u.id, h)).toEqual({
+      outcome: 'IGNORED',
+      reason: 'PASSIVE_LEGACY_QUEUE',
+    });
+    expect(calls).toEqual([]);
+    expect(await statusOf(u.id)).toBe('PLANNED');
+    expect(await testDb.executionUnitHostClaim.count({ where: { executionUnitId: u.id } })).toBe(0);
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
+    expect(await counterOf(w.grantId)).toBeNull();
+  });
+
+  it('expires a DISPATCHED unit before child start, releases its lease and blocks its dependent', async () => {
+    const w = await makeRuntimeWorld();
+    const dispatched = await makeUnit(w);
+    const dependent = await makeUnit(w);
+    await addEdge(dependent.id, dispatched.id);
+    const context = hooks(w);
+    let reachedFork!: () => void;
+    let releaseFork!: () => void;
+    const forkReached = new Promise<void>((resolve) => {
+      reachedFork = resolve;
+    });
+    const forkBarrier = new Promise<void>((resolve) => {
+      releaseFork = resolve;
+    });
+    context.h.forkInertChild = async () => {
+      context.calls.push('fork');
+      reachedFork();
+      await forkBarrier;
+      return context.child;
+    };
+
+    const dispatch = run(w, dispatched.id, context.h);
+    await forkReached;
+    expect(await statusOf(dispatched.id)).toBe('DISPATCHED');
+    expect(context.calls).toEqual(['capacity', 'f07', 'proofs', 'fork']);
+    expect(await liveLeaseCount(w.grantId)).toBe(1);
+
+    await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 5000) });
+    await expirePlanUnits(testDb, w.planId);
+    expect(await reasonOf(dispatched.id)).toMatchObject({
+      status: 'REFUSED',
+      terminalReason: 'SCAN_DEADLINE_EXPIRED',
+    });
+    expect(await reasonOf(dependent.id)).toMatchObject({
+      status: 'BLOCKED',
+      blockedBy: dispatched.id,
+    });
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
+    expect(
+      await testDb.executionUnitHostClaim.count({ where: { executionUnitId: dispatched.id } }),
+    ).toBe(1);
+    expect(await testDb.admissionLease.count({ where: { executionId: dispatched.id } })).toBe(1);
+    expect(
+      await testDb.effectAuthorization.count({ where: { executionUnitId: dispatched.id } }),
+    ).toBe(0);
+
+    releaseFork();
+    await expect(dispatch).resolves.toEqual({
+      outcome: 'IGNORED',
+      reason: 'LOST_DISPATCHED_RUNNING',
+    });
+    expect(context.child.terminate).toHaveBeenCalledOnce();
+    expect(context.calls).toEqual(['capacity', 'f07', 'proofs', 'fork']);
+    expect(context.admissions).toHaveLength(1);
   });
 
   it('refuses a later chained unit when its shared plan deadline leaves too little execution time', async () => {

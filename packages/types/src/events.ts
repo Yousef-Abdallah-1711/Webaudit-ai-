@@ -25,7 +25,13 @@
  * around the redaction boundary.
  */
 
-import type { ControlLevel, ModuleState, ModuleType, ScanState } from './domain.js';
+import type {
+  ControlLevel,
+  ExecutionUnitClass,
+  ModuleState,
+  ModuleType,
+  ScanState,
+} from './domain.js';
 
 export const SCAN_EVENT_TYPES = [
   'scan:state',
@@ -38,6 +44,7 @@ export const SCAN_EVENT_TYPES = [
   'scan:complete',
   'scan:failed',
   'issue:verified',
+  'execution:progress',
 ] as const;
 
 export type ScanEventType = (typeof SCAN_EVENT_TYPES)[number];
@@ -150,6 +157,21 @@ export interface IssueVerifiedEvent {
   readonly state: 'OPEN' | 'ASSERTED_FIXED' | 'RESOLVED' | 'UNVERIFIABLE';
 }
 
+/** FR-027: bounded, redacted progress for one planned execution unit. */
+export interface ExecutionProgressEvent {
+  readonly type: 'execution:progress';
+  readonly scanId: string;
+  readonly executionPlanId: string;
+  readonly planKind: 'INITIAL' | 'REVERIFY';
+  readonly executionUnitId: string;
+  readonly executionUnitClass: ExecutionUnitClass;
+  readonly at: string;
+  readonly label: string;
+  readonly completedUnits: number | null;
+  readonly totalUnits: number | null;
+  readonly indeterminate: boolean;
+}
+
 export type ScanEvent =
   | ScanStateEvent
   | ModuleStartedEvent
@@ -160,7 +182,8 @@ export type ScanEvent =
   | QuestionnaireNeededEvent
   | ScanCompleteEvent
   | ScanFailedEvent
-  | IssueVerifiedEvent;
+  | IssueVerifiedEvent
+  | ExecutionProgressEvent;
 
 /**
  * The envelope on the wire.

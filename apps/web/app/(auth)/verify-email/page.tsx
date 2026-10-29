@@ -16,7 +16,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthSecondaryButton } from '../../../components/auth/AuthFrame';
 import { AuthPrimaryButton } from '../../../components/auth/AuthFrame';
-import { AuthFormPanel, AuthShell } from '../../../components/auth/AuthShell';
+import { AuthFormPanel, AuthShell, AuthStatus } from '../../../components/auth/AuthShell';
 import { Icon } from '../../../components/ui/icons/Icon';
 import { useTranslations } from 'next-intl';
 import { ApiError, resendVerification, verifyEmail } from '../../../lib/api';
@@ -133,17 +133,19 @@ function TokenOutcome({ token }: { token: string }): React.ReactElement {
 function WaitingForClick({ email }: { email: string }): React.ReactElement {
   const t = useTranslations('auth');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendFailed, setSendFailed] = useState(false);
 
   async function onResend(): Promise<void> {
+    setSending(true);
+    setSendFailed(false);
     try {
       await resendVerification(email || undefined);
-    } catch (e) {
-      // resendVerification always answers 202 regardless of whether the
-      // address exists (no account-enumeration signal) — a thrown ApiError
-      // here means the request itself failed, not that resending refused.
-      if (!(e instanceof ApiError)) throw e;
-    } finally {
       setSent(true);
+    } catch {
+      setSendFailed(true);
+    } finally {
+      setSending(false);
     }
   }
 
@@ -163,8 +165,9 @@ function WaitingForClick({ email }: { email: string }): React.ReactElement {
             {email || t('verify_email_fallback')}
           </div>
           <AuthSecondaryButton fullWidth disabled={sent} onClick={() => void onResend()}>
-            {sent ? t('verify_resent') : t('verify_resend')}
+            {sent ? t('verify_resent') : sending ? t('verify_resend_pending') : t('verify_resend')}
           </AuthSecondaryButton>
+          {sendFailed && <AuthStatus>{t('verify_resend_failed')}</AuthStatus>}
         </AuthFormPanel>
       }
     />

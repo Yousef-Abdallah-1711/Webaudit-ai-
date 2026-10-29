@@ -31,6 +31,7 @@ import {
 import { useTranslations } from 'next-intl';
 import { API_BASE, register } from '../../../lib/api';
 import { useAuth } from '../../../components/auth/AuthProvider';
+import { FREE_ALLOCATION } from '@webaudit/config';
 
 export default function RegisterPage(): React.ReactElement | null {
   const t = useTranslations('auth');
@@ -49,11 +50,15 @@ export default function RegisterPage(): React.ReactElement | null {
 
   async function onSubmit(): Promise<void> {
     setError(null);
-    if (!email || password.length < 12) return;
+    if (!email.trim() || password.length < 12) return;
     setSubmitting(true);
     try {
       const trimmedName = name.trim();
-      const result = await register(email, password, trimmedName === '' ? undefined : trimmedName);
+      const result = await register(
+        email.trim(),
+        password,
+        trimmedName === '' ? undefined : trimmedName,
+      );
       try {
         window.sessionStorage.setItem('wa-verification-display-email', result.email);
       } catch {
@@ -78,22 +83,25 @@ export default function RegisterPage(): React.ReactElement | null {
 
   if (status === 'authenticated') return null;
 
+  const canSubmit = email.trim().length > 0 && password.length >= 12 && !submitting;
+
   return (
     <AuthShell
       form={
         <AuthFormPanel
           title={t('register_title')}
-          lead={t('register_lead')}
+          lead={t('register_lead', { freeCredits: FREE_ALLOCATION })}
           foot={
             <span>
               {t('register_foot_lead')} <a href="/login">{t('register_foot_link')}</a>
             </span>
           }
         >
-          <form className="flex flex-col gap-3.5" noValidate onSubmit={handleSubmit}>
+          <form className="flex flex-col gap-3.5" onSubmit={handleSubmit}>
             <Field
               label={t('name')}
               autoComplete="name"
+              maxLength={100}
               placeholder="Khalid Ahmed"
               value={name}
               onChange={(e) => {
@@ -104,6 +112,8 @@ export default function RegisterPage(): React.ReactElement | null {
               label={t('work_email')}
               type="email"
               autoComplete="email"
+              required
+              maxLength={320}
               placeholder="you@company.com"
               value={email}
               onChange={(e) => {
@@ -114,6 +124,9 @@ export default function RegisterPage(): React.ReactElement | null {
               label={t('password')}
               type="password"
               autoComplete="new-password"
+              required
+              minLength={12}
+              maxLength={200}
               placeholder={t('password_hint')}
               value={password}
               onChange={(e) => {
@@ -142,11 +155,7 @@ export default function RegisterPage(): React.ReactElement | null {
               {t('register_note')}
             </div>
             {error !== null && <AuthStatus>{error}</AuthStatus>}
-            <AuthPrimaryButton
-              type="submit"
-              fullWidth
-              disabled={password.length < 12 || submitting}
-            >
+            <AuthPrimaryButton type="submit" fullWidth disabled={!canSubmit}>
               {t('register_submit')}
             </AuthPrimaryButton>
           </form>

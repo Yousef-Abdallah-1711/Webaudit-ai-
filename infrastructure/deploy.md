@@ -21,8 +21,9 @@ container spec.
 As of Phase 8 (production-without-Paymob-or-AI master plan), `apps/api`, `apps/worker`, and `apps/web`
 each have a real, build-and-run-verified Dockerfile (`apps/{api,worker,web}/Dockerfile`), and there is a
 real production compose topology (`infrastructure/docker-compose.production.yml`) covering all three
-plus Postgres/Redis/an optional PgBouncer/an nginx reverse proxy — see "Docker Compose (production)"
-below. `apps/probe-pool` and `apps/sandbox-runner` are still not part of that compose topology,
+plus Postgres/Redis/an nginx reverse proxy — see "Docker Compose (production)" below. API and worker
+use separate logins scoped to `fahes_api` and `fahes_worker_exec`; only the migration and role
+provisioning jobs receive the administrator DSN. `apps/probe-pool` and `apps/sandbox-runner` are still not part of that compose topology,
 deliberately (the master plan's own §5 Out of scope for this release) — their sections below remain the
 process-level runbook.
 
@@ -37,7 +38,8 @@ credentials — the most privileged of the five units, and the only one that sho
 **Required environment** (see `.env.example` for the authoritative list; `apps/api/src/config/env.ts`
 fails closed — refuses to boot — if `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`/`ENCRYPTION_KEY` are unset
 and `NODE_ENV=production`, per Finding C3's fix):
-`DATABASE_URL`, `REDIS_URL`, `DATABASE_CONNECTION_LIMIT`/`DATABASE_POOL_TIMEOUT` (sized per-process —
+`DATABASE_URL` (the Compose API service maps `API_DATABASE_URL` to this name), `REDIS_URL`,
+`DATABASE_CONNECTION_LIMIT`/`DATABASE_POOL_TIMEOUT` (sized per-process —
 see `.env.example`'s own arithmetic if running more than 2 replicas), `ENCRYPTION_KEY`,
 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`/`GOOGLE_API_KEY` +
 their `_MODEL`/`_USD_PER_MTOK` pairs (Principle IV: at least two vendors configured with a real price,
@@ -72,13 +74,47 @@ route is enough to confirm the process is up; there is no dedicated `/health` ro
 built ("A pooler (PgBouncer in transaction mode) replaces this arithmetic; set the limit explicitly
 then."). That design is now real, not just anticipated:
 
-**What's built and verified** (`infrastructure/docker-compose.yml`'s `pgbouncer` service,
-profile-gated so it never starts by accident — `docker compose --profile pooled up -d`):
+**What's built and verified for development** (`infrastructure/docker-compose.yml`'s `pgbouncer`
+service, profile-gated so it never starts by accident — `docker compose --profile pooled up -d`):
 PgBouncer 1.25, `pool_mode = transaction`, sitting in front of the same `postgres` service, on host
 port `6452`. Verified for real, not assumed: a live Prisma client, and separately a full `apps/api`
 process booted with `DATABASE_URL` pointed at `postgresql://webaudit:webaudit_dev@localhost:6452/webaudit?connection_limit=1&pgbouncer=true`,
 both ran real queries through it successfully (`SELECT`, a real `user.count()`, and a live `GET
 /health` returning `200`) before being torn down.
+
+The production compose file intentionally does **not** include this single-backend-user pooler
+configuration. Its fixed backend identity would bypass the separate API/worker database roles. Do not
+point `API_DATABASE_URL` or `WORKER_DATABASE_URL` at it. A production pooler must authenticate each
+runtime login and preserve its database identity; that topology needs its own configuration and
+verification before it is added.
+
+## Production database identities
+
+`infrastructure/docker-compose.production.yml` keeps the PostgreSQL administrator connection in
+`MIGRATION_DATABASE_URL`, which is passed only to `migrate` and `provision-runtime-roles`. The
+one-shot provisioner creates or reconciles `webaudit_api_runtime` as a member only of `fahes_api`
+and `webaudit_worker_runtime` as a member only of `fahes_worker_exec`. It also resets both roles to
+`NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOREPLICATION`, and `NOBYPASSRLS`. API and worker receive
+only their corresponding runtime URL. Reconciliation removes stale direct grants on the `public`
+schema, tables, sequences, and functions so the `fahes_*` group roles define effective object access.
+Generate separate passwords with `openssl rand -hex 32`; use
+each value as its `*_DB_PASSWORD` and in the matching URL in `.env.production`.
+
+This protection takes effect on a fresh deployment or after updating and recreating the services.
+Already-running containers keep their existing environment until recreated. The migration and
+provisioning jobs still require an administrator DSN; do not copy it into either runtime URL.
+
+To verify the configured roles through the private Docker network, inspect only role metadata:
+
+```sh
+docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production \
+  exec postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c \
+  "SELECT rolname, rolsuper, rolcreatedb, rolcreaterole, rolreplication, rolbypassrls FROM pg_roles WHERE rolname IN ('webaudit_api_runtime','webaudit_worker_runtime') ORDER BY rolname"
+```
+
+Both runtime rows must report all elevated flags as `false`. A full access check should use the
+real-login role suite against a disposable database; do not run that destructive test suite against
+the deployment database.
 
 **The one thing this does not decide** — matching T295's own "the design is buildable now;
 deploying it needs real infrastructure provisioning" framing — is the real *production* topology:
@@ -232,16 +268,18 @@ follow it for a real deployment, substituting `.env.production` (a real, filled-
    docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production up -d
    ```
    Startup ordering is enforced by `depends_on` conditions, not by hoping: `postgres`/`redis` must
-   report `healthy` before `migrate` runs; `migrate` (`prisma migrate deploy`, one-shot) must exit 0
-   before `api`/`worker` are even created; `api` must report `healthy` before `web`; `api` and `web`
+   report `healthy` before `migrate` runs; `migrate` (`prisma migrate deploy`, one-shot) must exit 0,
+   then `provision-runtime-roles` must create/verify the constrained `webaudit_api_runtime` and
+   `webaudit_worker_runtime` logins before `api`/`worker` are even created; `api` must report `healthy`
+   before `web`; `api` and `web`
    must both report `healthy` before `proxy` starts routing to them.
 3. **Confirm migrations actually ran before anything else started** — do not assume this from the
    compose file alone:
    ```
    docker compose -f infrastructure/docker-compose.production.yml --env-file .env.production ps -a
    ```
-   `migrate` should show `Exited (0)`; `postgres`, `redis`, `api`, `worker`, `web`, `proxy` should all
-   show `healthy` (`pgbouncer` only appears if started with `--profile pooled`).
+   `migrate` and `provision-runtime-roles` should show `Exited (0)`; `postgres`, `redis`, `api`,
+   `worker`, `web`, `proxy` should all show `healthy`.
 4. **Spot-check the real routes through the reverse proxy** (matches what the Phase 8 smoke test
    actually ran):
    ```

@@ -13,7 +13,7 @@
  * the fix is proven from the REST resync alone — no realtime event ever
  * fires in this test.
  */
-import { createElement } from 'react';
+import { act, createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderClient } from '../helpers/render-client.js';
 
@@ -76,6 +76,75 @@ describe('ScanProgress', () => {
       expect(mounted.html()).toContain('Complete');
       expect(mounted.html()).toContain('Degraded');
       expect(mounted.html()).not.toContain('Waiting');
+    } finally {
+      mounted.unmount();
+    }
+  });
+
+  it('restores durable execution-unit progress from the authenticated scan resync', async () => {
+    const api = await import('../../lib/api.js');
+    vi.mocked(api.getScan).mockResolvedValueOnce({
+      scan: {
+        id: 'scan-1',
+        state: 'RUNNING_PHASE_1',
+        requestedModules: ['SECURITY'],
+        startedAt: new Date().toISOString(),
+        moduleResults: [],
+        executionPlans: [
+          {
+            id: 'plan-1',
+            kind: 'INITIAL',
+            state: 'RESOLVED',
+            units: [
+              {
+                id: 'unit-1',
+                executionUnitClass: 'BROWSER',
+                status: 'RUNNING',
+                progressSnapshot: {
+                  label: 'Opening pages',
+                  completedUnits: null,
+                  totalUnits: null,
+                  at: new Date().toISOString(),
+                },
+                progressIndeterminate: true,
+              },
+            ],
+          },
+        ],
+        quotedCredits: 80,
+        chargedCredits: 80,
+      },
+    });
+    const { ScanProgress } = await import('../../components/scan/ScanProgress.js');
+    const mounted = await renderClient(
+      createElement(ScanProgress, { scanId: 'scan-1', hostname: 'example.com' }),
+    );
+    try {
+      expect(mounted.html()).toContain('Execution steps');
+      expect(mounted.html()).toContain('Browser checks');
+      expect(mounted.html()).toContain('Opening pages');
+      expect(mounted.html()).toContain('progress is indeterminate');
+      expect(mounted.html()).not.toContain('50%');
+
+      const realtime = await import('../../lib/realtime.js');
+      const options = vi.mocked(realtime.connectRealtime).mock.calls.at(-1)?.[0];
+      expect(options).toBeDefined();
+      await act(async () => {
+        options?.onEvent({
+          type: 'execution:progress',
+          scanId: 'scan-1',
+          executionPlanId: 'plan-1',
+          planKind: 'INITIAL',
+          executionUnitId: 'unit-1',
+          executionUnitClass: 'BROWSER',
+          at: new Date().toISOString(),
+          label: 'Pages loaded',
+          completedUnits: 2,
+          totalUnits: 3,
+          indeterminate: false,
+        });
+      });
+      expect(mounted.html()).toContain('Pages loaded — 2 of 3');
     } finally {
       mounted.unmount();
     }

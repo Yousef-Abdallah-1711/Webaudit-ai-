@@ -66,18 +66,26 @@ describe('PricingPage', () => {
 
     expect(tierClasses).toHaveLength(4);
     expect(tierClasses.filter((className) => className.includes('border-accent'))).toHaveLength(1);
-    expect(tierClasses.filter((className) => className.includes('border-border-default'))).toHaveLength(3);
+    expect(
+      tierClasses.filter((className) => className.includes('border-border-default')),
+    ).toHaveLength(3);
     expect(grid).toContain('text-[1.125rem] font-bold');
     expect(grid).toContain('font-mono text-[0.8125rem] text-text-secondary');
 
     const table = render(createElement(CostTable));
-    const rowClasses = [...table.matchAll(/<div class="([^"]*)">(?=<span class="type-body !tracking-normal">)/g)].map(
-      (match) => match[1] ?? '',
-    );
+    const rowClasses = [
+      ...table.matchAll(/<div class="([^"]*)">(?=<span class="type-body !tracking-normal">)/g),
+    ].map((match) => match[1] ?? '');
     expect(rowClasses).toHaveLength(4);
     expect(rowClasses[0]).not.toContain('border-t-hairline');
-    expect(rowClasses.slice(1).every((className) => className.includes('border-x-0 border-b-0 border-t-hairline'))).toBe(true);
-    expect(rowClasses.every((className) => className.includes('flex px-[1.125rem] py-3.5'))).toBe(true);
+    expect(
+      rowClasses
+        .slice(1)
+        .every((className) => className.includes('border-x-0 border-b-0 border-t-hairline')),
+    ).toBe(true);
+    expect(rowClasses.every((className) => className.includes('flex px-[1.125rem] py-3.5'))).toBe(
+      true,
+    );
     expect(table).toContain('ms-auto font-mono text-[0.875rem]');
   });
 
@@ -124,7 +132,13 @@ describe('PricingPage', () => {
   });
 
   it('does not show a redeemable promo code on the landing page', () => {
-    expect(publicMessages.promo).toBe('First audit free — {freeCredits, number} credits');
+    expect(publicMessages.promo).toBe(
+      'Get {freeCredits, number} free credits to audit two or three areas',
+    );
     expect(publicMessages.promo).not.toContain('START50');
+
+    const grid = render(createElement(TierGrid));
+    expect(grid).toContain('Price not announced');
+    expect(grid).not.toMatch(/\$(?:29|99|299)\b/);
   });
 });
