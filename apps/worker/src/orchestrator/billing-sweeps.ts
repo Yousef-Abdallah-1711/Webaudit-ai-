@@ -23,6 +23,7 @@
 import type { Queue } from 'bullmq';
 import { renewDueSubscriptions, sendRenewalWarnings } from '@webaudit/api/billing';
 import { enforceRetention } from '@webaudit/api/storage-retention';
+import type { ArtifactStore } from '@webaudit/api/evidence';
 import type { Mailer } from '@webaudit/api/email';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
 import { JOB_NAMES } from '../queue/workers.js';
@@ -51,6 +52,8 @@ export async function scheduleBillingSweeps(maintenanceQueue: Queue): Promise<vo
 
 export interface BillingSweepDeps {
   readonly db: PrismaClient;
+  /** SPEC 009 FR-034: object store for artifact objects removed with a report; `null`/absent = no R2 configured. */
+  readonly artifactStore?: ArtifactStore | null;
   readonly mailer?: Mailer;
   readonly webUrl?: string;
 }
@@ -62,7 +65,12 @@ export function createBillingSweepHandler(deps: BillingSweepDeps): () => Promise
   return async function runBillingSweep(): Promise<void> {
     const renew = await renewDueSubscriptions(deps.db);
     const warned = await sendRenewalWarnings(deps.db, mailer);
-    const retention = await enforceRetention(deps.db, { mailer, storage: null, webUrl });
+    const retention = await enforceRetention(deps.db, {
+      mailer,
+      storage: null,
+      artifactStore: deps.artifactStore ?? null,
+      webUrl,
+    });
 
     if (renew.renewed + renew.lapsed + warned.warned + retention.warned + retention.removed > 0) {
       console.warn(

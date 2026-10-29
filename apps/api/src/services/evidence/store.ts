@@ -8,7 +8,7 @@ import {
   DeleteObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
-  type S3Client,
+  S3Client,
 } from '@aws-sdk/client-s3';
 
 export interface StoredObject {
@@ -103,4 +103,24 @@ export function createR2ArtifactStore(client: S3Client, bucket: string): Artifac
       return found;
     },
   };
+}
+
+/**
+ * Production wiring: an R2-backed store when every R2 variable is present, `null` otherwise. A deployment without R2
+ * credentials (dev, CI) simply has no object store: artifact rows are still removed by retention, and the reaper is a no-op.
+ */
+export function createArtifactStoreFromEnv(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): ArtifactStore | null {
+  const accountId = env['R2_ACCOUNT_ID'];
+  const accessKeyId = env['R2_ACCESS_KEY_ID'];
+  const secretAccessKey = env['R2_SECRET_ACCESS_KEY'];
+  const bucket = env['R2_BUCKET'];
+  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
+  const client = new S3Client({
+    region: 'auto',
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+  return createR2ArtifactStore(client, bucket);
 }

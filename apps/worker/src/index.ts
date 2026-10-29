@@ -65,6 +65,11 @@ import {
 } from './orchestrator/safety-lease-sweep.js';
 import { createBillingSweepHandler, scheduleBillingSweeps } from './orchestrator/billing-sweeps.js';
 import {
+  createArtifactReaperHandler,
+  scheduleArtifactReaper,
+} from './orchestrator/artifact-reaper.js';
+import { createArtifactStoreFromEnv } from '@webaudit/api/evidence';
+import {
   createPaymentExpirySweepHandler,
   schedulePaymentExpirySweep,
 } from './orchestrator/payment-expiry-scheduler.js';
@@ -248,6 +253,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
     (() => {
       const db = options.db ?? createWorkerDb();
       const mailer = createWorkerMailer(db);
+      // SPEC 009: null when no R2 credentials are configured (dev/CI); retention then removes rows only and the reaper is a no-op.
+      const artifactStore = createArtifactStoreFromEnv();
       const workspaceBaseDir = requiredEnv('WORKSPACE_BASE_DIR');
       uninstallTerminalRefund = installTerminalRefund({ db });
       uninstallTerminalTeardown = installTerminalTeardown({
@@ -318,7 +325,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
         // assert-fixed route is its only producer.
         reverify: createReverifyHandler({ db, publisher }),
         // FR-078 / FR-092 (T188/T189): renewals, renewal warnings, retention.
-        billingSweep: createBillingSweepHandler({ db, mailer }),
+        billingSweep: createBillingSweepHandler({ db, mailer, artifactStore }),
+        artifactReaper: createArtifactReaperHandler({ db, store: artifactStore }),
         // T032: the repeatable telemetry-partition archive sweep, defaulting
         // to dry-run (TELEMETRY_ARCHIVE_DRY_RUN must be "false" for a real
         // detach+drop). Registered as a repeatable job below.
@@ -367,6 +375,14 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   // done for the real handler path; a caller supplying its own `handlers`
   // (a test, the placeholder path) opts out.
   if (options.handlers === undefined) {
+    void scheduleArtifactReaper(queues.maintenance).catch((error: unknown) => {
+      logger.error(
+        'could not schedule the artifact reaper; orphaned artifact objects will not be reclaimed',
+        {
+          error: error instanceof Error ? error.message : String(error),
+        },
+      );
+    });
     void scheduleSafetySweep(queues.maintenance).catch((error: unknown) => {
       logger.error(
         'could not schedule the safety sweep; expired leases and stranded stops will not be ' +

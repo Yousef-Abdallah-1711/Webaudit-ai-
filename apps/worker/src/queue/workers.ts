@@ -73,6 +73,8 @@ export const JOB_NAMES = {
   timeoutSweep: 'timeout-sweep',
   /** `safety-lease-sweep.ts` (SPEC 008): lease reclaim + stranded kill-switch reconciliation. */
   safetySweep: 'safety-sweep',
+  /** `artifact-reaper.ts` (SPEC 009 FR-035): reclaims orphaned artifact objects. */
+  artifactReaper: 'artifact-reaper',
   paymentExpirySweep: 'payment-expiry-sweep',
   /** `apps/api`'s `reverify-producer.ts` → `reverifyQueue.add('reverify', …)` (T154). */
   reverify: 'reverify',
@@ -149,6 +151,7 @@ export const questionnaireTimeoutJobSchema = z
 /** The repeatable FR-038 sweep carries no per-run data. */
 export const timeoutSweepJobSchema = z.object({ kind: z.literal('timeout-sweep') }).strict();
 export const safetySweepJobSchema = z.object({ kind: z.literal('safety-sweep') }).strict();
+export const artifactReaperJobSchema = z.object({ kind: z.literal('artifact-reaper') }).strict();
 export const paymentExpirySweepJobSchema = z
   .object({ kind: z.literal('payment-expiry-sweep') })
   .strict();
@@ -264,6 +267,8 @@ export interface JobHandlers {
   readonly paymentExpirySweep?: () => Promise<void>;
   /** SPEC 008's repeatable lease-reclaim and stop-reconciler sweep. Carries no data. */
   readonly safetySweep?: () => Promise<void>;
+  /** SPEC 009's repeatable orphaned-artifact reaper. Carries no data. */
+  readonly artifactReaper?: () => Promise<unknown>;
   readonly authTokenCleanup?: () => Promise<void>;
   /** The repeatable billing sweep (T188/T189). Carries no data. */
   readonly billingSweep?: () => Promise<void>;
@@ -342,6 +347,16 @@ export async function dispatch(job: JobRef, handlers: JobHandlers = {}): Promise
       const handler = handlers.safetySweep;
       if (handler === undefined) {
         throw new JobNotImplementedError(job, 'T015', 'The SPEC 008 safety sweep');
+      }
+      await handler();
+      return;
+    }
+
+    case JOB_NAMES.artifactReaper: {
+      artifactReaperJobSchema.parse(job.data);
+      const handler = handlers.artifactReaper;
+      if (handler === undefined) {
+        throw new JobNotImplementedError(job, 'SPEC009', 'The SPEC 009 artifact reaper');
       }
       await handler();
       return;
