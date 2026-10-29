@@ -77,6 +77,31 @@ export const QUEUE_NAMES = {
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];
 
 /**
+ * SPEC 009 (runtime contract, "Queue placement", FR-017): one dedicated queue per non-passive execution class.
+ * Passive classes stay on the existing scan-phase queue (FR-040); TELEMETRY units never dispatch.
+ * Defined here so the API (producer) and the worker (consumer) agree on names, like the queues above.
+ */
+export const EXEC_QUEUE_NAMES = {
+  BROWSER: 'webaudit-exec-browser',
+  CRAWLER: 'webaudit-exec-crawler',
+  SOURCE_EXECUTION: 'webaudit-exec-source-execution',
+  ACTIVE_SECURITY: 'webaudit-exec-active-security',
+  AUTHENTICATED_WORKFLOW: 'webaudit-exec-authenticated-workflow',
+  LOAD_CAPACITY: 'webaudit-exec-load-capacity',
+} as const;
+
+export type ExecQueueName = (typeof EXEC_QUEUE_NAMES)[keyof typeof EXEC_QUEUE_NAMES];
+
+/** The queue a unit of the given class dispatches onto, or null when it is never queued (TELEMETRY). */
+export function queueNameForUnitClass(unitClass: string): QueueName | ExecQueueName | null {
+  if (unitClass === 'TELEMETRY') return null;
+  if (unitClass === 'PASSIVE_HTTP' || unitClass === 'SOURCE_STATIC') return QUEUE_NAMES.scanPhase;
+  return Object.prototype.hasOwnProperty.call(EXEC_QUEUE_NAMES, unitClass)
+    ? EXEC_QUEUE_NAMES[unitClass as keyof typeof EXEC_QUEUE_NAMES]
+    : null;
+}
+
+/**
  * Defaults every job inherits.
  *
  * `attempts: 1` on the phase queue is deliberate: the phase has already

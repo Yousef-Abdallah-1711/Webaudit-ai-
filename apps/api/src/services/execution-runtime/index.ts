@@ -5,3 +5,4 @@ export * from './expire.js';
 export * from './failure-class.js';
 export * from './finalize.js';
 export * from './plan-gate.js';
+export * from './dispatch.js';
