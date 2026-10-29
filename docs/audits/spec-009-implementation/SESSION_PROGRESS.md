@@ -97,3 +97,10 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 3. Decide/implement safe SPEC 009 production composition without loading remote code or embedding SPEC 010–012 engines; add a real `startWorker` lifecycle test.
 4. Reproduce the six historical failures only with an explicitly isolated Redis URL (the checked-in workspace config currently hardcodes `localhost:6389/15`; do not run reset/queue suites against it by accident).
 5. Complete remaining gates and update matrices; commit and push only verified SPEC 009 paths after final review.
+
+### Delivery update
+
+- Scoped commit `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3` created and pushed normally to `origin/main`.
+- Post-push `git fetch`, local HEAD, `origin/main`, and `git ls-remote` all agree on `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3`.
+- Remaining dirty/untracked files are the pre-existing website/auth edits, lockfile, `.next-final-cta-verify/`, and `logs/`; none were staged or committed.
+- Verification gap continues: full suite and startup composition are still open; do not report SPEC 009 complete.

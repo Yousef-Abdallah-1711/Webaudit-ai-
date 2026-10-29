@@ -114,7 +114,7 @@ The 28-gate reassessment is appended to `DEFINITION_OF_DONE.md`. Evidence suppor
 
 ## Z. Git commits and remote synchronization
 
-At report creation, implementation and report changes were local and uncommitted. The user's pre-existing web edits and artifacts remain unstaged. Push is authorized by the master directive but is deferred until the final scoped diff and checks are reviewed; no force operation is planned. Record the commit and remote verification here after delivery.
+The reviewed SPEC 009 changes were committed as `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3` (`fix(spec-009): restrict finalizer grants and close refusal gate`) and pushed to `origin/main` with a normal push. Follow-up `git fetch origin main`, `git rev-parse HEAD`, `git rev-parse origin/main`, and `git ls-remote origin refs/heads/main` all returned `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3`. The branch is even with origin. Existing web/auth changes, lockfile changes, `.next-final-cta-verify/`, and `logs/` remain uncommitted and unstaged.
 
 ## Verification commands and evidence classification
 
