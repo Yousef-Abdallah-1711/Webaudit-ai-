@@ -1,7 +1,7 @@
 # SPEC 009 — session progress and continuation handoff
 
 Last updated 2026-10-29. Session start: HEAD `a1034fa` = `origin/main`.
-**Verdict: SPEC 009 is NOT COMPLETE.** Service layer implemented and tested on real PostgreSQL; dispatch/queues, host loop, progress events, engines, real full-stack, Chrome acceptance, performance and the dev-database migration are not done. Gate count (`DEFINITION_OF_DONE.md`): 9 PASS · 12 PARTIAL · 7 NOT STARTED of 28. Requirement count (`REQUIREMENT_DELTA_MATRIX.md` addendum): 26 IMPLEMENTED-TESTED · 2 VERIFIED · 13 PARTIAL · 5 MISSING · 3 N/A.
+**Verdict: SPEC 009 is NOT COMPLETE.** Service layer implemented and tested on real PostgreSQL; dispatch/queues, host loop, progress events, engines, real full-stack, Chrome acceptance, performance and the dev-database migration are not done. Gate count (`DEFINITION_OF_DONE.md`): 9 PASS · 13 PARTIAL · 6 NOT STARTED of 28. Requirement count (`REQUIREMENT_DELTA_MATRIX.md` addendum): 26 IMPLEMENTED-TESTED · 2 VERIFIED · 14 PARTIAL · 4 MISSING · 3 N/A.
 
 ## Decisions (owner, 2026-10-29)
 DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; recorded in `docs/audits/fahes-master-audit/final-planning/DECISION_AMENDMENT_2026-10-29_SPEC009_LEVEL1.md`. v6 drafted and checked against 006/007/008/009 as implemented: `specs/009-core-scan-execution-platform/amendments/AMENDMENT-U1B-v6.md` (v1-v5 untouched). **Disclosed**: the migration has ten tables, not eight (`ExecutionUnitHostClaim`, `EffectAuthorization` are required by the approved options), plus a `terminalReason` column on `ExecutionUnit` (contract step 3 requires the reason to be recorded; the data model had no field). DEC-056/057/058/064 were treated as technical decisions inside DEC-066 (labelled as such, not owner answers).
@@ -16,6 +16,8 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 | `a60ee73` | enum mirrors in `packages/types` + drift guard (caught a real omission) |
 | `959802e` | worker: planned sweep, self-healing pass, plan-unit barrier, orchestrator hook (10 tests) |
 | `1f6e4a9` | evidence/artifact/materialization (23 tests, 5/5 mutants killed) |
+| `f0fb3cd`, `bab4c23` | docs: progress, DoD, matrix addendum, process status; FR-024 registry guard |
+| `2265019` | dispatch sequence (v6 §2), host-loop decision, per-class queue names (19 tests; 5/6 mutants killed, 1 equivalent) |
 
 ## Verification actually run
 - Migration: fresh install (all 25 migrations), rollback (`ROLLBACK-M009.sql`: tables 5→0, functions 5→0, types 0, history row removed), re-apply — on disposable database `m009_fresh`; only new tables are touched, 0 `DROP`/`DELETE`; applied to `webaudit_test` (recovered a failed history row caused by my own first, banner-polluted SQL via `prisma migrate resolve --rolled-back`). **Not applied to the dev `webaudit` database.**
@@ -33,7 +35,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 ## Not done, with the reason
 | Area | State |
 |---|---|
-| Queue topology, `dispatchExecutionUnit`, host loop, progress events (FR-017/018/027) | not built; need the engine host (SPEC 010-012) to be meaningful |
+| BullMQ producers/consumers for the per-class queues, the host process that runs `hostLoopDecision`, progress events (FR-017/018/027) | the logic (`dispatchExecutionUnit`, `hostLoopDecision`, queue names) is built and tested; the BullMQ wiring and the host process need an engine (SPEC 010-012) to be meaningful; progress events not built |
 | Engines for non-passive classes | out of scope (SPEC 010-012); the resolver refuses a class with no registered engine |
 | `storage/retention.ts` call to `enforceArtifactRetention`, scheduling `reclaimOrphanedArtifacts` | functions exist and tested; not wired (retention uses an array transaction; converting it risks the legacy suite) |
 | Real R2 | no credentials; adapter covered by a command stub only |
@@ -50,7 +52,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 
 ## Next exact tasks
 1. Read the full-suite result below; fix any regression attributable to this work.
-2. Wire dispatch: per-class queues (`packages/config/src/queues.ts`), `dispatchExecutionUnit` = step 0 (`dispatchDeadlineDecision`) → `claimUnitHost` → F07 admission with `executionId = ExecutionUnit.id` → CAS edges; host loop (≤5 s) with `classifyPreRunCause`; `finalizeUnitAndContinue` on exit. Needs one real engine or a test engine to exercise it.
+2. Create the BullMQ queues/workers for `EXEC_QUEUE_NAMES` and call `dispatchExecutionUnit` from a worker (payload = `{ executionUnitId }` only); run `hostLoopDecision` every ≤5 s in the engine host and apply its action (finalize via `finalizeUnitAndContinue`). Needs one real or test engine to exercise it end to end.
 3. Wire `enforceArtifactRetention` into the retention transaction and schedule the reaper; progress events.
 4. Back up and migrate the dev database; full-stack run on non-superuser roles; Chrome journey for whatever becomes user-visible.
 5. Re-run adverse + Playwright + k6 baselines; update DoD gates 7-15, 20, 23-26.
@@ -59,7 +61,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 Owner changes in the working tree are never staged: `pnpm-lock.yaml` hunks, `apps/web/audit-sweep.mjs`, `apps/web/auth-state.mjs`, `docs/audits/frontend-design/`, `showcase-*`. Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`. Normal push only.
 
 ## Full-suite result
-(pending — filled in after `/tmp/full.txt` completes; see the final report)
+The complete serial unit run is **not finished** at the time of writing: it takes hours here even on a throwaway tmpfs Postgres (1569 tests, each resetting ~70 partitioned tables). Last observed state of the run against the throwaway database: **295 passed, 0 failed** (api-first ordering; partial). The earlier parallel run on the shared database (38 failures) failed on DB-hook timeouts from contention; the failing file passed when run alone. **The full unit suite, the adverse suite and Playwright have NOT been re-run to completion after this change** — that remains an open verification gate (DoD gate 26, PARTIAL). What was run to completion: planning/runtime/evidence/dispatch (237 tests), worker sweep/gate/legacy timeout/orchestrator subsets (40), enum drift.
 
 ## Git
-(pending push)
+Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified with `git ls-remote`). Owner working-tree files were not staged.

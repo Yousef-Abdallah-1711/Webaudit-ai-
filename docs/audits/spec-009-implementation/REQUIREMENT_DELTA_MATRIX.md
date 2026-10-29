@@ -89,11 +89,11 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 009 | PARTIAL | terminal reasons and coverage facts exist; no per-unit "why it exists" narrative field |
 | 015 | PARTIAL | plan immutable; runtime child-unit creation for frontier classes not built |
 | 016, 044, 045 | NOT APPLICABLE | unchanged |
-| 017 | MISSING | per-class queue topology not built |
-| 018 | PARTIAL | claim/CAS are durable-state driven; no enqueue/dispatch code |
+| 017 | PARTIAL | queue names and class routing defined in `packages/config` (tested); no BullMQ queues/consumers created for them |
+| 018 | PARTIAL | `dispatchExecutionUnit` is driven by durable state (payload only identifies the row); no enqueue code or worker consumer yet |
 | 019 | MISSING | child process / force termination is host + engine work |
 | 020 | PARTIAL | config secret-key guard, evidence redaction; engine writers do not exist |
-| 021, 022, 022a | PARTIAL | stop precedence and expiry mapping tested; host loop and dispatch-time checks not wired |
+| 021, 022, 022a | PARTIAL | stop precedence, expiry mapping, dispatch-time F07 admission and the host-loop decision are tested; no running host process uses them |
 | 023 | IMPLEMENTED-TESTED | `failure-class.ts` |
 | 024 | IMPLEMENTED-TESTED | registry refuses `maxAttempts > 1` without a recorded proof |
 | 026, 041 | IMPLEMENTED-TESTED | tenant filter on every new service entry point |
@@ -108,4 +108,4 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 046 | VERIFIED COMPLETE for code that exists | no AI/provider imports in any new module |
 | 047 | PARTIAL | T-U1-1/2/3/6/7/8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9 `authorizeEffect` done, engine wrappers n/a; T-U1-10 AC-1..AC-20 partially covered |
 
-**Totals (49 FR items):** IMPLEMENTED-TESTED 26 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 5 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
+**Totals (49 FR items):** IMPLEMENTED-TESTED 26 · VERIFIED COMPLETE 2 · PARTIAL 14 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
