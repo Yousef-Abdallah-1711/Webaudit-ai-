@@ -14,6 +14,7 @@
     "./safety": "./src/services/safety/index.ts",
     "./planning": "./src/services/planning/index.ts",
     "./execution-runtime": "./src/services/execution-runtime/index.ts",
+    "./evidence": "./src/services/evidence/index.ts",
     "./authorization": "./src/services/authorization/index.ts",
     "./issues": "./src/services/issues/index.ts",
     "./intake": "./src/services/intake/index.ts",
