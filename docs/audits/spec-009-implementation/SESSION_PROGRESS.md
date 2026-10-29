@@ -41,6 +41,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 | Dev DB migration | deliberately not applied (needs a `pg_dump` backup first, as in 008) |
 | D-1 (browser pool) | unchanged and open: needs the SPEC 010 BROWSER engine (DEC-052/042) |
 | Least-privilege runtime on the dev stack | unchanged: dev API/worker still use the superuser; **not claimed** |
+| Role grants for the ten new tables | **not defined**: migration `20261030000000` grants only `EXECUTE` on `fahes_finalize_unit`; which of `fahes_api` / `fahes_worker_exec` / `fahes_orchestrator` may read or write each table (DEC-044 intent: workers hold no status privilege where SPEC 012 needs it) needs a design and a role-isolation test like 008's 116-case matrix. Until then a non-superuser runtime would need blanket grants (as 008's isolated stack used) and the privilege boundary is **not claimed** for the new tables |
 | Adverse suite, Playwright E2E, contract suite re-run after the change | not re-run |
 
 ## Environment hazards (for the next session)
