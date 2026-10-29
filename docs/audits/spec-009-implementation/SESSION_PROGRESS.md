@@ -37,7 +37,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 |---|---|
 | BullMQ producers/consumers for the per-class queues, the host process that runs `hostLoopDecision`, progress events (FR-017/018/027) | the logic (`dispatchExecutionUnit`, `hostLoopDecision`, queue names) is built and tested; the BullMQ wiring and the host process need an engine (SPEC 010-012) to be meaningful; progress events not built |
 | Engines for non-passive classes | out of scope (SPEC 010-012); the resolver refuses a class with no registered engine |
-| `storage/retention.ts` call to `enforceArtifactRetention`, scheduling `reclaimOrphanedArtifacts` | functions exist and tested; not wired (retention uses an array transaction; converting it risks the legacy suite) |
+| Production `artifactStore` for the retention job, scheduling `reclaimOrphanedArtifacts` | `enforceRetention` now calls `enforceArtifactRetention` inside one interactive transaction (legacy retention tests green + new test); needs R2 credentials and a scheduler entry |
 | Real R2 | no credentials; adapter covered by a command stub only |
 | Real API + worker + Redis run, Chrome acceptance (24 steps, 3 viewports), failure injection, load baselines, coverage | not started: there is no user-visible surface and no running unit path to drive; backend features are verified by DB tests only. Playwright MCP was not used. |
 | Dev DB migration | **applied 2026-10-29** after a `pg_dump -Fc` backup: `User` 86 / `Scan` 243 / `CreditTransaction` 267 and the `User` table checksum identical before and after; history 24 → 25; ten new tables and `fahes_finalize_unit` present. The running dev API/worker are unaffected (they do not use the new tables yet) |

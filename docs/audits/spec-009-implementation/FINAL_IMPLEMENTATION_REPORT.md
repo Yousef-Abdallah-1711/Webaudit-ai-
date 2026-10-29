@@ -1,7 +1,7 @@
 # SPEC 009 — implementation report (2026-10-29)
 
 ## Verdict
-**SPEC 009 is NOT COMPLETE and is not claimed as verified.** The service layer (schema, planning, runtime core, finalizer, U-1 sweep/gate, evidence/artifacts, dispatch logic) is implemented, committed, pushed and tested against real PostgreSQL. The parts that need a running engine host, a BullMQ consumer, a browser or a production-like stack are not done. Definition of Done: **9 PASS · 13 PARTIAL · 6 NOT STARTED** of 28 gates; requirements: **26 IMPLEMENTED-TESTED · 2 VERIFIED · 14 PARTIAL · 4 MISSING · 3 N/A** of 49 (`DEFINITION_OF_DONE.md`, `REQUIREMENT_DELTA_MATRIX.md` addendum).
+**SPEC 009 is NOT COMPLETE and is not claimed as verified.** The service layer (schema, planning, runtime core, finalizer, U-1 sweep/gate, evidence/artifacts, dispatch logic) is implemented, committed, pushed and tested against real PostgreSQL. The parts that need a running engine host, a BullMQ consumer, a browser or a production-like stack are not done. Definition of Done: **9 PASS · 13 PARTIAL · 6 NOT STARTED** of 28 gates; requirements: **27 IMPLEMENTED-TESTED · 2 VERIFIED · 13 PARTIAL · 4 MISSING · 3 N/A** of 49 (`DEFINITION_OF_DONE.md`, `REQUIREMENT_DELTA_MATRIX.md` addendum).
 
 ## Owner decisions
 DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner 2026-10-29. v6 amendment drafted and checked against SPEC 006/007/008/009 as implemented, with no business-policy change; historical v1–v5 untouched (`specs/009-…/amendments/AMENDMENT-U1B-v6.md`, `final-planning/DECISION_AMENDMENT_2026-10-29_SPEC009_LEVEL1.md`). Disclosed up front: ten tables instead of eight, and a `terminalReason` column. DEC-056/057/058/064 were treated as technical decisions inside DEC-066 and labelled so.
@@ -21,7 +21,7 @@ Stack overflow in configuration validation on deep input; a transaction-abort ra
 
 ## Not done (each is a stated gap, not a pass)
 - BullMQ producers/consumers for the per-class queues and the host process that runs the loop; progress events; engines for non-passive classes (SPEC 010–012). The resolver refuses a class with no registered engine.
-- Wiring `enforceArtifactRetention` into `storage/retention.ts` and scheduling the reaper; real R2 (no credentials; adapter covered by a command stub).
+- Passing `artifactStore` to the production retention job and scheduling the reaper (retention itself now removes artifact rows in its transaction, tested); real R2 (no credentials; adapter covered by a command stub).
 - Role grants for the ten new tables (migration grants only `EXECUTE` on the finalizer): the privilege boundary is **not claimed** for them. The dev API/worker still use the superuser; **no least-privilege claim anywhere**.
 - Real API + worker + Redis run, Chrome acceptance (nothing user-visible exists to drive; Playwright MCP was not used), failure injection, performance baselines, coverage measurement, adverse suite, Playwright E2E and contract suite re-runs.
 - D-1 (browser pool) is unchanged: it needs the SPEC 010 BROWSER engine (DEC-052/042). SPEC 009 does not close it.

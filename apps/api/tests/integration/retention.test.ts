@@ -6,6 +6,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, resetDb, seedPlans, testDb } from '../helpers/db.js';
 import { createCapturingMailer } from '../helpers/mailer.js';
 import { enforceRetention } from '../../src/services/storage/retention.js';
+import { createMemoryArtifactStore, createArtifact } from '../../src/services/evidence/index.js';
 
 const mailer = createCapturingMailer();
 const deps = { mailer, storage: null, webUrl: 'https://app.example' };
@@ -92,6 +93,67 @@ describe('enforceRetention', () => {
     expect(scan.summary).toBeNull();
     expect(await testDb.issue.count({ where: { scanId } })).toBe(0);
     expect(await testDb.moduleResult.count({ where: { scanId } })).toBe(0);
+  });
+
+  it('SPEC 009 FR-034: removes Artifact rows in the same transaction, objects after commit; a failed delete leaves an orphan, never a dangling row', async () => {
+    const scanId = await completedScan('ret-artifacts@example.com', 10);
+    const scan = await testDb.scan.findUniqueOrThrow({ where: { id: scanId } });
+    const plan = await testDb.scanPlan.create({
+      data: {
+        kind: 'INITIAL',
+        userId: scan.userId,
+        scanId,
+        state: 'RESOLVED',
+        deadlineMs: 900_000,
+      },
+    });
+    await testDb.$executeRawUnsafe(
+      `INSERT INTO "ExecutionUnit" (id,"scanPlanId","userId","targetId","executionUnitClass","engineId",configuration,priority,"timeoutPolicyMs","retryPolicy","requiresSafetyCheckpoint","idempotencyKey") VALUES ('ret-u',$1,$2,$3,'PASSIVE_HTTP','e','{}'::jsonb,0,1000,'{}'::jsonb,false,'ret-u:1')`,
+      plan.id,
+      scan.userId,
+      scan.targetId,
+    );
+    const store = createMemoryArtifactStore();
+    const a = await createArtifact(testDb, store, {
+      scanId,
+      userId: scan.userId,
+      executionUnitId: 'ret-u',
+      contentType: 'image/png',
+      body: new Uint8Array([1, 2, 3]),
+    });
+    const result = await enforceRetention(testDb, { ...deps, artifactStore: store });
+    expect(result.removed).toBe(1);
+    expect(await testDb.artifact.count({ where: { id: a.id } })).toBe(0);
+    expect(store.objects.size).toBe(0);
+
+    const scan2 = await completedScan('ret-artifacts2@example.com', 10);
+    const s2 = await testDb.scan.findUniqueOrThrow({ where: { id: scan2 } });
+    const plan2 = await testDb.scanPlan.create({
+      data: {
+        kind: 'INITIAL',
+        userId: s2.userId,
+        scanId: scan2,
+        state: 'RESOLVED',
+        deadlineMs: 900_000,
+      },
+    });
+    await testDb.$executeRawUnsafe(
+      `INSERT INTO "ExecutionUnit" (id,"scanPlanId","userId","targetId","executionUnitClass","engineId",configuration,priority,"timeoutPolicyMs","retryPolicy","requiresSafetyCheckpoint","idempotencyKey") VALUES ('ret-u2',$1,$2,$3,'PASSIVE_HTTP','e','{}'::jsonb,0,1000,'{}'::jsonb,false,'ret-u2:1')`,
+      plan2.id,
+      s2.userId,
+      s2.targetId,
+    );
+    const failing = { ...store, delete: () => Promise.reject(new Error('r2 down')) };
+    await createArtifact(testDb, store, {
+      scanId: scan2,
+      userId: s2.userId,
+      executionUnitId: 'ret-u2',
+      contentType: 'image/png',
+      body: new Uint8Array([9]),
+    });
+    await enforceRetention(testDb, { ...deps, artifactStore: failing });
+    expect(await testDb.artifact.count({ where: { scanId: scan2 } })).toBe(0);
+    expect(store.objects.size).toBe(1); // orphan object remains for the reaper
   });
 
   it('leaves a fresh report alone', async () => {

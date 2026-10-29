@@ -28,6 +28,8 @@ import type { PrismaClient } from '../../../prisma/generated/client/index.js';
 import type { Mailer } from '../email/mailer.js';
 import type { ReportStorage } from './reports.js';
 import { resolveEffectivePlan } from '../billing/entitlements.js';
+import { enforceArtifactRetention } from '../evidence/artifacts.js';
+import type { ArtifactStore } from '../evidence/store.js';
 
 const DAY_MS = 86_400_000;
 
@@ -35,6 +37,8 @@ export interface RetentionDeps {
   readonly mailer: Mailer;
   /** `null` skips artifact deletion (dev with no R2). Rows are still removed. */
   readonly storage: ReportStorage | null;
+  /** SPEC 009 FR-034: object store for `Artifact` rows; their rows go in the same transaction, objects after commit. */
+  readonly artifactStore?: ArtifactStore | null;
   /** Base URL for the export link in the warning email. */
   readonly webUrl: string;
 }
@@ -83,15 +87,28 @@ export async function enforceRetention(
     if (expiry === null) continue;
 
     if (expiry < now) {
-      await db.$transaction([
-        db.issue.deleteMany({ where: { scanId: scan.id } }),
-        db.moduleResult.deleteMany({ where: { scanId: scan.id } }),
-        db.readinessVerdict.deleteMany({ where: { scanId: scan.id } }),
-        db.scan.update({
+      // Interactive transaction (was an array of the same four writes): SPEC 009's artifact rows must be removed in
+      // the SAME transaction as the report data (artifact-contract rule 3), never a separate pass.
+      const artifactKeys = await db.$transaction(async (tx) => {
+        await tx.issue.deleteMany({ where: { scanId: scan.id } });
+        await tx.moduleResult.deleteMany({ where: { scanId: scan.id } });
+        await tx.readinessVerdict.deleteMany({ where: { scanId: scan.id } });
+        await tx.scan.update({
           where: { id: scan.id },
           data: { reportRemovedAt: now, overallScore: null, summary: null },
-        }),
-      ]);
+        });
+        return enforceArtifactRetention(tx, scan.id);
+      });
+      if (deps.artifactStore) {
+        for (const key of artifactKeys) {
+          try {
+            await deps.artifactStore.delete(key);
+          } catch (error) {
+            // A failed delete leaves an orphan the reaper reclaims; never a row pointing at a deleted object.
+            console.warn(`[retention] could not delete artifact object for ${scan.id}:`, error);
+          }
+        }
+      }
       if (deps.storage !== null) {
         try {
           await deps.storage.deleteScanObjects(scan.id);

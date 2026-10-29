@@ -101,11 +101,11 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 028, 030, 031, 033, 036, 037, 038, 042 | IMPLEMENTED-TESTED | `evidence.test.ts` (23, 5/5 mutants killed) |
 | 029 | PARTIAL | REVERIFY plan resolves from the finding (tested); reverify runner not switched to plans |
 | 032, 035 | PARTIAL | memory store + command-level R2 stub only; real R2 untested; reaper not scheduled |
-| 034 | PARTIAL | `enforceArtifactRetention` exists and is rollback-safe; not yet called from `storage/retention.ts`'s transaction |
+| 034 | IMPLEMENTED-TESTED | `enforceRetention` now removes Artifact rows in the same (interactive) transaction as the report data and deletes objects after commit; tested incl. a failing store. Production wiring must pass `artifactStore` (needs R2 credentials; the reaper is still unscheduled) |
 | 039 | PARTIAL | `scanCoverageSummary` exists; the report read path does not call it |
 | 040 | VERIFIED COMPLETE as an invariant so far | legacy sweep/orchestrator tests green with the new optional hooks; re-verified after the full unit run |
 | 043 | MISSING | per-engine observability |
 | 046 | VERIFIED COMPLETE for code that exists | no AI/provider imports in any new module |
 | 047 | PARTIAL | T-U1-1/2/3/6/7/8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9 `authorizeEffect` done, engine wrappers n/a; T-U1-10 AC-1..AC-20 partially covered |
 
-**Totals (49 FR items):** IMPLEMENTED-TESTED 26 · VERIFIED COMPLETE 2 · PARTIAL 14 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
+**Totals (49 FR items):** IMPLEMENTED-TESTED 27 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
