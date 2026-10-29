@@ -14,6 +14,7 @@ import type {
   UnitObservation,
 } from '@webaudit/api/execution-runtime';
 import type { EvidenceKind } from '@webaudit/api/prisma-client';
+import { EXEC_QUEUE_NAMES, queueNameForUnitClass } from '@webaudit/config';
 
 export interface AdapterUnit extends DispatchUnit {
   configuration: unknown;
@@ -37,6 +38,8 @@ export interface AdapterContext {
 
 export interface ExecutionAdapter {
   readonly engineId: string;
+  /** Queue class consumed by this adapter. Engine IDs remain the lookup key for a unit. */
+  readonly executionUnitClass: string;
   /** Class L consumes an F07 concurrency lease; class N does not. */
   readonly leaseClass: 'L' | 'N';
   readonly hardStopMarginMs?: number;
@@ -61,6 +64,13 @@ export function createAdapterRegistry(adapters: readonly ExecutionAdapter[] = []
   const byId = new Map<string, ExecutionAdapter>();
   for (const a of adapters) {
     if (byId.has(a.engineId)) throw new Error(`duplicate execution adapter for ${a.engineId}`);
+    const queueName = queueNameForUnitClass(a.executionUnitClass);
+    const executionQueueNames: readonly string[] = Object.values(EXEC_QUEUE_NAMES);
+    if (queueName === null || !executionQueueNames.includes(queueName)) {
+      throw new Error(
+        `execution adapter ${a.engineId} has no dispatch queue for ${a.executionUnitClass}`,
+      );
+    }
     byId.set(a.engineId, a);
   }
   return { find: (id) => byId.get(id), list: () => [...byId.values()] };

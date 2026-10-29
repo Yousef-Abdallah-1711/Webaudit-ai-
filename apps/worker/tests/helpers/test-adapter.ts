@@ -40,6 +40,7 @@ export function createTestAdapter(
   const aborted: string[] = [];
   const adapter: ExecutionAdapter = {
     engineId,
+    executionUnitClass: 'BROWSER',
     leaseClass: opts.lease ?? 'L',
     ...(opts.hardStopMarginMs === undefined ? {} : { hardStopMarginMs: opts.hardStopMarginMs }),
     admissionRequestFor: (u) =>

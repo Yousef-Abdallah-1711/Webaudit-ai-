@@ -60,9 +60,14 @@ Phase 1 items P9-A01..A05 and P9-C01 are DONE (tested). Phase 2 was unblocked by
 
 The historical status paragraph above predates later implementation commits and is superseded by source inspection and the dated verification report. Current evidence changes:
 
-- P9-B03/B04/B05/B06/B11 have implementation code; queues, host, admission, deadline handling, effects, and progress were exercised in `apps/worker/tests/integration/execution-runtime.test.ts` (16/16) with disposable real PostgreSQL, Redis, and BullMQ. They are **not yet composed into `apps/worker/src/index.ts`**, and this direct test is not full-stack verification.
+- P9-B03/B04/B05/B06/B11 have implementation code; queues, host, admission, deadline handling, effects, and progress were exercised in `apps/worker/tests/integration/execution-runtime.test.ts` (17/17) with disposable real PostgreSQL, Redis, and BullMQ. `startWorker` now composes locally supplied adapters into consumers and shutdown; its executable entrypoint has no registered production adapter, and this is not full API-stack verification.
 - P9-C10 includes the artifact reaper handler and repeatable scheduler in the worker entrypoint by static inspection; R2 and retention/reaper lifecycle remain unverified. Remove the stale statement that the reaper is unscheduled only after fresh verification of retention lifecycle.
 - P9-X03 is partly met for the narrow DB privilege proof: actual non-superuser login roles tested finalizer/status boundaries (7/7). Full table/function/tenant/effect/lease matrix and real API/worker role connections remain outstanding.
 - Corrective migration `20261030130000_core01_restrict_finalizer_grants` is fresh-install tested only and not applied to the shared development DB.
 - A real gap remains: no production `resolvePlan` caller or API-to-queue path was found; engine adapter integration remains future SPEC 010–012.
 - Historical full-suite, adverse, contract, browser, performance, R2, and coverage results are not current evidence. See `FINAL_VERIFICATION_REPORT_2026-10-29.md` and the current DoD reassessment.
+- Five previously named failing files passed together sequentially on isolated Redis and the disposable test database (27/27). This proves they pass without the shared Redis configuration but does not identify the exact cause of the earlier full-suite failures; full suite remains outstanding.
+
+## Verification update — 2026-10-29
+
+The full serial unit/contract/integration Vitest workspace is now complete: **243/243 files and 1,851/1,851 tests passed** on isolated PostgreSQL and Redis. The run closed the earlier full-suite failures: blank `EMAIL_TRANSPORT` is normalized to the documented SMTP default, and the sandbox-unconfigured contract clears the `.env` URL before its assertion. See the dated final verification report and session progress for scope and remaining gates. Adverse/visual suites, API plan producer/production adapter, browser, load, coverage, full privilege matrix, and real R2 remain open.

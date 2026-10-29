@@ -658,9 +658,9 @@ describe('POST /capabilities/upload (T216/T226)', () => {
   });
 
   it('503s SANDBOX_UNAVAILABLE when SANDBOX_RUNNER_URL is unset (not configured)', async () => {
-    // The test env (vitest.workspace.ts) never sets SANDBOX_RUNNER_URL, so
-    // this is the ambient state unless a test explicitly sets it — asserted
-    // here directly rather than assumed.
+    // The repository .env supplies a local default; remove it so this case
+    // proves the unconfigured behavior independently of the developer shell.
+    delete process.env['SANDBOX_RUNNER_URL'];
     expect(process.env['SANDBOX_RUNNER_URL']).toBeUndefined();
 
     const { token } = await makeOperatorToken();

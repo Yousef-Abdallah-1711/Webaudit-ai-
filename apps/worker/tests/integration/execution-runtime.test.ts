@@ -34,6 +34,7 @@ import {
   type ExecWorkerSet,
 } from '../../src/execution-runtime/index.js';
 import { createTestAdapter, type Behavior } from '../helpers/test-adapter.js';
+import { startWorker } from '../../src/index.js';
 
 const [host, port] = (process.env['EXEC_TEST_REDIS'] ?? 'localhost:6399').split(':');
 const connection = {
@@ -129,6 +130,38 @@ afterAll(async () => {
 const beh = (b: Behavior) => ({ behavior: b });
 
 describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
+  it('composes registered execution adapters into the standard worker service and drains them on shutdown', async () => {
+    const w = await makeRuntimeWorld({ scanState: 'RUNNING_PHASE_3' });
+    await db.moduleResult.create({
+      data: { scanId: w.scanId, module: 'SECURITY', state: 'COMPLETE', score: 80 },
+    });
+    const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
+    const h = createTestAdapter(w);
+    const publisher = new Redis({ host: connection.host, port: connection.port });
+    const phaseJobs: string[] = [];
+    const service = startWorker({
+      connection,
+      db: db as never,
+      publisher,
+      handlers: { phase: async (data) => void phaseJobs.push(data.phase) },
+      executionAdapters: [h.adapter],
+      executionArtifactStore: store,
+      installSignalHandlers: false,
+      shutdownGraceMs: 5000,
+    });
+    try {
+      expect(service.executionWorkers?.workers).toHaveLength(1);
+      expect(service.executionQueues).toBeDefined();
+      expect(await enqueueEligibleUnits(db as never, service.executionQueues!, w.planId)).toBe(1);
+      expect(await terminal(a.id)).toBe('COMPLETED');
+      await waitFor(async () => (phaseJobs.includes('RUNNING_MASTER') ? true : false));
+      expect(h.runs).toEqual([a.id]);
+    } finally {
+      await service.shutdown('integration-test');
+      await publisher.quit();
+    }
+  });
+
   it('runs a two-unit chain: only the root is enqueued, the dependent follows its completion; evidence, progress, effects and lease all settle', async () => {
     const w = await makeRuntimeWorld();
     const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });

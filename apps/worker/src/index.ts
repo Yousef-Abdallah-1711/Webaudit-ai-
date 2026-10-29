@@ -52,7 +52,7 @@ import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
 import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
 import { continueScanIfPlanTerminal } from '@webaudit/api/execution-runtime';
-import { createPhaseHandler } from './orchestrator/orchestrator.js';
+import { createPhaseHandler, planQueuePriorityFor } from './orchestrator/orchestrator.js';
 import { createQuestionnaireTimeoutHandler } from './orchestrator/questionnaire-timeout-handler.js';
 import { createReverifyHandler } from './reverify/runner.js';
 import {
@@ -68,7 +68,7 @@ import {
   createArtifactReaperHandler,
   scheduleArtifactReaper,
 } from './orchestrator/artifact-reaper.js';
-import { createArtifactStoreFromEnv } from '@webaudit/api/evidence';
+import { createArtifactStoreFromEnv, type ArtifactStore } from '@webaudit/api/evidence';
 import {
   createPaymentExpirySweepHandler,
   schedulePaymentExpirySweep,
@@ -102,6 +102,18 @@ import {
 } from './orchestrator/cancellation.js';
 import { initMonitoring } from './config/monitoring.js';
 import { writeHeartbeat } from './orchestrator/heartbeat.js';
+import {
+  createAdapterRegistry,
+  createExecQueues,
+  createExecWorkers,
+  createExecutionJobHandler,
+  enqueueEligibleUnits,
+  type ExecQueueSet,
+  type ExecWorkerSet,
+} from './execution-runtime/index.js';
+import type { ExecutionAdapter } from './execution-runtime/adapter.js';
+import { enqueuePhase } from './orchestrator/phases.js';
+import { createScanEmitter } from './orchestrator/emit.js';
 
 export const SERVICE_NAME = '@webaudit/worker' as const;
 
@@ -203,6 +215,10 @@ export interface WorkerServiceOptions {
   readonly cancellation?: CancellationSource;
   /** Omit to read `AI_MODE`/`AI_CHAIN` via `createExecutorFromEnv()`. */
   readonly executor?: AiExecutor;
+  /** Locally registered SPEC 010+ adapters; no code is downloaded or loaded at runtime. */
+  readonly executionAdapters?: readonly ExecutionAdapter[];
+  /** Required with `executionAdapters` when handlers are supplied by a test or embedding service. */
+  readonly executionArtifactStore?: ArtifactStore;
   /** Override only for focused tests or a deliberately reviewed deployment override. */
   readonly moduleTimeoutMs?: number;
   readonly shutdownGraceMs?: number;
@@ -217,6 +233,8 @@ export interface WorkerServiceOptions {
 export interface WorkerService {
   readonly queues: QueueSet;
   readonly workers: WorkerSet;
+  readonly executionQueues?: ExecQueueSet;
+  readonly executionWorkers?: ExecWorkerSet;
   /** Idempotent. A second SIGTERM must not start a second shutdown. */
   shutdown(reason?: string): Promise<void>;
 }
@@ -238,6 +256,18 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
 
   const queues = createQueues(connection);
 
+  if (
+    (options.executionAdapters?.length ?? 0) > 0 &&
+    options.handlers !== undefined &&
+    (options.db === undefined ||
+      options.executionArtifactStore === undefined ||
+      options.publisher === undefined)
+  ) {
+    throw new Error(
+      'executionAdapters with custom handlers require db, executionArtifactStore, and publisher.',
+    );
+  }
+
   // Built lazily-but-eagerly: only when no explicit `handlers` was given, so
   // a caller that wants the placeholders (or a fake) never pays for a real
   // database connection or AI executor it will not use.
@@ -246,15 +276,20 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
   let heartbeatTimer: NodeJS.Timeout | undefined;
   let cancellationToClose: { close(): Promise<void> } | undefined;
   let uploadStorage: UploadStorage | undefined;
+  let executionDb: PrismaClient | undefined;
+  let executionArtifactStore: ArtifactStore | null | undefined;
+  let executionPublisher: EventPublisher | undefined;
   let uninstallTerminalRefund: (() => void) | undefined;
   let uninstallTerminalTeardown: (() => void) | undefined;
   const handlers =
     options.handlers ??
     (() => {
       const db = options.db ?? createWorkerDb();
+      executionDb = db;
       const mailer = createWorkerMailer(db);
       // SPEC 009: null when no R2 credentials are configured (dev/CI); retention then removes rows only and the reaper is a no-op.
       const artifactStore = createArtifactStoreFromEnv();
+      executionArtifactStore = artifactStore;
       const workspaceBaseDir = requiredEnv('WORKSPACE_BASE_DIR');
       uninstallTerminalRefund = installTerminalRefund({ db });
       uninstallTerminalTeardown = installTerminalTeardown({
@@ -273,6 +308,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           publisherToClose = client;
           return client;
         })();
+      executionPublisher = publisher;
       const executor = options.executor ?? createExecutorFromEnv();
       const masterReportExecutor = createMasterReportExecutorFromEnv(process.env, executor);
       const moduleTimeoutMs = options.moduleTimeoutMs ?? moduleTimeoutForExecutor(executor);
@@ -352,6 +388,72 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       };
     })();
   const workers = createWorkers({ connection, handlers });
+
+  let executionQueues: ExecQueueSet | undefined;
+  let executionWorkers: ExecWorkerSet | undefined;
+  const adapters = options.executionAdapters ?? [];
+  if (adapters.length > 0) {
+    const db = executionDb ?? options.db;
+    const artifactStore = options.executionArtifactStore ?? executionArtifactStore;
+    const publisher = options.publisher ?? executionPublisher;
+    if (
+      db === undefined ||
+      artifactStore === undefined ||
+      artifactStore === null ||
+      publisher === undefined
+    ) {
+      throw new Error(
+        'SPEC 009 execution startup needs a database, artifact store, and Redis publisher.',
+      );
+    }
+    const registry = createAdapterRegistry(adapters);
+    executionQueues = createExecQueues(connection);
+    const handle = createExecutionJobHandler({
+      db,
+      registry,
+      artifactStore,
+      publisher,
+      hostInstanceId: process.env['EXECUTION_HOST_ID'] ?? `host-${process.pid}`,
+      gateFor: (scanId) => ({
+        enqueueMaster: async () => {
+          const scan = await db.scan.findUnique({
+            where: { id: scanId },
+            select: { userId: true, requestedModules: true },
+          });
+          if (scan === null) return;
+          await enqueuePhase(
+            {
+              scanPhaseQueue: queues.scanPhase,
+              maintenanceQueue: queues.maintenance,
+              db,
+              emitter: createScanEmitter(scanId, { publisher }),
+              planQueuePriority: await planQueuePriorityFor(db, scan.userId),
+            },
+            {
+              scanId,
+              phase: 'RUNNING_MASTER',
+              modules: scan.requestedModules,
+              attempt: 1,
+            },
+          );
+        },
+      }),
+      onUnitCompleted: (scanPlanId) => enqueueEligibleUnits(db, executionQueues!, scanPlanId),
+    });
+    executionWorkers = createExecWorkers({
+      connection,
+      classes: registry.list().map((adapter) => adapter.executionUnitClass),
+      handle,
+      concurrency: positiveIntFromEnv('EXECUTION_WORKER_CONCURRENCY', 2),
+      onError: (error) => logger.error('execution worker error', { message: error.message }),
+      onFailed: (job, error) =>
+        logger.error('execution job failed', {
+          queue: job?.queueName,
+          jobId: job?.id,
+          message: error.message,
+        }),
+    });
+  }
 
   if (options.handlers === undefined && process.env['REDIS_URL'] !== undefined) {
     const workerId = process.env['WORKER_ID'] ?? `${process.pid}`;
@@ -456,7 +558,10 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       // job's lock expires and another worker reclaims it as stalled, which is
       // the correct outcome for work we could not finish.
       const outcome = await Promise.race([
-        workers.close(false).then(() => 'drained' as const),
+        Promise.all([
+          workers.close(false),
+          ...(executionWorkers === undefined ? [] : [executionWorkers.close(false)]),
+        ]).then(() => 'drained' as const),
         deadline,
       ]);
       if (timer !== undefined) clearTimeout(timer);
@@ -473,6 +578,7 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
       // After the workers: a producer closed first would break a job that is
       // still finishing and needs to enqueue its successor.
       await queues.close();
+      await executionQueues?.close();
       if (heartbeatTimer !== undefined) clearInterval(heartbeatTimer);
       if (heartbeatRedisToClose !== undefined) heartbeatRedisToClose.disconnect();
       if (publisherToClose !== undefined) publisherToClose.disconnect();
@@ -493,7 +599,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
     process.once('SIGINT', () => void shutdown('SIGINT'));
   }
 
-  return { queues, workers, shutdown };
+  return {
+    queues,
+    workers,
+    ...(executionQueues === undefined ? {} : { executionQueues }),
+    ...(executionWorkers === undefined ? {} : { executionWorkers }),
+    shutdown,
+  };
 }
 
 /**

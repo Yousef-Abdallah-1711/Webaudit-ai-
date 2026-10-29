@@ -45,11 +45,11 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 1 | PARTIAL | Schema and historical resolver tests inspected; full current contract/adverse suite not rerun. |
 | 2 | PARTIAL | Versioned profile implementation inspected; full current profile suite not rerun. |
 | 3 | PARTIAL | Snapshot behavior documented in prior evidence; not rerun in this session. |
-| 4 | PARTIAL | Resolver/deadline code present; no production caller found for `resolvePlan`; full suite not rerun. |
+| 4 | PARTIAL | Resolver/deadline code present; no production caller found for `resolvePlan`; full serial unit/contract/integration workspace passed, but the API producer path is still absent. |
 | 5 | PARTIAL | Graph implementation present; full graph/DB constraint suite not rerun. |
 | 6 | PARTIAL | Guarded transitions/finalizer present; new runtime integration passes, but full transition/race matrix not rerun. |
-| 7 | PARTIAL | Real isolated PG/Redis/BullMQ test passes 16/16; production worker does not start the execution consumers. |
-| 8 | PARTIAL | `createExecWorkers` and host exercised directly; production `startWorker` does not compose them and no production adapter is registered. |
+| 7 | PARTIAL | Real isolated PG/Redis/BullMQ suite passes 17/17; `startWorker` composes registered adapters in test, but the executable entrypoint supplies none. |
+| 8 | PARTIAL | `startWorker` now composes per-class consumers/host, continuation, dependent enqueue, and shutdown for locally supplied adapters; no production adapter is registered. |
 | 9 | PARTIAL | Plan authorization code present; grant-revocation runtime case passes; complete plan/dispatch scope mutation matrix not run. |
 | 10 | PARTIAL | Runtime admits through F07 in the integration test; actual API/worker roles are not used for that path. |
 | 11 | PARTIAL | Budget behavior exists in F07; concurrency/oversubscription load test not run. |
@@ -67,8 +67,14 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 23 | NOT STARTED | No measured SPEC 009 performance baseline or k6 run. |
 | 24 | PARTIAL | Direct PG/Redis/BullMQ test is real integration; no API+worker process or HTTP scan lifecycle. Existing healthy containers were observed only. |
 | 25 | NOT STARTED | No real Chrome manual acceptance or browser evidence. |
-| 26 | PARTIAL | Worker typecheck and focused integration/adverse tests pass; full unit/adverse/contract/Playwright regression not run. |
+| 26 | PARTIAL | Full serial unit/contract/integration workspace passed 243/243 files and 1,851/1,851 tests; adverse, visual, Playwright, and full 49-FR re-review remain. |
 | 27 | PARTIAL | This dated report and reassessment were added; full 49-FR re-review and all stale historical documents remain. |
 | 28 | PARTIAL | Changes are local pending final review/commit/push; remote remains at the verified starting HEAD. |
 
 **Current reassessment: 25 PARTIAL · 3 NOT STARTED · 0 PASS. Verdict: NOT COMPLETE.** The zero PASS count is deliberate: the current DoD requires end-to-end evidence for each gate and this session did not perform the complete gate-specific verification for any one gate.
+
+### Verification update — 2026-10-29
+
+- The serial unit/contract/integration workspace passed against disposable PostgreSQL and isolated Redis: **243/243 files, 1,851/1,851 tests**.
+- The full-suite failures found earlier were fixed: blank `EMAIL_TRANSPORT` now behaves as omitted and selects the documented production SMTP default; the sandbox-unconfigured contract removes the repository `.env` URL before checking that path.
+- This does not change the 25 PARTIAL / 3 NOT STARTED / 0 PASS gate count. Production API plan dispatch, production adapter registration, complete least-privilege matrix, adverse/visual/Playwright, browser, load, coverage, and real R2 evidence remain incomplete.

@@ -103,4 +103,25 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Scoped commit `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3` created and pushed normally to `origin/main`.
 - Post-push `git fetch`, local HEAD, `origin/main`, and `git ls-remote` all agree on `b2f05c0d41d61f59f9cf385a63719f7c7ea049d3`.
 - Remaining dirty/untracked files are the pre-existing website/auth edits, lockfile, `.next-final-cta-verify/`, and `logs/`; none were staged or committed.
-- Verification gap continues: full suite and startup composition are still open; do not report SPEC 009 complete.
+- Verification gap continues: full suite, production adapter registration, and API-to-plan path are still open; do not report SPEC 009 complete.
+
+## Worker lifecycle continuation — 2026-10-29
+
+- Added `executionAdapters` composition to `startWorker`: validated adapter registry, per-class BullMQ consumers, durable dependent enqueue, plan-gate master-phase enqueue, progress/evidence host dependencies, and coordinated shutdown.
+- Adapter registration now declares its execution-unit class; registry startup refuses classes without an execution queue, and the host refuses an adapter/unit class mismatch.
+- Added an integration case that starts the standard worker service with a local deterministic adapter on isolated PostgreSQL/Redis and verifies unit completion, master-phase enqueue, and clean shutdown.
+- Re-ran execution runtime integration: **17/17 passed**. Worker typecheck passed before the docs update.
+- This repo has no production SPEC 010–012 adapter; the executable `startWorker()` entrypoint still supplies none. API `resolvePlan` still has no production caller. The end-to-end API plan producer remains open.
+- Changed paths for this continuation: `apps/worker/src/index.ts`, `apps/worker/src/execution-runtime/adapter.ts`, `apps/worker/src/execution-runtime/host.ts`, `apps/worker/tests/helpers/test-adapter.ts`, `apps/worker/tests/integration/execution-runtime.test.ts`, and the SPEC 009 audit reports.
+- These changes are not yet committed or pushed at this checkpoint.
+- Investigated all five previously named failing test files with a temporary Vitest workspace routing `REDIS_URL` to isolated Redis `127.0.0.1:6391` and `TEST_DATABASE_URL` to `m009_privilege_test`; **5 files / 27 tests passed** sequentially. The temporary workspace was removed. This does not prove the cause of the prior full-suite failures; the full suite was not run.
+- Re-ran worker typecheck and targeted ESLint after startup composition; both passed. ESLint initially caught `== null`; changed it to explicit null/undefined checks and reran clean.
+
+## Full unit/contract/integration workspace and failure closure — 2026-10-29
+
+- Ran the complete serial unit/contract/integration Vitest workspace with disposable PostgreSQL `m009_privilege_test` and isolated Redis `127.0.0.1:6391`: **243/243 files, 1,851/1,851 tests passed**, duration 906.98 seconds. This includes runtime, API contract, worker integration, and web unit suites; separate adverse and visual projects were not run.
+- First run identified two failures. The email child-process tests inherited the repository's empty `EMAIL_TRANSPORT` from `.env`; production treated empty as invalid rather than omitted. `createDefaultMailer` now trims and normalizes blank transport to `undefined`, preserving the documented SMTP default. All 3 email boot tests pass.
+- The admin capability contract assumed the sandbox URL was absent, while repository `.env` provides `http://localhost:3003`. The no-sandbox test now explicitly deletes that ambient default before asserting; the file passes 27/27.
+- Full rerun after both changes passed all 243 files and 1,851 tests. Expected logs from negative DB, provider, cancellation, and failure-injection tests are not suite failures.
+- The 28-gate DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. Remaining key gaps include production `resolvePlan`/API queue dispatch, registered production engine adapter, full privilege matrix, separate adverse/visual projects, browser, performance, coverage, and real R2 verification.
+- This update includes two API files in the SPEC 009 scope: `apps/api/src/app.ts` and `apps/api/tests/contract/admin.capabilities.test.ts`. Existing owner website/auth changes and lockfile/log/generated paths remain excluded.

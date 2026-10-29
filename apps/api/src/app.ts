@@ -107,7 +107,11 @@ export interface AppDeps {
 }
 
 function createDefaultMailer(db: PrismaClient): Mailer {
-  const transport = process.env['EMAIL_TRANSPORT']?.toUpperCase();
+  // Compose/deployment environments often materialize an unset variable as an
+  // empty string. Treat that the same as an omitted transport so production's
+  // documented SMTP default still applies.
+  const rawTransport = process.env['EMAIL_TRANSPORT']?.trim();
+  const transport = rawTransport ? rawTransport.toUpperCase() : undefined;
   if (env.isProduction && transport !== undefined && transport !== 'SMTP') {
     throw new Error('EMAIL_TRANSPORT must be SMTP in production.');
   }

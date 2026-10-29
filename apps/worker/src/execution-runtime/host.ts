@@ -66,6 +66,7 @@ interface UnitRow {
   userId: string;
   scanPlanId: string;
   engineId: string;
+  executionUnitClass: string;
   status: string;
   idempotencyKey: string;
   attempt: number;
@@ -88,6 +89,7 @@ export function createExecutionJobHandler(
         userId: true,
         scanPlanId: true,
         engineId: true,
+        executionUnitClass: true,
         status: true,
         idempotencyKey: true,
         attempt: true,
@@ -101,22 +103,28 @@ export function createExecutionJobHandler(
     const adapter = deps.registry.find(row.engineId);
     if (adapter === undefined) {
       // No engine here: fail closed and terminal rather than leave the unit PLANNED for the sweep.
-      const plan = await deps.db.scanPlan.findUnique({
-        where: { id: row.scanPlanId },
-        select: { scanId: true },
-      });
       const r = await finalizeUnitAndContinue(
         deps.db,
         row.id,
         row.idempotencyKey,
         { kind: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' },
-        plan?.scanId !== null && plan?.scanId !== undefined && deps.gateFor !== undefined
-          ? deps.gateFor(plan.scanId)
-          : { enqueueMaster: () => Promise.resolve() },
+        await gateForUnit(deps, row),
       );
       return r.finalize.replayed
         ? { result: 'IGNORED', reason: `STATUS_${r.finalize.status}` }
         : { result: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' };
+    }
+    if (adapter.executionUnitClass !== row.executionUnitClass) {
+      const r = await finalizeUnitAndContinue(
+        deps.db,
+        row.id,
+        row.idempotencyKey,
+        { kind: 'REFUSED', reason: 'ENGINE_CLASS_MISMATCH' },
+        await gateForUnit(deps, row),
+      );
+      return r.finalize.replayed
+        ? { result: 'IGNORED', reason: `STATUS_${r.finalize.status}` }
+        : { result: 'REFUSED', reason: 'ENGINE_CLASS_MISMATCH' };
     }
 
     let lease: { leaseId: string; holderToken: string } | null = null;
@@ -162,6 +170,19 @@ export function createExecutionJobHandler(
   function gateOf(_row: { id: string; scanPlanId: string }): GateDeps {
     return { enqueueMaster: () => Promise.resolve() };
   }
+}
+
+async function gateForUnit(
+  deps: HostDeps,
+  row: { id: string; scanPlanId: string },
+): Promise<GateDeps> {
+  const plan = await deps.db.scanPlan.findUnique({
+    where: { id: row.scanPlanId },
+    select: { scanId: true },
+  });
+  return plan?.scanId !== null && plan?.scanId !== undefined && deps.gateFor !== undefined
+    ? deps.gateFor(plan.scanId)
+    : { enqueueMaster: () => Promise.resolve() };
 }
 
 async function runUnit(
