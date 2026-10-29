@@ -64,7 +64,9 @@ test('a new user receives a real report, export, clipboard prompt, and fixes cou
   // FR-053/spec.md: a fix prompt exists for every issue — assert the real,
   // accessible "Copy fix prompt" control is present rather than guessing at
   // a hashed CSS-module class name.
-  await expect(page.getByRole('button', { name: enReports.report_copy_prompt }).first()).toBeVisible({
+  await expect(
+    page.getByRole('button', { name: enReports.report_copy_prompt }).first(),
+  ).toBeVisible({
     timeout: 5_000,
   });
 

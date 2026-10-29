@@ -68,8 +68,7 @@ export async function materializeFinding(
   });
   const scanId = unit?.scanPlan.scanId ?? null;
   if (unit === null || scanId === null) throw new MaterializeRefusedError('UNIT_NOT_FOUND');
-  if (!RAN.has(unit.status))
-    throw new MaterializeRefusedError('UNIT_DID_NOT_RUN');
+  if (!RAN.has(unit.status)) throw new MaterializeRefusedError('UNIT_DID_NOT_RUN');
 
   const moduleResult = await db.moduleResult.findFirst({
     where: { id: input.moduleResultId, scanId },

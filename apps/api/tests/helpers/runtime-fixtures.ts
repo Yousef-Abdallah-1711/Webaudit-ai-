@@ -121,9 +121,7 @@ export async function statusOf(id: string): Promise<string> {
   return r[0]!.status;
 }
 
-export async function reasonOf(
-  id: string,
-): Promise<{
+export async function reasonOf(id: string): Promise<{
   status: string;
   terminalReason: string | null;
   failureClass: string | null;
