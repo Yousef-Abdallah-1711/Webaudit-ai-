@@ -215,3 +215,9 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Expanded `core01-role-isolation.test.ts` with a catalog-backed exact table-level matrix across six real LOGIN roles and all ten CORE-01 tables, including denial of table-level `TRUNCATE`, `REFERENCES`, and `TRIGGER` privileges.
 - Added exact execute grants and no-PUBLIC checks for the five CORE-01 SECURITY DEFINER functions. The isolated real-login suite passes **22/22** on `m009_core01_evidence_fence_test` after all 35 migrations.
 - Residual gap: tenant/effect abuse cases and production API/worker service credentials are not verified. This strengthens the isolated privilege evidence but does not close DoD gate 22.
+
+## Known suite regression follow-up — 2026-10-29
+
+- Re-ran `email-boot-guard.test.ts` with `EMAIL_TRANSPORT=''` and the isolated Redis endpoint: **3/3 passed**. Updated its child-process environment to follow `TEST_REDIS_URL` or `EXEC_TEST_REDIS`, removing the prior hard-coded shared Redis DB 15 dependency.
+- Re-ran the unconfigured sandbox capability contract with a throwaway JWT secret and isolated services: **1/1 passed**. The test deletes the repository `.env` URL before exercising the 503 path.
+- Full serial suite was not rerun after this test-harness change. Its latest full pass is in `FINAL_VERIFICATION_REPORT_2026-10-29.md`; the two targeted reruns confirm the previously diagnosed regressions only.

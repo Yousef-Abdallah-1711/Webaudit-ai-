@@ -24,6 +24,12 @@ import { isolatedChildEnv } from '../helpers/isolated-database.js';
 const REPO_ROOT = join(__dirname, '..', '..', '..', '..');
 const TSX_CLI = join(REPO_ROOT, 'node_modules', 'tsx', 'dist', 'cli.mjs');
 const API_ENTRY = join(REPO_ROOT, 'apps', 'api', 'src', 'index.ts');
+// Use the disposable Redis endpoint selected for the test run. Falling back to
+// the application's shared development Redis made this process-boundary test
+// depend on and connect to an unrelated local DB 15 instance.
+const TEST_REDIS_URL =
+  process.env['TEST_REDIS_URL'] ??
+  `redis://${process.env['EXEC_TEST_REDIS'] ?? '127.0.0.1:6399'}/15`;
 
 interface SpawnResult {
   readonly code: number | null;
@@ -38,7 +44,7 @@ const BASE_ENV = {
   ...isolatedChildEnv(process.env, TEST_DB_URL),
   NODE_ENV: 'production',
   PORT: '0',
-  REDIS_URL: 'redis://localhost:6389/15',
+  REDIS_URL: TEST_REDIS_URL,
   JWT_ACCESS_SECRET: 'test-only-access-secret-not-used-anywhere-else-0123456789',
   JWT_REFRESH_SECRET: 'test-only-refresh-secret-not-used-anywhere-else-0123456789',
   ENCRYPTION_KEY: 'dGVzdC1vbmx5LWVuY3J5cHRpb24ta2V5LTMyYnl0ZXMteHg=',

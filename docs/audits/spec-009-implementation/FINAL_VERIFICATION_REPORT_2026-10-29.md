@@ -180,6 +180,13 @@ The same first browser run found that the signup form enabled its submit button 
 - Additional artifact/evidence/retention/reaper checks passed **32/32** with an in-memory object store and isolated PostgreSQL. Existing API/worker phase progression passed **1/1** over isolated Redis; authenticated SPEC 009 unit-progress reconnect/recovery and real R2 remain unverified.
 - Scoped delivery commit `80118ad59f03fb80c523c3d10bfb795850f62c6e` was pushed and verified against remote `main`; unrelated dirty website/auth edits remain preserved.
 
+### Focused regression follow-up — 2026-10-29
+
+- The production email boot guard passed **3/3** with `EMAIL_TRANSPORT` explicitly blank and `EXEC_TEST_REDIS=127.0.0.1:6391`; the isolated child process confirmed blank transport selects the documented SMTP default and configured SMTP starts successfully.
+- The sandbox-unconfigured capability contract passed **1/1** with a disposable JWT secret and isolated PostgreSQL/Redis. Its test removes the repository's `SANDBOX_RUNNER_URL` before making the request.
+- To keep that email boot test off the shared development Redis DB 15, its child now takes `TEST_REDIS_URL` or derives DB 15 from the dedicated `EXEC_TEST_REDIS` test endpoint. No shared Redis/database or running service was changed.
+- These are focused re-runs; the full serial unit/contract/integration suite was not rerun after the latest test-only edits. Existing complete-run counts remain historical evidence, not a fresh result from this continuation.
+
 ### Current checkout and delivery
 
 - At the start of this revalidation, branch `main`, `HEAD`, and `origin/main` were `974d2620306a200660304984f0e42eac174d4445`; there was no local/remote divergence. The configured remote was `https://github.com/Yousef-Abdallah-1711/Webaudit-ai-.git`.

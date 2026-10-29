@@ -1399,6 +1399,11 @@ grants across six roles and ten new tables, plus exact execute grants and no PUB
 CORE-01 SECURITY DEFINER functions. Tenant/effect abuse cases and deployed production role wiring remain
 open; see the current DoD and requirement matrix.
 
+Known suite regressions: production email guard passed 3/3 with blank `EMAIL_TRANSPORT`; the sandbox
+unconfigured contract passed 1/1 with a disposable JWT secret. The email child test now uses the isolated
+test Redis endpoint instead of hard-coded shared DB 15. The full serial workspace was not rerun after these
+test-only changes; see `FINAL_VERIFICATION_REPORT_2026-10-29.md` for the last complete-run evidence.
+
 Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
 also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails
 to connect. Never rely on the repository's shared Redis DB 15 default for a test run.
