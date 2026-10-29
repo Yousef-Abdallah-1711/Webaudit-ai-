@@ -106,7 +106,7 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 040 | VERIFIED COMPLETE as an invariant so far | legacy sweep/orchestrator tests green with the new optional hooks; re-verified after the full unit run |
 | 043 | MISSING | per-engine observability |
 | 046 | VERIFIED COMPLETE for code that exists | no AI/provider imports in any new module |
-| 047 | PARTIAL | T-U1-1/2/3/6/7/8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9 `authorizeEffect` done, engine wrappers n/a; T-U1-10 AC-1..AC-20 partially covered |
+| 047 | PARTIAL | T-U1-1..9 checked; T-U1-10 AC matrix partially covered, with AC-5/12/17/19 evidence gaps |
 
 **Totals (49 FR items):** IMPLEMENTED-TESTED 27 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
 
@@ -123,7 +123,7 @@ Freshly verified in this continuation:
 | FR-017/018 queue and durable execution path | `execution-runtime.test.ts` 16/16 on disposable PG, Redis and BullMQ; duplicate delivery and strict payload covered | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; production worker composition remains missing |
 | FR-021/022 safety and kill handling | same suite covers cancellation, operator kill, revoked grant and lease loss | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; actual API/worker role composition remains open |
 | FR-027 progress | Redis messages observed on the execution-unit channel in the same suite | PARTIAL; authenticated client consumption/reconnect recovery unverified |
-| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry, ready-gate, and engine evidence-fence paths verified; 25 API evidence tests and 21 real PG/Redis/BullMQ runtime tests pass | PARTIAL; AC-1…20 matrix, race/fairness and production worker wiring remain |
+| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry, ready-gate, and engine evidence-fence paths verified; 125 focused U-1 tests, 25 API evidence tests, 21 real PG/Redis/BullMQ runtime tests, and 2 refund-staleness adverse tests pass | PARTIAL; AC-5/12/17/19 evidence gaps, remaining race/fairness and production worker wiring remain |
 | CORE-01 finalizer privileges | fresh 34-migration disposable DB; real LOGIN-role suite 20/20, including only host/orchestrator finalizer access, host direct-terminal-write refusal, cross-plan dependency rejection, `PUBLIC` EXECUTE revocation, and API-login passive/authorized BROWSER plan resolution plus F01 authorization; generic worker still cannot read authorization rows | PARTIAL; tenant/effect/lease-secret and complete SECURITY DEFINER matrix, plus full HTTP API/queue and API/worker production-service flow, remain open |
 | FR-031…035 artifact lifecycle | reaper handler and repeatable schedule are wired by static inspection | PARTIAL; R2 and end-to-end retention/reaper lifecycle not run |
 

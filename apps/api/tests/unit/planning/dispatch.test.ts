@@ -163,6 +163,26 @@ describe('dispatchExecutionUnit', () => {
     }
   });
 
+  it('refuses a later chained unit when its shared plan deadline leaves too little execution time', async () => {
+    const w = await makeRuntimeWorld({ deadlineMs: HOUR });
+    const first = await makeUnit(w, { status: 'RUNNING' });
+    const later = await makeUnit(w, { timeoutPolicyMs: 300_000 });
+    await testDb.executionDependency.create({
+      data: { executionUnitId: later.id, dependsOnExecutionUnitId: first.id },
+    });
+    await finalizeExecutionUnit(testDb, first.id, first.key, { kind: 'COMPLETED' });
+    await setScan(w.scanId, { startedAt: new Date(Date.now() - (HOUR - 30_000)) });
+
+    const { h, calls } = hooks(w);
+    expect(await run(w, later.id, h)).toEqual({
+      outcome: 'REFUSED',
+      reason: 'SCAN_DEADLINE_INSUFFICIENT',
+    });
+    expect(calls).not.toContain('f07');
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
+    expect(await statusOf(later.id)).toBe('REFUSED');
+  });
+
   it('defers before the scan has started, and when the engine has no capacity (no claim, no F07)', async () => {
     const w = await makeRuntimeWorld({ startedAgoMs: null, scanState: 'QUEUED' });
     const u = await makeUnit(w);

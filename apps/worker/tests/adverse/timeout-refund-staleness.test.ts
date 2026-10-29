@@ -19,6 +19,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
 import { debit } from '@webaudit/api/credits';
 import { sweepTimedOutScans, type SweepOptions } from '../../src/orchestrator/timeout.js';
+import { createPlannedSweepPort } from '../../src/orchestrator/planned-sweep.js';
 
 function recordingEmitter() {
   return {
@@ -128,5 +129,89 @@ describe('P0-TIMEOUT-1 — a module delivered during batch processing is never r
 
     const after = await db.scan.findUniqueOrThrow({ where: { id: scan.id } });
     expect(after.state).toBe('TIMED_OUT');
+  });
+
+  it('uses a fresh module-result read after the planned candidate snapshot before refunding', async () => {
+    const user = await db.user.create({
+      data: {
+        email: 'planned-timeout-staleness@example.com',
+        passwordHash: 'x',
+        emailVerifiedAt: new Date(),
+      },
+    });
+    await db.creditLot.create({
+      data: {
+        userId: user.id,
+        kind: 'PURCHASED',
+        source: 'PURCHASE',
+        amountGranted: 100,
+        amountRemaining: 100,
+        expiresAt: null,
+      },
+    });
+    const target = await db.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: 'https://planned-timeout-staleness.example.com',
+        displayName: 'planned-timeout-staleness',
+        controlLevel: 'NONE',
+      },
+    });
+    const scan = await db.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY', 'SEO'],
+        capabilitySnapshot: {},
+        quotedCredits: 30,
+        chargedCredits: 30,
+        state: 'RUNNING_PHASE_1',
+        startedAt: new Date(Date.now() - 30 * 60_000),
+      },
+    });
+    await debit(db, { userId: user.id, amount: 30, reason: 'scan:create', scanId: scan.id });
+    await db.scanPlan.create({
+      data: {
+        kind: 'INITIAL',
+        userId: user.id,
+        scanId: scan.id,
+        state: 'RESOLVED',
+        deadlineMs: 15 * 60_000,
+      },
+    });
+
+    const outcomes = await sweepTimedOutScans({
+      db: db as unknown as SweepOptions['db'],
+      emitterFor: recordingEmitter().emitterFor,
+      refund: async (input) => {
+        await db.creditTransaction.create({
+          data: {
+            userId: user.id,
+            type: 'REFUND',
+            amount: input.credits,
+            reason: input.reason,
+            scanId: input.scanId,
+          },
+        });
+      },
+      maxDurationMs: 15 * 60_000,
+      planned: createPlannedSweepPort(db),
+      onBeforeScan: async (scanId) => {
+        if (scanId !== scan.id) return;
+        await db.moduleResult.create({
+          data: { scanId, module: 'SECURITY', state: 'COMPLETE', score: 88 },
+        });
+      },
+    });
+
+    expect(outcomes).toHaveLength(1);
+    expect(outcomes[0]?.undeliveredModules).toEqual(['SEO']);
+    const refund = await db.creditTransaction.findFirst({
+      where: { scanId: scan.id, type: 'REFUND' },
+      select: { amount: true },
+    });
+    expect(refund?.amount).toBe(15);
+    expect((await db.scan.findUniqueOrThrow({ where: { id: scan.id } })).state).toBe('TIMED_OUT');
   });
 });

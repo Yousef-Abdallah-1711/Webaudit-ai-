@@ -1386,10 +1386,10 @@ assessment live in `docs/audits/spec-009-implementation/REQUIREMENT_DELTA_MATRIX
 Latest SPEC 009 continuation (2026-10-29): T-U1-1 through T-U1-9 are now checked after focused
 verification on isolated PostgreSQL `127.0.0.1:5545` and Redis `127.0.0.1:6391`. Fresh database
 `m009_core01_evidence_fence_test` applied all 35 migrations. Evidence tests passed 25/25; worker
-runtime 21/21; resolver/dispatch/host-loop/expiry/planned-sweep/gate checks 124/124; CORE-01
-schema 17/17; refund-staleness adverse regression 1/1. Added a planned timeout-vs-unit-finalization
-race that leaves the scan `TIMED_OUT`, does not enqueue master synthesis, and refunds once. U-1
-T-U1-10 remains open: the full AC-1…AC-20 adverse race/fairness mapping is not proven. SPEC 009
+runtime 21/21; resolver/dispatch/host-loop/expiry/planned-sweep/gate checks 125/125; CORE-01
+schema 17/17; refund-staleness adverse checks 2/2. Added timeout-vs-finalization and late-dependent
+dispatch coverage. U-1 AC-5/12/17/19 still need explicit restart/progress and bounded-timing evidence;
+T-U1-10 remains open and SPEC 009
 remains NOT COMPLETE. Current implementation/report changes are local and uncommitted; preserve
 the pre-existing website/auth changes, lockfile, `.next-final-cta-verify/`, and `logs/`.
 

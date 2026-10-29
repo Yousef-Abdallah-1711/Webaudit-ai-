@@ -18,7 +18,7 @@ A gate is PASS only with the evidence named. Verdict values: PASS · PARTIAL · 
 | 11 | Budget enforcement | via 008 only (FR-025) | concurrent admission through the unit path | no oversubscription | any other budget write path | PARTIAL - no new budget write path exists; concurrent admission through the unit path not yet exercised |
 | 12 | Kill switch | three-way stop distinction preserved (FR-021) | stop during every unit status | CANCELLED ≠ KILLED; stop beats deadline | merged outcomes | PARTIAL - stop precedence and expiry mapping tested; live host stop not wired |
 | 13 | Cancellation | user cancel via existing path, unit-level effects | real-Chrome + DB | RUNNING→CANCELLED, others REFUSED(SCAN_CANCELLED), refund per existing rules | refund drift | PARTIAL - cancelled-scan expiry mapping tested; user-cancel end to end not exercised |
-| 14 | Deadline enforcement | U-1 whole contract (FR-047, AC-1…20) | adverse AC-1…AC-20 incl. DB clock, kill-vs-deadline, sweep-vs-gate race, refund fairness, legacy regression | all ACs green | any AC failing; legacy timeout behaviour changed | PARTIAL - T-U1-1,2,3,6,7,8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9/10 partial |
+| 14 | Deadline enforcement | U-1 whole contract (FR-047, AC-1…20) | adverse AC-1…AC-20 incl. DB clock, kill-vs-deadline, sweep-vs-gate race, refund fairness, legacy regression | all ACs green | any AC failing; legacy timeout behaviour changed | PARTIAL - T-U1-1..9 checked; AC-5/12/17/19 still have restart/progress, timing-bound, or production-engine evidence gaps; T-U1-10 remains open |
 | 15 | Failure recovery | crash/restart/redelivery safe (FR-018/024) | failure injection on dedicated containers | recovery without double effect | stuck or duplicated unit | NOT STARTED - no failure injection on a running stack yet |
 | 16 | Evidence persistence | envelope, provenance, tenant scope, redaction (FR-030, evidence-envelope-contract) | contract + adverse tests | no fabricated/cross-tenant evidence; missing measurement never "success" | evidence without provenance | PASS - `evidence.test.ts` (redaction, inline/artifact, tenant, committed-before-crash) |
 | 17 | Artifact persistence | R2 object reference, size budget, retention, orphan reclaim (FR-031–035, 042) | contract tests with a fake store, then the real configured store where available | staged-upload retention proven; orphans reclaimed | private artifact exposed; leaked object | PARTIAL - budgets, ordering, key validation, reaper and retention function tested with a memory store; real R2 untested (no credentials); not wired to the retention sweep or a scheduler |
@@ -126,7 +126,25 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 
 ### Evidence-fence continuation — 2026-10-29
 
-- A fresh isolated PostgreSQL database received all **35 migrations**. The new additive `20261030210000_core01_execution_evidence_fence` helper is owned by `fahes_owner`; it acquires the unit/scan locks, verifies the database-clock deadline and immutable claim, and is executable only by `fahes_exec_host`. `fahes_owner` receives only `UPDATE("startedAt")` on `Scan` to permit the lock; the host role still cannot update `Scan`.
+- A fresh isolated PostgreSQL database received all **35 migrations**. The new additive `20261030210000_core01_execution_evidence_fence` helper is owned by `fahes_owner`; it acquires the unit/scan locks, verifies the database-clock deadline and immutable claim, and is executable only by `fahes_exec_host`. `fahes_owner` receives only column-level `UPDATE("startedAt")` on `Scan` to permit the lock; the helper itself never updates the row and the host role still cannot update `Scan`.
 - API evidence tests passed **25/25**, including terminal unit, terminal scan, expired deadline, and permissive post-terminal registry evidence. The real PostgreSQL/Redis/BullMQ worker integration passed **21/21**, including evidence writes through a non-superuser host login and an assertion that direct host-role `Scan.startedAt` updates are denied.
-- The serialized resolver, dispatch/host-loop, expiry, planned-sweep, and plan-gate checks passed **124/124** across four files; CORE-01 schema/immutability passed **17/17**; the refund-staleness adverse regression passed **1/1**. The added timeout-vs-finalization race passed with one `TIMED_OUT` scan, no master enqueue, and one refund. T-U1-1 through T-U1-9 are checked in `tasks.md`; T-U1-10 remains open because these component suites do not establish the complete AC-1…AC-20 race/fairness matrix. DoD gate 14 remains PARTIAL; overall verdict remains **NOT COMPLETE**.
+- The serialized resolver, dispatch/host-loop, expiry, planned-sweep, and plan-gate checks passed **125/125** across four files; CORE-01 schema/immutability passed **17/17**; refund-staleness adverse checks passed **2/2**. The timeout-vs-finalization race passed with one `TIMED_OUT` scan, no master enqueue, and one refund. T-U1-1 through T-U1-9 are checked in `tasks.md`; T-U1-10 remains open because several ACs still need explicit bounded timing and restart/progress evidence. DoD gate 14 remains PARTIAL; overall verdict remains **NOT COMPLETE**.
 - These scoped implementation and documentation changes are local and uncommitted at this update. User-owned website/auth changes and unrelated working files were left untouched.
+
+| AC | Current evidence | Status |
+|---|---|---|
+| 1–4 | Legacy no-plan sweep; passive-only deadline; long-plan expiry; ceiling/grant refusals (`planned-timeout-sweep.test.ts`, `resolver.test.ts`) | COVERED |
+| 5 | Immutable `ScanPlan` deadline and duplicate-delivery coverage; explicit restart/progress mutation checks remain | PARTIAL |
+| 6 | Concurrent deadline sweep and matching unit finalization; terminal scan and one refund | COVERED |
+| 7 | Fresh-read refund regressions for legacy and planned passes (`timeout-refund-staleness.test.ts`) | COVERED |
+| 8–10 | Stop precedence, stale evidence/finalization fencing, and refusal before F07/budget (`runtime.test.ts`, evidence tests, `dispatch.test.ts`) | COVERED |
+| 11 | Later dependent unit refused when its shared deadline leaves insufficient time (`dispatch.test.ts`) | COVERED |
+| 12 | Terminal-scan and expired-REVERIFY self-healing cases pass; exact maximum interval bound is not measured | PARTIAL |
+| 13 | Timeout sweep races the completion gate; scan remains terminal and master is not enqueued | COVERED |
+| 14–16 | No F01/F07 contract/type edits; stop precedence and pre-run expiry/topological refusal tests pass | COVERED |
+| 17 | New comparisons use database time and legacy regression passes; deployed NTP/skew bound is unverified | PARTIAL |
+| 18 | Gate refuses continuation after deadline; sweep transitions the scan to `TIMED_OUT` | COVERED |
+| 19 | Isolated child termination and deferred expiry are tested; production engine backstop is not registered in SPEC 009 | PARTIAL |
+| 20 | Passive classes remain on legacy queue and are ignored by non-passive dispatch | COVERED |
+
+This is an evidence index, not closure of T-U1-10. The partial rows keep the complete AC matrix open.

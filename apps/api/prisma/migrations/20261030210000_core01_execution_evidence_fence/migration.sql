@@ -1,7 +1,7 @@
 -- SECURITY DEFINER fence for host-produced evidence. The execution host can read Scan but cannot lock it directly
 -- (row locks require UPDATE privilege); keep Scan immutable to that role and expose only this predicate+lock.
--- `fahes_owner` receives UPDATE on the single immutable `startedAt` column solely to acquire the row lock below;
--- the function itself never changes Scan, and no runtime role gains this privilege.
+-- `fahes_owner` receives UPDATE on only the `startedAt` column so it can acquire the row lock below;
+-- this function never changes Scan, and no runtime role gains this privilege.
 GRANT UPDATE ("startedAt") ON "Scan" TO fahes_owner;
 
 CREATE FUNCTION public.fahes_lock_execution_evidence(
