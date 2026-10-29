@@ -177,6 +177,8 @@ The same first browser run found that the signup form enabled its submit button 
 - Real LOGIN-role adverse suite: **17/17 passed** after the fix. A test assertion first failed against the existing default PUBLIC EXECUTE ACL on `fahes_dependency_same_plan()`; the additive migration `20261030180000_core01_revoke_public_definer_execute` removes that ACL. The actual API-role dependency trigger still rejects cross-plan edges. The temporary API finalizer-grant mutation was detected (1 expected failing assertion) and revoked.
 - Catalog checks confirmed all ten CORE-01 tables and the finalizer/host SECURITY DEFINER functions are owned by `fahes_owner`, runtime roles are non-superuser, schema `public` is not writable by PUBLIC or the host role, and the relevant definer functions pin `search_path`.
 - Runtime integration on the fresh database and isolated Redis: **21/21 passed**, including a real non-superuser execution-host login. Broader tenant/effect/lease-secret checks and the production API/worker role deployment remain open; DoD gate 22 remains PARTIAL.
+- Additional artifact/evidence/retention/reaper checks passed **32/32** with an in-memory object store and isolated PostgreSQL. Existing API/worker phase progression passed **1/1** over isolated Redis; authenticated SPEC 009 unit-progress reconnect/recovery and real R2 remain unverified.
+- Scoped delivery commit `80118ad59f03fb80c523c3d10bfb795850f62c6e` was pushed and verified against remote `main`; unrelated dirty website/auth edits remain preserved.
 
 ### Current checkout and delivery
 

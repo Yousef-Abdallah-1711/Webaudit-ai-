@@ -38,3 +38,8 @@ See `SESSION_PROGRESS.md` "Next exact tasks".
 - Test-first review found `fahes_dependency_same_plan()` was SECURITY DEFINER with default `PUBLIC EXECUTE`. The new adverse assertion failed against that state; migration `20261030180000_core01_revoke_public_definer_execute` revokes the default grant. After applying it, the same suite passed. A separate mutation that temporarily granted finalizer execution to `fahes_api` caused the test to fail (14 passed, 1 failed); the temporary grant was revoked on the disposable database.
 - The isolated PostgreSQL/Redis/BullMQ worker integration passed **21/21**, including non-superuser host execution and the end-to-end queued unit lifecycle. This still does not exercise the production API `resolvePlan` producer or a production SPEC 010–012 engine.
 - Scope remains incomplete: broader tenant/effect/lease-secret permission cases, API/worker production credentials, API plan production, real R2, process restart/outage, manual browser acceptance, performance, and full acceptance matrices remain open. Overall SPEC 009 verdict remains **NOT COMPLETE**.
+
+### Lifecycle checks and delivery update
+
+- Evidence persistence, artifact retention, and reaper integration passed **32/32** on isolated PostgreSQL with an in-memory object store. Existing API/worker phase progress passed **1/1** over isolated Redis; this does not verify SPEC 009 authenticated unit-progress reconnect/recovery.
+- Scoped changes were committed and pushed as `80118ad59f03fb80c523c3d10bfb795850f62c6e`; local `HEAD`, `origin/main`, and remote `main` matched after fetch/`ls-remote`. The website/auth refactor remains uncommitted and untouched.
