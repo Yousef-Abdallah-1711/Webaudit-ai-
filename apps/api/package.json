@@ -13,6 +13,7 @@
     "./control-gate": "./src/services/control-gate/index.ts",
     "./safety": "./src/services/safety/index.ts",
     "./planning": "./src/services/planning/index.ts",
+    "./execution-runtime": "./src/services/execution-runtime/index.ts",
     "./authorization": "./src/services/authorization/index.ts",
     "./issues": "./src/services/issues/index.ts",
     "./intake": "./src/services/intake/index.ts",
