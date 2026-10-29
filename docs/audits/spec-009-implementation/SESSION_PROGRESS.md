@@ -2,7 +2,7 @@
 
 ## Current verified handoff — 2026-10-29
 
-This section supersedes earlier status/count snapshots below. Current local branch is `main`; `HEAD`, `origin/main`, and live `origin` `main` all resolve to `e03577d6ccaa115f49648e6a24be6cb0bba18a45`. The worktree is dirty with pre-existing website/auth edits and local SPEC 009 implementation/evidence changes; preserve them. No reset, broad staging, commit, or push was performed.
+This section supersedes earlier status/count snapshots below. The initial checkout was `main` at `e03577d6ccaa115f49648e6a24be6cb0bba18a45`. The requested source, tests, website/auth changes, deployment updates, evidence, and handoff were delivered in commit `3c22765f7a0bf7df49242d1cb5debbe9968c4060` and verified on `origin/main`. Local generated Next output and runtime logs remain unstaged and preserved.
 
 - Latest full isolated unit/contract/integration run: **244 files / 1,874 tests passed**; adverse: **73 files / 1,153 passed / 1 skipped**. Full Playwright E2E passed **93/93 in 22.6 minutes** with real Chromium, API, worker and Next.js on isolated PostgreSQL/Redis. The completed scan path is the legacy queue, not SPEC 009 plan dispatch. Visual checks passed 8 mechanisms with 17 TODO comparisons.
 - The current `execution-runtime.test.ts` passed **24/24**, including secret-free lifecycle/resource telemetry for success, infrastructure failure and F07 kill, and a real worker process crash/replacement case. Worker typecheck, scoped ESLint and Prettier checks passed. `git diff --check` passed with the existing user-owned migration CRLF warning.
@@ -20,6 +20,7 @@ Resume from the U-1 evidence audit in `DEFINITION_OF_DONE.md`; do not treat hist
 - The full serial unit/contract/integration suite passed **244 files / 1,882 tests**; the full adverse suite passed **73 files / 1,153 passed / 1 skipped** on isolated PostgreSQL and Redis. The current progress recovery subset was **66/66** across five files.
 - Workspace typecheck passed **30/30 packages**; focused ESLint and Prettier passed. Visual mechanisms passed **8**, with **17 TODO** parity comparisons. Full Chromium E2E remains the prior **93/93** run and was not repeated during this closure pass.
 - SPEC 009 remains **NOT COMPLETE**, DoD remains **11 PASS / 17 PARTIAL**, and T-U1-10 remains open for production-engine termination/backstop and deployed clock-skew evidence. See `HANDOFF_2026-10-29.md` for the delivery inventory and remaining acceptance tasks.
+- The delivery commit was pushed to `origin/main` and the remote ref matched local `HEAD` at verification. A subsequent handoff/progress documentation reconciliation is included in the follow-up push.
 
 Last updated 2026-10-29. Session start: HEAD `a1034fa` = `origin/main`.
 **Verdict: SPEC 009 is NOT COMPLETE.** Service layer implemented and tested on real PostgreSQL; dispatch/queues, host loop, progress events, engines, real full-stack, Chrome acceptance, performance and the dev-database migration are not done. Gate count (`DEFINITION_OF_DONE.md`): 9 PASS · 13 PARTIAL · 6 NOT STARTED of 28. Requirement count (`REQUIREMENT_DELTA_MATRIX.md` addendum): 26 IMPLEMENTED-TESTED · 2 VERIFIED · 14 PARTIAL · 4 MISSING · 3 N/A.
