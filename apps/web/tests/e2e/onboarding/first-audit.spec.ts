@@ -6,7 +6,6 @@ import { startFixtureSite, type FixtureSite } from '../fixtures/static-site.js';
 
 let stack: Stack;
 let fixture: FixtureSite;
-const previousRedisUrl = process.env['REDIS_URL'];
 const creds = { email: 'onboarding@example.com', password: 'correct-horse-battery-staple' };
 
 test.beforeAll(async () => {
@@ -16,9 +15,6 @@ test.beforeAll(async () => {
   // reads it live on every call, but there is no reason to leave a wider
   // window open than the fixture's own lifetime.
   process.env['SAFE_NET_ALLOW_TARGETS'] = fixture.origin;
-  // Keep this scan's BullMQ queues away from any live worker using the default
-  // Redis logical database during manual development work.
-  process.env['REDIS_URL'] = 'redis://localhost:6389/15';
   stack = await startStack();
   await registerAndVerify(stack, creds);
 });
@@ -27,8 +23,6 @@ test.afterAll(async () => {
   await stack.stop();
   await fixture.close();
   delete process.env['SAFE_NET_ALLOW_TARGETS'];
-  if (previousRedisUrl === undefined) delete process.env['REDIS_URL'];
-  else process.env['REDIS_URL'] = previousRedisUrl;
 });
 
 test('a new user receives a real report, export, clipboard prompt, and fixes count', async ({

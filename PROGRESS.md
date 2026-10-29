@@ -1356,6 +1356,37 @@ same treatment as FR-017's Level 1 probe rate. Needs product sign-off; a one-lin
 
 ## Resume here
 
+### SPEC 009 execution platform handoff — 2026-10-29
+
+Current SPEC 009 status is **NOT COMPLETE**. The independently updated 49-FR review and 28-gate
+assessment live in `docs/audits/spec-009-implementation/REQUIREMENT_DELTA_MATRIX.md` and
+`DEFINITION_OF_DONE.md`; the evidence inventory is
+`docs/audits/spec-009-implementation/FINAL_VERIFICATION_REPORT_2026-10-29.md`.
+
+- Verification on disposable PostgreSQL `127.0.0.1:5545` and isolated Redis `127.0.0.1:6391`:
+  unit/contract/integration **243 files / 1,855 tests passed**; adverse **72 files / 1,142 passed,
+  1 skipped**; worker execution runtime **21/21**; Playwright **93/93**. API, worker, web types,
+  Prisma validation/migration status, scoped ESLint, and UI Oxlint adherence passed.
+- Visual harness: **8 passed, 17 todo**. The page-reference comparisons remain todo; the required
+  visual-parity threshold and manual 24-step Chrome acceptance are not established. No measured
+  SPEC 009 load baseline or instrumented coverage was produced.
+- Main implementation gaps: there is no production API caller of `resolvePlan`, no production
+  SPEC 010–012 adapter is registered, and no production API-to-worker scan path is proven. Also
+  open: complete privilege/U-1 race matrices, audit rollback, authenticated progress reconnect,
+  actual process restart/outage injection, real R2 lifecycle, observability, and manual acceptance.
+- One early Playwright attempt routed API queue writes to shared development Redis DB 15 while the
+  worker used isolated Redis. It left 47 keys in that shared DB at inspection. No keys were deleted
+  or flushed; subsequent runs did not target the shared Redis. E2E stack startup now resets API
+  `REDIS_URL` to the configured isolated `TEST_REDIS_URL`.
+- This verification began on `main` with `HEAD` equal to `origin/main`. The authorized delivery is
+  limited to the SPEC 009/runtime test changes, the isolated E2E Redis harness correction, and the
+  audit/map/handoff documents. Preserve unrelated public/auth refactor edits, `pnpm-lock.yaml`,
+  `.next-final-cta-verify/`, and `logs/`; delivery uses a normal push after fresh remote verification.
+
+Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
+also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails
+to connect. Never rely on the repository's shared Redis DB 15 default for a test run.
+
 ### Get running
 
 ```bash

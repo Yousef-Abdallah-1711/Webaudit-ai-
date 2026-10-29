@@ -664,7 +664,12 @@ describe('DEC-050 lock order: stop vs admission', () => {
       const live = await liveLeaseCount(w.grantId);
       expect(live).toBeLessThanOrEqual(3);
       await reclaimExpiredLeases(testDb);
-      expect((await counterOf(w.grantId))?.activeConcurrency).toBe(await liveLeaseCount(w.grantId));
+      // BudgetCounter is created lazily by the first admission that passes the
+      // stop check. If the concurrent stop wins before any admission, no row is
+      // correct and represents the same zero active concurrency as no leases.
+      expect((await counterOf(w.grantId))?.activeConcurrency ?? 0).toBe(
+        await liveLeaseCount(w.grantId),
+      );
     }
   }, 60_000);
 });

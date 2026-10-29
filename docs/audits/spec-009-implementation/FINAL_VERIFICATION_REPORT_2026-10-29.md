@@ -37,7 +37,7 @@ Created disposable database `m009_privilege_test` and applied all 27 migrations 
 
 ## I. BullMQ integration results
 
-`apps/worker/tests/integration/execution-runtime.test.ts`: the initial full run was 17/17; a later focused rerun after the hard-stop correction passed 18/18 with real disposable PostgreSQL, Redis, BullMQ queues, and workers. Covered standard `startWorker` composition with a locally supplied adapter, master-phase enqueue at the plan gate, shutdown draining, minimal payload rejection, duplicate delivery, dependent enqueue, progress publication, evidence rows, effect authorization, cancellation, kill switch, grant revocation, deadlines, hard stop, lost lease, and crashed-host state recovery. The test uses a deterministic adapter in the test process; it is not an API HTTP flow or a separately launched production deployment. The hard-stop fixture verifies termination of a real child handle, but engine execution is still in the worker process.
+`apps/worker/tests/integration/execution-runtime.test.ts`: the initial full run was 17/17; the current rerun after per-unit child execution and IPC passed 19/19 with real disposable PostgreSQL, Redis, BullMQ queues, and workers. Covered standard `startWorker` composition with a locally supplied test adapter, master-phase enqueue at the plan gate, shutdown draining, minimal payload rejection, duplicate delivery, dependent enqueue, progress publication, evidence rows, effect authorization, cancellation, kill switch, grant revocation, deadlines, hard stop, lost lease, and crashed-host state recovery. The process-isolation case proves a distinct PID, no database/Redis URLs in the child, and parent-mediated evidence writes. It is not an API HTTP flow or a production engine deployment.
 
 ## J. Execution host verification
 
@@ -69,7 +69,7 @@ Confirmed defect: the initial grant migrations left the finalizer callable by AP
 
 ## Q. Full unit suite
 
-The serial unit/contract/integration workspace was run against disposable PostgreSQL `m009_privilege_test` and isolated Redis at `127.0.0.1:6391`: **243/243 files and 1,851/1,851 tests passed** in 906.98 seconds. It includes the five previously identified failing files, the SPEC 009 execution-runtime integration (17/17), the admin capability contract (27/27), and production email boot guard (3/3). The separate adverse and visual projects were not included; this is not Playwright/browser or complete SPEC 009 DoD evidence.
+The serial unit/contract/integration workspace was run against disposable PostgreSQL `m009_privilege_test` and isolated Redis at `127.0.0.1:6391`: **243/243 files and 1,851/1,851 tests passed** in 906.98 seconds. It includes the five previously identified failing files, the SPEC 009 execution-runtime integration (17/17 at that time), the admin capability contract (27/27), and production email boot guard (3/3). The separate adverse and visual projects were not included; this is not Playwright/browser or complete SPEC 009 DoD evidence. Subsequent changes were verified with the targeted runtime integration (19/19), safety role-isolation and kill-switch adverse tests (127/127), worker typecheck/lint/format, and a separately tagged Docker image build and in-image child-process smoke.
 
 The earlier whole-suite failures were resolved with two findings: `EMAIL_TRANSPORT=""` from the repository/deployment environment was treated as an invalid production transport instead of omitted, preventing the documented SMTP default; `SANDBOX_RUNNER_URL` from `.env` leaked into a contract test that assumed it was absent. Blank email transport now normalizes to unset, and the contract test explicitly clears its local default before asserting the unconfigured path. The focused tests and the complete serial workspace passed after these changes.
 
@@ -130,6 +130,49 @@ The reviewed SPEC 009 changes were committed as `b2f05c0d41d61f59f9cf385a63719f7
 - The full serial adverse workspace passed 72 files / 1,134 executed tests with one skipped test.
 - No separately launched API+worker plan-dispatch lifecycle, Chrome, Playwright MCP/CLI, real R2, k6, or coverage evidence is claimed.
 
+## Post-checkpoint revalidation — 2026-10-29
+
+- Latest execution-runtime integration: **20/20 passed** on isolated PostgreSQL, Redis, and BullMQ, including F07 checkpoint STOP over IPC during a child action. The test confirms the child is killed, the unit is finalized as `KILLED` with `AUTHORIZATION_REVOKED`, and its lease is released.
+- Latest complete unit/contract/integration workspace: **243/243 files and 1,854/1,854 tests passed** in 1,001 seconds on fresh disposable PostgreSQL and Redis. The prior interrupted attempt was due to stopped Docker infrastructure; its `0x40010004` exit was a console-control interruption. No test assertion failures were reported in the completed rerun.
+- Targeted adverse suites: safety role isolation **116/116** and worker kill switch **11/11**, total **127/127**. The complete adverse workspace was rerun after the current runtime changes: **72/72 files, 1,134 passed, 1 skipped** in 462.33 seconds. This includes real PostgreSQL role isolation, Redis kill-switch recovery, Chromium SSRF checks, sandbox containment, and failure-injection coverage; it does not establish the entire SPEC 009 privilege/race matrix.
+- Worker TypeScript check, scoped ESLint, scoped Prettier, and `git diff --check` passed. Rebuilt `webaudit-worker:spec009-child-isolation`; in-image child smoke returned `ENGINE_RESULT`, checkpoint `PROCEED`, and confirmed the child had no DB/Redis URL.
+- DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. Production API plan dispatch and production adapter registration, complete privilege and race matrix, visual/Playwright/manual browser evidence, load, coverage, and real R2 remain incomplete. No production service container was started or replaced.
+
 ### Latest delivery synchronization — 2026-10-29
 
 Scoped commit `1d6e8b80db7ce0c98b4b6f044d97290ec54795d0` (`fix(spec-009): compose worker adapters and close suite failures`) was pushed normally. Post-push `git fetch origin main`, local `HEAD`, `origin/main`, and `git ls-remote origin refs/heads/main` all agree on that hash. Pre-existing website/auth edits, `pnpm-lock.yaml`, `.next-final-cta-verify/`, and `logs/` were not staged or committed.
+
+## Final independent revalidation — 2026-10-29
+
+This section supersedes the earlier test totals and statements that Playwright was not run.
+
+### Verification results
+
+- Full serial unit/contract/integration workspace, against disposable PostgreSQL `127.0.0.1:5545/m009_privilege_test` and isolated Redis `127.0.0.1:6391`: **243 files, 1,855 tests passed**. The suite is serial; `AI_MODE=fixtures` was set.
+- Full serial adverse workspace on the same disposable services: **72/72 files passed, 1,142 passed, 1 skipped**.
+- Full Chromium Playwright E2E suite: **93/93 passed** in 26.2 minutes. It exercised the application’s test stack, public/auth pages, dashboard, and onboarding flows. It is not proof of the missing production SPEC 009 API-to-plan execution path, and it is not the separate 24-step manual Chrome acceptance.
+- `pnpm.cmd test:visual`: **2 files passed; 8 passed, 17 todo**. The harness and real-page capture run, but the page-to-reference comparisons are explicitly todo, so the required 1440/390 visual-parity threshold is not established.
+- SPEC 009 worker execution-runtime integration: **21/21 passed**, including isolated PostgreSQL, Redis/BullMQ, actual per-unit child process, parent-mediated effects/evidence/progress, F07 checkpoint, cancellation, kill, revocation, deadlines, hard-stop, lease loss, duplicate delivery, and standard `startWorker` composition with a deterministic test adapter.
+- API, worker, and web TypeScript checks passed during this continuation. The visual suite built and started the Next app. Prisma validation and migration status passed: **31 migrations found; isolated database up to date**. Scoped ESLint passed; Oxlint UI adherence passed on 210 files with zero warnings/errors; `git diff --check` passed. Prettier passed on the scoped source/docs except `apps/web/tests/e2e/onboarding/first-audit.spec.ts`; the same file from `HEAD` also fails the Prettier check, so its existing style was not mass-reformatted as part of the Redis-only test fix.
+
+### Browser test harness routing issue and correction
+
+The first full Playwright run completed **90/93**. Two onboarding/dashboard cases timed out because their specs overrode API `REDIS_URL` to the shared development Redis at `localhost:6389/15` while the isolated worker used `TEST_REDIS_URL=127.0.0.1:6391`. The first run therefore wrote E2E queue keys to development Redis database 15 and split queue producer/consumer traffic. The local database reported 47 keys at inspection. No keys were deleted and no `FLUSHDB`/`FLUSHALL` was issued. Subsequent runs did not target port 6389. The harness now resets API `REDIS_URL` to `TEST_REDIS_URL` before stack boot, and the per-spec hardcoded Redis overrides were removed. Focused affected tests and the full 93-test rerun passed against isolated Redis.
+
+The same first browser run found that the signup form enabled its submit button with an empty email. The page now disables submission until a non-empty email and minimum-length password are entered; the focused auth visual tests and full browser suite pass. This edit is in the user’s ongoing auth/public-page refactor and remains outside the SPEC 009 commit.
+
+### Current SPEC 009 limits
+
+- Repository search still finds no production caller of `resolvePlan`; the production API plan-to-queue path is absent.
+- The actual worker entrypoint has no production SPEC 010–012 engine adapter. The generic runtime is exercised using a local test adapter only.
+- The direct runtime suite is real PG/Redis/BullMQ/process integration, not the full HTTP API + non-superuser API/worker production scan flow.
+- Full lease/effect/definer-function privilege matrix, all U-1 AC-1…20 race/fairness cases, API cancellation/refund lifecycle, audit-event rollback, authenticated progress reconnect recovery, actual restart/outage recovery, real R2 lifecycle, performance baseline, instrumented coverage, and manual Chrome journey remain open.
+- The additive finalizer-grant correction is verified on a fresh isolated migration chain; it was not applied to the shared development database.
+- The current 49-FR review is in `REQUIREMENT_DELTA_MATRIX.md`; the current 28-gate count is in `DEFINITION_OF_DONE.md`. Both retain **NOT COMPLETE** as the SPEC 009 verdict.
+- A full-workspace attempt without `EXEC_TEST_REDIS` had 242/243 files pass; the runtime file used its documented fallback `localhost:6399` and failed to connect. The runtime file passed 21/21 focused with `EXEC_TEST_REDIS=127.0.0.1:6391`, and the complete serial workspace then passed **243/243 files, 1,855/1,855 tests** in 754.79 seconds with that variable explicitly set.
+
+### Current checkout and delivery
+
+- At the start of this revalidation, branch `main`, `HEAD`, and `origin/main` were `974d2620306a200660304984f0e42eac174d4445`; there was no local/remote divergence. The configured remote was `https://github.com/Yousef-Abdallah-1711/Webaudit-ai-.git`.
+- User-owned auth/public-page refactor files, translations, pricing work, E2E changes outside the SPEC 009 harness correction, `pnpm-lock.yaml`, `.next-final-cta-verify/`, and `logs/` were kept out of the SPEC 009 scope. No existing running service was stopped or replaced.
+- This report records the verification snapshot before delivery. The scoped commit and normal push are authorized; the delivery hash is reported in the handoff after remote verification.

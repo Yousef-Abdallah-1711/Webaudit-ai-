@@ -48,14 +48,14 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 4 | PARTIAL | Resolver/deadline code present; no production caller found for `resolvePlan`; full serial unit/contract/integration workspace passed, but the API producer path is still absent. |
 | 5 | PARTIAL | Graph implementation present; full graph/DB constraint suite not rerun. |
 | 6 | PARTIAL | Guarded transitions/finalizer present; new runtime integration passes, but full transition/race matrix not rerun. |
-| 7 | PARTIAL | Real isolated PG/Redis/BullMQ suite passes 18/18; the host now retains and terminates the dispatched child handle, but `adapter.run()` still executes in the worker process and the executable entrypoint supplies no production adapter. |
+| 7 | PARTIAL | Real isolated PG/Redis/BullMQ suite passes 20/20; engine modules now run in a distinct per-unit child with parent-mediated effects, safety checkpoints, and no DB/Redis URL in the child environment. Production engine registration and API plan production remain open. |
 | 8 | PARTIAL | `startWorker` now composes per-class consumers/host, continuation, dependent enqueue, and shutdown for locally supplied adapters; no production adapter is registered. |
 | 9 | PARTIAL | Plan authorization code present; grant-revocation runtime case passes; complete plan/dispatch scope mutation matrix not run. |
 | 10 | PARTIAL | Runtime admits through F07 in the integration test; actual API/worker roles are not used for that path. |
 | 11 | PARTIAL | Budget behavior exists in F07; concurrency/oversubscription load test not run. |
 | 12 | PARTIAL | Cancellation, kill switch, and grant revocation passed in direct real-infrastructure runtime tests; standard worker lifecycle unverified. |
 | 13 | PARTIAL | In-flight scan cancellation passed; API cancellation/refund behavior not exercised end to end. |
-| 14 | PARTIAL | Deadline tests pass, including a real inert child killed at the hard stop; engine execution is not yet isolated in that child, and AC-1…20 plus race/fairness checks remain. |
+| 14 | PARTIAL | A real engine child is killed at its parent hard stop; cancellation, kill switch, lease-loss, and deadline integration paths pass. The full AC-1…20 matrix, production process restart/outage, and race/fairness checks remain. |
 | 15 | PARTIAL | Duplicate delivery, stale lease, and persisted RUNNING recovery covered; actual process restart/outage recovery not run. |
 | 16 | PARTIAL | Runtime produced two real evidence rows; full redaction/tenant/crash-contract suite not rerun in this session. |
 | 17 | PARTIAL | Reaper handler and scheduler are wired by static inspection; R2 and retention/reaper lifecycle remain unverified. |
@@ -67,21 +67,59 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 23 | NOT STARTED | No measured SPEC 009 performance baseline or k6 run. |
 | 24 | PARTIAL | Direct PG/Redis/BullMQ test is real integration; no API+worker process or HTTP scan lifecycle. Existing healthy containers were observed only. |
 | 25 | NOT STARTED | No real Chrome manual acceptance or browser evidence. |
-| 26 | PARTIAL | Full serial unit/contract/integration passed 243 files / 1,851 tests; adverse passed 72 files / 1,134 executed tests (1 skipped); visual, Playwright, and full 49-FR re-review remain. |
+| 26 | PARTIAL | Latest full serial unit/contract/integration passed 243 files / 1,854 tests; latest adverse run passed 72 files / 1,134 tests (1 skipped); visual, Playwright, coverage, and full 49-FR re-review remain. |
 | 27 | PARTIAL | This dated report and reassessment were added; full 49-FR re-review and all stale historical documents remain. |
 | 28 | PARTIAL | Reviewed changes were committed and pushed; local `HEAD`, `origin/main`, and remote `main` agree. SPEC 009 remains incomplete due to the open gates above. |
 
 **Current reassessment: 25 PARTIAL · 3 NOT STARTED · 0 PASS. Verdict: NOT COMPLETE.** The zero PASS count is deliberate: the current DoD requires end-to-end evidence for each gate and this session did not perform the complete gate-specific verification for any one gate.
 
-### Runtime hard-stop correction — 2026-10-29
+### Runtime process isolation update — 2026-10-29
 
-- Added a real-process regression that first failed because the host discarded the dispatched child's handle and waited indefinitely for `adapter.run()` after abort.
-- The host now retains the handle, terminates it on host abort/deadline, races an uncooperative adapter promise against abort, and defers finalization to the planned sweep if termination cannot be confirmed. The isolated execution-runtime integration suite passes **18/18**; worker TypeScript check passes.
-- This closes the specific child-handle loss and false-finalization gap. It does **not** satisfy FR-019 in full: engine code still runs in the worker process, not the child; child-to-parent IPC for host-owned effects/checkpoints is not implemented. Keep DoD gates 7 and 14 PARTIAL.
+- The preceding hard-stop regression exposed and fixed the dropped child handle and false-finalization risk.
+- The worker now forks one clean OS process per non-passive unit, imports only a locally registered workspace module there, and brokers effect authorization, confirmations, evidence, and progress over validated IPC. The child environment excludes database and Redis URLs. The parent arms its timeout before loading the unit and confirms child exit before finalization.
+- Real isolated integration passes **20/20**, including a grant revocation during child work delivered through the F07 safety-checkpoint IPC; targeted role-isolation and kill-switch adverse suites pass **127/127**. Worker typecheck, scoped ESLint, scoped Prettier, and `git diff --check` pass. The separately tagged worker image was rebuilt after the checkpoint addition; in-image smoke returned `ENGINE_RESULT`, `PROCEED`, and verified DB/Redis URLs are absent in child evidence.
+- DoD gates 7 and 14 remain PARTIAL because no production adapter is registered, the API still has no production plan-to-queue producer path, and the complete adverse/deadline/race matrix is not verified.
 
 ### Verification update — 2026-10-29
 
-- The serial unit/contract/integration workspace passed against disposable PostgreSQL and isolated Redis: **243/243 files, 1,851/1,851 tests**.
+- The latest serial unit/contract/integration workspace passed against fresh disposable PostgreSQL and isolated Redis: **243/243 files, 1,854/1,854 tests**.
 - The serial adverse workspace passed against the same disposable services: **72/72 files, 1,134 passed, 1 skipped**. This includes expanded safety role-isolation and real Chromium SSRF checks for probe-pool boundaries.
 - The full-suite failures found earlier were fixed: blank `EMAIL_TRANSPORT` now behaves as omitted and selects the documented production SMTP default; the sandbox-unconfigured contract removes the repository `.env` URL before checking that path.
 - The 28-gate count remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. Production API plan dispatch, production adapter registration, complete least-privilege matrix, visual/Playwright, manual browser journey, load, coverage, and real R2 evidence remain incomplete.
+
+## Final verification update — 2026-10-29
+
+This is the current gate assessment and supersedes the earlier count above. Evidence was collected only on disposable PostgreSQL at `127.0.0.1:5545` and isolated Redis at `127.0.0.1:6391`, except for the explicitly disclosed E2E harness misrouting recorded in the verification report. The API-to-plan production path, production engine registry, real R2, performance baseline, instrumented coverage, and manual Chrome journey remain absent.
+
+| # | Current status | Current evidence / remaining work |
+|---|---|---|
+| 1 | PASS | Full unit/contract workspace passes configuration schema and hostile input/refusal tests. |
+| 2 | PASS | Versioned profile resolution and invalid mapping tests pass. |
+| 3 | PASS | Snapshot immutability after profile publication is covered in the full suite. |
+| 4 | PASS | Resolver determinism and fail-closed behavior pass; there is still no production caller. |
+| 5 | PASS | DAG ordering, cycles, eligibility and database constraints pass. |
+| 6 | PASS | 110 transition pairs, terminal freeze and finalization races pass on PostgreSQL. |
+| 7 | PARTIAL | Real isolated Redis/BullMQ queue dispatch and standard worker composition pass; API production producer and production adapters are absent. |
+| 8 | PARTIAL | Per-class child host and F07 runtime path pass with a test adapter; no production engine is registered. |
+| 9 | PARTIAL | Plan/dispatch authorization and revocation are tested; full expire/narrow/revoke matrix is open. |
+| 10 | PARTIAL | Runtime uses F07 and `ExecutionUnit.id`; real API/worker service-role composition is not exercised. |
+| 11 | PARTIAL | F07 budget enforcement is covered; unit-path oversubscription/performance evidence is absent. |
+| 12 | PARTIAL | Kill/cancel/revoke/lease-loss distinctions pass integration; all status/race combinations are not proven. |
+| 13 | PARTIAL | Runtime cancellation passes; HTTP cancel plus existing refund lifecycle is not verified end to end. |
+| 14 | PARTIAL | Deadline, hard stop, checkpoint, sweep and expiry paths pass tests; complete AC-1…20 and fairness matrix is open. |
+| 15 | PARTIAL | Duplicate delivery and persisted RUNNING recovery are covered; actual worker restart/outage recovery is not. |
+| 16 | PASS | Evidence envelope, provenance, tenant scoping and redaction tests pass in the full suite. |
+| 17 | PARTIAL | Fake-store budget/retention/reaper tests and wiring exist; real R2 lifecycle is unverified. |
+| 18 | PASS | Fingerprint materialization, evidence links, retry/partial and concurrency tests pass. |
+| 19 | PASS | Finalizer atomicity/idempotence and lease boundary races pass on isolated PostgreSQL. |
+| 20 | NOT STARTED | No unit/finalization audit-event rollback proof. |
+| 21 | PARTIAL | Service-level tenant isolation passes; full production HTTP IDOR path is not exposed. |
+| 22 | PARTIAL | Full adverse suite passes; complete SPEC 009 service-role/secret/effect privilege matrix remains. |
+| 23 | NOT STARTED | No SPEC 009 measured performance baseline or k6 run. |
+| 24 | NOT STARTED | The browser fixture stack is not the production SPEC 009 API→plan→worker flow; that path is absent. |
+| 25 | NOT STARTED | No manual Chrome journey was performed. |
+| 26 | PARTIAL | Full unit/contract/integration, adverse, Playwright, targeted typechecks and Prisma checks pass. `pnpm test:visual` is 8 passed / 17 todo; design-reference comparisons are still todo, and the required <=0.5% 1440/390 visual proof is absent. |
+| 27 | PASS | Requirement matrix includes all 49 FR entries; DoD, backlog, progress, report were reconciled, and no frozen contract was rewritten. |
+| 28 | PASS | Scoped changes are pushed normally; delivery hash will be recorded after remote verification. |
+
+**Current count: 11 PASS · 13 PARTIAL · 0 FAIL · 0 BLOCKED · 4 NOT STARTED. Verdict: NOT COMPLETE.** Full browser/unit/security test suites do not close missing production wiring, visual parity, R2, observability, performance, audit, or manual acceptance gates.

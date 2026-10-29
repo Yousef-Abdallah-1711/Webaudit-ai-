@@ -7,8 +7,10 @@
  */
 
 import { Redis } from 'ioredis';
+import { randomBytes } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { testDb as db, resetDb, closeDb } from '@webaudit/api/test-db';
+import { PrismaClient } from '@webaudit/api/prisma-client';
 import { triggerStop } from '@webaudit/api/safety';
 import { expirePlanUnits } from '@webaudit/api/execution-runtime';
 import { liveLeaseCount, counterOf } from '../../../api/tests/helpers/safety-fixtures.js';
@@ -155,11 +157,99 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
       expect(await enqueueEligibleUnits(db as never, service.executionQueues!, w.planId)).toBe(1);
       expect(await terminal(a.id)).toBe('COMPLETED');
       await waitFor(async () => (phaseJobs.includes('RUNNING_MASTER') ? true : false));
-      expect(h.runs).toEqual([a.id]);
+      expect(await db.evidence.count({ where: { executionUnitId: a.id } })).toBe(1);
     } finally {
       await service.shutdown('integration-test');
       await publisher.quit();
     }
+  });
+
+  it('runs a real queued unit through PostgreSQL as a non-superuser execution-host login', async () => {
+    const login = `zz_exec_host_${randomBytes(5).toString('hex')}`;
+    const password = randomBytes(18).toString('hex');
+    const url = new URL(process.env['TEST_DATABASE_URL'] ?? process.env['DATABASE_URL'] ?? '');
+    if (!url.hostname) throw new Error('TEST_DATABASE_URL is required for the role integration');
+    await db.$executeRawUnsafe(
+      `CREATE ROLE ${login} LOGIN PASSWORD '${password}' NOSUPERUSER NOCREATEDB NOCREATEROLE NOBYPASSRLS IN ROLE fahes_exec_host`,
+    );
+    url.username = login;
+    url.password = password;
+    const hostDb = new PrismaClient({ datasources: { db: { url: url.toString() } }, log: [] });
+    try {
+      const currentUser = await hostDb.$queryRaw<
+        Array<{ current_user: string }>
+      >`SELECT current_user`;
+      expect(currentUser[0]?.current_user).toBe(login);
+      const w = await makeRuntimeWorld();
+      const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
+      expect(
+        await hostDb.target.findUnique({ where: { id: w.targetId }, select: { userId: true } }),
+      ).toEqual({ userId: w.userId });
+      expect(
+        await hostDb.targetAuthorization.findMany({
+          where: {
+            targetId: w.targetId,
+            userId: w.userId,
+            executionClasses: { has: 'BROWSER' },
+          },
+          include: { scope: true },
+          orderBy: [{ grantedAt: 'desc' }, { id: 'asc' }],
+        }),
+      ).toHaveLength(1);
+      expect(
+        await hostDb.targetEnvironment.findFirst({
+          where: { targetId: w.targetId, target: { userId: w.userId } },
+          select: { classification: true },
+        }),
+      ).not.toBeNull();
+      start(w, createTestAdapter(w), { db: hostDb });
+      const workerFailures: string[] = [];
+      workers?.workers[0]?.on('failed', (_job, error) => {
+        if (error) workerFailures.push(error.message);
+      });
+      await enqueueExecutionUnit(queues, {
+        id: a.id,
+        executionUnitClass: 'BROWSER',
+        attempt: 1,
+      });
+      const outcome = await terminal(a.id).catch(async (error: unknown) => {
+        const unit = await db.executionUnit.findUnique({
+          where: { id: a.id },
+          select: { status: true },
+        });
+        throw new Error(
+          `non-superuser execution did not finalize (status=${unit?.status}; worker=${workerFailures.join('; ')}): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      });
+      expect(outcome).toBe('COMPLETED');
+      const evidence = await db.evidence.findFirstOrThrow({ where: { executionUnitId: a.id } });
+      expect(evidence.inlinePayload).toMatchObject({
+        unit: a.id,
+        databaseUrlAvailable: false,
+        redisUrlAvailable: false,
+        checkpoint: 'PROCEED',
+      });
+    } finally {
+      await hostDb.$disconnect();
+      await db.$executeRawUnsafe(`DROP OWNED BY ${login}`);
+      await db.$executeRawUnsafe(`DROP ROLE IF EXISTS ${login}`);
+    }
+  }, 30_000);
+
+  it('runs the engine body in a separate OS process while evidence writes stay parent mediated', async () => {
+    const w = await makeRuntimeWorld();
+    const a = await makeUnit(w, { configuration: beh({ kind: 'COMPLETE' }) });
+    start(w, createTestAdapter(w));
+    await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
+    expect(await terminal(a.id)).toBe('COMPLETED');
+    const evidence = await db.evidence.findFirstOrThrow({ where: { executionUnitId: a.id } });
+    expect(evidence.inlinePayload).toMatchObject({ unit: a.id });
+    expect(evidence.inlinePayload).toMatchObject({
+      databaseUrlAvailable: false,
+      redisUrlAvailable: false,
+      checkpoint: 'PROCEED',
+    });
+    expect((evidence.inlinePayload as { processId: number }).processId).not.toBe(process.pid);
   });
 
   it('runs a two-unit chain: only the root is enqueued, the dependent follows its completion; evidence, progress, effects and lease all settle', async () => {
@@ -172,7 +262,6 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     expect(await enqueueEligibleUnits(db as never, queues, w.planId)).toBe(1); // only the root
     expect(await terminal(a.id)).toBe('COMPLETED');
     expect(await terminal(b.id)).toBe('COMPLETED');
-    expect(h.runs).toEqual([a.id, b.id]);
     expect(await db.evidence.count({ where: { executionUnitId: { in: [a.id, b.id] } } })).toBe(2);
     const effects = await db.effectAuthorization.findMany({ where: { executionUnitId: a.id } });
     expect(effects.map((e) => e.state)).toEqual(['CONFIRMED']);
@@ -236,7 +325,7 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     await waitFor(async () => (failures.length > 0 ? true : false));
     expect(failures[0]).toMatch(/unrecognized|Unrecognized/);
     expect(await statusOf(a.id)).toBe('PLANNED');
-    expect(h.runs).toEqual([]);
+    expect(await db.evidence.count({ where: { executionUnitId: a.id } })).toBe(0);
   });
 
   it('classifies an engine exception as ENGINE_DEFECT and blocks its dependents', async () => {
@@ -295,7 +384,6 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
         .add(EXEC_JOB_NAME, { executionUnitId: a.id }, { jobId: id });
     expect(await terminal(a.id)).toBe('COMPLETED');
     await new Promise((r) => setTimeout(r, 300));
-    expect(h.runs).toEqual([a.id]);
     expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
   });
 });
@@ -304,8 +392,7 @@ describe('controlled failure injection on the running path', () => {
   it('user cancellation (SCAN stop) mid-run: the host aborts the engine, the unit ends CANCELLED, the lease is released', async () => {
     const w = await makeRuntimeWorld();
     const a = await makeUnit(w, { configuration: beh({ kind: 'HANG' }) });
-    const h = createTestAdapter(w);
-    start(w, h);
+    start(w, createTestAdapter(w));
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
     await triggerStop(db as never, {
@@ -315,7 +402,6 @@ describe('controlled failure injection on the running path', () => {
       reason: 'USER_CANCELLATION',
     });
     expect(await terminal(a.id)).toBe('CANCELLED');
-    expect(h.aborted).toEqual([a.id]);
     expect(await liveLeaseCount(w.grantId)).toBe(0);
   });
 
@@ -348,6 +434,50 @@ describe('controlled failure injection on the running path', () => {
     expect(await terminal(a.id)).toBe('KILLED');
     expect(await reasonOf(a.id)).toMatchObject({ terminalReason: 'AUTHORIZATION_REVOKED' });
   });
+
+  it('F07 checkpoint STOP over IPC kills the child when authorization is revoked during its action', async () => {
+    const w = await makeRuntimeWorld();
+    const logMessages: string[] = [];
+    const progressMessages: string[] = [];
+    const a = await makeUnit(w, {
+      configuration: beh({ kind: 'CHECKPOINT_WAIT', ms: 500 }),
+    });
+    start(w, createTestAdapter(w), {
+      loopIntervalMs: 5000,
+      log: (message) => logMessages.push(message),
+      publisher: {
+        publish: (_channel, message) => (progressMessages.push(message), Promise.resolve(1)),
+      },
+    });
+    await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
+    await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false), 2500);
+    await waitFor(
+      async () =>
+        progressMessages.some((message) => message.includes('checkpoint-wait-start'))
+          ? true
+          : false,
+      2500,
+    );
+    await db.targetAuthorization.update({
+      where: { id: w.grantId },
+      data: { revokedAt: new Date() },
+    });
+    await waitFor(
+      async () =>
+        progressMessages.some((message) => message.includes('checkpoint-wait-finished'))
+          ? true
+          : false,
+      2500,
+    );
+    await waitFor(
+      async () =>
+        logMessages.includes('execution child F07 safety checkpoint stopped work') ? true : false,
+      2500,
+    );
+    expect(await terminal(a.id)).toBe('KILLED');
+    expect(await reasonOf(a.id)).toMatchObject({ terminalReason: 'AUTHORIZATION_REVOKED' });
+    expect(await liveLeaseCount(w.grantId)).toBe(0);
+  }, 10_000);
 
   it('scan deadline passing mid-run: FAILED/TIMEOUT detail SCAN_DEADLINE', async () => {
     const w = await makeRuntimeWorld({ deadlineMs: HOUR });
@@ -382,33 +512,24 @@ describe('controlled failure injection on the running path', () => {
       configuration: beh({ kind: 'PROCESS_HANG' }),
       timeoutPolicyMs: 300,
     });
-    const h = createTestAdapter(w, 'engine.x', { hardStopMarginMs: 100, forkProcess: true });
+    const h = createTestAdapter(w, 'engine.x', { hardStopMarginMs: 100 });
     const { handle } = start(w, h);
-    let running: Promise<unknown> | undefined;
-    try {
-      running = handle({ executionUnitId: a.id });
-      await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
-      await waitFor(async () => (h.terminated.includes(a.id) ? true : false), 2_000);
-      expect(await statusOf(a.id)).toBe('FAILED');
-      expect(await reasonOf(a.id)).toMatchObject({
-        failureClass: 'TIMEOUT',
-        terminalReason: 'HARD_STOP',
-      });
-    } finally {
-      await h.cleanupChildren();
-      await running?.catch(() => undefined);
-    }
+    const running = handle({ executionUnitId: a.id });
+    expect(await running).toMatchObject({ result: 'FINALIZED' });
+    expect(await statusOf(a.id)).toBe('FAILED');
+    expect(await reasonOf(a.id)).toMatchObject({
+      failureClass: 'TIMEOUT',
+      terminalReason: 'HARD_STOP',
+    });
   });
 
   it('lost lease mid-run: the stale host aborts and does NOT finalize; the plan-deadline sweep ends the unit', async () => {
     const w = await makeRuntimeWorld({ deadlineMs: HOUR });
     const a = await makeUnit(w, { configuration: beh({ kind: 'HANG' }) });
-    const h = createTestAdapter(w);
-    start(w, h);
+    start(w, createTestAdapter(w));
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
     await db.$executeRawUnsafe(`SELECT public.f07_release_leases_by_execution($1)`, a.id);
-    await waitFor(async () => (h.aborted.includes(a.id) ? true : false));
     await new Promise((r) => setTimeout(r, 300));
     expect(await statusOf(a.id)).toBe('RUNNING'); // the stale holder wrote nothing
     await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 120_000) });
@@ -435,11 +556,9 @@ describe('controlled failure injection on the running path', () => {
   it('a unit left RUNNING by a crashed host is never re-dispatched; the sweep finalizes it after the deadline', async () => {
     const w = await makeRuntimeWorld({ deadlineMs: HOUR });
     const a = await makeUnit(w, { status: 'RUNNING' });
-    const h = createTestAdapter(w);
-    start(w, h);
+    start(w, createTestAdapter(w));
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     await new Promise((r) => setTimeout(r, 500));
-    expect(h.runs).toEqual([]);
     expect(await statusOf(a.id)).toBe('RUNNING');
     await setScan(w.scanId, { startedAt: new Date(Date.now() - HOUR - 120_000) });
     await expirePlanUnits(db as never, w.planId, {

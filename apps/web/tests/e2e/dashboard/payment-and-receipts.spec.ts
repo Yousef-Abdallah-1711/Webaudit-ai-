@@ -21,7 +21,6 @@ import { startStack, type Stack } from '../support/stack.js';
 import { registerAndVerify, loginViaUi, type Creds } from '../support/auth.js';
 
 let stack: Stack;
-const previousRedisUrl = process.env['REDIS_URL'];
 const owner: Creds = {
   email: 'payment-owner@example.com',
   password: 'correct-horse-battery-staple',
@@ -33,7 +32,6 @@ const other: Creds = {
 
 test.beforeAll(async () => {
   test.setTimeout(180_000);
-  process.env['REDIS_URL'] = 'redis://localhost:6389/14';
   stack = await startStack();
   await registerAndVerify(stack, owner);
   await registerAndVerify(stack, other);
@@ -41,8 +39,6 @@ test.beforeAll(async () => {
 
 test.afterAll(async () => {
   await stack.stop();
-  if (previousRedisUrl === undefined) delete process.env['REDIS_URL'];
-  else process.env['REDIS_URL'] = previousRedisUrl;
 });
 
 function signWebhook(event: Record<string, unknown>): { raw: string; signature: string } {

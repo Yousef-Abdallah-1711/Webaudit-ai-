@@ -59,6 +59,36 @@ async function hasStatusUpdatePrivilege(client: PrismaClient): Promise<boolean> 
   return rows[0]!.allowed;
 }
 
+async function hasTablePrivilege(
+  client: PrismaClient,
+  table: string,
+  privilege: string,
+): Promise<boolean> {
+  const rows = await client.$queryRaw<Array<{ allowed: boolean }>>`
+    SELECT has_table_privilege(current_user, format('%I.%I', 'public', ${table}), ${privilege}) AS allowed
+  `;
+  return rows[0]!.allowed;
+}
+
+async function hasColumnPrivilege(
+  client: PrismaClient,
+  table: string,
+  column: string,
+  privilege: string,
+): Promise<boolean> {
+  const rows = await client.$queryRaw<Array<{ allowed: boolean }>>`
+    SELECT has_column_privilege(current_user, format('%I.%I', 'public', ${table}), ${column}, ${privilege}) AS allowed
+  `;
+  return rows[0]!.allowed;
+}
+
+async function hasFunctionPrivilege(client: PrismaClient, signature: string): Promise<boolean> {
+  const rows = await client.$queryRaw<Array<{ allowed: boolean }>>`
+    SELECT has_function_privilege(current_user, to_regprocedure(${`public.${signature}`}), 'EXECUTE') AS allowed
+  `;
+  return rows[0]!.allowed;
+}
+
 async function unitIdForDirectWrite(): Promise<string> {
   const user = await testDb.user.create({
     data: { email: `core01-role-${suffix}@example.com`, emailVerifiedAt: new Date() },
@@ -149,5 +179,119 @@ describe('terminal status writes remain guarded even for the execution host', ()
         unitId,
       ),
     ).rejects.toThrow(/terminal_write_forbidden|42501/i);
+  });
+});
+
+describe('CORE-01 table and column grants use the intended runtime roles', () => {
+  it('keeps raw lease secrets and F07 tables unreadable to every runtime login', async () => {
+    for (const role of Object.keys(roles) as RoleName[]) {
+      const client = clientFor(role);
+      expect(await hasTablePrivilege(client, 'AdmissionLease', 'SELECT'), role).toBe(false);
+      expect(await hasTablePrivilege(client, 'BudgetCounter', 'SELECT'), role).toBe(false);
+      expect(await hasTablePrivilege(client, 'KillSwitchState', 'SELECT'), role).toBe(false);
+    }
+  });
+
+  it('allows the API to create plans and units but not to mutate them', async () => {
+    const api = clientFor('api');
+    expect(await hasTablePrivilege(api, 'ScanPlan', 'SELECT')).toBe(true);
+    expect(await hasTablePrivilege(api, 'ScanPlan', 'INSERT')).toBe(true);
+    expect(await hasTablePrivilege(api, 'ExecutionUnit', 'INSERT')).toBe(true);
+    expect(await hasTablePrivilege(api, 'ExecutionUnit', 'UPDATE')).toBe(false);
+    expect(await hasColumnPrivilege(api, 'ExecutionUnit', 'status', 'UPDATE')).toBe(false);
+    expect(await hasTablePrivilege(clientFor('worker'), 'ExecutionUnit', 'SELECT')).toBe(false);
+    expect(await hasTablePrivilege(clientFor('nobody'), 'ExecutionUnit', 'SELECT')).toBe(false);
+  });
+
+  it('limits host writes to lifecycle columns and append-only execution records', async () => {
+    const host = clientFor('host');
+    expect(await hasTablePrivilege(host, 'ExecutionUnit', 'SELECT')).toBe(true);
+    expect(await hasTablePrivilege(host, 'Scan', 'SELECT')).toBe(false);
+    expect(await hasColumnPrivilege(host, 'Scan', 'id', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'Scan', 'state', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'Scan', 'startedAt', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'Scan', 'chargedCredits', 'SELECT')).toBe(false);
+    expect(await hasColumnPrivilege(host, 'Target', 'userId', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'Target', 'canonicalValue', 'SELECT')).toBe(false);
+    expect(await hasTablePrivilege(host, 'TargetAuthorization', 'SELECT')).toBe(true);
+    expect(await hasTablePrivilege(host, 'ScopeDefinition', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'TargetEnvironment', 'classification', 'SELECT')).toBe(
+      true,
+    );
+    expect(await hasColumnPrivilege(host, 'TargetEnvironment', 'id', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'ExecutionUnit', 'status', 'UPDATE')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'ExecutionUnit', 'progressSnapshot', 'UPDATE')).toBe(
+      true,
+    );
+    expect(await hasColumnPrivilege(host, 'ExecutionUnit', 'configuration', 'UPDATE')).toBe(false);
+    expect(await hasColumnPrivilege(host, 'ExecutionUnit', 'userId', 'UPDATE')).toBe(false);
+    expect(await hasTablePrivilege(host, 'ExecutionUnit', 'INSERT')).toBe(false);
+    expect(await hasTablePrivilege(host, 'ExecutionUnitHostClaim', 'INSERT')).toBe(true);
+    expect(await hasTablePrivilege(host, 'ExecutionUnitHostClaim', 'UPDATE')).toBe(false);
+    expect(await hasTablePrivilege(host, 'Evidence', 'INSERT')).toBe(true);
+    expect(await hasTablePrivilege(host, 'Evidence', 'UPDATE')).toBe(false);
+    expect(await hasTablePrivilege(host, 'Evidence', 'DELETE')).toBe(false);
+    expect(await hasColumnPrivilege(host, 'EffectAuthorization', 'state', 'UPDATE')).toBe(true);
+    expect(await hasColumnPrivilege(host, 'EffectAuthorization', 'userId', 'UPDATE')).toBe(false);
+  });
+
+  it('gives the orchestrator only the artifact cleanup/update path and keeps operator read-only', async () => {
+    const orchestrator = clientFor('orchestrator');
+    expect(await hasTablePrivilege(orchestrator, 'Artifact', 'DELETE')).toBe(true);
+    expect(await hasTablePrivilege(orchestrator, 'Artifact', 'INSERT')).toBe(false);
+    expect(await hasColumnPrivilege(orchestrator, 'Evidence', 'artifactId', 'UPDATE')).toBe(true);
+    expect(await hasColumnPrivilege(orchestrator, 'Evidence', 'inlinePayload', 'UPDATE')).toBe(
+      false,
+    );
+
+    const operator = clientFor('operator');
+    expect(await hasTablePrivilege(operator, 'ExecutionUnit', 'SELECT')).toBe(true);
+    expect(await hasTablePrivilege(operator, 'ExecutionUnit', 'UPDATE')).toBe(false);
+    expect(await hasTablePrivilege(operator, 'Evidence', 'SELECT')).toBe(false);
+  });
+});
+
+describe('SECURITY DEFINER entry points are granted narrowly', () => {
+  it('allows admission to API and host, but not a generic worker or operator', async () => {
+    const signature = 'f07_admit(text,text,text,text,text,boolean,boolean,text)';
+    expect(await hasFunctionPrivilege(clientFor('api'), signature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('host'), signature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('worker'), signature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('operator'), signature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('nobody'), signature)).toBe(false);
+  });
+
+  it('grants the host only the F07 read/audit helpers needed by the shared admission service', async () => {
+    const budget = 'f07_budget_snapshot(text,text)';
+    const audit =
+      'f07_record_audit_ts("ExecutionAuditEventType",text,text,text,text,text,text,text,text,text,jsonb)';
+    expect(await hasFunctionPrivilege(clientFor('host'), budget)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('host'), audit)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('worker'), budget)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('worker'), audit)).toBe(false);
+  });
+
+  it('allows lease liveness reads only through the host-owned narrow function', async () => {
+    const signature = 'fahes_lock_live_lease(text)';
+    expect(await hasFunctionPrivilege(clientFor('host'), signature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('api'), signature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('worker'), signature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('orchestrator'), signature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('operator'), signature)).toBe(false);
+  });
+
+  it('does not expose raw stop rows; only the scoped stop functions can be called', async () => {
+    const stopSignature = 'f07_stop_pending(text,text,text,text,text)';
+    const reasonSignature = 'fahes_pending_stop_reason(text,text,text,text,text)';
+    expect(await hasFunctionPrivilege(clientFor('worker'), stopSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('api'), stopSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('host'), stopSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('operator'), stopSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('host'), reasonSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('orchestrator'), reasonSignature)).toBe(true);
+    expect(await hasFunctionPrivilege(clientFor('api'), reasonSignature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('worker'), reasonSignature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('operator'), reasonSignature)).toBe(false);
+    expect(await hasFunctionPrivilege(clientFor('nobody'), reasonSignature)).toBe(false);
   });
 });

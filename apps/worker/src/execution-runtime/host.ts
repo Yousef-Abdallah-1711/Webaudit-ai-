@@ -33,10 +33,11 @@ import {
   releaseLeasesByExecution,
   renewLease,
   requestAdmission,
+  safetyCheckpoint,
 } from '@webaudit/api/safety';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
-import type { ForkedChild } from '@webaudit/api/execution-runtime';
-import type { AdapterRegistry, AdapterUnit, ExecutionAdapter } from './adapter.js';
+import type { AdapterRegistry, AdapterUnit, AdapterContext, ExecutionAdapter } from './adapter.js';
+import { forkExecutionChild, type IsolatedExecutionChild } from './process-child.js';
 
 export interface HostDeps {
   readonly db: PrismaClient;
@@ -75,6 +76,7 @@ interface UnitRow {
   idempotencyKey: string;
   attempt: number;
   timeoutPolicyMs: number;
+  requiresSafetyCheckpoint: boolean;
   configuration: unknown;
 }
 
@@ -98,6 +100,7 @@ export function createExecutionJobHandler(
         idempotencyKey: true,
         attempt: true,
         timeoutPolicyMs: true,
+        requiresSafetyCheckpoint: true,
         configuration: true,
       },
     })) as UnitRow | null;
@@ -131,7 +134,7 @@ export function createExecutionJobHandler(
         : { result: 'REFUSED', reason: 'ENGINE_CLASS_MISMATCH' };
     }
 
-    let lease: { leaseId: string; holderToken: string } | null = null;
+    let lease: { grantId: string; leaseId: string; holderToken: string } | null = null;
     const dispatched = await dispatchExecutionUnit(
       deps.db,
       {
@@ -142,10 +145,7 @@ export function createExecutionJobHandler(
           : { hasCapacity: (u) => adapter.hasCapacity!(u) }),
         ...(adapter.guards === undefined ? {} : { guards: (u) => adapter.guards!(u) }),
         ...(adapter.proofs === undefined ? {} : { proofs: (u) => adapter.proofs!(u) }),
-        forkInertChild: (u) =>
-          adapter.forkInertChild === undefined
-            ? Promise.resolve({ terminate: () => Promise.resolve() })
-            : adapter.forkInertChild(u),
+        forkInertChild: () => Promise.resolve(forkExecutionChild()),
         ...(adapter.hardStopMarginMs === undefined
           ? {}
           : { hardStopMarginMs: () => adapter.hardStopMarginMs! }),
@@ -154,10 +154,15 @@ export function createExecutionJobHandler(
           // The lease token comes from OUR admission result; workers never read AdmissionLease (it holds tokens in clear).
           if (
             res.outcome === 'GRANTED' &&
+            res.grantId !== undefined &&
             res.leaseId !== undefined &&
             res.holderToken !== undefined
           ) {
-            lease = { leaseId: res.leaseId, holderToken: res.holderToken };
+            lease = {
+              grantId: res.grantId,
+              leaseId: res.leaseId,
+              holderToken: res.holderToken,
+            };
           }
           return res;
         },
@@ -174,7 +179,7 @@ export function createExecutionJobHandler(
       row,
       dispatched.claimToken,
       lease,
-      dispatched.child,
+      dispatched.child as IsolatedExecutionChild,
       interval,
       log,
       gateOf,
@@ -204,30 +209,49 @@ async function runUnit(
   adapter: ExecutionAdapter,
   row: UnitRow,
   claimToken: string,
-  lease: { leaseId: string; holderToken: string } | null,
-  child: ForkedChild,
+  lease: { grantId: string; leaseId: string; holderToken: string } | null,
+  child: IsolatedExecutionChild,
   interval: number,
   log: (m: string, e?: Record<string, unknown>) => void,
   gateOf: (r: { id: string; scanPlanId: string }) => GateDeps,
 ): Promise<HostResult> {
   const { db } = deps;
   const controller = new AbortController();
-  const host = { executionUnitId: row.id, userId: row.userId, hostInstanceId: deps.hostInstanceId };
-  const unit = (await loadAdapterUnit(db, row.id)) as AdapterUnit;
-  const scanId =
-    (await db.scanPlan.findUnique({ where: { id: row.scanPlanId }, select: { scanId: true } }))
-      ?.scanId ?? null;
-  const gate = (): GateDeps =>
-    scanId !== null && deps.gateFor !== undefined ? deps.gateFor(scanId) : gateOf(row);
-
-  let decided: { action: HostLoopAction } | null = null;
   let hardStopFired = false;
-  let lastProgress = 0;
   let terminatePromise: Promise<void> | undefined;
   const terminateChild = (): Promise<void> => {
     terminatePromise ??= child.terminate();
     return terminatePromise;
   };
+  const margin = adapter.hardStopMarginMs ?? 60_000;
+  const hardStop = setTimeout(() => {
+    hardStopFired = true;
+    controller.abort();
+  }, row.timeoutPolicyMs + margin);
+  hardStop.unref();
+  controller.signal.addEventListener('abort', () => void terminateChild().catch(() => undefined), {
+    once: true,
+  });
+
+  const host = { executionUnitId: row.id, userId: row.userId, hostInstanceId: deps.hostInstanceId };
+  let unit: AdapterUnit;
+  let scanId: string | null;
+  try {
+    unit = (await loadAdapterUnit(db, row.id)) as AdapterUnit;
+    scanId =
+      (await db.scanPlan.findUnique({ where: { id: row.scanPlanId }, select: { scanId: true } }))
+        ?.scanId ?? null;
+  } catch (error) {
+    clearTimeout(hardStop);
+    await terminateChild().catch(() => undefined);
+    throw error;
+  }
+  const gate = (): GateDeps =>
+    scanId !== null && deps.gateFor !== undefined ? deps.gateFor(scanId) : gateOf(row);
+
+  let decided: { action: HostLoopAction } | null = null;
+  let lastProgress = 0;
+  let checkpointStopped = false;
 
   const renew = async (): Promise<LeaseRenewal> => {
     if (lease === null) return 'RENEWED';
@@ -240,14 +264,6 @@ async function runUnit(
   };
   const decide = (): Promise<HostLoopAction> =>
     hostLoopDecision(db, { id: row.id, userId: row.userId, leaseClass: adapter.leaseClass }, renew);
-
-  // Arm the parent-side hard stop BEFORE any effect (runtime contract rule 3): a hung adapter cannot postpone it.
-  const margin = adapter.hardStopMarginMs ?? 60_000;
-  const hardStop = setTimeout(() => {
-    hardStopFired = true;
-    controller.abort();
-  }, row.timeoutPolicyMs + margin);
-  hardStop.unref();
 
   let ticking = false;
   const loop = setInterval(() => {
@@ -272,11 +288,6 @@ async function runUnit(
   }, interval);
   loop.unref();
 
-  // Abort requests must stop the OS child even if its event loop and engine ignore the signal.
-  controller.signal.addEventListener('abort', () => void terminateChild().catch(() => undefined), {
-    once: true,
-  });
-
   const progress = (tick: ProgressTick): void => {
     emitProgress(deps.publisher, row.id, tick);
     const now = Date.now();
@@ -290,10 +301,10 @@ async function runUnit(
     }).catch(() => undefined);
   };
 
-  let observation: Awaited<ReturnType<ExecutionAdapter['run']>> | null = null;
+  let observation: Awaited<ReturnType<IsolatedExecutionChild['run']>> | null = null;
   let runFinished = false;
   try {
-    const runPromise = adapter.run({
+    const context: AdapterContext = {
       unit,
       signal: controller.signal,
       authorizeEffect: (kind, ordinal) =>
@@ -316,7 +327,39 @@ async function runUnit(
           ...(contentType === undefined ? {} : { contentType }),
         }),
       progress,
-    });
+      safetyCheckpoint: async () => {
+        if (!row.requiresSafetyCheckpoint) return { outcome: 'PROCEED' as const };
+        log('execution child requested an F07 safety checkpoint', { executionUnitId: row.id });
+        const admission = adapter.admissionRequestFor(unit);
+        const checkpoint = await safetyCheckpoint(db, {
+          executionId: row.id,
+          targetId: unit.targetId,
+          executionClass: admission.executionClass,
+          destination: admission.destination,
+          ...(scanId === null ? {} : { scanId }),
+          idempotencyKey: row.idempotencyKey,
+          consumes: admission.consumes,
+          abortController: new AbortController(),
+          ...(lease === null ? {} : { lease }),
+        });
+        if (checkpoint.outcome === 'STOP') {
+          checkpointStopped = true;
+          log('execution child F07 safety checkpoint stopped work', {
+            executionUnitId: row.id,
+            reason: checkpoint.reason,
+          });
+          return { outcome: 'STOP' as const, reason: checkpoint.reason };
+        }
+        return { outcome: 'PROCEED' as const };
+      },
+    };
+    const runPromise = child.run(
+      adapter.childModuleUrl,
+      adapter.childExportName,
+      unit,
+      context,
+      () => controller.abort(),
+    );
     const outcome = await Promise.race([
       runPromise.then((value) => ({ kind: 'RUN' as const, value })),
       new Promise<{ kind: 'STOP' }>((resolve) => {
@@ -332,7 +375,7 @@ async function runUnit(
     }
   } catch {
     // An uncaught exception in the engine's own code: ENGINE_DEFECT, classified by the host.
-    observation = { source: 'ENGINE_EXCEPTION' };
+    observation = checkpointStopped ? { source: 'F07_STOP' } : { source: 'ENGINE_EXCEPTION' };
   } finally {
     clearInterval(loop);
     clearTimeout(hardStop);
@@ -350,7 +393,7 @@ async function runUnit(
   }
   if (!runFinished && !hardStopFired && decided === null) {
     // The adapter rejected after an abort race; the host loop still owns the eventual outcome.
-    observation ??= { source: 'ENGINE_EXCEPTION' };
+    observation ??= checkpointStopped ? { source: 'F07_STOP' } : { source: 'ENGINE_EXCEPTION' };
   }
 
   // The loop may have decided while the adapter was winding down; otherwise ask once more right before finalizing
@@ -395,7 +438,7 @@ async function finalizeFor(
   row: UnitRow,
   action: HostLoopAction,
   hardStopFired: boolean,
-  observation: Awaited<ReturnType<ExecutionAdapter['run']>>,
+  observation: Awaited<ReturnType<IsolatedExecutionChild['run']>>,
   gate: GateDeps,
   log: (m: string, e?: Record<string, unknown>) => void,
   scanId: string | null,

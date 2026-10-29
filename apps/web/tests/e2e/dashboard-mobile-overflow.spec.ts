@@ -10,7 +10,6 @@ const operator = {
 
 test.beforeAll(async () => {
   test.setTimeout(180_000);
-  process.env['REDIS_URL'] = 'redis://localhost:6389/15';
   stack = await startStack();
   await registerAndVerify(stack, operator);
   await promoteToOperator(stack, operator.email);

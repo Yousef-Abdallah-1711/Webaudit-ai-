@@ -148,3 +148,37 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Re-ran `apps/worker/tests/integration/execution-runtime.test.ts` on the isolated PostgreSQL `m009_privilege_test` and Redis `127.0.0.1:6391`: **18/18 passed**. Worker TypeScript check passed. `git diff --check` passed.
 - Scope limit: the dispatched child is still inert; `adapter.run()` executes in the worker process. Engine-in-child execution, host-owned IPC for effects/checkpoints, and production engine registration remain open. DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**.
 - Changed SPEC 009 paths: `apps/worker/src/execution-runtime/host.ts`, `apps/worker/tests/helpers/test-adapter.ts`, `apps/worker/tests/integration/execution-runtime.test.ts`, and `docs/audits/spec-009-implementation/{DEFINITION_OF_DONE.md,SESSION_PROGRESS.md}`. Pre-existing website/auth edits, lockfile, generated output, and logs remain untouched.
+
+## Per-unit child execution and IPC — 2026-10-29
+
+- Added `process-child.ts` and `child-entry.ts`: every non-passive unit forks one OS process before the `RUNNING` edge; only a local workspace file module and the unit's execution data are sent to it. The child receives an allowlisted environment without `DATABASE_URL` or `REDIS_URL`.
+- Engine work now executes in the child. Effect authorization, effect confirmation, evidence writes, and progress ticks cross a validated IPC protocol to parent-owned services. The parent deadline is armed before worker-side unit reads; abort kills the child, and failed termination leaves the row/lease for the planned sweep.
+- Test-first evidence: the process-ID regression failed before implementation (child evidence PID equaled the worker PID), then passed after the change. Runtime integration is **19/19** with real isolated PostgreSQL/Redis/BullMQ; child evidence verifies distinct PID and absence of DB/Redis URLs. Safety role-isolation plus worker kill-switch adverse suites: **127/127**.
+- Worker TypeScript check, scoped ESLint, Prettier, `git diff --check` passed. A uniquely tagged `webaudit-worker:spec009-child-isolation` image built; an in-image Node/TSX smoke exercised the actual `forkExecutionChild` and returned `ENGINE_RESULT`. Existing Docker services were not replaced or restarted.
+- Updated PROJECT_MAP, DoD, requirement delta, verification report, and this progress record. DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS** because API plan resolution still has no production caller, no production engine is registered, and other gates (complete privilege/race matrix, browser/visual, load, coverage, R2) remain open.
+- Current changes are not yet committed. Earlier dirty website/auth files, lockfile, generated output, and logs remain untouched.
+
+## Safety-checkpoint IPC regression continuation — 2026-10-29
+
+- Runtime integration now passes **20/20**. The added F07 regression revokes a grant during child work and verifies checkpoint STOP travels over IPC, the host kills the child, the unit finalizes as `KILLED` with `AUTHORIZATION_REVOKED`, and the lease is released.
+- Re-ran targeted adverse suites against isolated PostgreSQL/Redis: safety role isolation **116/116** and worker kill switch **11/11**, total **127/127**.
+- Worker TypeScript check and scoped ESLint pass. Scoped Prettier initially found formatting in the integration test; the file was formatted and the complete scoped Prettier check then passed. `git diff --check` passed.
+- Current branch is `main`; `HEAD` and `origin/main` both resolve to `974d2620306a200660304984f0e42eac174d4445`. The new runtime changes and evidence are still uncommitted. The worker image predates the checkpoint addition and must be rebuilt/smoke-tested before its evidence is current.
+- DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. No claim is made that the entire SPEC 009 suite was rerun after these changes.
+
+## Full workspace and Docker revalidation — 2026-10-29
+
+- The first full-suite retry was interrupted after setup failures showed Docker Desktop and its isolated PostgreSQL/Redis containers were down; exit `0x40010004` was a console interruption, not a test assertion failure. Docker Desktop was started and only disposable verification containers were recreated on ports 5545/6391.
+- Re-ran the complete serial unit/contract/integration workspace against fresh disposable PostgreSQL/Redis using a temporary Vitest workspace override: **243/243 files, 1,854/1,854 tests passed** in 1,001 seconds. This run includes the 20-test execution-runtime suite.
+- Rebuilt `webaudit-worker:spec009-child-isolation` after the checkpoint IPC addition. In-image smoke returned `ENGINE_RESULT`; parent mediation observed `PROCEED`; child evidence reported `DATABASE_URL` and `REDIS_URL` unavailable.
+- Targeted runtime/adverse results remain 20/20 and 127/127. The complete adverse workspace was also rerun after the runtime changes: **72/72 files, 1,134 passed, 1 skipped** in 462.33 seconds. DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**; visual/browser, production API/engine, complete privilege/race matrix, load, coverage, and real R2 gates remain open.
+
+## Final continuation — 2026-10-29
+
+- The latest full Playwright CLI run finished **93/93 passed** in 26.2 minutes on isolated PostgreSQL `127.0.0.1:5545` and Redis `127.0.0.1:6391`. Focused previously failing queue/onboarding specs and the auth visual suite also passed after the harness changes.
+- First full browser attempt was **90/93** because two specs forced the API to use shared development Redis `localhost:6389/15` while the worker used isolated Redis `6391`. That run created keys in dev Redis DB15 (47 keys were present at inspection). Nothing was flushed or deleted. Harness fixes now force API Redis to the configured isolated `TEST_REDIS_URL`; later browser runs did not access port 6389.
+- The first browser run also found empty signup could be submitted; the signup button now requires a non-empty email and 12-character password. This user-owned auth/public-page refactor remains outside the SPEC 009 commit.
+- Final full unit/contract/integration rerun is green against the same disposable database and Redis: **243/243 files, 1,855/1,855 tests passed** in 754.79 seconds with `EXEC_TEST_REDIS=127.0.0.1:6391`. A first rerun omitted this suite-specific variable (242/243 files passed, runtime file hit fallback `localhost:6399`); the focused runtime rerun then passed 21/21 and the corrected full rerun passed.
+- Full adverse workspace is green: **72/72 files, 1,142 passed, 1 skipped**. Runtime integration is **21/21**. API, worker and web typechecks pass. `pnpm test:visual` completed with **8 passed, 17 todo**; the reference parity assertions remain todo, so visual acceptance is not claimed.
+- Updated the 49-entry requirement matrix, 28-gate DoD, final verification report, implementation backlog, and PROJECT_MAP test-environment note. Current DoD is **11 PASS · 13 PARTIAL · 4 NOT STARTED**; verdict remains **NOT COMPLETE** because production API plan dispatch, production engine registration, full privilege/AC matrix, visual parity, audit rollback, real R2, performance, coverage, and manual Chrome remain open.
+- Keep shared development/production containers untouched. Do not clean Redis DB15: it is a shared developer DB and this run made no deletion attempt.

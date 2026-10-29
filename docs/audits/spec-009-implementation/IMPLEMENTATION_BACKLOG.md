@@ -70,4 +70,16 @@ The historical status paragraph above predates later implementation commits and 
 
 ## Verification update — 2026-10-29
 
-The full serial unit/contract/integration Vitest workspace is now complete: **243/243 files and 1,851/1,851 tests passed** on isolated PostgreSQL and Redis. The run closed the earlier full-suite failures: blank `EMAIL_TRANSPORT` is normalized to the documented SMTP default, and the sandbox-unconfigured contract clears the `.env` URL before its assertion. See the dated final verification report and session progress for scope and remaining gates. Adverse/visual suites, API plan producer/production adapter, browser, load, coverage, full privilege matrix, and real R2 remain open.
+The latest full serial unit/contract/integration Vitest workspace is complete: **243/243 files and 1,854/1,854 tests passed** on fresh disposable PostgreSQL and Redis. The run closed the earlier full-suite failures: blank `EMAIL_TRANSPORT` is normalized to the documented SMTP default, and the sandbox-unconfigured contract clears the `.env` URL before its assertion. See the dated final verification report and session progress for scope and remaining gates. Adverse/visual suites, API plan producer/production adapter, browser, load, coverage, full privilege matrix, and real R2 remain open.
+
+Runtime continuation (2026-10-29): FR-019 now has a per-unit local-module OS child runner with parent-mediated effect/evidence/progress and safety-checkpoint IPC and a sanitized environment. Targeted runtime integration is 20/20; the affected role-isolation and kill-switch adverse tests are 127/127; the tagged Docker worker image rebuilt after the checkpoint change and the in-image child smoke passes. This does not close the API plan producer or remaining engine/DoD gates.
+
+## Final revalidation — 2026-10-29
+
+The phase tables and verification paragraphs above are historical planning records and are superseded by this current state:
+
+- Implemented and exercised on isolated PostgreSQL/Redis/BullMQ: plan/profile resolution components, execution-unit persistence/transitions, per-class queue/worker composition, child-process isolation and parent IPC, F07 checkpointing, deadline/expiry/finalization, evidence/materialization, artifact fake-store behavior, and artifact reaper wiring.
+- Complete serial unit/contract/integration: **243 files, 1,855 tests passed**. Complete adverse: **72 files, 1,142 passed, 1 skipped**. SPEC 009 worker runtime: **21/21**. Full Playwright E2E: **93/93** using isolated services after correcting a test-harness Redis split.
+- Visual harness: **8 passed, 17 todo**; it proves the capture/comparison machinery runs but leaves the page-reference comparisons unresolved. It does not satisfy the UI 0.5% parity bar. Instrumented coverage and a SPEC 009 performance baseline also remain unmeasured.
+- Still required for end-to-end completion: production API `resolvePlan`→durable queue producer; registered production SPEC 010–012 engine adapter; real API and worker service-role scan flow; complete privilege and U-1 AC-1…20 race/fairness matrices; authenticated progress reconnect/recovery; audit-event rollback proof; process restart/outage injection; real R2 retention/reaper test; per-engine observability; measured performance; instrumented coverage; manual Chrome acceptance.
+- `DEFINITION_OF_DONE.md` and `REQUIREMENT_DELTA_MATRIX.md` hold the current gate and 49-FR status. SPEC 009 remains **NOT COMPLETE** until the open production and acceptance gates close.

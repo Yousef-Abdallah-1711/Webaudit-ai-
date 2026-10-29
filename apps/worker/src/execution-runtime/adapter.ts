@@ -6,25 +6,25 @@
 
 import type { AdmissionRequest } from '@webaudit/api/safety';
 import type { RecordedEvidence } from '@webaudit/api/evidence';
-import type {
-  DispatchUnit,
-  EffectDecision,
-  ForkedChild,
-  ProgressTick,
-  UnitObservation,
-} from '@webaudit/api/execution-runtime';
+import type { DispatchUnit, EffectDecision, ProgressTick } from '@webaudit/api/execution-runtime';
 import type { EvidenceKind } from '@webaudit/api/prisma-client';
 import { EXEC_QUEUE_NAMES, queueNameForUnitClass } from '@webaudit/config';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 export interface AdapterUnit extends DispatchUnit {
   configuration: unknown;
 }
 
-/** What `run` may do. Every externally visible effect must go through `authorizeEffect` first (DEC-051). */
+export type ChildCheckpointResult = { outcome: 'PROCEED' } | { outcome: 'STOP'; reason: string };
+
+/** Child-process context. Every externally visible effect must go through the host's `authorizeEffect` (DEC-051). */
 export interface AdapterContext {
   readonly unit: AdapterUnit;
   /** Aborted when the host decides the unit must stop (stop, lease lost, deadline, hard stop). Honour it promptly. */
   readonly signal: AbortSignal;
+  /** F07 checkpoint relayed to the parent; lease tokens and authorization internals never cross IPC. */
+  safetyCheckpoint(): Promise<ChildCheckpointResult>;
   authorizeEffect(kind: string, ordinal: number): Promise<EffectDecision>;
   confirmEffect(kind: string, ordinal: number): Promise<boolean>;
   recordEvidence(
@@ -43,14 +43,13 @@ export interface ExecutionAdapter {
   /** Class L consumes an F07 concurrency lease; class N does not. */
   readonly leaseClass: 'L' | 'N';
   readonly hardStopMarginMs?: number;
+  /** Local, reviewed module loaded only inside the per-unit child process. */
+  readonly childModuleUrl: string;
+  readonly childExportName: string;
   admissionRequestFor(unit: DispatchUnit): AdmissionRequest;
   hasCapacity?(unit: DispatchUnit): Promise<boolean>;
   guards?(unit: DispatchUnit): Promise<string | null>;
   proofs?(unit: DispatchUnit): Promise<string | null>;
-  /** The inert child under the start gate. Absent: a no-op child. */
-  forkInertChild?(unit: DispatchUnit): Promise<ForkedChild>;
-  /** The work. Returns what actually happened; the host classifies it (the engine never self-reports a failure class). */
-  run(context: AdapterContext): Promise<UnitObservation>;
   /** Termination confirmation for `expirePlanUnits`; absent means "not confirmed gone". */
   onUnitExpired?(unit: { id: string }): Promise<'TERMINATED' | 'PENDING'>;
 }
@@ -64,6 +63,33 @@ export function createAdapterRegistry(adapters: readonly ExecutionAdapter[] = []
   const byId = new Map<string, ExecutionAdapter>();
   for (const a of adapters) {
     if (byId.has(a.engineId)) throw new Error(`duplicate execution adapter for ${a.engineId}`);
+    let childModule: URL;
+    try {
+      childModule = new URL(a.childModuleUrl);
+    } catch {
+      throw new Error(`execution adapter ${a.engineId} has an invalid child module URL`);
+    }
+    if (
+      childModule.protocol !== 'file:' ||
+      childModule.hostname !== '' ||
+      childModule.search.length > 0 ||
+      childModule.hash.length > 0 ||
+      !/^[A-Za-z_$][\w$]*$/.test(a.childExportName)
+    ) {
+      throw new Error(
+        `execution adapter ${a.engineId} must use a local file module and named export`,
+      );
+    }
+    const workspace = resolve(process.cwd());
+    const moduleRelativePath = relative(workspace, resolve(fileURLToPath(childModule)));
+    if (
+      moduleRelativePath === '' ||
+      moduleRelativePath === '..' ||
+      moduleRelativePath.startsWith(`..${sep}`) ||
+      isAbsolute(moduleRelativePath)
+    ) {
+      throw new Error(`execution adapter ${a.engineId} child module must be inside the workspace`);
+    }
     const queueName = queueNameForUnitClass(a.executionUnitClass);
     const executionQueueNames: readonly string[] = Object.values(EXEC_QUEUE_NAMES);
     if (queueName === null || !executionQueueNames.includes(queueName)) {

@@ -91,7 +91,7 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 016, 044, 045 | NOT APPLICABLE | unchanged |
 | 017 | PARTIAL | queue names and class routing defined in `packages/config` (tested); no BullMQ queues/consumers created for them |
 | 018 | PARTIAL | `dispatchExecutionUnit` is driven by durable state (payload only identifies the row); no enqueue code or worker consumer yet |
-| 019 | MISSING | child process / force termination is host + engine work |
+| 019 | PARTIAL | per-unit OS child runner, sanitized child environment, parent-mediated effect/evidence/progress and F07 safety-checkpoint IPC, and parent hard-stop pass real-process integration and a rebuilt-image smoke; no production engine is registered and the complete race/host-restart matrix remains |
 | 020 | PARTIAL | config secret-key guard, evidence redaction; engine writers do not exist |
 | 021, 022, 022a | PARTIAL | stop precedence, expiry mapping, dispatch-time F07 admission and the host-loop decision are tested; no running host process uses them |
 | 023 | IMPLEMENTED-TESTED | `failure-class.ts` |
@@ -128,3 +128,76 @@ Freshly verified in this continuation:
 | FR-031…035 artifact lifecycle | reaper handler and repeatable schedule are wired by static inspection | PARTIAL; R2 and end-to-end retention/reaper lifecycle not run |
 
 This session did not rebuild every FR row from source and tests; no replacement 49-FR count is asserted. Use `FINAL_VERIFICATION_REPORT_2026-10-29.md` for the complete A–Z evidence inventory and `DEFINITION_OF_DONE.md` for the 28-gate reassessment.
+
+---
+
+## Current full-suite re-review — 2026-10-29
+
+This section supersedes the earlier status totals above. The complete isolated serial unit/contract/integration workspace and adverse workspace have now been rerun, the SPEC 009 worker integration is 21/21, and the complete Playwright E2E suite is 93/93. “TESTED” means the requirement's implemented component has current automated evidence; it does **not** imply the production API-to-worker scan path exists. “PARTIAL” means material lifecycle, production wiring, external service, or acceptance evidence is still absent.
+
+| FR | Current status | Current evidence and remaining gap |
+|---|---|---|
+| 001 | TESTED | Scan configuration validation and refusal cases pass in the complete unit/contract workspace. |
+| 002 | TESTED | Versioned profile resolution and invalid profile refusal pass. |
+| 003 | TESTED | Published profile changes preserve the version captured by existing plans. |
+| 004 | PARTIAL | Domain/class/unit mapping is tested; no production SPEC 010–012 engine is registered. |
+| 005 | PARTIAL | Deterministic, fail-closed resolver is tested; repository search finds no production `resolvePlan` caller. |
+| 006 | TESTED | Immutable plan snapshot and database trigger tests pass on isolated PostgreSQL. |
+| 007 | TESTED | Fresh F01 authorization checks and refusal behavior pass; no production plan producer invokes the resolver. |
+| 008 | TESTED | DAG validation, eligibility, ordering and database constraints pass. |
+| 009 | PARTIAL | Coverage/reason facts exist; a complete per-unit explanation of why it exists/ran/was blocked is not exposed. |
+| 010 | TESTED | Fan-in blocking and predecessor explanation rules pass service/database tests. |
+| 011 | TESTED | Unique plan-per-scan persistence constraint passes on isolated PostgreSQL. |
+| 012 | TESTED | ExecutionUnit schema and lifecycle persistence tests pass. |
+| 013 | TESTED | Dependency scope, duplicate, dangling, self-edge and cycle rejection pass. |
+| 014 | TESTED | All 110 ordered status pairs, terminal freeze and finalizer races pass. |
+| 015 | PARTIAL | Plan immutability is tested; production discovery/frontier expansion is not connected. |
+| 016 | NOT APPLICABLE | REUSE/EXTEND/NEW classification is a planning artifact, recorded in the approved plan. |
+| 017 | TESTED | Per-class queues/consumers and worker composition pass real isolated Redis/BullMQ integration; no production engine is registered. |
+| 018 | TESTED | Durable-state dispatch, deduplication, dependent enqueue and worker lifecycle pass direct integration; API plan-to-queue producer is absent. |
+| 019 | TESTED | Per-unit child-process isolation, sanitized environment, parent-mediated IPC, hard-stop and F07 checkpoint pass real-process tests and image smoke. |
+| 020 | PARTIAL | Secret guards/redaction and child environment are tested; future engine-specific payload/log writers do not exist. |
+| 021 | TESTED | Cancellation, operator kill, authorization revocation and lease-loss distinctions pass runtime integration. |
+| 022 | TESTED | Host admission and safety-checkpoint paths pass direct runtime tests; production API/worker-role composition is unverified. |
+| 022a | PARTIAL | Plan and dispatch authorization checks exist and revocation is tested; complete expiry/narrowing matrix is outstanding. |
+| 023 | TESTED | Failure classification and refusal/retry semantics pass unit and registry tests. |
+| 024 | PARTIAL | Registry refuses retries without an idempotency proof; successful retry-after-side-effect proof is not available. |
+| 025 | TESTED | Idempotency and F07 side-effect authorization paths pass service/runtime tests. |
+| 026 | TESTED | Tenant-scoped service lookups and adverse tests pass; no production SPEC 009 HTTP read path exists. |
+| 027 | PARTIAL | Unit progress is published and validated; authenticated client consumption, reconnect ordering and recovery are unverified. |
+| 027a | PARTIAL | Terminal progress guard is present and exercised; client recovery/no-missed-event contract is not proven. |
+| 028 | TESTED | Evidence-to-issue many-to-many persistence and linkage tests pass. |
+| 029 | PARTIAL | REVERIFY plan resolution is tested; the production reverify runner still uses the legacy path. |
+| 030 | TESTED | Evidence envelope redaction and secret filtering pass unit/adverse tests. |
+| 031 | TESTED | Oversized evidence routing to artifact references and size guards pass fake-store tests. |
+| 032 | PARTIAL | Object references and key validation pass fake-store tests; real R2 credentials/service were not used. |
+| 033 | TESTED | Per-object artifact budget and boundary refusal tests pass. |
+| 034 | PARTIAL | Retention transaction is tested and worker wiring exists; real R2 retention lifecycle was not executed. |
+| 035 | PARTIAL | Reaper handler/schedule exist; real object deletion and orphan-recovery lifecycle were not exercised. |
+| 036 | TESTED | Existing fingerprint identity and uniqueness are preserved; materialization tests pass. |
+| 037 | TESTED | New-class finding/evidence linking passes materialization tests. |
+| 038 | TESTED | Partial completion preserves committed evidence in finalization/materialization tests. |
+| 039 | PARTIAL | Coverage summary is computed; production report read/UI does not consume it. |
+| 040 | VERIFIED INVARIANT | Passive/legacy scan behavior remains unchanged in full regression and browser suites; no SPEC 009 path is wired into legacy scans. |
+| 041 | TESTED | Tenant scoping on new entities is tested; production API exposure remains absent. |
+| 042 | TESTED | R2 key shape and tenant/scan scoping validation pass fake-store tests; real R2 remains unverified. |
+| 043 | MISSING | Per-engine observability instrumentation and measured engine metrics are not implemented. |
+| 044 | NOT APPLICABLE | Pricing design is expressly out of scope; existing billing remains authoritative. |
+| 045 | NOT APPLICABLE | Credential storage design is expressly out of scope; opaque credential binding is the boundary. |
+| 046 | VERIFIED INVARIANT | Static review confirms no AI/provider calls in SPEC 009 planning, execution-control or evidence modules. |
+| 047 | PARTIAL | Deadline, gate, sweep and runtime hard-stop paths are tested; full AC-1…20 race/fairness matrix and production wiring remain. |
+
+**Current tally (49 entries): 2 VERIFIED INVARIANT · 27 TESTED · 16 PARTIAL · 1 MISSING · 3 NOT APPLICABLE.** This is a component-evidence tally, not a declaration that SPEC 009 is end-to-end complete. The production API plan producer, production engine registration, authenticated progress recovery, full runtime privilege matrix, R2 lifecycle, observability, performance, manual acceptance, and several contract-specific lifecycle checks remain open.
+
+### Success criteria recheck
+
+| SC | Current status | Evidence / remaining gap |
+|---|---|---|
+| 001 | TESTED | REUSE/EXTEND/NEW classifications are recorded in `plan.md`. |
+| 002 | TESTED | New rows and tenant filters are covered by schema, service and adverse tests; production API path remains absent. |
+| 003 | PARTIAL | The per-unit child process resolves the process-topology dependency; production engine registration is outstanding. |
+| 004 | PARTIAL | Full adverse workspace passes; this is not the complete SPEC 009-specific 40-scenario proof matrix. |
+| 005 | PARTIAL | Database-backed quickstart components are tested; no production API-to-worker plan lifecycle exists. |
+| 006 | NOT APPLICABLE | Planning-pass scope criterion, superseded by implementation phase. |
+| 007 | PARTIAL | Generic child/adapter contract is testable; no registered production engine to validate the author workflow. |
+| 008 | PARTIAL | Deadline arithmetic and runtime checks pass; the full U-1 AC matrix and production lifecycle remain. |

@@ -130,6 +130,10 @@ async function resetDb(db: PrismaClient): Promise<void> {
 }
 
 export async function startStack(): Promise<Stack> {
+  // Specs may have changed REDIS_URL after this module loaded. Re-assert the
+  // isolated test Redis immediately before booting both API producers and the
+  // worker consumers so they cannot split across different Redis instances.
+  process.env['REDIS_URL'] = TEST_REDIS_URL;
   process.env['AI_MODE'] = 'fixtures';
   process.env['WORKSPACE_BASE_DIR'] = mkdtempSync(path.join(tmpdir(), 'webaudit-e2e-'));
 
