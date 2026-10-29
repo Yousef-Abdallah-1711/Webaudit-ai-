@@ -102,7 +102,7 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 7 | PARTIAL | Real isolated Redis/BullMQ queue dispatch and standard worker composition pass; API production producer and production adapters are absent. |
 | 8 | PARTIAL | Per-class child host and F07 runtime path pass with a test adapter; no production engine is registered. |
 | 9 | PARTIAL | Plan/dispatch authorization and revocation are tested; full expire/narrow/revoke matrix is open. |
-| 10 | PARTIAL | Runtime uses F07 and `ExecutionUnit.id`; real API/worker service-role composition is not exercised. |
+| 10 | PARTIAL | Runtime uses F07 and `ExecutionUnit.id`; API plan resolution/F01 queries and execution-host runtime are separately exercised under real login roles, but the composed production API/worker path is not exercised. |
 | 11 | PARTIAL | F07 budget enforcement is covered; unit-path oversubscription/performance evidence is absent. |
 | 12 | PARTIAL | Kill/cancel/revoke/lease-loss distinctions pass integration; all status/race combinations are not proven. |
 | 13 | PARTIAL | Runtime cancellation passes; HTTP cancel plus existing refund lifecycle is not verified end to end. |
@@ -114,9 +114,9 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 19 | PASS | Finalizer atomicity/idempotence and lease boundary races pass on isolated PostgreSQL. |
 | 20 | NOT STARTED | No unit/finalization audit-event rollback proof. |
 | 21 | PARTIAL | Service-level tenant isolation passes; full production HTTP IDOR path is not exposed. |
-| 22 | PARTIAL | Fresh 32-migration database and real LOGIN-role suite pass 17/17; verified all ten CORE-01 tables are owned by `fahes_owner`, runtime groups are non-superuser, `public`/host cannot create in `public`, and the tested SECURITY DEFINER functions use a fixed search path. A deliberately restored API finalizer grant made the regression suite fail, then was revoked. Remaining: broader cross-tenant/effect/secret matrix and running API/worker under their intended production logins. |
+| 22 | PARTIAL | Secret-key guard, redaction, key-shape validation, and SSRF/redirect/private-network adverse tests pass; the new plan-role work adds no network surface. |
 | 23 | NOT STARTED | No SPEC 009 measured performance baseline or k6 run. |
-| 24 | NOT STARTED | The browser fixture stack is not the production SPEC 009 API→plan→worker flow; that path is absent. |
+| 24 | NOT STARTED | The API planning and F01 services now pass through real `fahes_api` login credentials, and the worker runtime passes separately through a real execution-host login. A production HTTP API→plan→durable-queue→worker scan remains absent. |
 | 25 | NOT STARTED | No manual Chrome journey was performed. |
 | 26 | PARTIAL | Full unit/contract/integration, adverse, Playwright, targeted typechecks and Prisma checks pass. `pnpm test:visual` is 8 passed / 17 todo; design-reference comparisons are still todo, and the required <=0.5% 1440/390 visual proof is absent. |
 | 27 | PASS | Requirement matrix includes all 49 FR entries; DoD, backlog, progress, report were reconciled, and no frozen contract was rewritten. |

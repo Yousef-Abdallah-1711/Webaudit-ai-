@@ -185,6 +185,10 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 
 ## Privilege migration continuation — 2026-10-29
 
+- Latest continuation: fresh disposable DB is current through **34 migrations**. The real CORE-01 LOGIN-role suite passes **20/20** after test-first fixes for narrowly scoped `fahes_api` reads. API login resolves passive and authorized BROWSER plans and executes F01 authorization; the generic worker still cannot select authorization rows.
+- Worker runtime remains **21/21**; artifact/evidence/retention/reaper checks **32/32** with an in-memory object store; existing phase progress **1/1** over isolated Redis. These are separate service-level proofs, not a production HTTP-to-queue scan flow. Gate 10 remains PARTIAL; gate 24 remains NOT STARTED. SPEC 009 remains NOT COMPLETE.
+- Two additive migrations and the role-isolation test are the only SPEC 009 code changes in this continuation. Existing website/auth dirty files and generated output/logs remain excluded.
+
 - Starting checkout was `main`, `HEAD` and `origin/main` both `4ed0ed067952e7e29cdd60619ee0c0c1a1e0ffdb`; this is newer than the historical handoff hash `96df6fe72d11`. The WebAudit remote is `Yousef-Abdallah-1711/Webaudit-ai-.git`. Existing website/auth, lockfile, generated output, and logs changes were preserved.
 - On a newly created disposable `m009_core01_fresh_test` database, all **32 migrations** applied from the beginning; `prisma migrate status` reported up to date. The isolated database and Redis container were used; shared dev/prod databases and running production-named containers were not changed.
 - The CORE-01 real LOGIN-role suite passes **17/17**. Catalog inspection confirms all ten CORE-01 tables are owned by `fahes_owner`, runtime groups are non-superuser, `public` and `fahes_exec_host` cannot create in schema `public`, and the finalizer/host SECURITY DEFINER helpers have fixed search paths.

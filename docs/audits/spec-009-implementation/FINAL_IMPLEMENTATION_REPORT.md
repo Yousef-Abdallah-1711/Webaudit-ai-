@@ -39,6 +39,14 @@ See `SESSION_PROGRESS.md` "Next exact tasks".
 - The isolated PostgreSQL/Redis/BullMQ worker integration passed **21/21**, including non-superuser host execution and the end-to-end queued unit lifecycle. This still does not exercise the production API `resolvePlan` producer or a production SPEC 010–012 engine.
 - Scope remains incomplete: broader tenant/effect/lease-secret permission cases, API/worker production credentials, API plan production, real R2, process restart/outage, manual browser acceptance, performance, and full acceptance matrices remain open. Overall SPEC 009 verdict remains **NOT COMPLETE**.
 
+### API least-privilege planning follow-up
+
+- A fresh disposable database received all **34 migrations** and Prisma reports the schema up to date. No shared development or production-named database was migrated.
+- The real LOGIN-role suite now passes **20/20**. New test-first cases first failed when `fahes_api` lacked plan-ownership and F01 authorization reads; additive migrations `20261030190000_core01_api_plan_ownership_reads` and `20261030200000_core01_api_authorization_reads` grant only the required columns/tables. The API login now resolves passive and authorized BROWSER plans and calls the production F01 authorization query. The generic worker still cannot read authorization rows.
+- This proves the API planning service under its intended non-superuser login, not a production HTTP route, durable queue producer, or complete API/worker scan. Those remain open; DoD gate 10 stays PARTIAL and gate 24 stays NOT STARTED.
+- The isolated worker runtime integration remains **21/21**; artifact/evidence/retention/reaper checks remain **32/32** with an in-memory object store; existing API/worker phase progress remains **1/1**. Authenticated SPEC 009 unit-progress reconnect/recovery and real R2 are unverified.
+- The 28-gate assessment remains **NOT COMPLETE**. Gate 10 remains PARTIAL and gate 24 remains NOT STARTED: role-scoped planning and worker-runtime evidence are separate, with no production HTTP-to-queue scan path.
+
 ### Lifecycle checks and delivery update
 
 - Evidence persistence, artifact retention, and reaper integration passed **32/32** on isolated PostgreSQL with an in-memory object store. Existing API/worker phase progress passed **1/1** over isolated Redis; this does not verify SPEC 009 authenticated unit-progress reconnect/recovery.

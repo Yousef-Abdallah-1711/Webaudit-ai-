@@ -7,6 +7,14 @@ import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaClient } from '../../prisma/generated/client/index.js';
 import { closeDb, resetDb, testDb, TEST_DB_URL } from '../helpers/db.js';
+import { isAuthorized } from '../../src/services/authorization/check.js';
+import {
+  createEngineRegistry,
+  createScanProfile,
+  passiveBaselineRegistry,
+  resolvePlan,
+} from '../../src/services/planning/index.js';
+import { makeWorld, WEB_DESTINATION } from '../helpers/safety-fixtures.js';
 
 const suffix = randomBytes(4).toString('hex');
 const password = randomBytes(16).toString('hex');
@@ -179,6 +187,153 @@ describe('fahes_finalize_unit is callable only by the execution host and orchest
       }
     });
   }
+});
+
+describe('API role can resolve an unchanged passive baseline plan', () => {
+  it('reads tenant ownership and persists a passive plan through its real LOGIN connection', async () => {
+    const marker = randomBytes(4).toString('hex');
+    const user = await testDb.user.create({
+      data: {
+        email: `core01-api-plan-${suffix}-${marker}@example.com`,
+        emailVerifiedAt: new Date(),
+      },
+    });
+    const target = await testDb.target.create({
+      data: {
+        userId: user.id,
+        inputType: 'URL',
+        canonicalValue: `https://plan-${marker}.example.com`,
+        displayName: 'API plan role test',
+      },
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: user.id,
+        targetId: target.id,
+        requestedModules: ['SECURITY'],
+        capabilitySnapshot: {},
+        quotedCredits: 1,
+        chargedCredits: 1,
+        state: 'QUEUED',
+      },
+    });
+    const api = clientFor('api');
+    expect(await hasColumnPrivilege(api, 'Scan', 'id', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Scan', 'userId', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Scan', 'targetId', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Scan', 'chargedCredits', 'SELECT')).toBe(false);
+    expect(await hasColumnPrivilege(api, 'Target', 'id', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Target', 'userId', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Target', 'canonicalValue', 'SELECT')).toBe(true);
+    expect(await hasColumnPrivilege(api, 'Target', 'displayName', 'SELECT')).toBe(false);
+
+    const result = await resolvePlan(
+      {
+        db: api as never,
+        registry: passiveBaselineRegistry(),
+        isAuthorized: (input) => isAuthorized(api as never, input),
+      },
+      { targetId: target.id, profile: { kind: 'CUSTOM', domains: ['SECURITY'] } },
+      'INITIAL',
+      new Date(),
+      { scanId: scan.id },
+    );
+
+    expect(result.state).toBe('RESOLVED');
+    if (result.state === 'RESOLVED') {
+      expect(result.units).toHaveLength(1);
+      expect(await api.scanPlan.findUnique({ where: { id: result.planId } })).toMatchObject({
+        userId: user.id,
+        scanId: scan.id,
+        state: 'RESOLVED',
+      });
+    }
+  });
+
+  it('runs the real F01 authorization query through its login without widening the generic worker role', async () => {
+    const marker = randomBytes(4).toString('hex');
+    const world = await makeWorld(`core01-api-f01-${suffix}-${marker}@example.com`, {
+      classes: ['BROWSER'],
+    });
+    const api = clientFor('api');
+
+    await expect(
+      isAuthorized(api as never, {
+        targetId: world.targetId,
+        userId: world.userId,
+        executionClass: 'BROWSER',
+        destination: WEB_DESTINATION,
+        now: new Date(),
+      }),
+    ).resolves.toMatchObject({ outcome: 'AUTHORIZED' });
+    expect(await hasTablePrivilege(clientFor('worker'), 'TargetAuthorization', 'SELECT')).toBe(
+      false,
+    );
+  });
+
+  it('resolves an authorized non-passive plan through API grants and a deterministic test engine', async () => {
+    const marker = randomBytes(4).toString('hex');
+    const world = await makeWorld(`core01-api-active-${suffix}-${marker}@example.com`, {
+      classes: ['BROWSER'],
+    });
+    const scan = await testDb.scan.create({
+      data: {
+        userId: world.userId,
+        targetId: world.targetId,
+        requestedModules: ['UI'],
+        capabilitySnapshot: {},
+        quotedCredits: 1,
+        chargedCredits: 1,
+        state: 'QUEUED',
+      },
+    });
+    const profile = await createScanProfile(testDb as never, `api-role-${marker}`, {
+      defaultDomains: ['UI'],
+      domainExecutionClasses: { UI: ['BROWSER'] },
+    });
+    const api = clientFor('api');
+
+    const result = await resolvePlan(
+      {
+        db: api as never,
+        registry: createEngineRegistry([
+          {
+            domain: 'UI',
+            unitClass: 'BROWSER',
+            templates: [
+              {
+                key: 'api-role-browser',
+                engineId: 'test.api-role-browser',
+                executionUnitClass: 'BROWSER',
+                timeoutPolicyMs: 60_000,
+                hardStopMarginMs: 60_000,
+                maxAttempts: 1,
+                priority: 0,
+              },
+            ],
+          },
+        ]),
+        isAuthorized: (input) => isAuthorized(api as never, input),
+      },
+      {
+        targetId: world.targetId,
+        profile: {
+          kind: 'NAMED',
+          scanProfileId: profile.scanProfileId,
+          scanProfileVersion: profile.version.version,
+        },
+      },
+      'INITIAL',
+      new Date(),
+      { scanId: scan.id },
+    );
+
+    expect(result.state).toBe('RESOLVED');
+    if (result.state === 'RESOLVED') {
+      expect(result.units[0]?.targetAuthorizationId).toBe(world.grantId);
+      expect(await api.executionUnit.count({ where: { scanPlanId: result.planId } })).toBe(1);
+    }
+  });
 });
 
 describe('terminal status writes remain guarded even for the execution host', () => {
