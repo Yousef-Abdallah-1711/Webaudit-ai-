@@ -85,6 +85,18 @@ afterAll(async () => {
   await closeDb();
 });
 
+describe('engine registry (FR-024)', () => {
+  it('refuses retries above 1 without a recorded idempotence proof, and invalid attempt counts', () => {
+    expect(() => registryOf([browser('a', { maxAttempts: 2 })])).toThrow(/FR-024/);
+    expect(() => registryOf([browser('a', { maxAttempts: 0 })])).toThrow(/maxAttempts/);
+    expect(() => registryOf([browser('a', { maxAttempts: 1.5 })])).toThrow(/maxAttempts/);
+    expect(() =>
+      registryOf([browser('a', { maxAttempts: 3, idempotenceProven: true })]),
+    ).not.toThrow();
+    expect(() => registryOf([browser('a', { maxAttempts: 1 })])).not.toThrow();
+  });
+});
+
 describe('ScanConfiguration', () => {
   const base = { targetId: 't1', profile: { kind: 'CUSTOM', domains: ['SEO'] } };
 

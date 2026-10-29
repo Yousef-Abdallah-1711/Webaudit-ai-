@@ -20,6 +20,8 @@ export interface EngineTemplateUnit {
   readonly hardStopMarginMs: number;
   /** FR-024: > 1 only for an engine that proved idempotence; 1 otherwise. */
   readonly maxAttempts: number;
+  /** The recorded proof FR-024 requires before `maxAttempts` may exceed 1. */
+  readonly idempotenceProven?: boolean;
   readonly priority: number;
   /** Keys of templates in the same expansion this unit waits for. */
   readonly dependsOnKeys?: readonly string[];
@@ -47,6 +49,15 @@ export function createEngineRegistry(
     for (const t of row.templates) {
       if (t.executionUnitClass !== row.unitClass)
         throw new Error(`template ${t.key} class mismatch for ${k}`);
+      if (!Number.isInteger(t.maxAttempts) || t.maxAttempts < 1) {
+        throw new Error(`template ${t.key} has an invalid maxAttempts`);
+      }
+      // FR-024: idempotence for any retry beyond the first must be PROVEN, not assumed.
+      if (t.maxAttempts > 1 && t.idempotenceProven !== true) {
+        throw new Error(
+          `template ${t.key} allows retries without a proven idempotence record (FR-024)`,
+        );
+      }
     }
     byKey.set(k, row.templates);
   }

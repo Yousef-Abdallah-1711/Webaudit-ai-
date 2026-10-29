@@ -50,3 +50,8 @@ Real full-stack run (non-superuser roles), Chrome journey, failure injection, lo
 
 ## U-1 task map (`tasks.md` T-U1-1…10)
 T-U1-1 → P9-A10 (blocked) · **T-U1-2 → P9-A02 DONE** · T-U1-3 → P9-A12 · T-U1-4 → P9-A04 (done) + P9-B05 · T-U1-5 → P9-B06 · T-U1-6/7 → P9-B07 · T-U1-8 → P9-B08 · T-U1-9 → P9-B09 · T-U1-10 → P9-B10.
+
+---
+
+## Status update — 2026-10-29 end of session
+Phase 1 items P9-A01..A05 and P9-C01 are DONE (tested). Phase 2 was unblocked by the owner's approvals (see `SESSION_PROGRESS.md`) and delivered at the service layer: P9-A10 (migration), A11, A12, B01 (transition table + CAS), B02 (finalizer), B07 (sweep/expiry), B08 (gate), B09 (`authorizeEffect`; engine wrappers pending), C10/C11 (evidence, artifacts, materialization). Remaining: P9-B03 (queue topology + dispatch), B04 (checkpoint wiring), B05 (step-0 wiring), B06 (host-loop helper), B10 (AC-1..AC-20 matrix), B11 (progress events), retention/reaper wiring, P9-X01 (secret guard reuse for engine writers), P9-X03 (non-superuser provisioning, still not done), then Phase 3. T-U1 map: T-U1-1 ✓, 2 ✓, 3 ✓, 4 partial, 5 ✗, 6 ✓, 7 ✓, 8 ✓, 9 partial, 10 partial.

@@ -70,3 +70,42 @@ Statuses: VERIFIED COMPLETE · IMPLEMENTED BUT UNVERIFIED · PARTIAL · MISSING 
 ## Totals (49 FR items + 8 SC)
 FR (49 items = 47 numbered + FR-022a + FR-027a; counted by script from the table): VERIFIED COMPLETE 2 (FR-040 invariant, FR-046 for existing code) · PARTIAL 7 (005, 008, 010, 013, 014, 036, 047) · BLOCKED 11 · MISSING 26 · NOT APPLICABLE 3 (016, 044, 045). SC: PARTIAL 1 · MISSING 4 · NOT APPLICABLE 3.
 **IMPLEMENTED BUT UNVERIFIED: none** — everything that exists was tested.
+
+---
+
+## Status update — 2026-10-29, end of implementation session (supersedes the Status column above; the table above is the session-start baseline)
+
+Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests on real PostgreSQL (service layer), but not yet exercised through a running API/worker or a browser, so **not** VERIFIED COMPLETE. VERIFIED COMPLETE is reserved for items proven end to end.
+
+| FR | Status now | Evidence / what is missing |
+|---|---|---|
+| 001 | IMPLEMENTED-TESTED | `scan-configuration.ts`; `resolver.test.ts` |
+| 002, 003 | IMPLEMENTED-TESTED | `profiles.ts`; version snapshot test |
+| 004 | IMPLEMENTED-TESTED | profile mapping + engine registry; non-passive classes have no engines yet (SPEC 010-012), so they refuse `NO_ENGINE_REGISTERED` |
+| 005 | IMPLEMENTED-TESTED | determinism test; the resolver reads F01/DB (deterministic, not "pure") |
+| 006 | IMPLEMENTED-TESTED | immutable-row trigger |
+| 007 | IMPLEMENTED-TESTED | fresh F01 per class, spy-verified |
+| 008, 010, 011, 012, 013, 014, 025 | IMPLEMENTED-TESTED | `graph.ts`, CORE-01 triggers, `core01-schema.test.ts` (110-pair transition table) |
+| 009 | PARTIAL | terminal reasons and coverage facts exist; no per-unit "why it exists" narrative field |
+| 015 | PARTIAL | plan immutable; runtime child-unit creation for frontier classes not built |
+| 016, 044, 045 | NOT APPLICABLE | unchanged |
+| 017 | MISSING | per-class queue topology not built |
+| 018 | PARTIAL | claim/CAS are durable-state driven; no enqueue/dispatch code |
+| 019 | MISSING | child process / force termination is host + engine work |
+| 020 | PARTIAL | config secret-key guard, evidence redaction; engine writers do not exist |
+| 021, 022, 022a | PARTIAL | stop precedence and expiry mapping tested; host loop and dispatch-time checks not wired |
+| 023 | IMPLEMENTED-TESTED | `failure-class.ts` |
+| 024 | IMPLEMENTED-TESTED | registry refuses `maxAttempts > 1` without a recorded proof |
+| 026, 041 | IMPLEMENTED-TESTED | tenant filter on every new service entry point |
+| 027, 027a | MISSING | progress events not built |
+| 028, 030, 031, 033, 036, 037, 038, 042 | IMPLEMENTED-TESTED | `evidence.test.ts` (23, 5/5 mutants killed) |
+| 029 | PARTIAL | REVERIFY plan resolves from the finding (tested); reverify runner not switched to plans |
+| 032, 035 | PARTIAL | memory store + command-level R2 stub only; real R2 untested; reaper not scheduled |
+| 034 | PARTIAL | `enforceArtifactRetention` exists and is rollback-safe; not yet called from `storage/retention.ts`'s transaction |
+| 039 | PARTIAL | `scanCoverageSummary` exists; the report read path does not call it |
+| 040 | VERIFIED COMPLETE as an invariant so far | legacy sweep/orchestrator tests green with the new optional hooks; re-verified after the full unit run |
+| 043 | MISSING | per-engine observability |
+| 046 | VERIFIED COMPLETE for code that exists | no AI/provider imports in any new module |
+| 047 | PARTIAL | T-U1-1/2/3/6/7/8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9 `authorizeEffect` done, engine wrappers n/a; T-U1-10 AC-1..AC-20 partially covered |
+
+**Totals (49 FR items):** IMPLEMENTED-TESTED 26 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 5 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
