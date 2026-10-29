@@ -4,3 +4,4 @@ export * from './effects.js';
 export * from './expire.js';
 export * from './failure-class.js';
 export * from './finalize.js';
+export * from './plan-gate.js';

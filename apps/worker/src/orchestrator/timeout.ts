@@ -37,6 +37,7 @@ import {
 import { refundForUndelivered } from '@webaudit/config';
 import { isTerminal, transition, type ScanStateStore } from './state-machine.js';
 import type { ScanEmitter } from './emit.js';
+import type { PlannedSweepPort } from './planned-sweep.js';
 
 /** An area counts as delivered when it produced something scorable. */
 export function isDelivered(state: ModuleState): boolean {
@@ -86,7 +87,12 @@ export interface TimeoutTransactionStore extends ScanStateStore {
 export interface TimeoutStore extends ScanStateStore {
   scan: ScanStateStore['scan'] & {
     findMany(args: {
-      where: { state: { in: readonly ScanState[] }; startedAt: { lt: Date } };
+      where: {
+        state: { in: readonly ScanState[] };
+        startedAt: { lt: Date };
+        /** SPEC 009 planned pass: restrict the batch to the scans the plan query selected. */
+        id?: { in: readonly string[] };
+      };
       select: {
         id: true;
         state: true;
@@ -133,6 +139,11 @@ export interface SweepOptions {
    * Never used in production.
    */
   readonly onBeforeScan?: (scanId: string) => Promise<void>;
+  /**
+   * SPEC 009 U-1: the planned and self-healing passes. Absent (or no plan rows in existence) the sweep is
+   * exactly the legacy sweep (FR-040).
+   */
+  readonly planned?: PlannedSweepPort;
 }
 
 /** States a scan can be timed out from — every non-terminal one. */
@@ -183,11 +194,51 @@ export async function sweepTimedOutScans(
     },
   });
 
+  const planned = options.planned;
+  // Legacy pass: scans WITHOUT a RESOLVED INITIAL plan (a refused or absent plan is legacy), unchanged semantics.
+  const withPlan =
+    planned === undefined
+      ? new Set<string>()
+      : await planned.withResolvedInitialPlan(candidates.map((c) => c.id));
+  const legacy = withPlan.size === 0 ? candidates : candidates.filter((c) => !withPlan.has(c.id));
+
   const outcomes: TimeoutOutcome[] = [];
-  for (const scan of candidates.slice(0, options.batchSize ?? 50)) {
+  for (const scan of legacy.slice(0, options.batchSize ?? 50)) {
     await options.onBeforeScan?.(scan.id);
     outcomes.push(await terminate(options, scan));
   }
+  if (planned === undefined) return outcomes;
+
+  // Planned pass: the deadline comes from the plan, never a constant. Units are expired and module results are
+  // finalized BEFORE the guarded TIMED_OUT move so the refund reflects what the units actually delivered.
+  const expired = await planned.findExpiredPlannedScans(SWEEPABLE, options.batchSize ?? 50);
+  if (expired.length > 0) {
+    const rows = await options.db.scan.findMany({
+      where: {
+        id: { in: expired.map((e) => e.scanId) },
+        state: { in: SWEEPABLE },
+        startedAt: { lt: new Date('9999-12-31T23:59:59.000Z') },
+      },
+      select: {
+        id: true,
+        state: true,
+        quotedCredits: true,
+        chargedCredits: true,
+        requestedModules: true,
+        moduleResults: { select: { module: true, state: true } },
+      },
+    });
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    for (const candidate of expired) {
+      const scan = byId.get(candidate.scanId);
+      if (scan === undefined) continue;
+      await options.onBeforeScan?.(scan.id);
+      await planned.prepareForTimeout(candidate.scanPlanId);
+      outcomes.push(await terminate(options, scan));
+    }
+  }
+  // Self-healing pass (every invocation): no unit outlives its scan or REVERIFY plan.
+  await planned.selfHeal(options.batchSize ?? 50);
   return outcomes;
 }
 

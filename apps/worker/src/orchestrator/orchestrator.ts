@@ -207,6 +207,16 @@ export interface OrchestratorOptions {
    */
   readonly masterReportExecutor?: AiExecutor;
   /**
+   * SPEC 009 U-1 plan-unit barrier (scan-deadline-contract.md): called where the chain would continue to
+   * RUNNING_MASTER. 'no-plan' (the only answer today: no ScanPlan rows exist for legacy scans) falls through to the
+   * unchanged legacy continuation; any other answer means the gate decided (waiting, past the deadline, or it
+   * enqueued the master job itself).
+   */
+  readonly planGate?: (input: {
+    scanId: string;
+    enqueueMaster: () => Promise<void>;
+  }) => Promise<'no-plan' | 'not-ready' | 'deadline-passed' | 'continued'>;
+  /**
    * P0-CANCEL-1's checkpoint-based cooperative cancellation (research.md
    * Decision 4). Optional so existing tests that never exercise cancellation
    * don't need to construct one — `handlePhase` simply never learns of a
@@ -722,6 +732,19 @@ export function createPhaseHandler(
             attempt: 1,
           });
           return;
+        }
+
+        const enqueueMaster = async (): Promise<void> => {
+          await enqueuePhase(context, {
+            scanId: data.scanId,
+            phase: next,
+            modules: scan.requestedModules,
+            attempt: 1,
+          });
+        };
+        if (options.planGate !== undefined) {
+          const gate = await options.planGate({ scanId: data.scanId, enqueueMaster });
+          if (gate !== 'no-plan') return;
         }
 
         // next is RUNNING_MASTER. Not a module-running phase — the queue

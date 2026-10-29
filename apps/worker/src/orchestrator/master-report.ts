@@ -38,7 +38,10 @@ export interface MasterSynthesisResult {
  * here so the scan-level executive summary never reads like an outage when
  * nothing is actually wrong.
  */
-function fallbackSummary(areas: readonly AreaScore[], reason: 'CHAIN_EXHAUSTED' | 'DISABLED'): string {
+function fallbackSummary(
+  areas: readonly AreaScore[],
+  reason: 'CHAIN_EXHAUSTED' | 'DISABLED',
+): string {
   const scored = areas.filter((a) => a.score !== null);
   const prefix =
     reason === 'DISABLED'

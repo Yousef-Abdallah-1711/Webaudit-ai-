@@ -74,7 +74,8 @@ export function createTelemetryArchiveHandler(
     // any environment (including one with no R2 credentials configured) since
     // it never touches storage at all; requiring credentials just to compute
     // a report would be a needless, misleading dependency.
-    const resolvedStorage = storage ?? (dryRun ? UNUSED_IN_DRY_RUN : createTelemetryArchiveStorage());
+    const resolvedStorage =
+      storage ?? (dryRun ? UNUSED_IN_DRY_RUN : createTelemetryArchiveStorage());
     const results = await runTelemetryArchive(db, resolvedStorage, {
       retentionMonths: configuredMs('TELEMETRY_ARCHIVE_RETENTION_MONTHS', DEFAULT_RETENTION_MONTHS),
       dryRun,

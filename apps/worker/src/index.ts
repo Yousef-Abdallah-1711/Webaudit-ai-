@@ -51,6 +51,7 @@ import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers
 import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
 import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
+import { continueScanIfPlanTerminal } from '@webaudit/api/execution-runtime';
 import { createPhaseHandler } from './orchestrator/orchestrator.js';
 import { createQuestionnaireTimeoutHandler } from './orchestrator/questionnaire-timeout-handler.js';
 import { createReverifyHandler } from './reverify/runner.js';
@@ -283,6 +284,9 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
           publisher,
           executor,
           masterReportExecutor,
+          // SPEC 009 U-1 plan-unit barrier: answers 'no-plan' for every legacy scan, so the legacy chain is unchanged.
+          planGate: ({ scanId, enqueueMaster }) =>
+            continueScanIfPlanTerminal(db, scanId, { enqueueMaster }),
           cancellation,
           moduleTimeoutMs,
           // T174. `createUploadStorage` reads the R2 variables when it is

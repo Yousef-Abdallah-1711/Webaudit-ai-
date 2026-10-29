@@ -16,6 +16,7 @@ import { refundPartial } from '@webaudit/api/credits';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
 import { sweepTimedOutScans, type SweepOptions } from './timeout.js';
 import { createScanEmitter, type EventPublisher } from './emit.js';
+import { createPlannedSweepPort } from './planned-sweep.js';
 import { JOB_NAMES } from '../queue/workers.js';
 
 export const TIMEOUT_SWEEP_JOB_NAME = JOB_NAMES.timeoutSweep;
@@ -80,6 +81,8 @@ export function createTimeoutSweepHandler(deps: TimeoutSweepHandlerDeps): () => 
       refund,
       maxDurationMs: maxScanDurationMs(),
       batchSize: 50,
+      // SPEC 009 U-1: planned + self-healing passes; a no-op for scans without a plan.
+      planned: createPlannedSweepPort(deps.db),
     });
     const timedOut = outcomes.filter((o) => o.timedOut);
     if (timedOut.length > 0) {
