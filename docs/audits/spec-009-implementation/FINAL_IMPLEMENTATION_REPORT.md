@@ -25,7 +25,7 @@ Stack overflow in configuration validation on deep input; a transaction-abort ra
 - Role grants for the ten new tables (migration grants only `EXECUTE` on the finalizer): the privilege boundary is **not claimed** for them. The dev API/worker still use the superuser; **no least-privilege claim anywhere**.
 - Real API + worker + Redis run, Chrome acceptance (nothing user-visible exists to drive; Playwright MCP was not used), failure injection, performance baselines, coverage measurement, adverse suite, Playwright E2E and contract suite re-runs.
 - D-1 (browser pool) is unchanged: it needs the SPEC 010 BROWSER engine (DEC-052/042). SPEC 009 does not close it.
-- **Full unit suite not completed**: it takes hours (each DB test resets ~70 partitioned tables). The run against a throwaway tmpfs Postgres was at **337 passed, 0 failed** when this report was written and was still running; an earlier parallel run on the shared database failed on DB-hook timeouts from contention (a failing file passed alone). Treat gate 26 as PARTIAL until it finishes.
+- **Full unit suite**: finished at 1783 passed / 6 failed (236 files, 1789 tests) on a throwaway tmpfs Postgres; the 6 failures are in 5 queue/Redis-heavy files that all pass when re-run alone (27/27), so they are order/timing-dependent, not attributed to this work. No fully green single run was obtained; gate 26 stays PARTIAL (adverse, Playwright and contract suites not re-run).
 
 ## Next
 See `SESSION_PROGRESS.md` "Next exact tasks".
