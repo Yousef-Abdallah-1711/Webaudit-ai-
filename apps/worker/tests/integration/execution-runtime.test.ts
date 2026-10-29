@@ -376,6 +376,30 @@ describe('controlled failure injection on the running path', () => {
     expect(await liveLeaseCount(w.grantId)).toBe(0);
   });
 
+  it('parent hard stop kills a real child that ignores AbortSignal and does not wait for adapter cooperation', async () => {
+    const w = await makeRuntimeWorld();
+    const a = await makeUnit(w, {
+      configuration: beh({ kind: 'PROCESS_HANG' }),
+      timeoutPolicyMs: 300,
+    });
+    const h = createTestAdapter(w, 'engine.x', { hardStopMarginMs: 100, forkProcess: true });
+    const { handle } = start(w, h);
+    let running: Promise<unknown> | undefined;
+    try {
+      running = handle({ executionUnitId: a.id });
+      await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
+      await waitFor(async () => (h.terminated.includes(a.id) ? true : false), 2_000);
+      expect(await statusOf(a.id)).toBe('FAILED');
+      expect(await reasonOf(a.id)).toMatchObject({
+        failureClass: 'TIMEOUT',
+        terminalReason: 'HARD_STOP',
+      });
+    } finally {
+      await h.cleanupChildren();
+      await running?.catch(() => undefined);
+    }
+  });
+
   it('lost lease mid-run: the stale host aborts and does NOT finalize; the plan-deadline sweep ends the unit', async () => {
     const w = await makeRuntimeWorld({ deadlineMs: HOUR });
     const a = await makeUnit(w, { configuration: beh({ kind: 'HANG' }) });

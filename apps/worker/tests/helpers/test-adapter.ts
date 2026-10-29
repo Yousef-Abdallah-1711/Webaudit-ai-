@@ -6,6 +6,7 @@
 import { admissionRequest, type SafetyWorld } from '../../../api/tests/helpers/safety-fixtures.js';
 import type { ExecutionAdapter } from '../../src/execution-runtime/adapter.js';
 import type { UnitObservation } from '@webaudit/api/execution-runtime';
+import { spawn, type ChildProcess } from 'node:child_process';
 
 export type Behavior =
   | { kind: 'COMPLETE' }
@@ -15,6 +16,8 @@ export type Behavior =
   | { kind: 'CUSTOMER_EXIT'; code: number }
   /** Does nothing until aborted (a hung engine). */
   | { kind: 'HANG' }
+  /** A real child process that ignores AbortSignal and exits only when killed by its parent. */
+  | { kind: 'PROCESS_HANG' }
   /** Works for `ms`, honouring abort. */
   | { kind: 'WAIT'; ms: number };
 
@@ -22,6 +25,8 @@ export interface TestAdapterHandle {
   adapter: ExecutionAdapter;
   runs: string[];
   aborted: string[];
+  terminated: string[];
+  cleanupChildren(): Promise<void>;
 }
 
 const sleep = (ms: number, signal: AbortSignal): Promise<'DONE' | 'ABORTED'> =>
@@ -34,10 +39,21 @@ const sleep = (ms: number, signal: AbortSignal): Promise<'DONE' | 'ABORTED'> =>
 export function createTestAdapter(
   world: SafetyWorld,
   engineId = 'engine.x',
-  opts: { hardStopMarginMs?: number; lease?: 'L' | 'N' } = {},
+  opts: { hardStopMarginMs?: number; lease?: 'L' | 'N'; forkProcess?: boolean } = {},
 ): TestAdapterHandle {
   const runs: string[] = [];
   const aborted: string[] = [];
+  const terminated: string[] = [];
+  const children = new Map<string, ChildProcess>();
+  const cleanupChildren = async (): Promise<void> => {
+    for (const child of children.values()) {
+      if (child.exitCode !== null || child.signalCode !== null) continue;
+      await new Promise<void>((resolve) => {
+        child.once('exit', () => resolve());
+        child.kill('SIGKILL');
+      });
+    }
+  };
   const adapter: ExecutionAdapter = {
     engineId,
     executionUnitClass: 'BROWSER',
@@ -49,6 +65,27 @@ export function createTestAdapter(
         idempotencyKey: u.idempotencyKey,
         consumes: { request: true, concurrency: (opts.lease ?? 'L') === 'L' },
       }),
+    ...(opts.forkProcess
+      ? {
+          async forkInertChild(u) {
+            const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)'], {
+              stdio: 'ignore',
+              windowsHide: true,
+            });
+            children.set(u.id, child);
+            return {
+              async terminate() {
+                if (child.exitCode !== null || child.signalCode !== null) return;
+                await new Promise<void>((resolve) => {
+                  child.once('exit', () => resolve());
+                  child.kill('SIGKILL');
+                });
+                terminated.push(u.id);
+              },
+            };
+          },
+        }
+      : {}),
     async run(ctx): Promise<UnitObservation> {
       runs.push(ctx.unit.id);
       const behavior = ((ctx.unit.configuration as { behavior?: Behavior } | null)?.behavior ?? {
@@ -70,6 +107,13 @@ export function createTestAdapter(
             return { source: 'HARD_STOP_DEADLINE' };
           }
           return { source: 'ENGINE_RESULT' };
+        }
+        case 'PROCESS_HANG': {
+          const child = children.get(ctx.unit.id);
+          if (child === undefined) throw new Error('test child was not forked before execution');
+          return await new Promise<UnitObservation>((resolve) => {
+            child.once('exit', () => resolve({ source: 'HARD_STOP_DEADLINE' }));
+          });
         }
         case 'EFFECTS': {
           for (let i = 1; i <= behavior.count; i++) {
@@ -94,5 +138,5 @@ export function createTestAdapter(
       }
     },
   };
-  return { adapter, runs, aborted };
+  return { adapter, runs, aborted, terminated, cleanupChildren };
 }

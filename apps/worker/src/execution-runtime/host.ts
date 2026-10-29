@@ -35,6 +35,7 @@ import {
   requestAdmission,
 } from '@webaudit/api/safety';
 import type { PrismaClient } from '@webaudit/api/prisma-client';
+import type { ForkedChild } from '@webaudit/api/execution-runtime';
 import type { AdapterRegistry, AdapterUnit, ExecutionAdapter } from './adapter.js';
 
 export interface HostDeps {
@@ -57,7 +58,10 @@ export type HostResult =
   | { result: 'IGNORED' | 'DEFERRED'; reason: string }
   | { result: 'REFUSED'; reason: string }
   | { result: 'FINALIZED'; status: string; replayed: boolean }
-  | { result: 'ABANDONED'; reason: 'LEASE_LOST' | 'TERMINAL_ELSEWHERE' };
+  | {
+      result: 'ABANDONED';
+      reason: 'LEASE_LOST' | 'TERMINAL_ELSEWHERE' | 'CHILD_TERMINATION_UNCONFIRMED';
+    };
 
 const MAX_LOOP_MS = 5000;
 
@@ -164,7 +168,17 @@ export function createExecutionJobHandler(
     if (dispatched.outcome !== 'RUNNING') {
       return { result: dispatched.outcome, reason: dispatched.reason };
     }
-    return runUnit(deps, adapter, row, dispatched.claimToken, lease, interval, log, gateOf);
+    return runUnit(
+      deps,
+      adapter,
+      row,
+      dispatched.claimToken,
+      lease,
+      dispatched.child,
+      interval,
+      log,
+      gateOf,
+    );
   };
 
   function gateOf(_row: { id: string; scanPlanId: string }): GateDeps {
@@ -191,6 +205,7 @@ async function runUnit(
   row: UnitRow,
   claimToken: string,
   lease: { leaseId: string; holderToken: string } | null,
+  child: ForkedChild,
   interval: number,
   log: (m: string, e?: Record<string, unknown>) => void,
   gateOf: (r: { id: string; scanPlanId: string }) => GateDeps,
@@ -208,6 +223,11 @@ async function runUnit(
   let decided: { action: HostLoopAction } | null = null;
   let hardStopFired = false;
   let lastProgress = 0;
+  let terminatePromise: Promise<void> | undefined;
+  const terminateChild = (): Promise<void> => {
+    terminatePromise ??= child.terminate();
+    return terminatePromise;
+  };
 
   const renew = async (): Promise<LeaseRenewal> => {
     if (lease === null) return 'RENEWED';
@@ -252,6 +272,11 @@ async function runUnit(
   }, interval);
   loop.unref();
 
+  // Abort requests must stop the OS child even if its event loop and engine ignore the signal.
+  controller.signal.addEventListener('abort', () => void terminateChild().catch(() => undefined), {
+    once: true,
+  });
+
   const progress = (tick: ProgressTick): void => {
     emitProgress(deps.publisher, row.id, tick);
     const now = Date.now();
@@ -266,8 +291,9 @@ async function runUnit(
   };
 
   let observation: Awaited<ReturnType<ExecutionAdapter['run']>> | null = null;
+  let runFinished = false;
   try {
-    observation = await adapter.run({
+    const runPromise = adapter.run({
       unit,
       signal: controller.signal,
       authorizeEffect: (kind, ordinal) =>
@@ -291,6 +317,19 @@ async function runUnit(
         }),
       progress,
     });
+    const outcome = await Promise.race([
+      runPromise.then((value) => ({ kind: 'RUN' as const, value })),
+      new Promise<{ kind: 'STOP' }>((resolve) => {
+        if (controller.signal.aborted) return resolve({ kind: 'STOP' });
+        controller.signal.addEventListener('abort', () => resolve({ kind: 'STOP' }), {
+          once: true,
+        });
+      }),
+    ]);
+    if (outcome.kind === 'RUN') {
+      runFinished = true;
+      observation = outcome.value;
+    }
   } catch {
     // An uncaught exception in the engine's own code: ENGINE_DEFECT, classified by the host.
     observation = { source: 'ENGINE_EXCEPTION' };
@@ -299,11 +338,35 @@ async function runUnit(
     clearTimeout(hardStop);
   }
 
+  // A stop is not durable until the child is confirmed gone. If termination cannot be confirmed,
+  // leave the RUNNING row and lease for the planned sweep rather than falsely finalizing it.
+  try {
+    await terminateChild();
+  } catch (error) {
+    log('execution child termination unconfirmed; deferring to planned sweep', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return { result: 'ABANDONED', reason: 'CHILD_TERMINATION_UNCONFIRMED' };
+  }
+  if (!runFinished && !hardStopFired && decided === null) {
+    // The adapter rejected after an abort race; the host loop still owns the eventual outcome.
+    observation ??= { source: 'ENGINE_EXCEPTION' };
+  }
+
   // The loop may have decided while the adapter was winding down; otherwise ask once more right before finalizing
   // (a stale holder must not finalize, and a passed deadline changes the outcome).
   const action: HostLoopAction =
     decided !== null ? (decided as { action: HostLoopAction }).action : await decide();
-  return finalizeFor(deps, row, action, hardStopFired, observation, gate(), log, scanId);
+  return finalizeFor(
+    deps,
+    row,
+    action,
+    hardStopFired,
+    observation ?? { source: 'ENGINE_EXCEPTION' },
+    gate(),
+    log,
+    scanId,
+  );
 }
 
 async function loadAdapterUnit(db: PrismaClient, id: string): Promise<unknown> {

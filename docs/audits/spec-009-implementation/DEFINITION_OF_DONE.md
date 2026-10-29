@@ -48,14 +48,14 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 4 | PARTIAL | Resolver/deadline code present; no production caller found for `resolvePlan`; full serial unit/contract/integration workspace passed, but the API producer path is still absent. |
 | 5 | PARTIAL | Graph implementation present; full graph/DB constraint suite not rerun. |
 | 6 | PARTIAL | Guarded transitions/finalizer present; new runtime integration passes, but full transition/race matrix not rerun. |
-| 7 | PARTIAL | Real isolated PG/Redis/BullMQ suite passes 17/17; `startWorker` composes registered adapters in test, but the executable entrypoint supplies none. |
+| 7 | PARTIAL | Real isolated PG/Redis/BullMQ suite passes 18/18; the host now retains and terminates the dispatched child handle, but `adapter.run()` still executes in the worker process and the executable entrypoint supplies no production adapter. |
 | 8 | PARTIAL | `startWorker` now composes per-class consumers/host, continuation, dependent enqueue, and shutdown for locally supplied adapters; no production adapter is registered. |
 | 9 | PARTIAL | Plan authorization code present; grant-revocation runtime case passes; complete plan/dispatch scope mutation matrix not run. |
 | 10 | PARTIAL | Runtime admits through F07 in the integration test; actual API/worker roles are not used for that path. |
 | 11 | PARTIAL | Budget behavior exists in F07; concurrency/oversubscription load test not run. |
 | 12 | PARTIAL | Cancellation, kill switch, and grant revocation passed in direct real-infrastructure runtime tests; standard worker lifecycle unverified. |
 | 13 | PARTIAL | In-flight scan cancellation passed; API cancellation/refund behavior not exercised end to end. |
-| 14 | PARTIAL | Deadline, hard-stop, and planned expiry paths pass in runtime tests; AC-1…20 matrix and race/fairness checks not run. |
+| 14 | PARTIAL | Deadline tests pass, including a real inert child killed at the hard stop; engine execution is not yet isolated in that child, and AC-1…20 plus race/fairness checks remain. |
 | 15 | PARTIAL | Duplicate delivery, stale lease, and persisted RUNNING recovery covered; actual process restart/outage recovery not run. |
 | 16 | PARTIAL | Runtime produced two real evidence rows; full redaction/tenant/crash-contract suite not rerun in this session. |
 | 17 | PARTIAL | Reaper handler and scheduler are wired by static inspection; R2 and retention/reaper lifecycle remain unverified. |
@@ -72,6 +72,12 @@ The table above is a historical snapshot and several descriptions are stale (not
 | 28 | PARTIAL | Reviewed changes were committed and pushed; local `HEAD`, `origin/main`, and remote `main` agree. SPEC 009 remains incomplete due to the open gates above. |
 
 **Current reassessment: 25 PARTIAL · 3 NOT STARTED · 0 PASS. Verdict: NOT COMPLETE.** The zero PASS count is deliberate: the current DoD requires end-to-end evidence for each gate and this session did not perform the complete gate-specific verification for any one gate.
+
+### Runtime hard-stop correction — 2026-10-29
+
+- Added a real-process regression that first failed because the host discarded the dispatched child's handle and waited indefinitely for `adapter.run()` after abort.
+- The host now retains the handle, terminates it on host abort/deadline, races an uncooperative adapter promise against abort, and defers finalization to the planned sweep if termination cannot be confirmed. The isolated execution-runtime integration suite passes **18/18**; worker TypeScript check passes.
+- This closes the specific child-handle loss and false-finalization gap. It does **not** satisfy FR-019 in full: engine code still runs in the worker process, not the child; child-to-parent IPC for host-owned effects/checkpoints is not implemented. Keep DoD gates 7 and 14 PARTIAL.
 
 ### Verification update — 2026-10-29
 

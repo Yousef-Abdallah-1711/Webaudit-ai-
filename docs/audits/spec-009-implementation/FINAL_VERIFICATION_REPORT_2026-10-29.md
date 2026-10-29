@@ -37,7 +37,7 @@ Created disposable database `m009_privilege_test` and applied all 27 migrations 
 
 ## I. BullMQ integration results
 
-`apps/worker/tests/integration/execution-runtime.test.ts`: 17/17 passed with real disposable PostgreSQL, Redis, BullMQ queues, and workers. Covered standard `startWorker` composition with a locally supplied adapter, master-phase enqueue at the plan gate, shutdown draining, minimal payload rejection, duplicate delivery, dependent enqueue, progress publication, evidence rows, effect authorization, cancellation, kill switch, grant revocation, deadlines, hard stop, lost lease, and crashed-host state recovery. The test uses a deterministic adapter in the test process; it is not an API HTTP flow or a separately launched production deployment.
+`apps/worker/tests/integration/execution-runtime.test.ts`: the initial full run was 17/17; a later focused rerun after the hard-stop correction passed 18/18 with real disposable PostgreSQL, Redis, BullMQ queues, and workers. Covered standard `startWorker` composition with a locally supplied adapter, master-phase enqueue at the plan gate, shutdown draining, minimal payload rejection, duplicate delivery, dependent enqueue, progress publication, evidence rows, effect authorization, cancellation, kill switch, grant revocation, deadlines, hard stop, lost lease, and crashed-host state recovery. The test uses a deterministic adapter in the test process; it is not an API HTTP flow or a separately launched production deployment. The hard-stop fixture verifies termination of a real child handle, but engine execution is still in the worker process.
 
 ## J. Execution host verification
 

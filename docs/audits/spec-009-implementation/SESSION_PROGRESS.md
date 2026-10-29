@@ -140,3 +140,11 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Result: **72/72 files passed, 1,134 tests passed, 1 test skipped** (1,135 total). The skip is reported by `packages/capability-sdk/tests/adverse/context-confinement.test.ts`.
 - Included `apps/api/tests/adverse/safety-role-isolation.test.ts` (116/116), `core01-role-isolation.test.ts` (7/7), and the other API/worker security, safety, concurrency, SSRF, sandbox, and containment cases. Real Chromium SSRF tests for the probe-pool boundary passed; manual Chrome acceptance for SPEC 009 was not performed.
 - The worker/API plan producer path, production adapter registration, complete privilege matrix, visual/Playwright, manual Chrome, k6/load, coverage, and real R2 checks remain open. DoD remains 25 PARTIAL / 3 NOT STARTED / 0 PASS.
+
+## Hard-stop regression continuation — 2026-10-29
+
+- Added a real OS child process to the execution-runtime integration fixture. The regression failed before the fix: timeout expired but the child was never terminated because the host dropped `dispatchExecutionUnit`'s returned handle and awaited `adapter.run()` indefinitely.
+- Updated the host to retain and terminate that handle on abort, race adapter completion against abort, and return `CHILD_TERMINATION_UNCONFIRMED` without finalizing or releasing the lease if the kill cannot be confirmed.
+- Re-ran `apps/worker/tests/integration/execution-runtime.test.ts` on the isolated PostgreSQL `m009_privilege_test` and Redis `127.0.0.1:6391`: **18/18 passed**. Worker TypeScript check passed. `git diff --check` passed.
+- Scope limit: the dispatched child is still inert; `adapter.run()` executes in the worker process. Engine-in-child execution, host-owned IPC for effects/checkpoints, and production engine registration remain open. DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**.
+- Changed SPEC 009 paths: `apps/worker/src/execution-runtime/host.ts`, `apps/worker/tests/helpers/test-adapter.ts`, `apps/worker/tests/integration/execution-runtime.test.ts`, and `docs/audits/spec-009-implementation/{DEFINITION_OF_DONE.md,SESSION_PROGRESS.md}`. Pre-existing website/auth edits, lockfile, generated output, and logs remain untouched.
