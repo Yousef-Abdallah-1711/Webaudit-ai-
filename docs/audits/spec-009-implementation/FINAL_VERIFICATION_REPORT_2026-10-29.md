@@ -171,6 +171,13 @@ The same first browser run found that the signup form enabled its submit button 
 - The current 49-FR review is in `REQUIREMENT_DELTA_MATRIX.md`; the current 28-gate count is in `DEFINITION_OF_DONE.md`. Both retain **NOT COMPLETE** as the SPEC 009 verdict.
 - A full-workspace attempt without `EXEC_TEST_REDIS` had 242/243 files pass; the runtime file used its documented fallback `localhost:6399` and failed to connect. The runtime file passed 21/21 focused with `EXEC_TEST_REDIS=127.0.0.1:6391`, and the complete serial workspace then passed **243/243 files, 1,855/1,855 tests** in 754.79 seconds with that variable explicitly set.
 
+### Privilege migration follow-up — 2026-10-29
+
+- A new disposable database `m009_core01_fresh_test` received all **32 migrations from the beginning**; Prisma reported the schema up to date. Shared development/production data were not targeted.
+- Real LOGIN-role adverse suite: **17/17 passed** after the fix. A test assertion first failed against the existing default PUBLIC EXECUTE ACL on `fahes_dependency_same_plan()`; the additive migration `20261030180000_core01_revoke_public_definer_execute` removes that ACL. The actual API-role dependency trigger still rejects cross-plan edges. The temporary API finalizer-grant mutation was detected (1 expected failing assertion) and revoked.
+- Catalog checks confirmed all ten CORE-01 tables and the finalizer/host SECURITY DEFINER functions are owned by `fahes_owner`, runtime roles are non-superuser, schema `public` is not writable by PUBLIC or the host role, and the relevant definer functions pin `search_path`.
+- Runtime integration on the fresh database and isolated Redis: **21/21 passed**, including a real non-superuser execution-host login. Broader tenant/effect/lease-secret checks and the production API/worker role deployment remain open; DoD gate 22 remains PARTIAL.
+
 ### Current checkout and delivery
 
 - At the start of this revalidation, branch `main`, `HEAD`, and `origin/main` were `974d2620306a200660304984f0e42eac174d4445`; there was no local/remote divergence. The configured remote was `https://github.com/Yousef-Abdallah-1711/Webaudit-ai-.git`.

@@ -89,20 +89,35 @@ async function hasFunctionPrivilege(client: PrismaClient, signature: string): Pr
   return rows[0]!.allowed;
 }
 
+async function publicCanExecuteFunction(client: PrismaClient, signature: string): Promise<boolean> {
+  const rows = await client.$queryRaw<Array<{ allowed: boolean }>>`
+    SELECT EXISTS (
+      SELECT 1
+        FROM pg_proc p
+        CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl
+       WHERE p.oid = to_regprocedure(${`public.${signature}`})
+         AND acl.grantee = 0
+         AND acl.privilege_type = 'EXECUTE'
+    ) AS allowed
+  `;
+  return rows[0]!.allowed;
+}
+
 async function unitIdForDirectWrite(): Promise<string> {
+  const marker = randomBytes(4).toString('hex');
   const user = await testDb.user.create({
-    data: { email: `core01-role-${suffix}@example.com`, emailVerifiedAt: new Date() },
+    data: { email: `core01-role-${suffix}-${marker}@example.com`, emailVerifiedAt: new Date() },
   });
   const plan = await testDb.scanPlan.create({
     data: {
       kind: 'INITIAL',
       userId: user.id,
-      scanId: `core01-role-scan-${suffix}`,
+      scanId: `core01-role-scan-${suffix}-${marker}`,
       state: 'RESOLVED',
       deadlineMs: 1_000_000,
     },
   });
-  const id = `core01-role-unit-${suffix}`;
+  const id = `core01-role-unit-${suffix}-${marker}`;
   await testDb.$executeRawUnsafe(
     `INSERT INTO "ExecutionUnit" (id,"scanPlanId","userId","targetId","executionUnitClass","engineId",configuration,priority,
        "timeoutPolicyMs","retryPolicy","requiresSafetyCheckpoint","idempotencyKey",status)
@@ -252,6 +267,28 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
 });
 
 describe('SECURITY DEFINER entry points are granted narrowly', () => {
+  it('does not leave a SECURITY DEFINER trigger helper executable by PUBLIC', async () => {
+    expect(
+      await publicCanExecuteFunction(clientFor('nobody'), 'fahes_dependency_same_plan()'),
+    ).toBe(false);
+  });
+
+  it('keeps the cross-plan dependency trigger working for the API while rejecting a forged edge', async () => {
+    const api = clientFor('api');
+    const first = await unitIdForDirectWrite();
+    const second = await unitIdForDirectWrite();
+
+    await expect(
+      api.executionDependency.create({
+        data: {
+          id: `core01-cross-plan-${suffix}`,
+          executionUnitId: first,
+          dependsOnExecutionUnitId: second,
+        },
+      }),
+    ).rejects.toThrow(/dependency_cross_plan/i);
+  });
+
   it('allows admission to API and host, but not a generic worker or operator', async () => {
     const signature = 'f07_admit(text,text,text,text,text,boolean,boolean,text)';
     expect(await hasFunctionPrivilege(clientFor('api'), signature)).toBe(true);

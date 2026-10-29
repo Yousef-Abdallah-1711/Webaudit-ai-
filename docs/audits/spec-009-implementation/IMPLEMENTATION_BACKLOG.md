@@ -68,6 +68,12 @@ The historical status paragraph above predates later implementation commits and 
 - Historical full-suite, adverse, contract, browser, performance, R2, and coverage results are not current evidence. See `FINAL_VERIFICATION_REPORT_2026-10-29.md` and the current DoD reassessment.
 - Five previously named failing files passed together sequentially on isolated Redis and the disposable test database (27/27). This proves they pass without the shared Redis configuration but does not identify the exact cause of the earlier full-suite failures; full suite remains outstanding.
 
+### Privilege review follow-up — 2026-10-29
+
+- **Closed in this continuation:** revoke PUBLIC EXECUTE from the CORE-01 SECURITY DEFINER dependency trigger helper. Regression evidence is in `apps/api/tests/adverse/core01-role-isolation.test.ts`; its negative assertion was observed failing before migration `20261030180000_core01_revoke_public_definer_execute` and passing after.
+- **Reverified:** fresh 32-migration deployment and status; CORE-01 LOGIN-role suite 17/17; execution-runtime integration 21/21. The deliberate API-finalizer grant mutation was detected by the production-role test and revoked from the disposable DB.
+- **Still open:** full cross-tenant/effect/lease-secret/function privilege matrix and actual API/worker production credentials. These are verification gaps; the new migration does not make the broader privilege gate PASS.
+
 ## Verification update — 2026-10-29
 
 The latest full serial unit/contract/integration Vitest workspace is complete: **243/243 files and 1,854/1,854 tests passed** on fresh disposable PostgreSQL and Redis. The run closed the earlier full-suite failures: blank `EMAIL_TRANSPORT` is normalized to the documented SMTP default, and the sandbox-unconfigured contract clears the `.env` URL before its assertion. See the dated final verification report and session progress for scope and remaining gates. Adverse/visual suites, API plan producer/production adapter, browser, load, coverage, full privilege matrix, and real R2 remain open.

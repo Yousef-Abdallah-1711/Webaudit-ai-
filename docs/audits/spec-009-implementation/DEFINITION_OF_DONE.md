@@ -114,7 +114,7 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 19 | PASS | Finalizer atomicity/idempotence and lease boundary races pass on isolated PostgreSQL. |
 | 20 | NOT STARTED | No unit/finalization audit-event rollback proof. |
 | 21 | PARTIAL | Service-level tenant isolation passes; full production HTTP IDOR path is not exposed. |
-| 22 | PARTIAL | Full adverse suite passes; complete SPEC 009 service-role/secret/effect privilege matrix remains. |
+| 22 | PARTIAL | Fresh 32-migration database and real LOGIN-role suite pass 17/17; verified all ten CORE-01 tables are owned by `fahes_owner`, runtime groups are non-superuser, `public`/host cannot create in `public`, and the tested SECURITY DEFINER functions use a fixed search path. A deliberately restored API finalizer grant made the regression suite fail, then was revoked. Remaining: broader cross-tenant/effect/secret matrix and running API/worker under their intended production logins. |
 | 23 | NOT STARTED | No SPEC 009 measured performance baseline or k6 run. |
 | 24 | NOT STARTED | The browser fixture stack is not the production SPEC 009 API→plan→worker flow; that path is absent. |
 | 25 | NOT STARTED | No manual Chrome journey was performed. |

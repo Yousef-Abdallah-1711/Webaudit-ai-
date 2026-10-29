@@ -29,3 +29,12 @@ Stack overflow in configuration validation on deep input; a transaction-abort ra
 
 ## Next
 See `SESSION_PROGRESS.md` "Next exact tasks".
+
+## Continuation verification — 2026-10-29
+
+- Created a new disposable database, applied all **32 migrations from the beginning**, and confirmed `prisma migrate status` reports the schema is up to date. No shared development or production-named container was migrated or modified.
+- Verified all ten CORE-01 tables are owned by `fahes_owner`; runtime groups are non-superuser and have no create privilege on `public`; the finalizer and execution-host SECURITY DEFINER helpers have `fahes_owner` ownership and fixed `search_path` settings.
+- The real LOGIN-role adverse suite passed **17/17**. It covers finalizer grants, terminal writes, selected column/table grants, F07 admission helper access, lease and stop reads, and a cross-plan dependency rejection while the API role invokes the actual production trigger.
+- Test-first review found `fahes_dependency_same_plan()` was SECURITY DEFINER with default `PUBLIC EXECUTE`. The new adverse assertion failed against that state; migration `20261030180000_core01_revoke_public_definer_execute` revokes the default grant. After applying it, the same suite passed. A separate mutation that temporarily granted finalizer execution to `fahes_api` caused the test to fail (14 passed, 1 failed); the temporary grant was revoked on the disposable database.
+- The isolated PostgreSQL/Redis/BullMQ worker integration passed **21/21**, including non-superuser host execution and the end-to-end queued unit lifecycle. This still does not exercise the production API `resolvePlan` producer or a production SPEC 010–012 engine.
+- Scope remains incomplete: broader tenant/effect/lease-secret permission cases, API/worker production credentials, API plan production, real R2, process restart/outage, manual browser acceptance, performance, and full acceptance matrices remain open. Overall SPEC 009 verdict remains **NOT COMPLETE**.
