@@ -150,11 +150,11 @@ export async function casHostTransition(db: SafetyDb, input: CasInput): Promise<
                           AND c."claimTokenHash" = ${tokenHash} AND c."hostInstanceId" = ${input.hostInstanceId})`);
       if (updated !== 1) return 'LOST' as const;
       if (input.leaseClass === 'L') {
-        const lease = await tx.$queryRaw<Array<{ one: number }>>(Prisma.sql`
-          SELECT 1 AS one FROM "AdmissionLease"
-           WHERE "executionId" = ${input.executionUnitId} AND "releasedAt" IS NULL AND "reclaimedAt" IS NULL
-           FOR SHARE`);
-        if (lease.length === 0) throw new LeaseLost();
+        // Definer function: workers never read AdmissionLease; the FOR SHARE lock it takes lives in THIS transaction.
+        const live = await tx.$queryRaw<Array<{ live: boolean }>>(
+          Prisma.sql`SELECT public.fahes_lock_live_lease(${input.executionUnitId}) AS live`,
+        );
+        if (live[0]?.live !== true) throw new LeaseLost();
       }
       return 'OK' as const;
     });

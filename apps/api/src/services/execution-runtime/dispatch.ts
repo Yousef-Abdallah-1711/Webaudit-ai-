@@ -249,10 +249,10 @@ export async function hostLoopDecision(
   // before it reports a fenced holder, so the renewal result alone cannot prove the lease is lost.
   let renewal: LeaseRenewal = 'RENEWED';
   if (unit.leaseClass === 'L') {
-    const live = await db.$queryRaw<Array<{ one: number }>>(Prisma.sql`
-      SELECT 1 AS one FROM "AdmissionLease"
-       WHERE "executionId" = ${unit.id} AND "releasedAt" IS NULL AND "reclaimedAt" IS NULL`);
-    renewal = live.length === 0 ? 'FENCED' : await renewLease();
+    const live = await db.$queryRaw<Array<{ live: boolean }>>(
+      Prisma.sql`SELECT public.fahes_lock_live_lease(${unit.id}) AS live`,
+    );
+    renewal = live[0]?.live === true ? await renewLease() : 'FENCED';
   }
   if (renewal === 'FENCED')
     return { action: 'ABORT_LEASE_LOST', acknowledgeStop: cause.cause === 'KILL_SWITCH_PENDING' };

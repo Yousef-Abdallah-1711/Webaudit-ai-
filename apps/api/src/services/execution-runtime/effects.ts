@@ -48,10 +48,10 @@ export async function authorizeEffect(db: SafetyDb, input: EffectInput): Promise
     if (cause.cause !== 'NONE') return { result: 'REFUSED', reason: cause.cause } as const;
 
     if (input.leaseClass === 'L') {
-      const lease = await tx.$queryRaw<Array<{ one: number }>>(Prisma.sql`
-        SELECT 1 AS one FROM "AdmissionLease"
-         WHERE "executionId" = ${unit.id} AND "releasedAt" IS NULL AND "reclaimedAt" IS NULL FOR SHARE`);
-      if (lease.length === 0) return { result: 'REFUSED', reason: 'LEASE_LOST' } as const;
+      const live = await tx.$queryRaw<Array<{ live: boolean }>>(
+        Prisma.sql`SELECT public.fahes_lock_live_lease(${unit.id}) AS live`,
+      );
+      if (live[0]?.live !== true) return { result: 'REFUSED', reason: 'LEASE_LOST' } as const;
     }
 
     const inserted = await tx.$executeRaw(Prisma.sql`

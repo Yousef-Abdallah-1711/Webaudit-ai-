@@ -113,6 +113,7 @@ export function createExecutionJobHandler(
         : { result: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' };
     }
 
+    let lease: { leaseId: string; holderToken: string } | null = null;
     const dispatched = await dispatchExecutionUnit(
       deps.db,
       {
@@ -130,7 +131,18 @@ export function createExecutionJobHandler(
         ...(adapter.hardStopMarginMs === undefined
           ? {}
           : { hardStopMarginMs: () => adapter.hardStopMarginMs! }),
-        requestAdmission: (r) => requestAdmission(deps.db, r),
+        requestAdmission: async (r) => {
+          const res = await requestAdmission(deps.db, r);
+          // The lease token comes from OUR admission result; workers never read AdmissionLease (it holds tokens in clear).
+          if (
+            res.outcome === 'GRANTED' &&
+            res.leaseId !== undefined &&
+            res.holderToken !== undefined
+          ) {
+            lease = { leaseId: res.leaseId, holderToken: res.holderToken };
+          }
+          return res;
+        },
         releaseLeases: (id) => releaseLeasesByExecution(deps.db, id),
       },
       { executionUnitId: row.id, userId: row.userId, hostInstanceId: deps.hostInstanceId },
@@ -138,25 +150,12 @@ export function createExecutionJobHandler(
     if (dispatched.outcome !== 'RUNNING') {
       return { result: dispatched.outcome, reason: dispatched.reason };
     }
-    // Capture the lease the admission just created so the loop can renew it with its token.
-    const lease = await currentLease(deps.db, row.id);
     return runUnit(deps, adapter, row, dispatched.claimToken, lease, interval, log, gateOf);
   };
 
   function gateOf(_row: { id: string; scanPlanId: string }): GateDeps {
     return { enqueueMaster: () => Promise.resolve() };
   }
-}
-
-async function currentLease(
-  db: PrismaClient,
-  executionId: string,
-): Promise<{ leaseId: string; holderToken: string } | null> {
-  const l = await db.admissionLease.findFirst({
-    where: { executionId, releasedAt: null, reclaimedAt: null },
-    select: { id: true, holderToken: true },
-  });
-  return l === null ? null : { leaseId: l.id, holderToken: l.holderToken };
 }
 
 async function runUnit(

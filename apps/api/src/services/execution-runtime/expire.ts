@@ -19,6 +19,7 @@ import {
   type ExecutionUnitStatus,
 } from '../planning/graph.js';
 import { dbNow } from './cause.js';
+import { findPendingStopReason } from './stop-reason.js';
 import { hasUnconfirmedEffects } from './effects.js';
 import { finalizeExecutionUnit, type FinalizeOutcome } from './finalize.js';
 
@@ -123,14 +124,11 @@ export async function expirePlanUnits(
       targetId: seen.targetId,
       userId: seen.userId,
     });
-    let stopReason: string | null = null;
-    if (stop !== null) {
-      const ks = await db.killSwitchState.findUnique({
-        where: { scope_scopeId: { scope: stop.scope, scopeId: stop.scopeId } },
-        select: { reason: true },
-      });
-      stopReason = ks?.reason ?? 'SYSTEM_SAFETY_POLICY';
-    }
+    const stopReason: string | null =
+      stop === null
+        ? null
+        : ((await findPendingStopReason(db, { id, userId: seen.userId, scanPlanId })) ??
+          'SYSTEM_SAFETY_POLICY');
     const scanCause =
       scan?.state === 'CANCELLED'
         ? 'SCAN_CANCELLED'

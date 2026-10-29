@@ -1,7 +1,7 @@
 /** The reason code of the pending stop that covers a unit (execution, scan, grant, target, tenant or platform scope), if any. */
 
 import type { SafetyDb } from '../safety/db.js';
-import { findPendingStop } from '../safety/kill-switch-state.js';
+import { Prisma } from '../../../prisma/generated/client/index.js';
 
 export async function findPendingStopReason(
   db: SafetyDb,
@@ -12,17 +12,9 @@ export async function findPendingStopReason(
     select: { targetId: true, targetAuthorizationId: true, scanPlan: { select: { scanId: true } } },
   });
   if (row === null) return null;
-  const stop = await findPendingStop(db, {
-    executionId: unit.id,
-    scanId: row.scanPlan.scanId,
-    grantId: row.targetAuthorizationId ?? '',
-    targetId: row.targetId,
-    userId: unit.userId,
-  });
-  if (stop === null) return null;
-  const ks = await db.killSwitchState.findUnique({
-    where: { scope_scopeId: { scope: stop.scope, scopeId: stop.scopeId } },
-    select: { reason: true },
-  });
-  return ks?.reason ?? 'SYSTEM_SAFETY_POLICY';
+  // Definer function: workers never read KillSwitchState; it applies the same predicate as f07_stop_pending.
+  const rows = await db.$queryRaw<Array<{ reason: string | null }>>(Prisma.sql`
+    SELECT public.fahes_pending_stop_reason(${unit.id}, ${row.scanPlan.scanId}, ${row.targetAuthorizationId ?? ''},
+      ${row.targetId}, ${unit.userId}) AS reason`);
+  return rows[0]?.reason ?? null;
 }
