@@ -67,6 +67,17 @@ async function ensureTestDatabaseMigrated(): Promise<void> {
  * reference data seeded once, and every test needs them.
  */
 const TABLES_TO_CLEAR = [
+  // SPEC 009: scalar ids into the legacy tables, cleared first.
+  'IssueEvidenceLink',
+  'Evidence',
+  'Artifact',
+  'EffectAuthorization',
+  'ExecutionUnitHostClaim',
+  'ExecutionDependency',
+  'ExecutionUnit',
+  'ScanPlan',
+  'ScanProfileVersion',
+  'ScanProfile',
   // SPEC 008: no FKs into these (scalar ids only), cleared first.
   'ExecutionAuditEvent',
   'KillSwitchState',

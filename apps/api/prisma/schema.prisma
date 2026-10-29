@@ -1172,3 +1172,264 @@ model ExecutionAuditEvent {
   @@index([targetId, timestamp])
   @@index([actorId, timestamp])
 }
+
+// ---------------------------------------------------------------------------
+// SPEC 009 — Core Scan & Execution Platform (CORE-01). Additive. No @relation
+// into any pre-existing model: every reference to Target/Scan/Issue/
+// TargetAuthorization/User is a plain scalar (research R2). The two extra
+// tables (ExecutionUnitHostClaim, EffectAuthorization) are required by the
+// approved DEC-066/DEC-051 option A (amendments/AMENDMENT-U1B-v6.md).
+// ---------------------------------------------------------------------------
+
+enum ExecutionUnitClass {
+  PASSIVE_HTTP
+  SOURCE_STATIC
+  BROWSER
+  CRAWLER
+  SOURCE_EXECUTION
+  ACTIVE_SECURITY
+  AUTHENTICATED_WORKFLOW
+  LOAD_CAPACITY
+  TELEMETRY
+}
+
+enum ExecutionUnitStatus {
+  PLANNED
+  SKIPPED
+  BLOCKED
+  ADMITTED
+  REFUSED
+  DISPATCHED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+  KILLED
+}
+
+enum FailureClass {
+  TRANSIENT_INFRASTRUCTURE
+  DETERMINISTIC_FINDING
+  TARGET_UNAVAILABLE
+  SAFETY_REFUSED
+  TIMEOUT
+  ENGINE_DEFECT
+  INVALID_CONFIGURATION
+  CUSTOMER_CODE_FAILURE
+  EXTERNAL_DEPENDENCY_FAILURE
+}
+
+enum EvidenceKind {
+  HTTP_TRANSACTION
+  SOURCE_LOCATION
+  SCREENSHOT
+  SCREENSHOT_DIFF
+  DOM_NODE
+  ACCESSIBILITY_NODE
+  BROWSER_TRACE
+  HAR
+  VIDEO
+  LOAD_METRICS
+  SECURITY_REPRODUCTION
+  CODE_FLOW
+  DEPENDENCY
+  TELEMETRY
+}
+
+enum ScanPlanKind {
+  INITIAL
+  REVERIFY
+}
+
+enum ScanPlanState {
+  RESOLVED
+  REFUSED
+}
+
+enum EffectAuthorizationState {
+  AUTHORIZED
+  CONFIRMED
+  ABANDONED
+}
+
+model ScanProfile {
+  id              String   @id @default(cuid())
+  slug            String   @unique
+  isSystemDefined Boolean  @default(true)
+  createdBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  versions ScanProfileVersion[]
+}
+
+model ScanProfileVersion {
+  id                     String       @id @default(cuid())
+  scanProfileId          String
+  version                Int
+  defaultDomains         ModuleType[]
+  domainExecutionClasses Json
+  advancedConfigSchema   Json?
+  createdAt              DateTime     @default(now())
+
+  scanProfile ScanProfile @relation(fields: [scanProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([scanProfileId, version])
+  @@index([scanProfileId])
+}
+
+model ScanPlan {
+  id                   String        @id @default(cuid())
+  kind                 ScanPlanKind  @default(INITIAL)
+  userId               String
+  scanId               String?
+  reverifyIssueId      String?
+  scanProfileVersionId String?
+  state                ScanPlanState
+  refusalReason        String?
+  resolvedAt           DateTime      @default(now())
+  /// U-1: immutable plan deadline; non-null iff state = RESOLVED (DB CHECK).
+  deadlineMs           Int?
+  deadlineBreakdown    Json?
+
+  executionUnits ExecutionUnit[]
+
+  @@index([scanId])
+  @@index([reverifyIssueId])
+  @@index([userId])
+}
+
+model ExecutionUnit {
+  id                       String              @id @default(cuid())
+  scanPlanId               String
+  userId                   String
+  targetId                 String
+  targetAuthorizationId    String?
+  executionUnitClass       ExecutionUnitClass
+  engineId                 String
+  configuration            Json
+  priority                 Int
+  timeoutPolicyMs          Int
+  retryPolicy              Json
+  requiresSafetyCheckpoint Boolean             @default(false)
+  idempotencyKey           String
+  status                   ExecutionUnitStatus @default(PLANNED)
+  attempt                  Int                 @default(1)
+  blockedByExecutionUnitId String?
+  skippedReason            String?
+  failureClass             FailureClass?
+  /// Specific terminal cause (REFUSED reason, KILLED F07 reason); runtime-finalization-contract step 3.
+  terminalReason           String?
+  evidenceContractRef      String?
+  credentialBindingRef     String?
+  costMicros               Int                 @default(0)
+  progressSnapshot         Json?
+  progressIndeterminate    Boolean             @default(false)
+  createdAt                DateTime            @default(now())
+  dispatchedAt             DateTime?
+  startedAt                DateTime?
+  completedAt              DateTime?
+
+  scanPlan     ScanPlan              @relation(fields: [scanPlanId], references: [id], onDelete: Cascade)
+  dependents   ExecutionDependency[] @relation("DependentUnit")
+  dependencies ExecutionDependency[] @relation("DependsOnUnit")
+  evidence     Evidence[]
+
+  @@unique([scanPlanId, idempotencyKey])
+  @@index([scanPlanId])
+  @@index([userId])
+  @@index([targetAuthorizationId])
+  @@index([status])
+  @@index([blockedByExecutionUnitId])
+}
+
+model ExecutionDependency {
+  id                       String @id @default(cuid())
+  executionUnitId          String
+  dependsOnExecutionUnitId String
+
+  executionUnit ExecutionUnit @relation("DependentUnit", fields: [executionUnitId], references: [id], onDelete: Cascade)
+  dependsOnUnit ExecutionUnit @relation("DependsOnUnit", fields: [dependsOnExecutionUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([executionUnitId, dependsOnExecutionUnitId])
+  @@index([dependsOnExecutionUnitId])
+}
+
+model Evidence {
+  id              String       @id @default(cuid())
+  executionUnitId String
+  kind            EvidenceKind
+  inlinePayload   Json?
+  artifactId      String?
+  redacted        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+
+  executionUnit ExecutionUnit       @relation(fields: [executionUnitId], references: [id], onDelete: Cascade)
+  artifact      Artifact?           @relation(fields: [artifactId], references: [id])
+  issueLinks    IssueEvidenceLink[]
+
+  @@index([executionUnitId])
+  @@index([artifactId])
+}
+
+model IssueEvidenceLink {
+  id         String @id @default(cuid())
+  issueId    String
+  evidenceId String
+
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, evidenceId])
+  @@index([issueId])
+  @@index([evidenceId])
+}
+
+model Artifact {
+  id                 String   @id @default(cuid())
+  scanId             String
+  userId             String
+  executionUnitId    String
+  storageKey         String   @unique
+  contentType        String
+  sizeBytes          Int
+  retentionPolicyRef String   @default("report-retention-parity")
+  createdAt          DateTime @default(now())
+
+  evidence Evidence[]
+
+  @@index([scanId])
+  @@index([userId])
+  @@index([executionUnitId])
+}
+
+/// U-1b v6 §3. Immutable once written; scalars only.
+model ExecutionUnitHostClaim {
+  id              String   @id @default(cuid())
+  executionUnitId String
+  attempt         Int
+  scanPlanId      String
+  userId          String
+  hostInstanceId  String
+  claimTokenHash  String
+  claimSeq        BigInt   @default(autoincrement())
+  acquiredAt      DateTime @default(now())
+
+  @@unique([executionUnitId, attempt])
+  @@index([scanPlanId])
+}
+
+/// DEC-051 option A / U-1b v6 §5: per-effect authorization ledger.
+model EffectAuthorization {
+  id              String                   @id @default(cuid())
+  executionUnitId String
+  attempt         Int
+  kind            String
+  ordinal         Int
+  userId          String
+  state           EffectAuthorizationState @default(AUTHORIZED)
+  authorizedAt    DateTime                 @default(now())
+  confirmedAt     DateTime?
+
+  @@unique([executionUnitId, attempt, kind, ordinal])
+  @@index([executionUnitId, state])
+}
