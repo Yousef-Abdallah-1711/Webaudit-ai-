@@ -40,7 +40,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 | `storage/retention.ts` call to `enforceArtifactRetention`, scheduling `reclaimOrphanedArtifacts` | functions exist and tested; not wired (retention uses an array transaction; converting it risks the legacy suite) |
 | Real R2 | no credentials; adapter covered by a command stub only |
 | Real API + worker + Redis run, Chrome acceptance (24 steps, 3 viewports), failure injection, load baselines, coverage | not started: there is no user-visible surface and no running unit path to drive; backend features are verified by DB tests only. Playwright MCP was not used. |
-| Dev DB migration | deliberately not applied (needs a `pg_dump` backup first, as in 008) |
+| Dev DB migration | **applied 2026-10-29** after a `pg_dump -Fc` backup: `User` 86 / `Scan` 243 / `CreditTransaction` 267 and the `User` table checksum identical before and after; history 24 → 25; ten new tables and `fahes_finalize_unit` present. The running dev API/worker are unaffected (they do not use the new tables yet) |
 | D-1 (browser pool) | unchanged and open: needs the SPEC 010 BROWSER engine (DEC-052/042) |
 | Least-privilege runtime on the dev stack | unchanged: dev API/worker still use the superuser; **not claimed** |
 | Role grants for the ten new tables | **not defined**: migration `20261030000000` grants only `EXECUTE` on `fahes_finalize_unit`; which of `fahes_api` / `fahes_worker_exec` / `fahes_orchestrator` may read or write each table (DEC-044 intent: workers hold no status privilege where SPEC 012 needs it) needs a design and a role-isolation test like 008's 116-case matrix. Until then a non-superuser runtime would need blanket grants (as 008's isolated stack used) and the privilege boundary is **not claimed** for the new tables |
@@ -54,7 +54,7 @@ DEC-047 A, DEC-051 A, DEC-066 A (in principle) approved by the owner's message; 
 1. Read the full-suite result below; fix any regression attributable to this work.
 2. Create the BullMQ queues/workers for `EXEC_QUEUE_NAMES` and call `dispatchExecutionUnit` from a worker (payload = `{ executionUnitId }` only); run `hostLoopDecision` every ≤5 s in the engine host and apply its action (finalize via `finalizeUnitAndContinue`). Needs one real or test engine to exercise it end to end.
 3. Wire `enforceArtifactRetention` into the retention transaction and schedule the reaper; progress events.
-4. Back up and migrate the dev database; full-stack run on non-superuser roles; Chrome journey for whatever becomes user-visible.
+4. Full-stack run on non-superuser roles (dev DB is already migrated); Chrome journey for whatever becomes user-visible.
 5. Re-run adverse + Playwright + k6 baselines; update DoD gates 7-15, 20, 23-26.
 
 ## Continuation notes
