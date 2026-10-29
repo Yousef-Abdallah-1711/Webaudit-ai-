@@ -222,6 +222,12 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - The full file passes **12/12** against isolated PostgreSQL and Redis. The tested bound is one configured 5-second interval plus the 5-second host-loop allowance.
 - This proves the PLANNED/no-child case only. Active-engine termination/confirmation remains open because no production adapter is registered; AC-12 remains PARTIAL.
 
+## AC-5 consumer recreation follow-up — 2026-10-29
+
+- Extended the real PostgreSQL/Redis/BullMQ runtime case: after progress and duplicate delivery complete a unit, it closes that worker consumer, creates a new host identity, and redelivers the terminal unit.
+- The focused case passes **1/1**; terminal state and one host claim remain unchanged, and the plan deadline is identical before/after the redelivery.
+- This is consumer recreation after completion, not an OS process crash with active work. AC-5 remains PARTIAL pending in-flight process restart/recovery evidence.
+
 ## Known suite regression follow-up — 2026-10-29
 
 - Re-ran `email-boot-guard.test.ts` with `EMAIL_TRANSPORT=''` and the isolated Redis endpoint: **3/3 passed**. Updated its child-process environment to follow `TEST_REDIS_URL` or `EXEC_TEST_REDIS`, removing the prior hard-coded shared Redis DB 15 dependency.

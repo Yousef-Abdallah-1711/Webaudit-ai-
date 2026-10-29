@@ -98,7 +98,7 @@ function start(
     onUnitCompleted: (planId) => enqueueEligibleUnits(db as never, queues, planId),
     ...extra,
   });
-  workers = createExecWorkers({
+  const workerSet = createExecWorkers({
     connection,
     prefix,
     classes: ['BROWSER'],
@@ -106,7 +106,8 @@ function start(
     concurrency: 4,
     onFailed: () => undefined,
   });
-  return { publisher, handle };
+  workers = workerSet;
+  return { publisher, handle, workerSet };
 }
 
 beforeAll(async () => {
@@ -420,7 +421,7 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     expect(gateCalls).toContain(w.scanId);
   });
 
-  it('runs a duplicate delivery exactly once (durable claim), whatever the queue does', async () => {
+  it('keeps deadline and claim stable across progress, duplicate delivery, and consumer recreation', async () => {
     const w = await makeRuntimeWorld();
     const initialPlan = await db.scanPlan.findUniqueOrThrow({
       where: { id: w.planId },
@@ -428,7 +429,7 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     });
     const a = await makeUnit(w, { configuration: beh({ kind: 'WAIT', ms: 400 }) });
     const h = createTestAdapter(w);
-    start(w, h);
+    const firstHost = start(w, h);
     await queues
       .queueFor('BROWSER')!
       .add(EXEC_JOB_NAME, { executionUnitId: a.id }, { jobId: 'dup-0' });
@@ -445,6 +446,23 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
         .add(EXEC_JOB_NAME, { executionUnitId: a.id }, { jobId: id });
     expect(await terminal(a.id)).toBe('COMPLETED');
     await new Promise((r) => setTimeout(r, 300));
+    expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
+
+    // Close this consumer and create a new host identity before redelivery.
+    // The durable terminal state prevents a second claim after recreation.
+    await firstHost.workerSet.close(true);
+    workers = null;
+    await firstHost.publisher.quit();
+    const restartedHost = start(w, h);
+    const restartedJob = await queues
+      .queueFor('BROWSER')!
+      .add(EXEC_JOB_NAME, { executionUnitId: a.id }, { jobId: 'dup-after-restart' });
+    await waitFor(async () => ((await restartedJob.getState()) === 'completed' ? true : false));
+    await restartedHost.workerSet.close(true);
+    workers = null;
+    await restartedHost.publisher.quit();
+
+    expect(await statusOf(a.id)).toBe('COMPLETED');
     expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
     expect(
       await db.scanPlan.findUniqueOrThrow({

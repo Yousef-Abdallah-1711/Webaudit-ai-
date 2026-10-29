@@ -134,7 +134,7 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | AC | Current evidence | Status |
 |---|---|---|
 | 1–4 | Legacy no-plan sweep; passive-only deadline; long-plan expiry; ceiling/grant refusals (`planned-timeout-sweep.test.ts`, `resolver.test.ts`) | COVERED |
-| 5 | Immutable `ScanPlan` deadline, mutable progress update and duplicate-delivery coverage; worker restart/recovery evidence remains | PARTIAL |
+| 5 | Immutable `ScanPlan` deadline, mutable progress, duplicate delivery and consumer recreation coverage; process restart/in-flight recovery remains | PARTIAL |
 | 6 | Concurrent deadline sweep and matching unit finalization; terminal scan and one refund | COVERED |
 | 7 | Fresh-read refund regressions for legacy and planned passes (`timeout-refund-staleness.test.ts`) | COVERED |
 | 8–10 | Stop precedence, stale evidence/finalization fencing, and refusal before F07/budget (`runtime.test.ts`, evidence tests, `dispatch.test.ts`) | COVERED |
@@ -152,7 +152,7 @@ This is an evidence index, not closure of T-U1-10. The partial rows keep the com
 ### Progress/redelivery deadline check — 2026-10-29
 
 - The isolated worker integration case passed **1/1** on disposable PostgreSQL and Redis. It writes a mutable `ExecutionUnit.progressSnapshot`, delivers duplicate queue jobs, confirms exactly one durable host claim, and verifies the owning `ScanPlan.deadlineMs` is unchanged. The schema suite separately rejects direct updates to the immutable plan deadline.
-- AC-5 remains PARTIAL because this does not simulate a worker process restart/recovery. AC-12, AC-17, and AC-19 remain open for bounded sweep timing, deployed clock-skew evidence, and a production engine backstop. T-U1-10 and SPEC 009 remain open.
+- AC-5 remains PARTIAL because consumer recreation after a terminal unit does not simulate process restart/in-flight recovery. AC-12, AC-17, and AC-19 remain open for active-engine termination, deployed clock-skew evidence, and a production engine backstop. T-U1-10 and SPEC 009 remain open.
 - The production API still has no `resolvePlan` caller, and the production worker registers no SPEC 010–012 engine adapter. The parallel-run contract keeps current passive scans on the existing scan-phase path; wiring every passive scan into plan execution would need an explicit contract/cutover decision before changing production behavior.
 
 ### CORE-01 privilege matrix follow-up — 2026-10-29

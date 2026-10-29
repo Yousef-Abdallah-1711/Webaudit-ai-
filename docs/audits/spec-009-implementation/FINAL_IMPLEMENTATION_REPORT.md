@@ -61,7 +61,8 @@ See `SESSION_PROGRESS.md` "Next exact tasks".
 ### Progress/redelivery deadline check — 2026-10-29
 
 - Added isolated worker-runtime coverage for an `ExecutionUnit.progressSnapshot` update and duplicate BullMQ delivery. On disposable PostgreSQL/Redis, the case passed **1/1**, observed one durable host claim, and confirmed `ScanPlan.deadlineMs` remained unchanged. The schema immutability suite already verifies that a direct plan deadline update is rejected.
-- AC-5 remains PARTIAL pending worker restart/recovery coverage. AC-12, AC-17 and AC-19 still lack bounded sweep timing, deployed clock-skew evidence and a production engine backstop. The production API has no `resolvePlan` caller and the worker registers no SPEC 010–012 engine adapter. SPEC 009 remains NOT COMPLETE.
+- Follow-up added consumer recreation before another terminal-unit redelivery. The focused integration case passed again **1/1**, with one durable host claim and the same immutable plan deadline.
+- AC-5 remains PARTIAL because consumer recreation after completion does not simulate process restart/in-flight recovery. AC-12, AC-17 and AC-19 still lack active-engine termination, deployed clock-skew evidence and a production engine backstop. The production API has no `resolvePlan` caller and the worker registers no SPEC 010–012 engine adapter. SPEC 009 remains NOT COMPLETE.
 - Current passive scans remain on the legacy path under the parallel-run boundary. Connecting every passive scan to planned execution would require an explicit contract/cutover decision; no production behavior was changed here.
 
 ### AC-12 live scheduler check — 2026-10-29
