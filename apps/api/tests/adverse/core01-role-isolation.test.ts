@@ -5,7 +5,7 @@
 
 import { randomBytes } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PrismaClient } from '../../prisma/generated/client/index.js';
+import { Prisma, PrismaClient } from '../../prisma/generated/client/index.js';
 import { closeDb, resetDb, testDb, TEST_DB_URL } from '../helpers/db.js';
 import { isAuthorized } from '../../src/services/authorization/check.js';
 import {
@@ -353,6 +353,92 @@ describe('terminal status writes remain guarded even for the execution host', ()
 });
 
 describe('CORE-01 table and column grants use the intended runtime roles', () => {
+  it('matches the exact table-level privilege matrix for every CORE-01 table and runtime role', async () => {
+    const tableNames = [
+      'ScanProfile',
+      'ScanProfileVersion',
+      'ScanPlan',
+      'ExecutionUnit',
+      'ExecutionDependency',
+      'Evidence',
+      'IssueEvidenceLink',
+      'Artifact',
+      'ExecutionUnitHostClaim',
+      'EffectAuthorization',
+    ] as const;
+    const expected = {
+      api: {
+        ScanProfile: ['INSERT', 'SELECT'],
+        ScanProfileVersion: ['INSERT', 'SELECT'],
+        ScanPlan: ['INSERT', 'SELECT'],
+        ExecutionUnit: ['INSERT', 'SELECT'],
+        ExecutionDependency: ['INSERT', 'SELECT'],
+        Evidence: ['SELECT'],
+        IssueEvidenceLink: ['SELECT'],
+        Artifact: ['SELECT'],
+      },
+      worker: {},
+      host: {
+        ScanProfile: ['SELECT'],
+        ScanProfileVersion: ['SELECT'],
+        ScanPlan: ['SELECT'],
+        ExecutionUnit: ['SELECT'],
+        ExecutionDependency: ['SELECT'],
+        Evidence: ['INSERT', 'SELECT'],
+        IssueEvidenceLink: ['INSERT', 'SELECT'],
+        Artifact: ['INSERT', 'SELECT'],
+        ExecutionUnitHostClaim: ['INSERT', 'SELECT'],
+        EffectAuthorization: ['INSERT', 'SELECT'],
+      },
+      orchestrator: {
+        ScanProfile: ['SELECT'],
+        ScanProfileVersion: ['SELECT'],
+        ScanPlan: ['SELECT'],
+        ExecutionUnit: ['SELECT'],
+        ExecutionDependency: ['SELECT'],
+        Evidence: ['SELECT'],
+        IssueEvidenceLink: ['SELECT'],
+        Artifact: ['DELETE', 'SELECT'],
+        EffectAuthorization: ['SELECT'],
+      },
+      operator: {
+        ScanPlan: ['SELECT'],
+        ExecutionUnit: ['SELECT'],
+        ExecutionDependency: ['SELECT'],
+      },
+      nobody: {},
+    } satisfies Record<RoleName, Partial<Record<(typeof tableNames)[number], string[]>>>;
+    for (const roleName of Object.keys(roles) as RoleName[]) {
+      const client = clientFor(roleName);
+      const matrix = await client.$queryRaw<Array<{ tableName: string; privileges: string[] }>>`
+        SELECT t.relname AS "tableName",
+          array_remove(ARRAY[
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'SELECT') THEN 'SELECT' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'INSERT') THEN 'INSERT' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'UPDATE') THEN 'UPDATE' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'DELETE') THEN 'DELETE' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'TRUNCATE') THEN 'TRUNCATE' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'REFERENCES') THEN 'REFERENCES' END,
+            CASE WHEN has_table_privilege(current_user, format('public.%I', t.relname), 'TRIGGER') THEN 'TRIGGER' END
+          ], NULL) AS privileges
+        FROM (VALUES ${Prisma.join(tableNames.map((name) => Prisma.sql`(${name})`))}) AS t(relname)
+        ORDER BY t.relname
+      `;
+
+      expect(matrix).toHaveLength(tableNames.length);
+      for (const row of matrix) {
+        const wanted = expected[roleName][row.tableName as (typeof tableNames)[number]] ?? [];
+        expect(new Set(row.privileges), `${roleName} on ${row.tableName}`).toEqual(new Set(wanted));
+        expect(row.privileges).not.toContain('TRUNCATE');
+        expect(row.privileges).not.toContain('REFERENCES');
+        expect(row.privileges).not.toContain('TRIGGER');
+      }
+    }
+
+    // Per-column exceptions (for host lifecycle/progress writes and API ownership reads)
+    // are asserted separately below; this matrix is deliberately table-level only.
+  });
+
   it('keeps raw lease secrets and F07 tables unreadable to every runtime login', async () => {
     for (const role of Object.keys(roles) as RoleName[]) {
       const client = clientFor(role);
@@ -422,6 +508,26 @@ describe('CORE-01 table and column grants use the intended runtime roles', () =>
 });
 
 describe('SECURITY DEFINER entry points are granted narrowly', () => {
+  it('matches the exact CORE-01 SECURITY DEFINER execution matrix with no PUBLIC grants', async () => {
+    const matrix = {
+      'fahes_dependency_same_plan()': [],
+      'fahes_finalize_unit(text,text,text,"FailureClass",text,jsonb)': ['host', 'orchestrator'],
+      'fahes_lock_execution_evidence(text,text,integer,text,text)': ['host'],
+      'fahes_lock_live_lease(text)': ['host'],
+      'fahes_pending_stop_reason(text,text,text,text,text)': ['host', 'orchestrator'],
+    } satisfies Record<string, RoleName[]>;
+
+    for (const [signature, allowedRoles] of Object.entries(matrix)) {
+      expect(await publicCanExecuteFunction(clientFor('nobody'), signature), signature).toBe(false);
+      for (const roleName of Object.keys(roles) as RoleName[]) {
+        expect(
+          await hasFunctionPrivilege(clientFor(roleName), signature),
+          `${roleName}: ${signature}`,
+        ).toBe(allowedRoles.includes(roleName));
+      }
+    }
+  });
+
   it('does not leave a SECURITY DEFINER trigger helper executable by PUBLIC', async () => {
     expect(
       await publicCanExecuteFunction(clientFor('nobody'), 'fahes_dependency_same_plan()'),

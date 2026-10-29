@@ -1394,6 +1394,11 @@ AC-12/17/19 still need bounded-time, deployed clock-skew and production-engine e
 remains open and SPEC 009 remains NOT COMPLETE. Continue from `docs/audits/spec-009-implementation/SESSION_PROGRESS.md`;
 preserve the website/auth edits, lockfile, `.next-final-cta-verify/`, and `logs/`.
 
+CORE-01 privilege follow-up: the isolated real-LOGIN-role suite passes 22/22. It checks exact table-level
+grants across six roles and ten new tables, plus exact execute grants and no PUBLIC access for the five
+CORE-01 SECURITY DEFINER functions. Tenant/effect abuse cases and deployed production role wiring remain
+open; see the current DoD and requirement matrix.
+
 Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
 also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails
 to connect. Never rely on the repository's shared Redis DB 15 default for a test run.

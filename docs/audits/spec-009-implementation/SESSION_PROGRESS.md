@@ -209,3 +209,9 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Added an isolated integration assertion to the duplicate-delivery worker test: a mutable unit progress update and repeated queue delivery preserve the owning plan's immutable `deadlineMs`; the durable host claim count remains one.
 - The targeted case passed **1/1** against `m009_core01_evidence_fence_test` and isolated Redis `127.0.0.1:6391`. The first attempt exposed an ordering mistake in the test itself (waiting for RUNNING before enqueue); it was corrected, and the final run passed.
 - AC-5 is still PARTIAL until worker restart/recovery is exercised. AC-12/17/19 and T-U1-10 remain open. Production API plan resolution and SPEC 010–012 adapters remain absent. Current passive scans stay on the legacy route under the parallel-run boundary; no cutover behavior was invented.
+
+## CORE-01 privilege matrix follow-up — 2026-10-29
+
+- Expanded `core01-role-isolation.test.ts` with a catalog-backed exact table-level matrix across six real LOGIN roles and all ten CORE-01 tables, including denial of table-level `TRUNCATE`, `REFERENCES`, and `TRIGGER` privileges.
+- Added exact execute grants and no-PUBLIC checks for the five CORE-01 SECURITY DEFINER functions. The isolated real-login suite passes **22/22** on `m009_core01_evidence_fence_test` after all 35 migrations.
+- Residual gap: tenant/effect abuse cases and production API/worker service credentials are not verified. This strengthens the isolated privilege evidence but does not close DoD gate 22.
