@@ -29,6 +29,13 @@ import {
   CONTROL_LEVELS,
   VERIFICATION_METHODS,
   CREDIT_KINDS,
+  EFFECT_AUTHORIZATION_STATES,
+  EVIDENCE_KINDS,
+  EXECUTION_UNIT_CLASSES,
+  EXECUTION_UNIT_STATUSES,
+  FAILURE_CLASSES,
+  SCAN_PLAN_KINDS,
+  SCAN_PLAN_STATES,
   EXECUTION_AUDIT_EVENT_TYPES,
   EXECUTION_CLASSES,
   INPUT_TYPES,
@@ -165,6 +172,26 @@ const MIRRORED: readonly Mirror[] = [
     members: TARGET_ENVIRONMENT_CLASSIFICATIONS,
   },
   { prisma: 'ScopeTargetKind', exported: 'SCOPE_TARGET_KINDS', members: SCOPE_TARGET_KINDS },
+  // SPEC 009
+  {
+    prisma: 'ExecutionUnitClass',
+    exported: 'EXECUTION_UNIT_CLASSES',
+    members: EXECUTION_UNIT_CLASSES,
+  },
+  {
+    prisma: 'ExecutionUnitStatus',
+    exported: 'EXECUTION_UNIT_STATUSES',
+    members: EXECUTION_UNIT_STATUSES,
+  },
+  { prisma: 'FailureClass', exported: 'FAILURE_CLASSES', members: FAILURE_CLASSES },
+  { prisma: 'EvidenceKind', exported: 'EVIDENCE_KINDS', members: EVIDENCE_KINDS },
+  { prisma: 'ScanPlanKind', exported: 'SCAN_PLAN_KINDS', members: SCAN_PLAN_KINDS },
+  { prisma: 'ScanPlanState', exported: 'SCAN_PLAN_STATES', members: SCAN_PLAN_STATES },
+  {
+    prisma: 'EffectAuthorizationState',
+    exported: 'EFFECT_AUTHORIZATION_STATES',
+    members: EFFECT_AUTHORIZATION_STATES,
+  },
 ];
 
 /**

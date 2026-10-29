@@ -288,3 +288,74 @@ export function isScoredState(s: ModuleState): boolean {
 export function canTransition(from: IssueState, to: IssueState): boolean {
   return ISSUE_STATE_TRANSITIONS[from].includes(to);
 }
+
+// ─── SPEC 009 — Core Scan & Execution Platform ────────────────────────────────
+
+/** Superset of `ExecutionClass`: adds the two passive classes and the degenerate TELEMETRY class. */
+export const EXECUTION_UNIT_CLASSES = [
+  'PASSIVE_HTTP',
+  'SOURCE_STATIC',
+  'BROWSER',
+  'CRAWLER',
+  'SOURCE_EXECUTION',
+  'ACTIVE_SECURITY',
+  'AUTHENTICATED_WORKFLOW',
+  'LOAD_CAPACITY',
+  'TELEMETRY',
+] as const;
+export type ExecutionUnitClass = (typeof EXECUTION_UNIT_CLASSES)[number];
+
+export const EXECUTION_UNIT_STATUSES = [
+  'PLANNED',
+  'SKIPPED',
+  'BLOCKED',
+  'ADMITTED',
+  'REFUSED',
+  'DISPATCHED',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+  'KILLED',
+] as const;
+export type ExecutionUnitStatus = (typeof EXECUTION_UNIT_STATUSES)[number];
+
+export const FAILURE_CLASSES = [
+  'TRANSIENT_INFRASTRUCTURE',
+  'DETERMINISTIC_FINDING',
+  'TARGET_UNAVAILABLE',
+  'SAFETY_REFUSED',
+  'TIMEOUT',
+  'ENGINE_DEFECT',
+  'INVALID_CONFIGURATION',
+  'CUSTOMER_CODE_FAILURE',
+  'EXTERNAL_DEPENDENCY_FAILURE',
+] as const;
+export type FailureClass = (typeof FAILURE_CLASSES)[number];
+
+export const EVIDENCE_KINDS = [
+  'HTTP_TRANSACTION',
+  'SOURCE_LOCATION',
+  'SCREENSHOT',
+  'SCREENSHOT_DIFF',
+  'DOM_NODE',
+  'ACCESSIBILITY_NODE',
+  'BROWSER_TRACE',
+  'HAR',
+  'VIDEO',
+  'LOAD_METRICS',
+  'SECURITY_REPRODUCTION',
+  'CODE_FLOW',
+  'DEPENDENCY',
+  'TELEMETRY',
+] as const;
+export type EvidenceKind = (typeof EVIDENCE_KINDS)[number];
+
+export const SCAN_PLAN_KINDS = ['INITIAL', 'REVERIFY'] as const;
+export type ScanPlanKind = (typeof SCAN_PLAN_KINDS)[number];
+
+export const SCAN_PLAN_STATES = ['RESOLVED', 'REFUSED'] as const;
+export type ScanPlanState = (typeof SCAN_PLAN_STATES)[number];
+
+export const EFFECT_AUTHORIZATION_STATES = ['AUTHORIZED', 'CONFIRMED', 'ABANDONED'] as const;
+export type EffectAuthorizationState = (typeof EFFECT_AUTHORIZATION_STATES)[number];

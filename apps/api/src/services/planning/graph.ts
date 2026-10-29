@@ -13,22 +13,14 @@
  *            step 5): `dependentsToBlock` answers for one finalized unit; repeated application
  *            reaches every downstream unit.
  *
- * Unit statuses are mirrored locally (they equal `ExecutionUnitStatus` in `data-model.md`)
- * because the Prisma enum does not exist yet — the schema migration is blocked (CORE-01).
+ * The class/status lists come from `@webaudit/types` (mirrors of the Prisma enums, drift-tested).
  */
 
-export const EXECUTION_UNIT_CLASSES = [
-  'PASSIVE_HTTP',
-  'SOURCE_STATIC',
-  'BROWSER',
-  'CRAWLER',
-  'SOURCE_EXECUTION',
-  'ACTIVE_SECURITY',
-  'AUTHENTICATED_WORKFLOW',
-  'LOAD_CAPACITY',
-  'TELEMETRY',
-] as const;
-export type ExecutionUnitClass = (typeof EXECUTION_UNIT_CLASSES)[number];
+import { EXECUTION_UNIT_CLASSES, EXECUTION_UNIT_STATUSES } from '@webaudit/types';
+import type { ExecutionUnitClass, ExecutionUnitStatus } from '@webaudit/types';
+
+export { EXECUTION_UNIT_CLASSES, EXECUTION_UNIT_STATUSES };
+export type { ExecutionUnitClass, ExecutionUnitStatus };
 
 /** Passive units (scan-deadline-contract "Definitions"): never need a `TargetAuthorization`. */
 const PASSIVE_CLASSES: ReadonlySet<ExecutionUnitClass> = new Set([
@@ -40,21 +32,6 @@ const PASSIVE_CLASSES: ReadonlySet<ExecutionUnitClass> = new Set([
 export function isPassiveClass(unitClass: ExecutionUnitClass): boolean {
   return PASSIVE_CLASSES.has(unitClass);
 }
-
-export const EXECUTION_UNIT_STATUSES = [
-  'PLANNED',
-  'SKIPPED',
-  'BLOCKED',
-  'ADMITTED',
-  'REFUSED',
-  'DISPATCHED',
-  'RUNNING',
-  'COMPLETED',
-  'FAILED',
-  'CANCELLED',
-  'KILLED',
-] as const;
-export type ExecutionUnitStatus = (typeof EXECUTION_UNIT_STATUSES)[number];
 
 /** Terminal statuses: no transition leaves them (deadline contract, boundary rule 6). */
 const TERMINAL_STATUSES: ReadonlySet<ExecutionUnitStatus> = new Set([
