@@ -139,7 +139,7 @@ This is the current gate assessment and supersedes the earlier count above. Evid
 | 7 | Fresh-read refund regressions for legacy and planned passes (`timeout-refund-staleness.test.ts`) | COVERED |
 | 8–10 | Stop precedence, stale evidence/finalization fencing, and refusal before F07/budget (`runtime.test.ts`, evidence tests, `dispatch.test.ts`) | COVERED |
 | 11 | Later dependent unit refused when its shared deadline leaves insufficient time (`dispatch.test.ts`) | COVERED |
-| 12 | Terminal-scan and expired-REVERIFY self-healing cases pass; exact maximum interval bound is not measured | PARTIAL |
+| 12 | Live repeat-scheduler test self-heals a PLANNED unit after a terminal scan within one configured sweep interval plus the host-loop bound; active production-engine termination remains unverified | PARTIAL |
 | 13 | Timeout sweep races the completion gate; scan remains terminal and master is not enqueued | COVERED |
 | 14–16 | No F01/F07 contract/type edits; stop precedence and pre-run expiry/topological refusal tests pass | COVERED |
 | 17 | New comparisons use database time and legacy regression passes; deployed NTP/skew bound is unverified | PARTIAL |
@@ -160,6 +160,11 @@ This is an evidence index, not closure of T-U1-10. The partial rows keep the com
 - The expanded real-LOGIN-role suite passes **22/22** against the 35-migration disposable PostgreSQL database. It now compares effective table-level privileges for every CORE-01 table across API, generic worker, execution host, orchestrator, operator, and an ungrouped role, and checks the exact execute matrix plus absence of `PUBLIC EXECUTE` for every CORE-01 SECURITY DEFINER function.
 - The catalog check confirms no runtime role has table-level `TRUNCATE`, `REFERENCES`, or `TRIGGER`; expected API insert/read access, host append/lifecycle access, orchestrator artifact cleanup, and operator read-only access match the declared matrix. Existing real-login tests continue to cover selected column grants, denial of direct terminal writes, raw F07 table denial, and cross-plan dependency rejection.
 - Gate 22 remains PARTIAL: tenant/effect abuse cases and the full deployed API/worker service-role flow have not been demonstrated. This test validates grants on the isolated database only; the production/dev service credentials are not least-privilege verified.
+
+### AC-12 live sweep cadence follow-up — 2026-10-29
+
+- The complete `planned-timeout-sweep.test.ts` file passed **12/12** on isolated PostgreSQL and Redis. A new test schedules the production `timeout-sweep` repeat job at the supported 5-second minimum, waits for an empty sweep to complete, then creates a terminal scan with a `PLANNED` unit and measures until the next scheduled sweep terminalizes it.
+- The measured assertion is bounded by the configured 5-second sweep interval plus the contract's 5-second host-loop allowance. This verifies the PLANNED/no-child case through the real BullMQ scheduler and production sweep handler. AC-12 remains PARTIAL for active-engine termination/confirmation under registered production adapters, which SPEC 010–012 have not supplied.
 
 ### Prior full-suite failure follow-up — 2026-10-29
 

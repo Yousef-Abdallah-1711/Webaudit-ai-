@@ -1404,6 +1404,10 @@ unconfigured contract passed 1/1 with a disposable JWT secret. The email child t
 test Redis endpoint instead of hard-coded shared DB 15. The full serial workspace was not rerun after these
 test-only changes; see `FINAL_VERIFICATION_REPORT_2026-10-29.md` for the last complete-run evidence.
 
+U-1 AC-12: the live BullMQ sweep cadence test in `planned-timeout-sweep.test.ts` passes as part of 12/12.
+It confirms a PLANNED unit on a terminal scan is expired by the next 5-second scheduled sweep; active engine
+termination remains unverified, so AC-12 stays PARTIAL.
+
 Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
 also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails
 to connect. Never rely on the repository's shared Redis DB 15 default for a test run.

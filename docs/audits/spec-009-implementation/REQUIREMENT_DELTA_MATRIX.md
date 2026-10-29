@@ -185,7 +185,7 @@ This section supersedes the earlier status totals above. The complete isolated s
 | 044 | NOT APPLICABLE | Pricing design is expressly out of scope; existing billing remains authoritative. |
 | 045 | NOT APPLICABLE | Credential storage design is expressly out of scope; opaque credential binding is the boundary. |
 | 046 | VERIFIED INVARIANT | Static review confirms no AI/provider calls in SPEC 009 planning, execution-control or evidence modules. |
-| 047 | PARTIAL | Deadline, gate, sweep, runtime hard-stop and engine evidence-fence paths are tested; AC-5 now covers mutable progress and duplicate delivery preserving the immutable deadline, while restart/recovery, bounded timing, deployed clock-skew, production-engine and production-wiring evidence remain. |
+| 047 | PARTIAL | Deadline, gate, sweep, runtime hard-stop and engine evidence-fence paths are tested; AC-5 covers mutable progress/duplicate delivery and AC-12 covers a live scheduled PLANNED-unit expiry, while restart/recovery, active-engine termination, deployed clock-skew, production-engine and production-wiring evidence remain. |
 
 **Current tally (49 entries): 2 VERIFIED INVARIANT · 27 TESTED · 16 PARTIAL · 1 MISSING · 3 NOT APPLICABLE.** This is a component-evidence tally, not a declaration that SPEC 009 is end-to-end complete. The production API plan producer, production engine registration, authenticated progress recovery, full runtime privilege matrix, R2 lifecycle, observability, performance, manual acceptance, and several contract-specific lifecycle checks remain open.
 

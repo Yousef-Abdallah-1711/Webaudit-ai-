@@ -63,3 +63,8 @@ See `SESSION_PROGRESS.md` "Next exact tasks".
 - Added isolated worker-runtime coverage for an `ExecutionUnit.progressSnapshot` update and duplicate BullMQ delivery. On disposable PostgreSQL/Redis, the case passed **1/1**, observed one durable host claim, and confirmed `ScanPlan.deadlineMs` remained unchanged. The schema immutability suite already verifies that a direct plan deadline update is rejected.
 - AC-5 remains PARTIAL pending worker restart/recovery coverage. AC-12, AC-17 and AC-19 still lack bounded sweep timing, deployed clock-skew evidence and a production engine backstop. The production API has no `resolvePlan` caller and the worker registers no SPEC 010–012 engine adapter. SPEC 009 remains NOT COMPLETE.
 - Current passive scans remain on the legacy path under the parallel-run boundary. Connecting every passive scan to planned execution would require an explicit contract/cutover decision; no production behavior was changed here.
+
+### AC-12 live scheduler check — 2026-10-29
+
+- Added a real BullMQ repeat-scheduler test to the existing planned sweep integration file. After an empty sweep completes, it creates a terminal scan with a pending unit and verifies the next scheduled sweep terminalizes the unit within the configured 5-second interval plus the 5-second host-loop allowance.
+- `planned-timeout-sweep.test.ts` passes **12/12** on isolated PostgreSQL/Redis. This covers a PLANNED unit with no child to terminate; active production-engine termination remains unverified and AC-12 remains PARTIAL.

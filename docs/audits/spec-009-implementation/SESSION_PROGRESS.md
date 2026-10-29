@@ -216,6 +216,12 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Added exact execute grants and no-PUBLIC checks for the five CORE-01 SECURITY DEFINER functions. The isolated real-login suite passes **22/22** on `m009_core01_evidence_fence_test` after all 35 migrations.
 - Residual gap: tenant/effect abuse cases and production API/worker service credentials are not verified. This strengthens the isolated privilege evidence but does not close DoD gate 22.
 
+## AC-12 live sweep cadence follow-up — 2026-10-29
+
+- Added a real BullMQ repeat-scheduler test to `planned-timeout-sweep.test.ts`. It waits for an initial empty sweep, then creates a terminal scan with a pending unit and measures until the next scheduled sweep expires it.
+- The full file passes **12/12** against isolated PostgreSQL and Redis. The tested bound is one configured 5-second interval plus the 5-second host-loop allowance.
+- This proves the PLANNED/no-child case only. Active-engine termination/confirmation remains open because no production adapter is registered; AC-12 remains PARTIAL.
+
 ## Known suite regression follow-up — 2026-10-29
 
 - Re-ran `email-boot-guard.test.ts` with `EMAIL_TRANSPORT=''` and the isolated Redis endpoint: **3/3 passed**. Updated its child-process environment to follow `TEST_REDIS_URL` or `EXEC_TEST_REDIS`, removing the prior hard-coded shared Redis DB 15 dependency.

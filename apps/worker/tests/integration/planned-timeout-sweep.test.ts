@@ -3,6 +3,8 @@
  * barrier. Legacy behaviour for scans without a plan is asserted alongside, because FR-040 says it must not move.
  */
 
+import { Queue, Worker } from 'bullmq';
+import { Redis } from 'ioredis';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { testDb as db, resetDb, seedPlans, closeDb } from '@webaudit/api/test-db';
 import { debit } from '@webaudit/api/credits';
@@ -11,7 +13,10 @@ import {
   finalizeUnitAndContinue,
   type ModuleResultFinalizer,
 } from '@webaudit/api/execution-runtime';
-import { createTimeoutSweepHandler } from '../../src/orchestrator/timeout-scheduler.js';
+import {
+  createTimeoutSweepHandler,
+  scheduleTimeoutSweep,
+} from '../../src/orchestrator/timeout-scheduler.js';
 
 const noopPublisher = { publish: () => Promise.resolve(1) };
 const MIN = 60_000;
@@ -213,6 +218,64 @@ describe('planned timeout sweep (U-1 T-U1-6/7)', () => {
       'RUNNING_PHASE_1',
     );
   });
+
+  it('self-heals a terminal scan unit within one live repeat-scheduler interval', async () => {
+    const redisAddress = process.env['EXEC_TEST_REDIS'] ?? '127.0.0.1:6399';
+    const [host, port] = redisAddress.split(':');
+    const connection = { host: host ?? '127.0.0.1', port: Number(port ?? 6399) };
+    const prefix = `timeout-cadence-${Math.random().toString(36).slice(2, 8)}`;
+    const queueName = 'webaudit-maintenance';
+    const queue = new Queue(queueName, { connection, prefix });
+    const publisher = new Redis(connection);
+    const previousInterval = process.env['TIMEOUT_SWEEP_INTERVAL_MS'];
+    process.env['TIMEOUT_SWEEP_INTERVAL_MS'] = '5000';
+    const worker = new Worker(
+      queueName,
+      createTimeoutSweepHandler({ db: db as never, publisher }),
+      { connection, prefix, concurrency: 1 },
+    );
+    let completedSweeps = 0;
+    worker.on('completed', () => {
+      completedSweeps += 1;
+    });
+
+    const sweepIntervalMs = 5_000;
+    const hostLoopBoundMs = 5_000;
+    try {
+      await scheduleTimeoutSweep(queue);
+      const startupDeadline = performance.now() + 10_000;
+      while (completedSweeps === 0 && performance.now() < startupDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+      expect(completedSweeps).toBeGreaterThan(0);
+
+      // Create the terminal scan only after one empty sweep completed, so this
+      // measures the wait for the next scheduled invocation.
+      const w = await world({ state: 'CANCELLED', startedAgoMs: 1_000 });
+      const p = await plan(w, 120 * MIN);
+      const pending = await unit(p.id, w.user.id, w.target.id);
+      const startedAt = performance.now();
+      const deadline = startedAt + sweepIntervalMs + hostLoopBoundMs;
+      let status = await statusOf(pending.id);
+      while (status === 'PLANNED' && performance.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        status = await statusOf(pending.id);
+      }
+
+      expect(status).toBe('REFUSED');
+      expect(performance.now() - startedAt).toBeLessThanOrEqual(sweepIntervalMs + hostLoopBoundMs);
+      expect((await db.scan.findUniqueOrThrow({ where: { id: w.scan.id } })).state).toBe(
+        'CANCELLED',
+      );
+    } finally {
+      await worker.close(true);
+      await queue.obliterate({ force: true });
+      await queue.close();
+      await publisher.quit();
+      if (previousInterval === undefined) delete process.env['TIMEOUT_SWEEP_INTERVAL_MS'];
+      else process.env['TIMEOUT_SWEEP_INTERVAL_MS'] = previousInterval;
+    }
+  }, 25_000);
 
   it('keeps a RUNNING non-passive unit non-terminal inside the hard-stop margin, then fails it TERMINATION_UNCONFIRMED', async () => {
     const w = await world({ startedAgoMs: 120 * MIN + 20_000 });
