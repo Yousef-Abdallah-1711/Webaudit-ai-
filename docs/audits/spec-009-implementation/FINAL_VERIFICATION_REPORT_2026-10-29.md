@@ -126,4 +126,9 @@ The reviewed SPEC 009 changes were committed as `b2f05c0d41d61f59f9cf385a63719f7
 - Temporary isolated Vitest workspace override set `REDIS_URL=redis://127.0.0.1:6391/15` and ran the five historical files serially — 5 files, 27/27 passed. The temporary workspace file was removed; the shared development Redis was not used.
 - `pnpm.cmd --filter @webaudit/worker typecheck` — exit 0 after startup composition.
 - Targeted ESLint on the five changed worker TypeScript files — exit 0 after correcting one strict-equality lint finding.
-- No real HTTP API, separately launched worker, Chrome, Playwright MCP/CLI, R2, k6, coverage, or full-suite evidence is claimed.
+- The full serial unit/contract/integration workspace passed 243 files / 1,851 tests. API typecheck, scoped ESLint, scoped Prettier, and `git diff --check` also passed.
+- No separately launched API+worker plan-dispatch lifecycle, Chrome, Playwright MCP/CLI, real R2, k6, or coverage evidence is claimed.
+
+### Latest delivery synchronization — 2026-10-29
+
+Scoped commit `1d6e8b80db7ce0c98b4b6f044d97290ec54795d0` (`fix(spec-009): compose worker adapters and close suite failures`) was pushed normally. Post-push `git fetch origin main`, local `HEAD`, `origin/main`, and `git ls-remote origin refs/heads/main` all agree on that hash. Pre-existing website/auth edits, `pnpm-lock.yaml`, `.next-final-cta-verify/`, and `logs/` were not staged or committed.

@@ -125,3 +125,11 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Full rerun after both changes passed all 243 files and 1,851 tests. Expected logs from negative DB, provider, cancellation, and failure-injection tests are not suite failures.
 - The 28-gate DoD remains **25 PARTIAL / 3 NOT STARTED / 0 PASS**. Remaining key gaps include production `resolvePlan`/API queue dispatch, registered production engine adapter, full privilege matrix, separate adverse/visual projects, browser, performance, coverage, and real R2 verification.
 - This update includes two API files in the SPEC 009 scope: `apps/api/src/app.ts` and `apps/api/tests/contract/admin.capabilities.test.ts`. Existing owner website/auth changes and lockfile/log/generated paths remain excluded.
+
+### Delivery update — 2026-10-29
+
+- Scoped commit `1d6e8b80db7ce0c98b4b6f044d97290ec54795d0` (`fix(spec-009): compose worker adapters and close suite failures`) was committed and pushed normally to `origin/main`.
+- Post-push `git fetch origin main`, local `HEAD`, `origin/main`, and `git ls-remote origin refs/heads/main` all agree on `1d6e8b80db7ce0c98b4b6f044d97290ec54795d0`.
+- Final checks: full isolated unit/contract/integration workspace 243/243 files and 1,851/1,851 tests; API typecheck; scoped ESLint; scoped Prettier; `git diff --check` all passed.
+- Only pre-existing website/auth work, `pnpm-lock.yaml`, `apps/web/.next-final-cta-verify/`, and `logs/` remain dirty/untracked; they were not staged or committed.
+- SPEC 009 remains PARTIALLY COMPLETE; see current DoD and remaining gaps above.
