@@ -109,3 +109,22 @@ Status vocabulary used here: **IMPLEMENTED-TESTED** = built and covered by tests
 | 047 | PARTIAL | T-U1-1/2/3/6/7/8 done; T-U1-4 decision function only; T-U1-5 not built; T-U1-9 `authorizeEffect` done, engine wrappers n/a; T-U1-10 AC-1..AC-20 partially covered |
 
 **Totals (49 FR items):** IMPLEMENTED-TESTED 27 · VERIFIED COMPLETE 2 · PARTIAL 13 · MISSING 4 · NOT APPLICABLE 3. **Zero requirement is claimed as end-to-end verified beyond the two invariants.**
+
+---
+
+## Cross-device independent delta — 2026-10-29
+
+The totals above are historical and are **not a current 49-FR recount**. Independent inspection confirms that multiple status notes in this file are stale: per-class BullMQ producers/consumers, the execution host, host loop, progress publishing, planned sweep/gate, and artifact-reaper scheduling now exist. The current worker entrypoint still does not compose the execution consumers; repository search found no production caller of `resolvePlan`; no production engine adapter is registered. Therefore file presence and the direct 16-test PG/Redis/BullMQ integration do not establish the end-to-end API→plan→worker path.
+
+Freshly verified in this continuation:
+
+| Requirement area | Evidence | Current disposition |
+|---|---|---|
+| FR-017/018 queue and durable execution path | `execution-runtime.test.ts` 16/16 on disposable PG, Redis and BullMQ; duplicate delivery and strict payload covered | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; production worker composition remains missing |
+| FR-021/022 safety and kill handling | same suite covers cancellation, operator kill, revoked grant and lease loss | IMPLEMENTED, DIRECT INTEGRATION VERIFIED; actual API/worker role composition remains open |
+| FR-027 progress | Redis messages observed on the execution-unit channel in the same suite | PARTIAL; authenticated client consumption/reconnect recovery unverified |
+| FR-047 U-1 | dispatch, hard-stop, deadline, planned expiry and ready-gate paths present; runtime integration suite passed | PARTIAL; AC-1…20 matrix, race/fairness and production worker wiring remain |
+| CORE-01 finalizer privileges | before-fix real-login test failed for API and generic worker; after additive correction role suite passed 7/7 on fresh migrated DB | PARTIAL; only finalizer/status subset covered, and existing dev DB not updated |
+| FR-031…035 artifact lifecycle | reaper handler and repeatable schedule are wired by static inspection | PARTIAL; R2 and end-to-end retention/reaper lifecycle not run |
+
+This session did not rebuild every FR row from source and tests; no replacement 49-FR count is asserted. Use `FINAL_VERIFICATION_REPORT_2026-10-29.md` for the complete A–Z evidence inventory and `DEFINITION_OF_DONE.md` for the 28-gate reassessment.

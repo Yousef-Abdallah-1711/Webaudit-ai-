@@ -65,3 +65,35 @@ The complete serial unit run **finished** (throwaway tmpfs Postgres, 1158 s): **
 
 ## Git
 Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified with `git ls-remote`). Owner working-tree files were not staged.
+
+---
+
+## Cross-device revalidation — 2026-10-29 (supersedes status claims above where they differ)
+
+**Current checkout**: `H:\Projects\Webaudit-ai-`, branch `main`, local HEAD and `origin/main` both `96df6fe72d1107c352e89b9aa6534d612077e4a7` at inspection. The configured valid repository is `Yousef-Abdallah-1711/Webaudit-ai-`; the pasted `Yousef-Abdallah-1711/motakamel` is not found. Website/auth edits, `pnpm-lock.yaml`, `apps/web/.next-final-cta-verify/`, and `logs/` were already present and are preserved.
+
+### Verified in this continuation
+
+- Started only isolated disposable Docker services: PostgreSQL `127.0.0.1:5545` (tmpfs, `--rm`) and Redis `127.0.0.1:6391` (`--rm`). Existing WebAudit and unrelated services were not stopped or modified.
+- Regenerated Prisma client; API, worker, and web typechecks passed; web build passed (in the prior part of this task chain).
+- Applied all 27 Prisma migrations on a fresh disposable test database.
+- Added `20261030130000_core01_restrict_finalizer_grants` after a real-login regression demonstrated that `fahes_api` and `fahes_worker_exec` retained finalizer EXECUTE from the earlier grants. The isolated role matrix passed 7/7 after the fix; before it, the test failed for those two roles as intended.
+- Found and corrected a host edge: an unregistered-engine refusal now supplies the configured plan gate. The ready-barrier regression passes.
+- Runtime integration against actual PostgreSQL, Redis, and BullMQ passed 16/16; worker typecheck passed after the host change.
+- Static inspection corrected stale claims: artifact reaper handler and scheduler are wired; per-class queue/host/progress code exists and is covered directly in integration tests.
+
+### Current blockers and unverified scope
+
+- Production `apps/worker/src/index.ts` does not start the SPEC 009 exec queue consumers/host; `resolvePlan` has no production caller in `apps/` by repository search. No API→plan→queue→production-worker scan path is proven.
+- No production engine adapter is registered (future SPEC 010–012). Do not count the deterministic test adapter as an engine.
+- The additional finalizer-revocation migration has only been applied to a fresh isolated database. Do not infer it is deployed to the existing shared `webaudit` database.
+- Full role-negative matrix, historical six-suite failure root cause, full unit/adverse/contract/Playwright runs, API/worker process integration, R2, Chrome, k6, and coverage remain unverified.
+- DoD reassessment is in `DEFINITION_OF_DONE.md`; dated A–Z evidence report is `FINAL_VERIFICATION_REPORT_2026-10-29.md`. Verdict remains PARTIALLY COMPLETE.
+
+### Next exact actions
+
+1. Review scoped diff and ensure no website changes, generated artifacts, or secrets are included.
+2. Run the role-isolation test on corrected fresh migrations and the runtime integration test on dedicated PG/Redis if any related code changes.
+3. Decide/implement safe SPEC 009 production composition without loading remote code or embedding SPEC 010–012 engines; add a real `startWorker` lifecycle test.
+4. Reproduce the six historical failures only with an explicitly isolated Redis URL (the checked-in workspace config currently hardcodes `localhost:6389/15`; do not run reset/queue suites against it by accident).
+5. Complete remaining gates and update matrices; commit and push only verified SPEC 009 paths after final review.

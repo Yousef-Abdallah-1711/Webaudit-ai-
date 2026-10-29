@@ -101,12 +101,18 @@ export function createExecutionJobHandler(
     const adapter = deps.registry.find(row.engineId);
     if (adapter === undefined) {
       // No engine here: fail closed and terminal rather than leave the unit PLANNED for the sweep.
+      const plan = await deps.db.scanPlan.findUnique({
+        where: { id: row.scanPlanId },
+        select: { scanId: true },
+      });
       const r = await finalizeUnitAndContinue(
         deps.db,
         row.id,
         row.idempotencyKey,
         { kind: 'REFUSED', reason: 'ENGINE_NOT_REGISTERED' },
-        gateOf(row),
+        plan?.scanId !== null && plan?.scanId !== undefined && deps.gateFor !== undefined
+          ? deps.gateFor(plan.scanId)
+          : { enqueueMaster: () => Promise.resolve() },
       );
       return r.finalize.replayed
         ? { result: 'IGNORED', reason: `STATUS_${r.finalize.status}` }

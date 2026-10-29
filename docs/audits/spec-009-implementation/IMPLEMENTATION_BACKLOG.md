@@ -55,3 +55,14 @@ T-U1-1 → P9-A10 (blocked) · **T-U1-2 → P9-A02 DONE** · T-U1-3 → P9-A12 �
 
 ## Status update — 2026-10-29 end of session
 Phase 1 items P9-A01..A05 and P9-C01 are DONE (tested). Phase 2 was unblocked by the owner's approvals (see `SESSION_PROGRESS.md`) and delivered at the service layer: P9-A10 (migration), A11, A12, B01 (transition table + CAS), B02 (finalizer), B07 (sweep/expiry), B08 (gate), B09 (`authorizeEffect`; engine wrappers pending), C10/C11 (evidence, artifacts, materialization). Remaining: P9-B03 (queue topology + dispatch), B04 (checkpoint wiring), B05 (step-0 wiring), B06 (host-loop helper), B10 (AC-1..AC-20 matrix), B11 (progress events), retention/reaper wiring, P9-X01 (secret guard reuse for engine writers), P9-X03 (non-superuser provisioning, still not done), then Phase 3. T-U1 map: T-U1-1 ✓, 2 ✓, 3 ✓, 4 partial, 5 ✗, 6 ✓, 7 ✓, 8 ✓, 9 partial, 10 partial.
+
+## Cross-device status correction — 2026-10-29
+
+The historical status paragraph above predates later implementation commits and is superseded by source inspection and the dated verification report. Current evidence changes:
+
+- P9-B03/B04/B05/B06/B11 have implementation code; queues, host, admission, deadline handling, effects, and progress were exercised in `apps/worker/tests/integration/execution-runtime.test.ts` (16/16) with disposable real PostgreSQL, Redis, and BullMQ. They are **not yet composed into `apps/worker/src/index.ts`**, and this direct test is not full-stack verification.
+- P9-C10 includes the artifact reaper handler and repeatable scheduler in the worker entrypoint by static inspection; R2 and retention/reaper lifecycle remain unverified. Remove the stale statement that the reaper is unscheduled only after fresh verification of retention lifecycle.
+- P9-X03 is partly met for the narrow DB privilege proof: actual non-superuser login roles tested finalizer/status boundaries (7/7). Full table/function/tenant/effect/lease matrix and real API/worker role connections remain outstanding.
+- Corrective migration `20261030130000_core01_restrict_finalizer_grants` is fresh-install tested only and not applied to the shared development DB.
+- A real gap remains: no production `resolvePlan` caller or API-to-queue path was found; engine adapter integration remains future SPEC 010–012.
+- Historical full-suite, adverse, contract, browser, performance, R2, and coverage results are not current evidence. See `FINAL_VERIFICATION_REPORT_2026-10-29.md` and the current DoD reassessment.

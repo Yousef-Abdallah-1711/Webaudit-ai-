@@ -239,12 +239,16 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
   });
 
   it('refuses a unit whose engine has no registered adapter (fail closed, terminal)', async () => {
-    const w = await makeRuntimeWorld();
+    const w = await makeRuntimeWorld({ scanState: 'RUNNING_PHASE_3' });
+    await db.moduleResult.create({
+      data: { scanId: w.scanId, module: 'SECURITY', state: 'COMPLETE', score: 80 },
+    });
     const a = await makeUnit(w, { engineId: 'engine.unknown' });
     start(w, createTestAdapter(w));
     await enqueueExecutionUnit(queues, { id: a.id, executionUnitClass: 'BROWSER', attempt: 1 });
     expect(await terminal(a.id)).toBe('REFUSED');
     expect(await reasonOf(a.id)).toMatchObject({ terminalReason: 'ENGINE_NOT_REGISTERED' });
+    expect(gateCalls).toContain(w.scanId);
   });
 
   it('runs a duplicate delivery exactly once (durable claim), whatever the queue does', async () => {

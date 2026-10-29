@@ -35,3 +35,40 @@ A gate is PASS only with the evidence named. Verdict values: PASS · PARTIAL · 
 | 28 | Git delivery | logical commits, normal push, remote verified | `git ls-remote` | local = remote | unpushed work | PARTIAL - commits local; push after the full-suite result |
 
 **Verdict rule**: SPEC 009 is VERIFIED COMPLETE only if gates 1-28 are PASS (or an approved exclusion is recorded). Current state (counted from the table, 2026-10-29 end of session): **9 PASS · 13 PARTIAL · 0 BLOCKED · 6 NOT STARTED** of 28 gates. **Verdict: NOT COMPLETE.**
+
+## Independent reassessment — 2026-10-29
+
+The table above is a historical snapshot and several descriptions are stale (notably queue/worker integration and artifact-reaper scheduling). This reassessment applies the stricter current evidence standard: prior test claims were not re-run unless explicitly named below, and direct test-process integration does not establish API/production-worker readiness.
+
+| # | Current status | Current evidence / remaining work |
+|---|---|---|
+| 1 | PARTIAL | Schema and historical resolver tests inspected; full current contract/adverse suite not rerun. |
+| 2 | PARTIAL | Versioned profile implementation inspected; full current profile suite not rerun. |
+| 3 | PARTIAL | Snapshot behavior documented in prior evidence; not rerun in this session. |
+| 4 | PARTIAL | Resolver/deadline code present; no production caller found for `resolvePlan`; full suite not rerun. |
+| 5 | PARTIAL | Graph implementation present; full graph/DB constraint suite not rerun. |
+| 6 | PARTIAL | Guarded transitions/finalizer present; new runtime integration passes, but full transition/race matrix not rerun. |
+| 7 | PARTIAL | Real isolated PG/Redis/BullMQ test passes 16/16; production worker does not start the execution consumers. |
+| 8 | PARTIAL | `createExecWorkers` and host exercised directly; production `startWorker` does not compose them and no production adapter is registered. |
+| 9 | PARTIAL | Plan authorization code present; grant-revocation runtime case passes; complete plan/dispatch scope mutation matrix not run. |
+| 10 | PARTIAL | Runtime admits through F07 in the integration test; actual API/worker roles are not used for that path. |
+| 11 | PARTIAL | Budget behavior exists in F07; concurrency/oversubscription load test not run. |
+| 12 | PARTIAL | Cancellation, kill switch, and grant revocation passed in direct real-infrastructure runtime tests; standard worker lifecycle unverified. |
+| 13 | PARTIAL | In-flight scan cancellation passed; API cancellation/refund behavior not exercised end to end. |
+| 14 | PARTIAL | Deadline, hard-stop, and planned expiry paths pass in runtime tests; AC-1…20 matrix and race/fairness checks not run. |
+| 15 | PARTIAL | Duplicate delivery, stale lease, and persisted RUNNING recovery covered; actual process restart/outage recovery not run. |
+| 16 | PARTIAL | Runtime produced two real evidence rows; full redaction/tenant/crash-contract suite not rerun in this session. |
+| 17 | PARTIAL | Reaper handler and scheduler are wired by static inspection; R2 and retention/reaper lifecycle remain unverified. |
+| 18 | PARTIAL | Materialization service/tests documented historically; current full concurrency/partial-result suite not rerun. |
+| 19 | PARTIAL | Idempotent finalizer exercised by integration; exact privilege fix is fresh-install tested but not applied to shared dev database. |
+| 20 | NOT STARTED | No unit/finalization audit-event rollback proof found. |
+| 21 | PARTIAL | Tenant-scoped service code inspected; no full IDOR/adverse matrix or real API attack path run. |
+| 22 | PARTIAL | Focused privilege regression covers finalizer and terminal status only; lease, tenant, effects, definer, SSRF, and secret matrix remains. |
+| 23 | NOT STARTED | No measured SPEC 009 performance baseline or k6 run. |
+| 24 | PARTIAL | Direct PG/Redis/BullMQ test is real integration; no API+worker process or HTTP scan lifecycle. Existing healthy containers were observed only. |
+| 25 | NOT STARTED | No real Chrome manual acceptance or browser evidence. |
+| 26 | PARTIAL | Worker typecheck and focused integration/adverse tests pass; full unit/adverse/contract/Playwright regression not run. |
+| 27 | PARTIAL | This dated report and reassessment were added; full 49-FR re-review and all stale historical documents remain. |
+| 28 | PARTIAL | Changes are local pending final review/commit/push; remote remains at the verified starting HEAD. |
+
+**Current reassessment: 25 PARTIAL · 3 NOT STARTED · 0 PASS. Verdict: NOT COMPLETE.** The zero PASS count is deliberate: the current DoD requires end-to-end evidence for each gate and this session did not perform the complete gate-specific verification for any one gate.
