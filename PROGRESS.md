@@ -1388,10 +1388,11 @@ verification on isolated PostgreSQL `127.0.0.1:5545` and Redis `127.0.0.1:6391`.
 `m009_core01_evidence_fence_test` applied all 35 migrations. Evidence tests passed 25/25; worker
 runtime 21/21; resolver/dispatch/host-loop/expiry/planned-sweep/gate checks 125/125; CORE-01
 schema 17/17; refund-staleness adverse checks 2/2. Added timeout-vs-finalization and late-dependent
-dispatch coverage. U-1 AC-5/12/17/19 still need explicit restart/progress and bounded-timing evidence;
-T-U1-10 remains open and SPEC 009
-remains NOT COMPLETE. Current implementation/report changes are local and uncommitted; preserve
-the pre-existing website/auth changes, lockfile, `.next-final-cta-verify/`, and `logs/`.
+dispatch coverage. The latest isolated worker case (1/1) also confirms mutable progress and duplicate
+delivery leave `ScanPlan.deadlineMs` unchanged; worker restart/recovery evidence is still open.
+AC-12/17/19 still need bounded-time, deployed clock-skew and production-engine evidence. T-U1-10
+remains open and SPEC 009 remains NOT COMPLETE. Continue from `docs/audits/spec-009-implementation/SESSION_PROGRESS.md`;
+preserve the website/auth edits, lockfile, `.next-final-cta-verify/`, and `logs/`.
 
 Use an explicit disposable DB/Redis for every database-backed suite. The worker runtime integration
 also requires `EXEC_TEST_REDIS=127.0.0.1:6391`; without it the test falls back to port 6399 and fails

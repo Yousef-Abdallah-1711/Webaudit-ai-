@@ -203,3 +203,9 @@ Pushed with a normal push: local `main` = `origin/main` = `2265019` (verified wi
 - Re-ran `resolver.test.ts`, `dispatch.test.ts`, `runtime.test.ts`, and `planned-timeout-sweep.test.ts`: **125/125**; `core01-schema.test.ts`: **17/17**; evidence tests: **25/25**; worker runtime: **21/21**; refund-staleness adverse checks: **2/2**. API and worker typechecks, Prisma validation, scoped ESLint, Prettier (changed TS/docs; SQL has no configured parser), and `git diff --check` pass.
 - Added timeout-sweep/finalization race coverage and a late dependent-unit refusal; the planned refund regression also verifies the fresh `ModuleResult` read after expiry processing.
 - T-U1-1 through T-U1-9 are checked. T-U1-10 remains open; AC-5/12/17/19 have explicit restart/progress, timing-bound, or production-engine gaps listed in `DEFINITION_OF_DONE.md`. SPEC 009 remains **NOT COMPLETE**. This continuation's changes are local/uncommitted, and existing website/auth edits, lockfile, generated output, and logs remain outside scope.
+
+## Progress/redelivery deadline check — 2026-10-29
+
+- Added an isolated integration assertion to the duplicate-delivery worker test: a mutable unit progress update and repeated queue delivery preserve the owning plan's immutable `deadlineMs`; the durable host claim count remains one.
+- The targeted case passed **1/1** against `m009_core01_evidence_fence_test` and isolated Redis `127.0.0.1:6391`. The first attempt exposed an ordering mistake in the test itself (waiting for RUNNING before enqueue); it was corrected, and the final run passed.
+- AC-5 is still PARTIAL until worker restart/recovery is exercised. AC-12/17/19 and T-U1-10 remain open. Production API plan resolution and SPEC 010–012 adapters remain absent. Current passive scans stay on the legacy route under the parallel-run boundary; no cutover behavior was invented.

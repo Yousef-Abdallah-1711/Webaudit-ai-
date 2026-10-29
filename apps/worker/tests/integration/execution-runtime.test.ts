@@ -422,9 +422,23 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
 
   it('runs a duplicate delivery exactly once (durable claim), whatever the queue does', async () => {
     const w = await makeRuntimeWorld();
+    const initialPlan = await db.scanPlan.findUniqueOrThrow({
+      where: { id: w.planId },
+      select: { deadlineMs: true },
+    });
     const a = await makeUnit(w, { configuration: beh({ kind: 'WAIT', ms: 400 }) });
     const h = createTestAdapter(w);
     start(w, h);
+    await queues
+      .queueFor('BROWSER')!
+      .add(EXEC_JOB_NAME, { executionUnitId: a.id }, { jobId: 'dup-0' });
+    await waitFor(async () => ((await statusOf(a.id)) === 'RUNNING' ? true : false));
+    // Progress is mutable execution state; it must not create a new plan or
+    // extend the immutable deadline that was resolved before dispatch.
+    await db.executionUnit.update({
+      where: { id: a.id },
+      data: { progressSnapshot: { phase: 'running', completed: 1, total: 3 } },
+    });
     for (const id of ['dup-1', 'dup-2', 'dup-3'])
       await queues
         .queueFor('BROWSER')!
@@ -432,6 +446,12 @@ describe('queue -> worker -> host -> finalizer on real infrastructure', () => {
     expect(await terminal(a.id)).toBe('COMPLETED');
     await new Promise((r) => setTimeout(r, 300));
     expect(await db.executionUnitHostClaim.count({ where: { executionUnitId: a.id } })).toBe(1);
+    expect(
+      await db.scanPlan.findUniqueOrThrow({
+        where: { id: w.planId },
+        select: { deadlineMs: true },
+      }),
+    ).toEqual(initialPlan);
   });
 });
 
