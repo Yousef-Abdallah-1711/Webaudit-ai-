@@ -6,3 +6,5 @@ export * from './failure-class.js';
 export * from './finalize.js';
 export * from './plan-gate.js';
 export * from './dispatch.js';
+export * from './progress.js';
+export * from './stop-reason.js';

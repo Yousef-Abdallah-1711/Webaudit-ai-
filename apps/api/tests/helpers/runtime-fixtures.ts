@@ -69,6 +69,8 @@ export interface UnitSpec {
   timeoutPolicyMs?: number;
   grant?: string | null;
   attempt?: number;
+  configuration?: unknown;
+  engineId?: string;
 }
 
 export async function makeUnit(
@@ -83,7 +85,7 @@ export async function makeUnit(
   await testDb.$executeRawUnsafe(
     `INSERT INTO "ExecutionUnit" (id,"scanPlanId","userId","targetId","targetAuthorizationId","executionUnitClass","engineId",configuration,priority,
        "timeoutPolicyMs","retryPolicy","requiresSafetyCheckpoint","idempotencyKey",status,"failureClass",attempt)
-     VALUES ($1,$2,$3,$4,$5,$6::"ExecutionUnitClass",'engine.x','{}'::jsonb,0,$7,'{}'::jsonb,$8,$9,$10::"ExecutionUnitStatus",$11::"FailureClass",$12)`,
+     VALUES ($1,$2,$3,$4,$5,$6::"ExecutionUnitClass",$13,$14::jsonb,0,$7,'{}'::jsonb,$8,$9,$10::"ExecutionUnitStatus",$11::"FailureClass",$12)`,
     id,
     w.planId,
     w.userId,
@@ -96,6 +98,8 @@ export async function makeUnit(
     o.status ?? 'PLANNED',
     o.failureClass ?? null,
     attempt,
+    o.engineId ?? 'engine.x',
+    JSON.stringify(o.configuration ?? {}),
   );
   return { id, key: `${id}:${String(attempt)}`, attempt };
 }
