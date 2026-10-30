@@ -201,6 +201,26 @@ Planning-only amendment authorized by the project owner; implementation tasks be
   AC-13 now also covers the timeout sweep winning during a registered module-result finalizer and concurrent gate calls: the worker state-machine's database-clock CAS alone may move `RUNNING_PHASE_3 -> RUNNING_MASTER`, and only its winner enqueues synthesis. The real worker composition test verifies the persisted state and `alreadyTransitioned` queue flag. Both suites pass 39/39 combined (`planned-timeout-sweep.test.ts`, 17/17; `execution-runtime.test.ts`, 22/22). T-U1-10 remains unchecked until production-engine/deployed-clock evidence is complete.
   AC-12 now also exercises a RUNNING BROWSER test-adapter unit through the live repeat scheduler and confirms expiry within the sweep/host-loop bound; production-engine termination evidence remains open.
 
+## Phase 12 — Production integration and verification (added 2026-10-30 from `docs/audits/spec-009-implementation/CURRENT_STATUS_AND_NEXT_EXECUTION_PLAN.md` section O)
+
+Added by the status audit; historical task ids and evidence above are unchanged. A box is checked only with named evidence.
+
+- [ ] N01 (P0, BLOCKED on spec/owner decisions) Flagged production plan creation from `/scans`. NOT implemented. Two undecided points found while reading the code (2026-10-30): (a) a `PASSIVE_HTTP` unit can only be refused from `PLANNED` (DB trigger/`fahes_finalize_unit` allow `PLANNED -> COMPLETED` for `TELEMETRY` only), and nothing in production walks a passive unit through ADMITTED/DISPATCHED/RUNNING, so a flag-on plan containing passive units would sit at the plan-unit barrier until the deadline; the contract does not say who completes passive units; (b) the `/scans` request has no profile field and the CUSTOM configuration maps every domain to `PASSIVE_HTTP`, so production requests cannot express non-passive work. Also: `enqueueEligibleUnits` lives in `apps/worker` (the API may not import it), so enqueue belongs to a worker-side hook after the scan starts (`Scan.startedAt` must be set before a non-passive unit dispatches). Needs: owner/spec decision on passive-unit completion and on request-to-ScanConfiguration mapping.
+- [x] N02 (P0) Production adapter registry: empty by default, explicit registration, contract-validated (`createAdapterRegistry`), startup log of registered engine ids or "no execution engines registered", exec queues only when at least one adapter exists. Evidence: `apps/worker/tests/unit/production-adapter-boundary.test.ts` (8 tests: empty default, explicit registration, duplicate, non-file module, outside-workspace module, margin, no-dispatch-queue class, no production `src` imports of test helpers or the deterministic test adapter) and `apps/worker/tests/integration/production-adapter-registry-boot.test.ts` (real boot against Redis/PostgreSQL: `executionQueues`/`executionWorkers` undefined). The API-side planning registry remains `passiveBaselineRegistry()` (no test engine); the invariant that both registries agree is not yet enforced by a test.
+- [ ] N03 (P1, PARTIAL) Coverage read model. Done: `GET /scans/:id/coverage` (tenant-scoped, facts only, no engine ids/configuration/credential refs, empty for legacy scans) with `apps/api/tests/contract/scans.coverage.test.ts` (4 tests). Not done: report synthesis and UI consumption of coverage; per-unit "why" beyond the recorded `skippedReason`/`terminalReason`/`failureClass`.
+- [ ] N04 (P1) Authenticated progress recovery: reconnect ordering, no-missed-terminal, authorization on both channels (FR-027/027a). Not started.
+- [ ] N05 (P1) Switch the REVERIFY runner to plans behind a flag (FR-029). Not started; depends on N01.
+- [ ] V01 (P1) Real API + worker as separate processes under non-superuser roles (production compose pattern). Not started. A standalone superuser-role start/stop and Chromium smoke were done in `docs/handoffs/NEW_DEVICE_RECOVERY_HANDOFF_2026-10-30.md`; that is not this task.
+- [ ] V02 (P1) HTTP lifecycle create -> plan -> dispatch -> finalize -> results -> cancel -> refund. Not started; depends on N01.
+- [ ] V03 (P2) Authorization expire/narrow/revoke matrix. Not started.
+- [ ] V04 (P2) Status x cause race matrix. Not started.
+- [ ] V05 (P2) Database and Redis outage recovery (failure injection on isolated infrastructure). Not started.
+- [ ] V06 (P3) Deployed clock-skew evidence (AC-17). BLOCKED: needs a deployed environment with NTP evidence.
+- [ ] V07 (P3) k6 / sustained load with resource sampling. Not started; k6 not available here.
+- [ ] V08 (P3) 24-step Chrome acceptance at three viewports; visual parity (17 TODO comparisons). Not started.
+- [ ] V09 (P3) Instrumented coverage run and full-regression closure. Coverage never run.
+- [ ] D01 (P2) R2/S3 lifecycle (create, retention delete, reaper) against real R2 or an owner-approved S3-compatible emulator. BLOCKED: no credentials / emulator decision.
+
 ## Explicitly NOT performed (per this feature's own charter)
 
 - `/speckit-implement` — NOT run. No application code, route, service file, or Prisma migration
