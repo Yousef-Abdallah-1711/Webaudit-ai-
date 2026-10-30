@@ -56,6 +56,7 @@ import { quoteFor } from './quote.js';
 import { assertRepositoryConnectionLive } from './repos.js';
 import type { ScanPhaseProducer } from '../queue/scan-phase-producer.js';
 import type { AdmissionGate } from '../queue/admission-gate.js';
+import { resolveScanPlan, selectProfile, type PlanIntegration } from './plan-integration.js';
 
 export class PlanUpgradeRequiredError extends Error {
   override readonly name = 'PlanUpgradeRequiredError';
@@ -99,6 +100,8 @@ export interface CreateScanInput {
   readonly targetId: string;
   readonly modules: readonly ModuleType[];
   readonly acceptedQuote: number;
+  /** N01 (DEC-072): optional, server-validated profile name; absent means the documented default. */
+  readonly profile?: string | undefined;
 }
 
 export interface CreateScanDeps {
@@ -123,6 +126,8 @@ export interface CreateScanDeps {
    * sequential requests, not concurrent ones. See `admission-gate.ts`.
    */
   readonly admissionGate?: AdmissionGate;
+  /** N01 (DEC-073): present only when `SCAN_EXECUTION_PLANS=on`; absent leaves the legacy flow unchanged. */
+  readonly planIntegration?: PlanIntegration;
 }
 
 export interface CreatedScan {
@@ -187,6 +192,14 @@ export async function createScan(
     });
     throw new PlanUpgradeRequiredError(target.inputType, requiredTier);
   }
+
+  // N01: validate the requested profile before anything is reserved or charged (refusals here cost nothing).
+  const selectedProfile = await selectProfile(
+    db,
+    deps.planIntegration,
+    input.profile,
+    input.modules,
+  );
 
   // Resolve the effective plan priority before checking capacity. This keeps
   // admission independent of the order in which lower-tier requests arrived.
@@ -358,6 +371,25 @@ export async function createScan(
     }
 
     const charged = created;
+
+    // N01: persist the INITIAL plan after the scan row and debit exist and before anything is enqueued. A refusal is a
+    // platform-side outcome: refund in full and fail the scan exactly like an enqueue failure (existing policy).
+    if (deps.planIntegration !== undefined && selectedProfile !== null) {
+      try {
+        await resolveScanPlan(db, deps.planIntegration, created.id, target.id, selectedProfile);
+      } catch (error) {
+        if (debited !== undefined) await refund(db, debited.id, 'scan:plan-refused');
+        await db.scan.updateMany({
+          where: { id: created.id, state: 'QUEUED' },
+          data: {
+            state: 'FAILED',
+            completedAt: new Date(),
+            failureReason: 'This scan could not be planned. No charge was made.',
+          },
+        });
+        throw error;
+      }
+    }
 
     try {
       // The first job carries only RUNNING_PHASE_1's own subset (everything but

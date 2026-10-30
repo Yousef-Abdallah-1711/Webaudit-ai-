@@ -60,6 +60,13 @@ import {
 import { scanCoverageSummary } from '../services/evidence/materialize.js';
 import { quoteFor } from '../services/intake/quote.js';
 import {
+  PlanRefusedError,
+  ProfileUnavailableError,
+  UnsupportedProfileError,
+  type PlanIntegration,
+} from '../services/intake/plan-integration.js';
+import { passiveBaselineRegistry } from '../services/planning/index.js';
+import {
   RepositoryConnectionMissingError,
   RepositoryConnectionRevokedError,
 } from '../services/intake/repos.js';
@@ -93,6 +100,8 @@ export interface ScanRoutesDeps {
   checkRepositoryConnection?: (db: PrismaClient, userId: string) => Promise<void>;
   /** T040-closure seam — see `CreateScanDeps.admissionGate`. */
   admissionGate?: AdmissionGate;
+  /** N01: overrides the `SCAN_EXECUTION_PLANS` flag in tests. `null` forces the legacy flow. */
+  planIntegration?: PlanIntegration | null;
 }
 
 const quoteBody = z.object({
@@ -104,6 +113,7 @@ const createBody = z.object({
   targetId: z.string().trim().min(1),
   modules: z.array(z.enum(MODULE_TYPES)).min(1),
   acceptedQuote: z.number().int().nonnegative(),
+  profile: z.string().trim().min(1).max(63).optional(),
 });
 
 /** FR-040: every field optional — a partial answer is still an answer. */
@@ -152,6 +162,14 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
   const cancelPublisher = deps.cancelPublisher ?? createCancelPublisher();
   const resolveRequiredControlLevel = deps.resolveRequiredControlLevel ?? (() => 'NONE' as const);
   const admissionGate = deps.admissionGate ?? createRedisAdmissionGate(QUEUE_NAMES.scanPhase);
+  // N01 / DEC-073: the SPEC 009 plan path is OFF unless the operator sets SCAN_EXECUTION_PLANS=on (exact match).
+  const planIntegration: PlanIntegration | undefined =
+    deps.planIntegration === null
+      ? undefined
+      : (deps.planIntegration ??
+        (process.env['SCAN_EXECUTION_PLANS'] === 'on'
+          ? { registry: passiveBaselineRegistry() }
+          : undefined));
 
   router.use(requireAuth);
 
@@ -181,6 +199,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
           producer,
           resolveRequiredControlLevel,
           admissionGate,
+          ...(planIntegration === undefined ? {} : { planIntegration }),
           ...(deps.checkRepositoryConnection === undefined
             ? {}
             : { checkRepositoryConnection: deps.checkRepositoryConnection }),
@@ -193,6 +212,24 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
     } catch (error) {
       if (error instanceof TargetNotAvailableError) {
         res.status(404).json(NOT_FOUND);
+        return;
+      }
+      if (error instanceof UnsupportedProfileError) {
+        res.status(422).json({ error: { code: 'UNSUPPORTED_PROFILE', message: error.message } });
+        return;
+      }
+      if (error instanceof ProfileUnavailableError) {
+        res.status(422).json({
+          error: {
+            code: 'PROFILE_UNAVAILABLE',
+            message: error.message,
+            details: { reason: error.reason },
+          },
+        });
+        return;
+      }
+      if (error instanceof PlanRefusedError) {
+        res.status(422).json({ error: { code: 'PLAN_REFUSED', message: error.message } });
         return;
       }
       if (error instanceof DuplicateScanError) {
