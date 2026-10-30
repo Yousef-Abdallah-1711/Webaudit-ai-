@@ -40,14 +40,42 @@ const styles = {
   scoreWrap: 'grid place-items-center',
   noScore: 'mt-2 font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
   areasList: 'flex flex-col gap-1.5',
-  summaryText: 'm-0 font-sans text-[1rem] leading-6 font-normal text-text-primary max-w-[70ch] text-pretty',
+  summaryText:
+    'm-0 font-sans text-[1rem] leading-6 font-normal text-text-primary max-w-[70ch] text-pretty',
   statRow: 'mt-4',
   tabs: 'flex gap-0.5 border-solid border-x-0 border-t-0 border-b-hairline border-b-border-default mb-4 flex-wrap',
   tab: 'bg-transparent border-0 border-solid border-b-2 border-b-transparent mb-[-0.0625rem] px-[0.875rem] py-2.5 font-sans text-[0.875rem] font-normal text-text-secondary cursor-pointer',
   tabActive: '!border-b-accent !font-semibold !text-text-strong',
   issueList: 'flex flex-col gap-3',
   empty: 'font-sans text-[0.875rem] leading-5 font-normal text-text-muted',
+  coverageList: 'm-0 mt-3 flex list-none flex-col gap-1.5 p-0',
+  coverageItem: 'font-sans text-[0.875rem] leading-5 font-normal text-text-secondary',
 } as const;
+
+const COVERAGE_STATUSES = [
+  'PLANNED',
+  'SKIPPED',
+  'BLOCKED',
+  'ADMITTED',
+  'REFUSED',
+  'DISPATCHED',
+  'RUNNING',
+  'COMPLETED',
+  'FAILED',
+  'CANCELLED',
+  'KILLED',
+] as const;
+const COVERAGE_CLASSES = [
+  'PASSIVE_HTTP',
+  'SOURCE_STATIC',
+  'BROWSER',
+  'CRAWLER',
+  'SOURCE_EXECUTION',
+  'ACTIVE_SECURITY',
+  'AUTHENTICATED_WORKFLOW',
+  'LOAD_CAPACITY',
+  'TELEMETRY',
+] as const;
 
 const AREA_TABS = ['ALL', 'PERFORMANCE', 'SECURITY', 'UI', 'TESTING', 'SEO'] as const;
 
@@ -185,8 +213,18 @@ export default function ReportPage(): React.ReactElement {
     );
   }
 
-  const list =
-    area === 'ALL' ? report.issues : report.issues.filter((i) => i.module === area);
+  const coverageStatusLabel = (status: string): string =>
+    (COVERAGE_STATUSES as readonly string[]).includes(status)
+      ? t(`report_coverage_status_${status as (typeof COVERAGE_STATUSES)[number]}`)
+      : status;
+  const coverageClassLabel = (unitClass: string): string =>
+    (COVERAGE_CLASSES as readonly string[]).includes(unitClass)
+      ? t(`report_coverage_class_${unitClass as (typeof COVERAGE_CLASSES)[number]}`)
+      : unitClass;
+  const coveragePlans = report.coverage ?? [];
+  const coverageUnits = coveragePlans.flatMap((plan) => plan.nonCompletedUnits);
+  const coverageCompleted = coveragePlans.reduce((n, plan) => n + plan.completedUnits.length, 0);
+  const list = area === 'ALL' ? report.issues : report.issues.filter((i) => i.module === area);
 
   const counts = {
     critical: report.issues.filter((i) => i.severity === 'CRITICAL').length,
@@ -221,7 +259,9 @@ export default function ReportPage(): React.ReactElement {
           <Card padding={20}>
             <div className={styles.scoreWrap}>
               <ScoreArc score={report.score ?? 0} delta={null} />
-              {report.score === null && <div className={styles.noScore}>{t('report_no_score')}</div>}
+              {report.score === null && (
+                <div className={styles.noScore}>{t('report_no_score')}</div>
+              )}
             </div>
           </Card>
           <Card padding={20} title={t('report_areas')}>
@@ -268,6 +308,31 @@ export default function ReportPage(): React.ReactElement {
               />
             </div>
           </Card>
+          {coverageUnits.length > 0 ? (
+            <Card
+              padding={24}
+              title={t('report_coverage_title')}
+              style={{ marginBottom: 'var(--space-4)' }}
+            >
+              <p className={styles.summaryText}>
+                {t('report_coverage_summary', {
+                  completed: coverageCompleted,
+                  total: coverageCompleted + coverageUnits.length,
+                })}
+              </p>
+              <ul className={styles.coverageList} data-testid="coverage-gaps">
+                {coverageUnits.map((unit) => (
+                  <li key={unit.id} className={styles.coverageItem}>
+                    {t('report_coverage_gap', {
+                      unit: coverageClassLabel(unit.executionUnitClass),
+                      status: coverageStatusLabel(unit.status),
+                      reason: unit.reason ?? t('report_coverage_no_reason'),
+                    })}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
           <div className={styles.tabs}>
             {AREA_TABS.map((tab) => (
               <button

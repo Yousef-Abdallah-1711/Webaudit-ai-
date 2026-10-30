@@ -181,3 +181,60 @@ describe('GET /scans/:id/coverage', () => {
     await request(app).get('/scans/anything/coverage').expect(401);
   });
 });
+
+describe('GET /scans/:id/report carries the same coverage (N03)', () => {
+  it('includes partial coverage with reasons, in the same shape as the coverage endpoint, without leaks', async () => {
+    const { token, userId } = await signIn('cov-report@example.com');
+    const scan = await makeScan(userId);
+    await makePlanWithUnits(userId, scan.id, scan.targetId);
+    const report = await request(app).get(`/scans/${scan.id}/report`).set(auth(token)).expect(200);
+    const endpoint = await request(app)
+      .get(`/scans/${scan.id}/coverage`)
+      .set(auth(token))
+      .expect(200);
+    expect((report.body as { report: { coverage: unknown } }).report.coverage).toEqual(
+      (endpoint.body as { coverage: unknown }).coverage,
+    );
+    const text = JSON.stringify(report.body);
+    for (const leaked of [
+      'config-must-not-leak',
+      'credential-ref-must-not-leak',
+      'browser.engine',
+      'probe.engine',
+    ]) {
+      expect(text).not.toContain(leaked);
+    }
+  });
+
+  it('is an empty list for a legacy scan and for failed or cancelled scans without a plan', async () => {
+    const { token, userId } = await signIn('cov-report-legacy@example.com');
+    const legacy = await makeScan(userId, 'QUEUED');
+    const res = await request(app).get(`/scans/${legacy.id}/report`).set(auth(token)).expect(200);
+    expect((res.body as { report: { coverage: unknown[] } }).report.coverage).toEqual([]);
+    for (const state of ['FAILED', 'CANCELLED'] as const) {
+      await testDb.scan.update({
+        where: { id: legacy.id },
+        data: { state, completedAt: new Date() },
+      });
+      const r = await request(app).get(`/scans/${legacy.id}/report`).set(auth(token)).expect(200);
+      expect((r.body as { report: { coverage: unknown[] } }).report.coverage).toEqual([]);
+    }
+  });
+
+  it('keeps coverage of a cancelled scan with a plan, and hides it from other tenants', async () => {
+    const owner = await signIn('cov-report-own@example.com');
+    const scan = await makeScan(owner.userId);
+    await makePlanWithUnits(owner.userId, scan.id, scan.targetId);
+    await testDb.scan.update({
+      where: { id: scan.id },
+      data: { state: 'CANCELLED', completedAt: new Date() },
+    });
+    const mine = await request(app)
+      .get(`/scans/${scan.id}/report`)
+      .set(auth(owner.token))
+      .expect(200);
+    expect((mine.body as { report: { coverage: unknown[] } }).report.coverage).toHaveLength(1);
+    const other = await signIn('cov-report-other@example.com');
+    await request(app).get(`/scans/${scan.id}/report`).set(auth(other.token)).expect(404);
+  });
+});

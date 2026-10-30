@@ -57,7 +57,7 @@ import {
   QuoteMismatchError,
   createScan,
 } from '../services/intake/create-scan.js';
-import { scanCoverageSummary } from '../services/evidence/materialize.js';
+import { readScanCoverage } from '../services/evidence/scan-coverage-read.js';
 import { quoteFor } from '../services/intake/quote.js';
 import {
   PlanRefusedError,
@@ -398,30 +398,7 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
       res.status(404).json(NOT_FOUND);
       return;
     }
-    const plans = await db.scanPlan.findMany({
-      where: { scanId: scan.id, userId, state: 'RESOLVED' },
-      orderBy: { resolvedAt: 'asc' },
-      select: { id: true, kind: true },
-    });
-    const coverage = await Promise.all(
-      plans.map(async (plan) => {
-        const summary = await scanCoverageSummary(db, plan.id, userId);
-        return {
-          planId: plan.id,
-          kind: plan.kind,
-          completedUnits: summary.completedUnits.map((u) => ({
-            id: u.id,
-            executionUnitClass: u.executionUnitClass,
-          })),
-          nonCompletedUnits: summary.nonCompletedUnits.map((n) => ({
-            id: n.unit.id,
-            executionUnitClass: n.unit.executionUnitClass,
-            status: n.status,
-            reason: n.reason,
-          })),
-        };
-      }),
-    );
+    const coverage = await readScanCoverage(db, scan.id, userId);
     res.status(200).json({ coverage });
   });
 

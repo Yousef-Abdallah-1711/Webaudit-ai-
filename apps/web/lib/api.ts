@@ -408,12 +408,26 @@ export interface ReportIssue {
   readonly fixable: boolean;
 }
 
+export interface ReportCoveragePlan {
+  readonly planId: string;
+  readonly kind: string;
+  readonly completedUnits: readonly { readonly id: string; readonly executionUnitClass: string }[];
+  readonly nonCompletedUnits: readonly {
+    readonly id: string;
+    readonly executionUnitClass: string;
+    readonly status: string;
+    readonly reason: string | null;
+  }[];
+}
+
 export interface Report {
   readonly scanId: string;
   readonly state: string;
   readonly score: number | null;
   readonly summary: string | null;
   readonly areas: readonly ReportArea[];
+  /** N03: absent from older servers; empty for a legacy scan. */
+  readonly coverage?: readonly ReportCoveragePlan[];
   readonly issues: readonly ReportIssue[];
 }
 

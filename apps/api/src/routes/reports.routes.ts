@@ -32,6 +32,7 @@ import { SEVERITIES, ISSUE_STATES } from '@webaudit/types';
 import type { PrismaClient } from '../../prisma/generated/client/index.js';
 import { requireAuth, type AuthedRequest } from '../middleware/auth.middleware.js';
 import { listFailingEvidenceForScan } from '../services/issues/attempts.js';
+import { readScanCoverage } from '../services/evidence/scan-coverage-read.js';
 import { ReportNotExportableError, exportReport } from '../services/storage/export.js';
 
 const NOT_FOUND_SCAN = { error: { code: 'NOT_FOUND', message: 'No such scan.' } };
@@ -99,9 +100,13 @@ export function reportsRoutes(db: PrismaClient): Router {
       include: { moduleResult: { select: { module: true } } },
     });
 
+    // N03: additive; empty for a legacy scan. Facts only, tenant-scoped, no engine ids or configuration.
+    const coverage = await readScanCoverage(db, scan.id, userId);
+
     res.status(200).json({
       report: {
         scanId: scan.id,
+        coverage,
         state: scan.state,
         // Never coerced — null means no area produced a score (FR-053).
         score: scan.overallScore,
