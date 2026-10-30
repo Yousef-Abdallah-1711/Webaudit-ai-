@@ -1,0 +1,214 @@
+# FAHES / WebAudit AI — disposable Docker ACCEPTANCE stack (not a deployment).
+#
+# Builds and runs the real api / worker / web images from the SAME Dockerfiles as production, with throwaway
+# infrastructure: its own PostgreSQL + Redis + volumes, a MinIO S3 emulator (DEC-075: emulator acceptance only, never R2),
+# and a loopback fixture site so a scan has a safe target. It never touches the shared development stack
+# (webaudit-postgres / webaudit-redis / pgbouncer) or any other Compose project.
+#
+# Differences from docker-compose.production.yml, all deliberate and all non-production:
+#   - NODE_ENV=development (SAFE_NET_ALLOW_TARGETS, the fixture-target escape hatch, is refused in production);
+#   - no TLS proxy: api and web publish 127.0.0.1-only ports;
+#   - AI_MODE=fixtures so legacy module runs are deterministic;
+#   - SCAN_EXECUTION_PLANS is a variable (default off) so BOTH the legacy and the SPEC 009 path can be accepted;
+#   - extra services: minio, fixture (no mail server: see EMAIL_TRANSPORT note below).
+# Runtime identities are the production ones: the provisioner creates webaudit_api_runtime / webaudit_worker_runtime /
+# webaudit_orchestrator_runtime and api/orchestrator connect as them (never as the administrator).
+#
+# Usage (see infrastructure/docker-acceptance.md):
+#   sh infrastructure/acceptance-env.sh                      # writes .env.acceptance with random throwaway secrets
+#   docker compose -f infrastructure/docker-compose.acceptance.yml --env-file .env.acceptance up -d --build
+#   docker compose -f infrastructure/docker-compose.acceptance.yml --env-file .env.acceptance down      # keeps volumes
+#   docker compose -f infrastructure/docker-compose.acceptance.yml --env-file .env.acceptance down -v   # disposable reset
+
+name: fahes-accept
+
+x-app-env: &app-env
+  NODE_ENV: development
+  AI_MODE: fixtures
+  REDIS_URL: redis://redis:6379
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?run infrastructure/acceptance-env.sh}
+  JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?run infrastructure/acceptance-env.sh}
+  JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?run infrastructure/acceptance-env.sh}
+  EMAIL_FROM: acceptance@fahes.test
+  # No EMAIL_TRANSPORT: non-production uses the console mailer (verification links are logged by the api). The SMTP client
+  # requires implicit TLS by design and Mailpit offers none, so the SMTP path is NOT exercised here.
+  SAFE_NET_ALLOW_TARGETS: http://127.0.0.1:8080
+  SCAN_EXECUTION_PLANS: ${SCAN_EXECUTION_PLANS:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: webaudit
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run infrastructure/acceptance-env.sh}
+      POSTGRES_DB: webaudit
+    volumes: [pg-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U webaudit -d webaudit']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    volumes: [redis-data:/data]
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [backend]
+
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?run infrastructure/acceptance-env.sh}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?run infrastructure/acceptance-env.sh}
+    volumes: [minio-data:/data]
+    ports: ['127.0.0.1:${ACCEPT_MINIO_PORT:-9191}:9000']
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [backend]
+
+  migrate:
+    image: fahes-accept-api:local   # built by the api service below
+    restart: 'no'
+    depends_on: { postgres: { condition: service_healthy } }
+    environment:
+      DATABASE_URL: postgresql://webaudit:${POSTGRES_PASSWORD}@postgres:5432/webaudit
+    entrypoint: ['pnpm', 'exec', 'prisma', 'migrate', 'deploy', '--schema', 'prisma/schema.prisma']
+    working_dir: /app/apps/api
+    networks: [backend]
+
+  provision-runtime-roles:
+    image: postgres:16-alpine
+    restart: 'no'
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://webaudit:${POSTGRES_PASSWORD}@postgres:5432/webaudit
+      API_DB_PASSWORD: ${API_DB_PASSWORD:?run infrastructure/acceptance-env.sh}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?run infrastructure/acceptance-env.sh}
+      ORCHESTRATOR_DB_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD:?run infrastructure/acceptance-env.sh}
+    entrypoint: ['/bin/sh', '-ec']
+    command: ['psql "$$MIGRATION_DATABASE_URL" --set ON_ERROR_STOP=1 --file /provision-runtime-db-roles.sql']
+    volumes: [./provision-runtime-db-roles.sql:/provision-runtime-db-roles.sql:ro]
+    networks: [backend]
+
+  # First-time bootstrap (deploy.md "First-time bootstrap"): a freshly migrated database has no Plan rows. Runs as the API login
+  # so it also proves the bootstrap works under the least-privilege grants. Idempotent.
+  seed:
+    image: fahes-accept-api:local
+    restart: 'no'
+    depends_on:
+      provision-runtime-roles: { condition: service_completed_successfully }
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://webaudit_api_runtime:${API_DB_PASSWORD}@postgres:5432/webaudit
+    entrypoint: ['node', '--import', 'tsx', 'scripts/seed.ts']
+    working_dir: /app
+    networks: [backend]
+
+  api:
+    image: fahes-accept-api:local
+    build: { context: .., dockerfile: apps/api/Dockerfile }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      provision-runtime-roles: { condition: service_completed_successfully }
+      seed: { condition: service_completed_successfully }
+    environment:
+      <<: *app-env
+      PORT: '3001'
+      DATABASE_URL: postgresql://webaudit_api_runtime:${API_DB_PASSWORD}@postgres:5432/webaudit
+      API_URL: http://127.0.0.1:${ACCEPT_API_PORT:-4530}
+      WEB_URL: http://127.0.0.1:${ACCEPT_WEB_PORT:-4531}
+      TRUST_PROXY_HOPS: '0'
+    ports: ['127.0.0.1:${ACCEPT_API_PORT:-4530}:3001']
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 6
+    networks: [backend, frontend]
+
+  # The worker process IS the orchestrator (phases, sweeps, plan-unit barrier, passive completion): it connects as the
+  # dedicated orchestrator login. The fixture site shares its network namespace so the scan target is 127.0.0.1:8080
+  # from the worker's point of view (the SSRF guard allows only the exact allow-listed loopback origin).
+  worker:
+    image: fahes-accept-worker:local
+    build: { context: .., dockerfile: apps/worker/Dockerfile }
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      provision-runtime-roles: { condition: service_completed_successfully }
+    environment:
+      <<: *app-env
+      DATABASE_URL: postgresql://webaudit_orchestrator_runtime:${ORCHESTRATOR_DB_PASSWORD}@postgres:5432/webaudit
+      API_URL: http://api:3001
+      WEB_URL: http://127.0.0.1:${ACCEPT_WEB_PORT:-4531}
+      WORKER_ID: worker-accept-1
+      WORKER_HEARTBEAT_INTERVAL_MS: '15000'
+      WORKER_HEARTBEAT_TTL_MS: '45000'
+      WORKSPACE_BASE_DIR: /app/.workspaces
+    volumes: [worker-workspaces:/app/.workspaces]
+    networks: [backend, egress]
+
+  fixture:
+    image: nginx:1.27-alpine
+    network_mode: 'service:worker'
+    depends_on: { worker: { condition: service_started } }
+    configs:
+      - source: fixture-nginx
+        target: /etc/nginx/conf.d/default.conf
+
+  web:
+    image: fahes-accept-web:local
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:${ACCEPT_API_PORT:-4530}
+    depends_on: { api: { condition: service_healthy } }
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+      API_URL: http://127.0.0.1:${ACCEPT_API_PORT:-4530}
+    ports: ['127.0.0.1:${ACCEPT_WEB_PORT:-4531}:3000']
+    healthcheck:
+      test: ['CMD', 'node', '-e', "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      start_period: 20s
+      retries: 6
+    networks: [frontend]
+
+configs:
+  fixture-nginx:
+    content: |
+      server {
+        listen 127.0.0.1:8080;
+        location / {
+          default_type text/html;
+          return 200 '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Fixture</title><meta name="description" content="Acceptance fixture page"></head><body><h1>Fixture site</h1><p>Static page for acceptance scans.</p></body></html>';
+        }
+      }
+
+volumes:
+  pg-data:
+  redis-data:
+  minio-data:
+  worker-workspaces:
+
+networks:
+  backend:
+    internal: true
+  frontend:
+  egress:
