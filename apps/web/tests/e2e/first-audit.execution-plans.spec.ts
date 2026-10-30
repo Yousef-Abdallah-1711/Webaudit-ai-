@@ -21,6 +21,10 @@ const TEST_REDIS_URL = isolatedTestRedisUrl();
 process.env['REDIS_URL'] = TEST_REDIS_URL;
 
 let db: PrismaClient;
+// G-4 / V01: when RT_API_DATABASE_URL and RT_ORCHESTRATOR_DATABASE_URL are set, the API and the worker connect as the
+// provisioned least-privilege logins (webaudit_api_runtime / webaudit_orchestrator_runtime); `db` stays the fixture login.
+let apiDb: PrismaClient | undefined;
+let workerDb: PrismaClient | undefined;
 let fixture: FixtureSite;
 let api: ApiService;
 let worker: WorkerService;
@@ -92,13 +96,19 @@ test.beforeAll(async () => {
     update: {},
   });
 
-  api = await startApi({ db, port: 0, installSignalHandlers: false });
+  const rtApi = process.env['RT_API_DATABASE_URL'];
+  const rtOrch = process.env['RT_ORCHESTRATOR_DATABASE_URL'];
+  if (rtApi !== undefined && rtOrch !== undefined) {
+    apiDb = new PrismaClient({ datasources: { db: { url: rtApi } }, log: ['error'] });
+    workerDb = new PrismaClient({ datasources: { db: { url: rtOrch } }, log: ['error'] });
+  }
+  api = await startApi({ db: apiDb ?? db, port: 0, installSignalHandlers: false });
   worker = startWorker({
     connection: {
       url: TEST_REDIS_URL,
       maxRetriesPerRequest: null,
     },
-    db,
+    db: workerDb ?? db,
     installSignalHandlers: false,
   });
 });
@@ -106,6 +116,8 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await worker.shutdown('e2e cleanup');
   await api.shutdown('e2e cleanup');
+  await apiDb?.$disconnect();
+  await workerDb?.$disconnect();
   await db.$disconnect();
   await fixture.close();
   delete process.env['SAFE_NET_ALLOW_TARGETS'];
