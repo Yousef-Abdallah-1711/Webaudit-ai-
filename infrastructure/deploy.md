@@ -97,6 +97,7 @@ and `webaudit_worker_runtime` as a member only of `fahes_worker_exec`. It also r
 `NOSUPERUSER`, `NOCREATEDB`, `NOCREATEROLE`, `NOREPLICATION`, and `NOBYPASSRLS`. API and worker receive
 only their corresponding runtime URL. Reconciliation removes stale direct grants on the `public`
 schema, tables, sequences, and functions so the `fahes_*` group roles define effective object access.
+It also provisions `webaudit_orchestrator_runtime` (member only of `fahes_orchestrator`, DEC-076): the worker process runs the scan phases, sweeps, the plan-unit barrier and passive completion, so it connects as this login through `ORCHESTRATOR_DATABASE_URL` and never as `webaudit_worker_runtime` (`fahes_worker_exec`, reserved for a future execution-host process). The provisioner grants ordinary DML on the legacy application tables (every table not owned by `fahes_owner`) to `fahes_api` and `fahes_orchestrator`; the SPEC 008/009 tables stay reachable only through their SECURITY DEFINER functions. These grants are table-level, not column-level.
 Generate separate passwords with `openssl rand -hex 32`; use
 each value as its `*_DB_PASSWORD` and in the matching URL in `.env.production`.
 

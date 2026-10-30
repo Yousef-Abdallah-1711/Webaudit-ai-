@@ -387,3 +387,53 @@ describe('plan-unit barrier with orchestrator-owned passive completion (completi
     expect(enqueued).toEqual([]);
   });
 });
+
+describe('dedicated orchestrator identity stays narrow (G-4, DEC-076)', () => {
+  const flags = (role: RoleName) =>
+    clientFor(role).$queryRaw<Array<Record<string, boolean>>>`
+      SELECT r.rolsuper AS super, r.rolbypassrls AS bypass, r.rolcreaterole AS createrole, r.rolcreatedb AS createdb,
+             pg_has_role(current_user, 'fahes_worker_exec', 'MEMBER') AS worker_exec,
+             pg_has_role(current_user, 'fahes_exec_host', 'MEMBER') AS exec_host,
+             pg_has_role(current_user, 'fahes_api', 'MEMBER') AS api
+        FROM pg_roles r WHERE r.rolname = current_user`;
+
+  it('a login holding only fahes_orchestrator has no cluster privilege and no execution-side role', async () => {
+    const row = (await flags('orchestrator'))[0];
+    expect(row).toEqual({
+      super: false,
+      bypass: false,
+      createrole: false,
+      createdb: false,
+      worker_exec: false,
+      exec_host: false,
+      api: false,
+    });
+  });
+
+  it('cannot ask F07 for admission and cannot write unit rows directly', async () => {
+    const client = clientFor('orchestrator');
+    const admit = await client.$queryRaw<Array<{ allowed: boolean }>>`
+      SELECT has_function_privilege(current_user, 'public.f07_admit(text,text,text,text,text,boolean,boolean,text)', 'EXECUTE') AS allowed`;
+    expect(admit[0]?.allowed).toBe(false);
+    const w = await makeWorld();
+    const u = await makeUnit(w);
+    await expect(
+      client.$executeRawUnsafe(`UPDATE "ExecutionUnit" SET status='ADMITTED' WHERE id=$1`, u.id),
+    ).rejects.toThrow(/permission denied/i);
+    await expect(
+      client.$executeRawUnsafe(`DELETE FROM "ExecutionUnit" WHERE id=$1`, u.id),
+    ).rejects.toThrow(/permission denied/i);
+    expect(await statusOf(u.id)).toBe('PLANNED');
+  });
+
+  it('the execution-side logins cannot become an orchestrator', async () => {
+    for (const role of ['worker', 'host', 'api', 'operator'] as const) {
+      const row = (await flags(role))[0];
+      expect(row?.['super']).toBe(false);
+      expect(row?.['bypass']).toBe(false);
+      const rows = await clientFor(role).$queryRaw<Array<{ orch: boolean }>>`
+        SELECT pg_has_role(current_user, 'fahes_orchestrator', 'MEMBER') AS orch`;
+      expect(rows[0]?.orch).toBe(false);
+    }
+  });
+});

@@ -105,6 +105,7 @@ services:
       MIGRATION_DATABASE_URL: ${MIGRATION_DATABASE_URL:?MIGRATION_DATABASE_URL is required}
       API_DB_PASSWORD: ${API_DB_PASSWORD:?API_DB_PASSWORD is required}
       WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:?WORKER_DB_PASSWORD is required}
+      ORCHESTRATOR_DB_PASSWORD: ${ORCHESTRATOR_DB_PASSWORD:?ORCHESTRATOR_DB_PASSWORD is required}
     entrypoint: ['/bin/sh', '-ec']
     command:
       [
@@ -204,7 +205,9 @@ services:
       # boot, and without this it refuses to start at all — this is not a
       # cosmetic default.
       AI_MODE: disabled
-      DATABASE_URL: ${WORKER_DATABASE_URL:?WORKER_DATABASE_URL is required}
+      # DEC-076 (G-4): the worker process is the orchestrator (phases, sweeps, plan-unit barrier, passive completion), so it
+      # connects as the dedicated orchestrator login, never as the execution-worker login.
+      DATABASE_URL: ${ORCHESTRATOR_DATABASE_URL:?ORCHESTRATOR_DATABASE_URL is required}
       DATABASE_CONNECTION_LIMIT: ${DATABASE_CONNECTION_LIMIT:-10}
       REDIS_URL: redis://redis:6379
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:?ENCRYPTION_KEY is required}
