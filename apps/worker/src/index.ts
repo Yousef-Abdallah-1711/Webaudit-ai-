@@ -404,6 +404,13 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
 
   let executionQueues: ExecQueueSet | undefined;
   let executionWorkers: ExecWorkerSet | undefined;
+  if (adapters.length === 0) {
+    logger.info('no execution engines registered; SPEC 009 execution queues are not started');
+  } else {
+    logger.info('execution engines registered', {
+      engines: adapters.map((adapter) => adapter.engineId),
+    });
+  }
   if (adapters.length > 0) {
     const db = executionDb ?? options.db;
     const artifactStore = options.executionArtifactStore ?? executionArtifactStore;

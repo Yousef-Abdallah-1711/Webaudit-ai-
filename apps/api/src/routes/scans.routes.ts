@@ -57,6 +57,7 @@ import {
   QuoteMismatchError,
   createScan,
 } from '../services/intake/create-scan.js';
+import { scanCoverageSummary } from '../services/evidence/materialize.js';
 import { quoteFor } from '../services/intake/quote.js';
 import {
   RepositoryConnectionMissingError,
@@ -343,6 +344,48 @@ export function scansRoutes(db: PrismaClient, deps: ScanRoutesDeps = {}): Router
         ? await producer.getQueuePosition(scan.id)
         : null;
     res.status(200).json({ scan: { ...scan, executionPlans, queuePosition } });
+  });
+
+  /**
+   * FR-038/039 coverage read model (N03): per plan, what ran, what did not, and why — facts only, no verdict and no
+   * score. Tenant-scoped on the scan and on every unit. Like GET /scans/:id, it never discloses engine ids,
+   * configuration or credential references. A legacy scan (no plan) answers an empty list.
+   */
+  router.get('/:id/coverage', async (req: AuthedRequest, res: Response) => {
+    const userId = req.auth!.userId;
+    const scan = await db.scan.findFirst({
+      where: { id: pathId(req), userId },
+      select: { id: true },
+    });
+    if (scan === null) {
+      res.status(404).json(NOT_FOUND);
+      return;
+    }
+    const plans = await db.scanPlan.findMany({
+      where: { scanId: scan.id, userId, state: 'RESOLVED' },
+      orderBy: { resolvedAt: 'asc' },
+      select: { id: true, kind: true },
+    });
+    const coverage = await Promise.all(
+      plans.map(async (plan) => {
+        const summary = await scanCoverageSummary(db, plan.id, userId);
+        return {
+          planId: plan.id,
+          kind: plan.kind,
+          completedUnits: summary.completedUnits.map((u) => ({
+            id: u.id,
+            executionUnitClass: u.executionUnitClass,
+          })),
+          nonCompletedUnits: summary.nonCompletedUnits.map((n) => ({
+            id: n.unit.id,
+            executionUnitClass: n.unit.executionUnitClass,
+            status: n.status,
+            reason: n.reason,
+          })),
+        };
+      }),
+    );
+    res.status(200).json({ coverage });
   });
 
   router.post('/:id/cancel', async (req: AuthedRequest, res: Response) => {
