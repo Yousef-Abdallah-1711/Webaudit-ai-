@@ -33,6 +33,11 @@ export interface GateDeps {
   claimContinuation: (scanId: string, deadlineMs: number) => Promise<boolean>;
   /** Called by the CAS winner only; the master job must carry alreadyTransitioned=true. */
   enqueueMaster: () => Promise<void>;
+  /**
+   * DEC-071: orchestrator-owned completion of passive units whose prerequisites hold. Supplied only by a caller that
+   * runs as the orchestrator role; an engine host that finalizes its own unit never passes it.
+   */
+  completePassiveUnits?: (scanPlanId: string) => Promise<unknown>;
 }
 
 const MODULE_TERMINAL = new Set(['COMPLETE', 'DEGRADED', 'FAILED', 'NOT_APPLICABLE']);
@@ -66,6 +71,8 @@ export async function continueScanIfPlanTerminal(
     const s = states.get(module);
     if (s === undefined || !MODULE_TERMINAL.has(s)) return 'not-ready';
   }
+
+  if (deps.completePassiveUnits !== undefined) await deps.completePassiveUnits(plan.id);
 
   const units = await db.executionUnit.findMany({
     where: { scanPlanId: plan.id },

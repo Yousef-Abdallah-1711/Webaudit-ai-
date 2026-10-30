@@ -51,7 +51,7 @@ import { createWorkers, type JobHandlers, type WorkerSet } from './queue/workers
 import { installProcessGuards } from './process-guards.js';
 import { createWorkerDb, type PrismaClient } from './db.js';
 import { createUploadStorage, type UploadStorage } from '@webaudit/api/intake';
-import { continueScanIfPlanTerminal } from '@webaudit/api/execution-runtime';
+import { completePassiveUnits, continueScanIfPlanTerminal } from '@webaudit/api/execution-runtime';
 import { createPhaseHandler, planQueuePriorityFor } from './orchestrator/orchestrator.js';
 import { transitionBeforeDeadline } from './orchestrator/state-machine.js';
 import { createQuestionnaireTimeoutHandler } from './orchestrator/questionnaire-timeout-handler.js';
@@ -342,6 +342,8 @@ export function startWorker(options: WorkerServiceOptions = {}): WorkerService {
                   })
                 ).moved,
               enqueueMaster,
+              // DEC-071: the orchestrator completes passive units at the barrier (a no-op for a legacy scan: no plan).
+              completePassiveUnits: (scanPlanId) => completePassiveUnits(db, scanPlanId),
             }),
           cancellation,
           moduleTimeoutMs,

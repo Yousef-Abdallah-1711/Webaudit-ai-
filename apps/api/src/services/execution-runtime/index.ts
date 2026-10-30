@@ -5,6 +5,7 @@ export * from './evidence-fence.js';
 export * from './expire.js';
 export * from './failure-class.js';
 export * from './finalize.js';
+export * from './passive-completion.js';
 export * from './plan-gate.js';
 export * from './dispatch.js';
 export * from './progress.js';

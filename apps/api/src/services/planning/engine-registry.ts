@@ -92,6 +92,8 @@ export function passiveBaselineRegistry(): EngineRegistry {
           hardStopMarginMs: 0,
           maxAttempts: 1,
           priority: 0,
+          // DEC-071: the passive completer reads the domain whose legacy module result this unit stands for.
+          configuration: { domain },
         } satisfies EngineTemplateUnit,
       ],
     })),
