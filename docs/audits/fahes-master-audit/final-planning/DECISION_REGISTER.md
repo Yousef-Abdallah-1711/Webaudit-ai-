@@ -91,3 +91,4 @@ Total decisions: 69.
 
 - 2026-10-28 â€” DEC-034, DEC-044, DEC-045, DEC-048, DEC-049 approved by the project owner (Option A each; direction only, not
   detailed text). Record: `DECISION_AMENDMENT_2026-10-28_SPEC008_LEVEL1.md`. Rows above are historical and unchanged.
+- 2026-10-30 — DEC-071..DEC-075 (SPEC 009 production-integration directions A-E) recorded by the project owner's instruction. Record: `DECISION_AMENDMENT_2026-10-30_SPEC009_INTEGRATION.md`. Rows above are historical and unchanged.
